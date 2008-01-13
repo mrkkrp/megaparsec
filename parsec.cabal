@@ -1,0 +1,34 @@
+name:		parsec
+version:	2.99.3
+license:	BSD3
+license-file:	LICENSE
+author:		Daan Leijen <daan@cs.uu.nl>, Paolo Martini <paolo@nemail.it>
+maintainer:	Paolo Martini <paolo@nemail.it>
+homepage:	http://www.cs.uu.nl/~daan/parsec.html
+category:	Parsing
+synopsis:	Monadic parser combinators
+description:
+	Parsec is designed from scratch as an industrial-strength parser
+	library.  It is simple, safe, well documented (on the package
+	homepage), has extensive libraries and good error messages,
+	and is also fast.  It is defined as a monad transfomer that can be
+	stacked on arbitrary monads, and it is also parametric in the
+	input stream type.
+exposed-modules:
+	Text.Parsec,
+	Text.Parsec.String,
+	Text.Parsec.ByteString,
+	Text.Parsec.LazyByteString,
+	Text.Parsec.Pos,
+	Text.Parsec.Error,
+	Text.Parsec.Prim,
+	Text.Parsec.Char,
+	Text.Parsec.Combinator,
+	Text.Parsec.Token,
+	Text.Parsec.Expr,
+	Text.Parsec.Language,
+	Text.Parsec.Perm
+build-depends:	base, mtl
+extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts
+ghc-options:	-O2
+ghc-prof-options:	-auto-all

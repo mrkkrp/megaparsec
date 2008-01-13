@@ -1,0 +1,5 @@
+A monadic parser combinator library, written by Daan Leijen. Parsec is designed
+from scratch as an industrial-strength parser library. It is simple, safe, well
+documented, has extensive libraries and good error messages, and is also
+fast. More documentation can be found on:
+<http://www.cs.uu.nl/~daan/parsec.html>
