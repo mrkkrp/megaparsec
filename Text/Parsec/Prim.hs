@@ -16,6 +16,7 @@
 
 module Text.Parsec.Prim where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Identity
@@ -57,14 +58,16 @@ instance Functor (Reply s u) where
     fmap f (Ok x s e) = Ok (f x) s e
     fmap f (Error e) = Error e -- XXX
 
-instance (Functor f) => Functor (ParsecT s u f) where
+instance (Monad m) => Functor (ParsecT s u m) where
     fmap f p = parsecMap f p
 
-parsecMap :: (Functor f) => (a -> b) -> ParsecT s u f a -> ParsecT s u f b
+parsecMap :: (Monad m) => (a -> b) -> ParsecT s u m a -> ParsecT s u m b
 parsecMap f p
-    = ParsecT $ \s -> fmap (fmap (fmap (fmap f))) (runParsecT p s)
+    = ParsecT $ \s -> liftM (fmap (liftM (fmap f))) (runParsecT p s)
 
--- | Monad: return, bind (>>=) and fail
+instance (Monad m) => Applicative (ParsecT s u m) where
+    pure = return
+    (<*>) = ap
 
 instance (Monad m) => Monad (ParsecT s u m) where
     return x = parserReturn x
