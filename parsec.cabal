@@ -28,7 +28,7 @@ exposed-modules:
 	Text.Parsec.Expr,
 	Text.Parsec.Language,
 	Text.Parsec.Perm
-build-depends:	base, mtl
+build-depends:	base, mtl, bytestring
 extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts
 ghc-options:	-O2
 ghc-prof-options:	-auto-all

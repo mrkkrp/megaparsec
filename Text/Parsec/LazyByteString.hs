@@ -20,14 +20,15 @@ import Text.Parsec.Error
 import Text.Parsec.Prim
 
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Base as B
+import qualified Data.ByteString.Unsafe as B
 import qualified Data.ByteString.Lazy.Char8 as C
 
 instance (Monad m) => Stream C.ByteString m Char where
-    uncons (B.LPS [])     = return Nothing
-    uncons (B.LPS (x:xs)) = return $ Just $
-            (toEnum $ fromEnum $ B.unsafeHead x,
-             if B.length x == 1 then B.LPS xs else B.LPS (B.unsafeTail x : xs))
+    uncons lbs = case C.toChunks lbs of
+                    []      -> return Nothing -- TODO: should be something better than toEnum . fromEnum
+                    (x:xs)  -> return $ Just (toEnum . fromEnum $ B.unsafeHead x,
+                                              if B.length x == 1 then C.fromChunks xs
+                                                                 else C.fromChunks (B.unsafeTail x:xs))
 
 type Parser a = Parsec C.ByteString () a
 type GenParser t st a = Parsec C.ByteString st a

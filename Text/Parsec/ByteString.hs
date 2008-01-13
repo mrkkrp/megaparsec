@@ -19,7 +19,7 @@ module Text.Parsec.ByteString
 import Text.Parsec.Error
 import Text.Parsec.Prim
 
-import qualified Data.ByteString.Base as B
+import qualified Data.ByteString.Unsafe as B
 import qualified Data.ByteString.Char8 as C
 
 instance (Monad m) => Stream C.ByteString m Char where
