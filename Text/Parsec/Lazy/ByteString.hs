@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Text.Parsec.LazyByteString
+-- Module      :  Text.Parsec.ByteString.Lazy
 -- Copyright   :  (c) Paolo Martini 2007
 -- License     :  BSD-style (see the LICENSE file)
 -- 
@@ -12,7 +12,7 @@
 
 {-# LANGUAGE FlexibleInstances #-}
 
-module Text.Parsec.LazyByteString
+module Text.Parsec.ByteString.Lazy
     ( Parser, GenParser, parseFromFile
     ) where
 

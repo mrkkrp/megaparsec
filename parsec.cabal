@@ -18,7 +18,7 @@ exposed-modules:
 	Text.Parsec,
 	Text.Parsec.String,
 	Text.Parsec.ByteString,
-	Text.Parsec.LazyByteString,
+	Text.Parsec.ByteString.Lazy,
 	Text.Parsec.Pos,
 	Text.Parsec.Error,
 	Text.Parsec.Prim,

@@ -16,7 +16,7 @@ module Text.Parsec
     , module Text.Parsec.Combinator
     , module Text.Parsec.String
     , module Text.Parsec.ByteString
-    , module Text.Parsec.LazyByteString
+    , module Text.Parsec.ByteString.Lazy
     , ParseError
     , errorPos
     , SourcePos
@@ -31,6 +31,6 @@ import Text.Parsec.Error
 import Text.Parsec.Prim
 import Text.Parsec.Char
 import Text.Parsec.Combinator
-import Text.Parsec.String         hiding ( Parser, GenParser, parseFromFile )
-import Text.Parsec.ByteString     hiding ( Parser, GenParser, parseFromFile )
-import Text.Parsec.LazyByteString hiding ( Parser, GenParser, parseFromFile )
+import Text.Parsec.String           hiding ( Parser, GenParser, parseFromFile )
+import Text.Parsec.ByteString       hiding ( Parser, GenParser, parseFromFile )
+import Text.Parsec.ByteString.Lazy  hiding ( Parser, GenParser, parseFromFile )
