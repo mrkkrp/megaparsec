@@ -337,7 +337,7 @@ manyAccum accum p
                      Empty mReply
                          -> do reply <- mReply
                                case reply of
-                                 Error err -> return $ Ok xs s err
+                                 Error err -> return $ Ok xs state err
                                  ok -> error "Text.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
                      Consumed mReply
                          -> do reply <- mReply
