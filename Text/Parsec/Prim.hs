@@ -51,8 +51,6 @@ data State s u = State {
       stateUser  :: !u
     }
 
--- | Functor: fmap
-
 instance Functor Consumed where
     fmap f (Consumed x) = Consumed (f x)
     fmap f (Empty x)    = Empty (f x)
@@ -131,8 +129,6 @@ parserFail msg
     = ParsecT $ \s -> return $ Empty $ return $
         Error (newErrorMessage (Message msg) (statePos s))
 
--- | MonadPlus: choice (mplus) and zero (mzero)
-
 instance (Monad m) => MonadPlus (ParsecT s u m) where
     mzero = parserZero
     mplus p1 p2 = parserPlus p1 p2
@@ -159,8 +155,6 @@ parserPlus (ParsecT p1) (ParsecT p2)
                         consumed
                           -> return $ consumed
           other -> return $ other
-
--- | MonadTrans: lifing actions from the underlying monad to ParsecT
 
 instance MonadTrans (ParsecT s u) where
     lift amb = ParsecT $ \s -> do
@@ -212,8 +206,6 @@ class (Monad m) => Stream s m t | s -> t where
 -- instance (Monad m) => Stream String m Char where
 --     uncons [    ] = return $ Nothing
 --     uncons (x:xs) = return $ Just (x,xs)
-
--- | Primitive parsers: tokens, try
 
 tokens :: (Stream s m t, Eq t)
        => ([t] -> String)      -- Pretty print a list of tokens
