@@ -16,15 +16,18 @@
 
 module Text.Parsec.Prim where
 
-import Control.Applicative
+import qualified Control.Applicative as Applicative ( Applicative(..), Alternative(..) )
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Identity
 
 import Text.Parsec.Pos
 import Text.Parsec.Error
+
 unknownError state        = newErrorUnknown (statePos state)
+
 sysUnExpectError msg pos  = Error (newErrorMessage (SysUnExpect msg) pos)
+
 unexpected :: (Stream s m t) => String -> ParsecT s u m a
 unexpected msg
     = ParsecT $ \s -> return $ Empty $ return $ 
@@ -65,9 +68,13 @@ parsecMap :: (Monad m) => (a -> b) -> ParsecT s u m a -> ParsecT s u m b
 parsecMap f p
     = ParsecT $ \s -> liftM (fmap (liftM (fmap f))) (runParsecT p s)
 
-instance (Monad m) => Applicative (ParsecT s u m) where
+instance (Monad m) => Applicative.Applicative (ParsecT s u m) where
     pure = return
-    (<*>) = ap
+    (<*>) = ap -- TODO: Can this be optimized?
+
+instance (Monad m) => Applicative.Alternative (ParsecT s u m) where
+    empty = mzero
+    (<|>) = mplus
 
 instance (Monad m) => Monad (ParsecT s u m) where
     return x = parserReturn x
@@ -438,5 +445,6 @@ modifyState f = do updateParserState $ \s -> s { stateUser = f (stateUser s) }
 
 setState :: (Monad m) => u -> ParsecT s u m ()
 setState = putState
+
 updateState :: (Monad m) => (u -> u) -> ParsecT s u m ()
 updateState = modifyState
