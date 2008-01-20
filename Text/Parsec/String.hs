@@ -4,10 +4,12 @@
 -- Copyright   :  (c) Paolo Martini 2007
 -- License     :  BSD-style (see the file libraries/parsec/LICENSE)
 -- 
--- Maintainer  :  paolo@nemail.com
+-- Maintainer  :  derek.a.elkins@gmail.com
 -- Stability   :  provisional
 -- Portability :  portable
 -- 
+-- Make Strings an instance of 'Stream' with 'Char' token type.
+--
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances #-}
@@ -26,6 +28,15 @@ instance (Monad m) => Stream [tok] m tok where
 type Parser a = Parsec String () a
 type GenParser tok st a = Parsec [tok] st a
 
+-- | @parseFromFile p filePath@ runs a string parser @p@ on the
+-- input read from @filePath@ using 'Prelude.readFile'. Returns either a 'ParseError'
+-- ('Left') or a value of type @a@ ('Right').
+--
+-- >  main    = do{ result <- parseFromFile numbers "digits.txt"
+-- >              ; case result of
+-- >                  Left err  -> print err
+-- >                  Right xs  -> print (sum xs)
+-- >              }
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
 parseFromFile p fname
     = do input <- readFile fname
