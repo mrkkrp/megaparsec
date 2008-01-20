@@ -21,7 +21,8 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Text.Parsec.Perm
-    ( PermParser  -- abstract
+    ( PermParser
+    , StreamPermParser -- abstract
 
     , permute
     , (<||>), (<$$>)
@@ -33,9 +34,6 @@ import Text.Parsec.String
 
 import Control.Monad.Identity
 
-{---------------------------------------------------------------
-
----------------------------------------------------------------}
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>
 
@@ -60,32 +58,85 @@ ptest
 {---------------------------------------------------------------
   Building a permutation parser
 ---------------------------------------------------------------}
-(<||>) :: (Stream s Identity tok) => StreamPermParser s tok st (a -> b) -> Parsec s st a -> StreamPermParser s tok st b
+
+-- | The expression @perm \<||> p@ adds parser @p@ to the permutation
+-- parser @perm@. The parser @p@ is not allowed to accept empty input -
+-- use the optional combinator ('<|?>') instead. Returns a
+-- new permutation parser that includes @p@. 
+
+(<||>) :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> Parsec s st a -> StreamPermParser s st b
 (<||>) perm p     = add perm p
 
-(<$$>) :: (Stream s Identity tok) => (a -> b) -> Parsec s st a -> StreamPermParser s tok st b
+-- | The expression @f \<$$> p@ creates a fresh permutation parser
+-- consisting of parser @p@. The the final result of the permutation
+-- parser is the function @f@ applied to the return value of @p@. The
+-- parser @p@ is not allowed to accept empty input - use the optional
+-- combinator ('<$?>') instead.
+--
+-- If the function @f@ takes more than one parameter, the type variable
+-- @b@ is instantiated to a functional type which combines nicely with
+-- the adds parser @p@ to the ('<||>') combinator. This
+-- results in stylized code where a permutation parser starts with a
+-- combining function @f@ followed by the parsers. The function @f@
+-- gets its parameters in the order in which the parsers are specified,
+-- but actual input can be in any order.
+
+(<$$>) :: (Stream s Identity tok) => (a -> b) -> Parsec s st a -> StreamPermParser s st b
 (<$$>) f p        = newperm f <||> p
 
-(<|?>) :: (Stream s Identity tok) => StreamPermParser s tok st (a -> b) -> (a, Parsec s st a) -> StreamPermParser s tok st b
+-- | The expression @perm \<||> (x,p)@ adds parser @p@ to the
+-- permutation parser @perm@. The parser @p@ is optional - if it can
+-- not be applied, the default value @x@ will be used instead. Returns
+-- a new permutation parser that includes the optional parser @p@. 
+
+(<|?>) :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> (a, Parsec s st a) -> StreamPermParser s st b
 (<|?>) perm (x,p) = addopt perm x p
 
-(<$?>) :: (Stream s Identity tok) => (a -> b) -> (a, Parsec s st a) -> StreamPermParser s tok st b
+-- | The expression @f \<$?> (x,p)@ creates a fresh permutation parser
+-- consisting of parser @p@. The the final result of the permutation
+-- parser is the function @f@ applied to the return value of @p@. The
+-- parser @p@ is optional - if it can not be applied, the default value
+-- @x@ will be used instead. 
+
+(<$?>) :: (Stream s Identity tok) => (a -> b) -> (a, Parsec s st a) -> StreamPermParser s st b
 (<$?>) f (x,p)    = newperm f <|?> (x,p)
-
-
 
 {---------------------------------------------------------------
   The permutation tree
 ---------------------------------------------------------------}
-type PermParser tok st a = StreamPermParser String tok st a
-data StreamPermParser s tok st a = Perm (Maybe a) [StreamBranch s tok st a]
-type Branch tok st a = StreamBranch String tok st a
-data StreamBranch s tok st a = forall b. Branch (StreamPermParser s tok st (b -> a)) (Parsec s st b)
--- data Branch tok st a     = forall b. Branch (PermParser tok st (b -> a)) (GenParser tok st b)
 
+-- | Provided for backwards compatibility.  The tok type is ignored.
+
+type PermParser tok st a = StreamPermParser String st a
+
+-- | The type @StreamPermParser s st a@ denotes a permutation parser that,
+-- when converted by the 'permute' function, parses 
+-- @s@ streams with user state @st@ and returns a value of
+-- type @a@ on success.
+--
+-- Normally, a permutation parser is first build with special operators
+-- like ('<||>') and than transformed into a normal parser
+-- using 'permute'.
+
+data StreamPermParser s st a = Perm (Maybe a) [StreamBranch s st a]
+
+type Branch st a = StreamBranch String st a
+
+data StreamBranch s st a = forall b. Branch (StreamPermParser s st (b -> a)) (Parsec s st b)
+
+-- | The parser @permute perm@ parses a permutation of parser described
+-- by @perm@. For example, suppose we want to parse a permutation of:
+-- an optional string of @a@'s, the character @b@ and an optional @c@.
+-- This can be described by:
+--
+-- >  test  = permute (tuple <$?> ("",many1 (char 'a'))
+-- >                         <||> char 'b' 
+-- >                         <|?> ('_',char 'c'))
+-- >        where
+-- >          tuple a b c  = (a,b,c)
 
 -- transform a permutation tree into a normal parser
-permute :: (Stream s Identity tok) => StreamPermParser s tok st a -> Parsec s st a
+permute :: (Stream s Identity tok) => StreamPermParser s st a -> Parsec s st a
 permute (Perm def xs)
   = choice (map branch xs ++ empty)
   where
@@ -101,11 +152,11 @@ permute (Perm def xs)
           }
 
 -- build permutation trees
-newperm :: (Stream s Identity tok) => (a -> b) -> StreamPermParser s tok st (a -> b)
+newperm :: (Stream s Identity tok) => (a -> b) -> StreamPermParser s st (a -> b)
 newperm f
   = Perm (Just f) []
 
-add :: (Stream s Identity tok) => StreamPermParser s tok st (a -> b) -> Parsec s st a -> StreamPermParser s tok st b
+add :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> Parsec s st a -> StreamPermParser s st b
 add perm@(Perm mf fs) p
   = Perm Nothing (first:map insert fs)
   where
@@ -113,7 +164,7 @@ add perm@(Perm mf fs) p
     insert (Branch perm' p')
             = Branch (add (mapPerms flip perm') p) p'
 
-addopt :: (Stream s Identity tok) => StreamPermParser s tok st (a -> b) -> a -> Parsec s st a -> StreamPermParser s tok st b
+addopt :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> a -> Parsec s st a -> StreamPermParser s st b
 addopt perm@(Perm mf fs) x p
   = Perm (fmap ($ x) mf) (first:map insert fs)
   where
@@ -122,7 +173,7 @@ addopt perm@(Perm mf fs) x p
             = Branch (addopt (mapPerms flip perm') x p) p'
 
 
-mapPerms :: (Stream s Identity tok) => (a -> b) -> StreamPermParser s tok st a -> StreamPermParser s tok st b
+mapPerms :: (Stream s Identity tok) => (a -> b) -> StreamPermParser s st a -> StreamPermParser s st b
 mapPerms f (Perm x xs)
   = Perm (fmap f x) (map (mapBranch f) xs)
   where
