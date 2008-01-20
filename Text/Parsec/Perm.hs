@@ -4,7 +4,7 @@
 -- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007
 -- License     :  BSD-style (see the file libraries/parsec/LICENSE)
 -- 
--- Maintainer  :  paolo@nemail.it
+-- Maintainer  :  derek.a.elkins@gmail.com
 -- Stability   :  provisional
 -- Portability :  non-portable (uses existentially quantified data constructors)
 -- 
