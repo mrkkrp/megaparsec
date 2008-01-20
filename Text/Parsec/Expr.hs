@@ -24,24 +24,66 @@ import Text.Parsec.Combinator
 -----------------------------------------------------------
 -- Assoc and OperatorTable
 -----------------------------------------------------------
+
+-- |  This data type specifies the associativity of operators: left, right
+-- or none.
+
 data Assoc                = AssocNone
                           | AssocLeft
                           | AssocRight
 
-data Operator s t u m a   = Infix (ParsecT s u m (a -> a -> a)) Assoc
-                          | Prefix (ParsecT s u m (a -> a))
-                          | Postfix (ParsecT s u m (a -> a))
+-- | This data type specifies operators that work on values of type @a@.
+-- An operator is either binary infix or unary prefix or postfix. A
+-- binary operator has also an associated associativity.
 
-type OperatorTable s t u m a = [[Operator s t u m a]]
+data Operator s u m a   = Infix (ParsecT s u m (a -> a -> a)) Assoc
+                        | Prefix (ParsecT s u m (a -> a))
+                        | Postfix (ParsecT s u m (a -> a))
 
+-- | An @OperatorTable s u m a@ is a list of @Operator s u m a@
+-- lists. The list is ordered in descending
+-- precedence. All operators in one list have the same precedence (but
+-- may have a different associativity).
 
+type OperatorTable s u m a = [[Operator s u m a]]
 
 -----------------------------------------------------------
 -- Convert an OperatorTable and basic term parser into
 -- a full fledged expression parser
 -----------------------------------------------------------
+
+-- | @buildExpressionParser table term@ builds an expression parser for
+-- terms @term@ with operators from @table@, taking the associativity
+-- and precedence specified in @table@ into account. Prefix and postfix
+-- operators of the same precedence can only occur once (i.e. @--2@ is
+-- not allowed if @-@ is prefix negate). Prefix and postfix operators
+-- of the same precedence associate to the left (i.e. if @++@ is
+-- postfix increment, than @-2++@ equals @-1@, not @-3@).
+--
+-- The @buildExpressionParser@ takes care of all the complexity
+-- involved in building expression parser. Here is an example of an
+-- expression parser that handles prefix signs, postfix increment and
+-- basic arithmetic.
+--
+-- >  expr    = buildExpressionParser table term
+-- >          <?> "expression"
+-- >
+-- >  term    =  parens expr 
+-- >          <|> natural
+-- >          <?> "simple expression"
+-- >
+-- >  table   = [ [prefix "-" negate, prefix "+" id ]
+-- >            , [postfix "++" (+1)]
+-- >            , [binary "*" (*) AssocLeft, binary "/" (div) AssocLeft ]
+-- >            , [binary "+" (+) AssocLeft, binary "-" (-)   AssocLeft ]
+-- >            ]
+-- >          
+-- >  binary  name fun assoc = Infix (do{ reservedOp name; return fun }) assoc
+-- >  prefix  name fun       = Prefix (do{ reservedOp name; return fun })
+-- >  postfix name fun       = Postfix (do{ reservedOp name; return fun })
+
 buildExpressionParser :: (Stream s m t)
-                      => OperatorTable s t u m a
+                      => OperatorTable s u m a
                       -> ParsecT s u m a
                       -> ParsecT s u m a
 buildExpressionParser operators simpleExpr
