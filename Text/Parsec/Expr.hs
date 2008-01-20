@@ -13,8 +13,6 @@
 -- 
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ExistentialQuantification #-}
-
 module Text.Parsec.Expr
     ( Assoc(..), Operator(..), OperatorTable
     , buildExpressionParser

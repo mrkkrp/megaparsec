@@ -6,13 +6,13 @@
 -- 
 -- Maintainer  :  derek.a.elkins@gmail.com
 -- Stability   :  provisional
--- Portability :  non-portable (uses existentially quantified data constructors)
+-- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 -- 
 -- A helper module to parse lexical elements (tokens).
 -- 
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE PolymorphicComponents #-}
 
 module Text.Parsec.Token
     ( LanguageDef
