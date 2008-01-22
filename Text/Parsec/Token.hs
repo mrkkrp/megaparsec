@@ -8,7 +8,8 @@
 -- Stability   :  provisional
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 -- 
--- A helper module to parse lexical elements (tokens).
+-- A helper module to parse lexical elements (tokens). See 'makeTokenParser'
+-- for a description of how to use it.
 -- 
 -----------------------------------------------------------------------------
 
@@ -318,9 +319,9 @@ data GenTokenParser s u m
 --
 -- >  module Main where
 -- >
--- >  import Parsec
--- >  import qualified ParsecToken as P
--- >  import ParsecLanguage (haskellDef)
+-- >  import Text.Parsec
+-- >  import qualified Text.Parsec.Token as P
+-- >  import Text.Parsec.Language (haskellDef)
 -- >
 -- >  -- The parser
 -- >  ...
