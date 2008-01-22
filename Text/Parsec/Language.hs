@@ -29,8 +29,13 @@ import Text.Parsec.Token
 -----------------------------------------------------------
 -- Styles: haskellStyle, javaStyle
 -----------------------------------------------------------
+
+-- | This is a minimal token definition for Haskell style languages. It
+-- defines the style of comments, valid identifiers and case
+-- sensitivity. It does not define any reserved words or operators.
+
 haskellStyle :: LanguageDef st
-haskellStyle= emptyDef
+haskellStyle = emptyDef
                 { commentStart   = "{-"
                 , commentEnd     = "-}"
                 , commentLine    = "--"
@@ -43,6 +48,10 @@ haskellStyle= emptyDef
                 , reservedNames  = []
                 , caseSensitive  = True
                 }
+
+-- | This is a minimal token definition for Java style languages. It
+-- defines the style of comments, valid identifiers and case
+-- sensitivity. It does not define any reserved words or operators.
 
 javaStyle  :: LanguageDef st
 javaStyle   = emptyDef
@@ -59,7 +68,14 @@ javaStyle   = emptyDef
 
 -----------------------------------------------------------
 -- minimal language definition
------------------------------------------------------------
+--------------------------------------------------------
+
+-- TODO: This seems wrong
+-- < This is the most minimal token definition. It is recommended to use
+-- this definition as the basis for other definitions. @emptyDef@ has
+-- no reserved names or operators, is case sensitive and doesn't accept
+-- comments, identifiers or operators.
+
 emptyDef   :: LanguageDef st
 emptyDef    = LanguageDef
                { commentStart   = ""
@@ -80,8 +96,13 @@ emptyDef    = LanguageDef
 -----------------------------------------------------------
 -- Haskell
 -----------------------------------------------------------
+
+-- | A lexer for the haskell language.
+
 haskell :: TokenParser st
 haskell      = makeTokenParser haskellDef
+
+-- | The language definition for the Haskell language.
 
 haskellDef  :: LanguageDef st
 haskellDef   = haskell98Def
@@ -92,6 +113,8 @@ haskellDef   = haskell98Def
     				   ,"forall"
     				   ]
                 }
+
+-- | The language definition for the language Haskell98.
 
 haskell98Def :: LanguageDef st
 haskell98Def = haskellStyle
@@ -110,8 +133,13 @@ haskell98Def = haskellStyle
 -----------------------------------------------------------
 -- Mondrian
 -----------------------------------------------------------
+
+-- | A lexer for the mondrian language.
+
 mondrian :: TokenParser st
 mondrian    = makeTokenParser mondrianDef
+
+-- | The language definition for the language Mondrian.
 
 mondrianDef :: LanguageDef st
 mondrianDef = javaStyle
