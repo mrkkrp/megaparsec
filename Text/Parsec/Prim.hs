@@ -369,10 +369,10 @@ tokenPrim :: (Stream s m t)
 tokenPrim show nextpos test = tokenPrimEx show nextpos Nothing test
 
 tokenPrimEx :: (Stream s m t)
-            => (t -> String)
+            => (t -> String)      
             -> (SourcePos -> t -> s -> SourcePos)
             -> Maybe (SourcePos -> t -> s -> u -> u)
-            -> (t -> Maybe a)
+            -> (t -> Maybe a)     
             -> ParsecT s u m a
 tokenPrimEx show nextpos mbNextState test
     = case mbNextState of
