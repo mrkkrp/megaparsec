@@ -170,6 +170,7 @@ parserPlus (ParsecT p1) (ParsecT p2)
                                 return $ Empty $ return (mergeErrorReply err reply2)
                         consumed
                           -> return $ consumed
+                    other -> return $ Empty $ return $ other
           other -> return $ other
 
 instance MonadTrans (ParsecT s u) where
