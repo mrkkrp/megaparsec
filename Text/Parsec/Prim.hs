@@ -12,7 +12,7 @@
 -- 
 -----------------------------------------------------------------------------   
 
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
 
 module Text.Parsec.Prim where
 
