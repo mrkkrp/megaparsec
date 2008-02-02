@@ -21,15 +21,10 @@ module Text.Parsec.ByteString
 import Text.Parsec.Error
 import Text.Parsec.Prim
 
-import qualified Data.ByteString.Unsafe as B
 import qualified Data.ByteString.Char8 as C
 
 instance (Monad m) => Stream C.ByteString m Char where
-    uncons s
-        | C.null s  = return $ Nothing
-        | otherwise = return $ Just $
-                                  ( toEnum $ fromEnum $ B.unsafeHead s
-                                  , B.unsafeTail s)
+    uncons = return . C.uncons
 
 type Parser a = Parsec C.ByteString () a
 type GenParser t st a = Parsec C.ByteString st a
