@@ -12,7 +12,8 @@
 -- 
 -----------------------------------------------------------------------------   
 
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
+             UndecidableInstances #-}
 
 module Text.Parsec.Prim where
 
@@ -20,6 +21,11 @@ import qualified Control.Applicative as Applicative ( Applicative(..), Alternati
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Identity
+
+import Control.Monad.Reader.Class
+import Control.Monad.State.Class
+import Control.Monad.Cont.Class
+import Control.Monad.Error.Class
 
 import Text.Parsec.Pos
 import Text.Parsec.Error
@@ -90,6 +96,33 @@ instance (Monad m) => Monad (ParsecT s u m) where
     return x = parserReturn x
     p >>= f  = parserBind p f
     fail msg = parserFail msg
+
+
+instance (MonadIO m) => MonadIO (ParsecT s u m) where
+    liftIO = lift . liftIO
+
+instance (MonadReader r m) => MonadReader r (ParsecT s u m) where
+    ask = lift ask
+    local f p = ParsecT $ \s -> local f (runParsecT p s)
+
+-- I'm presuming the user might want a separate, non-backtracking
+-- state aside from the Parsec user state.
+instance (MonadState s m) => MonadState s (ParsecT s' u m) where
+    get = lift get
+    put = lift . put
+
+instance (MonadCont m) => MonadCont (ParsecT s u m) where
+    callCC f = ParsecT $ \s ->
+          callCC $ \c ->
+          runParsecT (f (\a -> ParsecT $ \s' -> c (pack s' a))) s
+
+     where pack s a= Empty $ return (Ok a s (unknownError s))
+
+instance (MonadError e m) => MonadError e (ParsecT s u m) where
+    throwError = lift . throwError
+    p `catchError` h = ParsecT $ \s ->
+        runParsecT p s `catchError` \e ->
+            runParsecT (h e) s
 
 parserReturn :: (Monad m) => a -> ParsecT s u m a
 parserReturn x
