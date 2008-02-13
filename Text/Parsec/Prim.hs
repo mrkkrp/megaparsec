@@ -18,7 +18,7 @@
 module Text.Parsec.Prim where
 
 import qualified Control.Applicative as Applicative ( Applicative(..), Alternative(..) )
-import Control.Monad
+import Control.Monad()
 import Control.Monad.Trans
 import Control.Monad.Identity
 
@@ -30,8 +30,10 @@ import Control.Monad.Error.Class
 import Text.Parsec.Pos
 import Text.Parsec.Error
 
+unknownError :: State s u -> ParseError
 unknownError state        = newErrorUnknown (statePos state)
 
+sysUnExpectError :: String -> SourcePos -> Reply s u a
 sysUnExpectError msg pos  = Error (newErrorMessage (SysUnExpect msg) pos)
 
 -- | The parser @unexpected msg@ always fails with an unexpected error
@@ -75,7 +77,7 @@ instance Functor Consumed where
 
 instance Functor (Reply s u) where
     fmap f (Ok x s e) = Ok (f x) s e
-    fmap f (Error e) = Error e -- XXX
+    fmap _ (Error e) = Error e -- XXX
 
 instance (Monad m) => Functor (ParsecT s u m) where
     fmap f p = parsecMap f p
@@ -96,7 +98,6 @@ instance (Monad m) => Monad (ParsecT s u m) where
     return x = parserReturn x
     p >>= f  = parserBind p f
     fail msg = parserFail msg
-
 
 instance (MonadIO m) => MonadIO (ParsecT s u m) where
     liftIO = lift . liftIO
@@ -132,7 +133,7 @@ parserBind :: (Monad m)
            => ParsecT s u m a -> (a -> ParsecT s u m b) -> ParsecT s u m b
 
 parserBind p f
-    = ParsecT $ \s@(State _ u _) -> do
+    = ParsecT $ \s -> do -- TODO: This was \s@(State _ u _) ???
         res1 <- runParsecT p s
         case res1 of
 
@@ -164,6 +165,7 @@ parserBind p f
                       Error err1   -> return $ Error err1
 
 
+mergeErrorReply :: ParseError -> Reply s u a -> Reply s u a
 mergeErrorReply err1 reply -- XXX where to put it?
     = case reply of
         Ok x state err2 -> Ok x state (mergeError err1 err2)
@@ -268,7 +270,7 @@ labels p msgs
         setExpectErrors err []         = setErrorMessage (Expect "") err
         setExpectErrors err [msg]      = setErrorMessage (Expect msg) err
         setExpectErrors err (msg:msgs)
-            = foldr (\msg err -> addErrorMessage (Expect msg) err)
+            = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
                     (setErrorMessage (Expect msg) err) msgs
 
 -- | An instance of @Stream@ has stream type @s@, underlying monad @m@ and token type @t@ determined by the stream
@@ -282,13 +284,13 @@ tokens :: (Stream s m t, Eq t)
        -> ParsecT s u m [t]
 tokens _ _ []
     = ParsecT $ \s -> return $ Empty $ return $ Ok [] s (unknownError s)
-tokens shows nextposs tts@(t:ts)
-    = ParsecT $ \s@(State input pos u) -> 
+tokens showTokens nextposs tts@(tok:toks)
+    = ParsecT $ \(State input pos u) -> 
     let
-        errEof = return $ Error (setErrorMessage (Expect (shows tts))
+        errEof = return $ Error (setErrorMessage (Expect (showTokens tts))
                                  (newErrorMessage (SysUnExpect "") pos))
-        errExpect x = return $ Error (setErrorMessage (Expect (shows tts))
-                                 (newErrorMessage (SysUnExpect (shows [x])) pos))
+        errExpect x = return $ Error (setErrorMessage (Expect (showTokens tts))
+                                 (newErrorMessage (SysUnExpect (showTokens [x])) pos))
         walk []     rs = return (ok rs)
         walk (t:ts) rs = do
           sr <- uncons rs
@@ -304,7 +306,7 @@ tokens shows nextposs tts@(t:ts)
         return $ case sr of
             Nothing         -> Empty    $ errEof
             Just (x,xs)
-                | t == x    -> Consumed $ walk ts xs
+                | tok == x    -> Consumed $ walk toks xs
                 | otherwise -> Empty    $ errExpect x
         
 -- | The parser @try p@ behaves like parser @p@, except that it
@@ -372,7 +374,7 @@ token :: (Stream s Identity t)
       -> (t -> SourcePos)         -- ^ Computes the position of a token.
       -> (t -> Maybe a)           -- ^ Matching function for the token to parse.
       -> Parsec s u a
-token show tokpos test = tokenPrim show nextpos test
+token showToken tokpos test = tokenPrim showToken nextpos test
     where
         nextpos _ tok ts = case runIdentity (uncons ts) of
                              Nothing -> tokpos tok
@@ -400,7 +402,7 @@ tokenPrim :: (Stream s m t)
           -> (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
           -> (t -> Maybe a)                     -- ^ Matching function for the token to parse.
           -> ParsecT s u m a
-tokenPrim show nextpos test = tokenPrimEx show nextpos Nothing test
+tokenPrim showToken nextpos test = tokenPrimEx showToken nextpos Nothing test
 
 tokenPrimEx :: (Stream s m t)
             => (t -> String)      
@@ -408,10 +410,10 @@ tokenPrimEx :: (Stream s m t)
             -> Maybe (SourcePos -> t -> s -> u -> u)
             -> (t -> Maybe a)     
             -> ParsecT s u m a
-tokenPrimEx show nextpos mbNextState test
+tokenPrimEx showToken nextpos mbNextState test
     = case mbNextState of
         Nothing
-          -> ParsecT $ \s@(State input pos user) -> do
+          -> ParsecT $ \(State input pos user) -> do
               r <- uncons input
               case r of
                 Nothing -> return $ Empty $ return (sysUnExpectError "" pos)
@@ -423,9 +425,9 @@ tokenPrimEx show nextpos mbNextState test
                                      return $ Consumed $ return $
                                        (Ok x newstate (newErrorUnknown newpos))
                        Nothing -> return $ Empty $ return $
-                                    (sysUnExpectError (show c) pos)
+                                    (sysUnExpectError (showToken c) pos)
         Just nextState
-          -> ParsecT $ \s@(State input pos user) -> do
+          -> ParsecT $ \(State input pos user) -> do
               r <- uncons input
               case r of
                 Nothing -> return $ Empty $ return (sysUnExpectError "" pos)
@@ -438,7 +440,7 @@ tokenPrimEx show nextpos mbNextState test
                                      return $ Consumed $ return $
                                        (Ok x newstate (newErrorUnknown newpos))
                        Nothing -> return $ Empty $ return $
-                                    (sysUnExpectError (show c) pos)
+                                    (sysUnExpectError (showToken c) pos)
 
 -- | @many p@ applies the parser @p@ /zero/ or more times. Returns a
 --    list of the returned values of @p@.
@@ -460,7 +462,7 @@ many p
 
 skipMany :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m ()
 skipMany p
-  = do manyAccum (\x xs -> []) p
+  = do manyAccum (\_ _ -> []) p
        return ()
 
 manyAccum :: (Stream s m t)
@@ -476,13 +478,13 @@ manyAccum accum p
                          -> do reply <- mReply
                                case reply of
                                  Error err -> return $ Ok xs state err
-                                 ok -> error "Text.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
+                                 _         -> error "Text.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
                      Consumed mReply
                          -> do reply <- mReply
                                case reply of
                                  Error err
                                      -> return $ Error err
-                                 Ok x s' err
+                                 Ok x s' _err
                                      -> let ys = accum x xs
                                         in seq ys (walk ys s' (runParsecT p s'))
         in do r <- runParsecT p s
@@ -490,7 +492,7 @@ manyAccum accum p
                 Empty mReply
                     -> do reply <- mReply
                           case reply of
-                            Ok x s' err
+                            Ok _ _ _
                                 -> error "Text.ParserCombinators.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
                             Error err
                                 -> return $ Empty $ return (Ok [] s err)

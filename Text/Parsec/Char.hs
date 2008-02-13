@@ -122,7 +122,7 @@ anyChar             = satisfy (const True)
 
 satisfy :: (Stream s m Char) => (Char -> Bool) -> ParsecT s u m Char
 satisfy f           = tokenPrim (\c -> show [c])
-                                (\pos c cs -> updatePosChar pos c)
+                                (\pos c _cs -> updatePosChar pos c)
                                 (\c -> if f c then Just c else Nothing)
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns

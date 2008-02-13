@@ -14,6 +14,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE PolymorphicComponents #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Text.Parsec.Token
     ( LanguageDef

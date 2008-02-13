@@ -231,7 +231,7 @@ chainr1 p op        = scan
 -- used to implement 'eof'. Returns the accepted token. 
 
 anyToken :: (Stream s m t, Show t) => ParsecT s u m t
-anyToken            = tokenPrim show (\pos tok toks -> pos) Just
+anyToken            = tokenPrim show (\pos _tok _toks -> pos) Just
 
 -- | This parser only succeeds at the end of the input. This is not a
 -- primitive parser but it is defined using 'notFollowedBy'.

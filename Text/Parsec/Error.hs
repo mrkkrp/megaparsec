@@ -98,17 +98,17 @@ data ParseError = ParseError !SourcePos [Message]
 -- | Extracts the source position from the parse error
 
 errorPos :: ParseError -> SourcePos
-errorPos (ParseError pos msgs)
+errorPos (ParseError pos _msgs)
     = pos
 
 -- | Extracts the list of error messages from the parse error
 
 errorMessages :: ParseError -> [Message]
-errorMessages (ParseError pos msgs)
+errorMessages (ParseError _pos msgs)
     = sort msgs
 
 errorIsUnknown :: ParseError -> Bool
-errorIsUnknown (ParseError pos msgs)
+errorIsUnknown (ParseError _pos msgs)
     = null msgs
 
 -- < Create parse errors
@@ -189,10 +189,9 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
       commasOr ms       = commaSep (init ms) ++ " " ++ msgOr ++ " " ++ last ms
 
       commaSep          = seperate ", " . clean
-      semiSep           = seperate "; " . clean
 
-      seperate sep []     = ""
-      seperate sep [m]    = m
+      seperate   _ []     = ""
+      seperate   _ [m]    = m
       seperate sep (m:ms) = m ++ sep ++ seperate sep ms
 
       clean             = nub . filter (not . null)

@@ -30,7 +30,6 @@ module Text.Parsec.Perm
     ) where
 
 import Text.Parsec
-import Text.Parsec.String
 
 import Control.Monad.Identity
 
@@ -44,6 +43,7 @@ infixl 2 <$$>, <$?>
   * a required 'b'
   * an optional 'c'
 ---------------------------------------------------------------}
+{-
 test input
   = parse (do{ x <- ptest; eof; return x }) "" input
 
@@ -53,7 +53,7 @@ ptest
     (,,) <$?> ("",many1 (char 'a'))
          <||> char 'b'
          <|?> ('_',char 'c')
-
+-}
 
 {---------------------------------------------------------------
   Building a permutation parser
@@ -120,7 +120,7 @@ type PermParser tok st a = StreamPermParser String st a
 
 data StreamPermParser s st a = Perm (Maybe a) [StreamBranch s st a]
 
-type Branch st a = StreamBranch String st a
+-- type Branch st a = StreamBranch String st a
 
 data StreamBranch s st a = forall b. Branch (StreamPermParser s st (b -> a)) (Parsec s st b)
 
@@ -157,7 +157,7 @@ newperm f
   = Perm (Just f) []
 
 add :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> Parsec s st a -> StreamPermParser s st b
-add perm@(Perm mf fs) p
+add perm@(Perm _mf fs) p
   = Perm Nothing (first:map insert fs)
   where
     first   = Branch perm p
@@ -175,7 +175,7 @@ addopt perm@(Perm mf fs) x p
 
 mapPerms :: (Stream s Identity tok) => (a -> b) -> StreamPermParser s st a -> StreamPermParser s st b
 mapPerms f (Perm x xs)
-  = Perm (fmap f x) (map (mapBranch f) xs)
+  = Perm (fmap f x) (map mapBranch xs)
   where
-    mapBranch f (Branch perm p)
+    mapBranch (Branch perm p)
       = Branch (mapPerms (f.) perm) p
