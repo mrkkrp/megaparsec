@@ -13,7 +13,23 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Pos
-    ( module Text.Parsec.Pos
+    ( SourceName,
+      Line,
+      Column,
+      SourcePos,
+      sourceLine,
+      sourceColumn,
+      sourceName,
+      incSourceLine,
+      incSourceColumn,
+      setSourceLine,
+      setSourceColumn,
+      setSourceName,
+      newPos,
+      initialPos,
+      updatePosChar,
+      updatePosString
     ) where
+      
 
 import Text.Parsec.Pos

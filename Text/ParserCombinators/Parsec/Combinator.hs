@@ -13,7 +13,30 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Combinator
-    ( module Text.Parsec.Combinator
+    ( choice,
+      count,
+      between,
+      option,
+      optionMaybe,
+      optional,
+      skipMany1,
+      many1,
+      sepBy,
+      sepBy1,
+      endBy,
+      endBy1,
+      sepEndBy,
+      sepEndBy1,
+      chainl,
+      chainl1,
+      chainr,
+      chainr1,
+      eof,
+      notFollowedBy,
+      manyTill,
+      lookAhead,
+      anyToken
     ) where
+
 
 import Text.Parsec.Combinator

@@ -14,8 +14,7 @@
 
 module Text.ParserCombinators.Parsec
     ( -- complete modules
-      module Text.Parsec.String
-    , module Text.ParserCombinators.Parsec.Prim
+      module Text.ParserCombinators.Parsec.Prim
     , module Text.ParserCombinators.Parsec.Combinator
     , module Text.ParserCombinators.Parsec.Char
 

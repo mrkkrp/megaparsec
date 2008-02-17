@@ -13,7 +13,11 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Token
-    ( module Text.Parsec.Token
+    ( LanguageDef,
+      GenLanguageDef(..),
+      TokenParser,
+      GenTokenParser(..),
+      makeTokenParser
     ) where
 
 import Text.Parsec.Token

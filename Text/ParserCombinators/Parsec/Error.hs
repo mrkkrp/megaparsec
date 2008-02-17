@@ -13,7 +13,28 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Error
-    ( module Text.Parsec.Error
+    ( Message (SysUnExpect,UnExpect,Expect,Message),
+      messageString,
+      messageCompare,
+      messageEq,
+      ParseError,
+      errorPos,
+      errorMessages,
+      errorIsUnknown,
+      showErrorMessages,
+      newErrorMessage,
+      newErrorUnknown,
+      addErrorMessage,
+      setErrorPos,
+      setErrorMessage,
+      mergeError
     ) where
 
 import Text.Parsec.Error
+
+
+messageCompare :: Message -> Message -> Ordering
+messageCompare = compare
+
+messageEq :: Message -> Message -> Bool
+messageEq = (==)

@@ -28,6 +28,16 @@ exposed-modules:
 	Text.Parsec.Expr,
 	Text.Parsec.Language,
 	Text.Parsec.Perm
+        Text.ParserCombinators.Parsec,
+        Text.ParserCombinators.Parsec.Char,
+        Text.ParserCombinators.Parsec.Combinator,
+        Text.ParserCombinators.Parsec.Error,
+        Text.ParserCombinators.Parsec.Expr,
+        Text.ParserCombinators.Parsec.Language,
+        Text.ParserCombinators.Parsec.Perm,
+        Text.ParserCombinators.Parsec.Pos,
+        Text.ParserCombinators.Parsec.Prim,
+        Text.ParserCombinators.Parsec.Token
 build-depends:	base, mtl, bytestring
 extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts
 ghc-options:	-O2

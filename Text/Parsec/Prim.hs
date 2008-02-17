@@ -57,7 +57,7 @@ unexpected msg
 data ParsecT s u m a
     = ParsecT { runParsecT :: State s u -> m (Consumed (m (Reply s u a))) }
 
-type Parsec s u a = ParsecT s u Identity a
+type Parsec s u = ParsecT s u Identity
 
 data Consumed a  = Consumed a
                  | Empty !a

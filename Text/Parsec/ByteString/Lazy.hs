@@ -27,8 +27,8 @@ import qualified Data.ByteString.Lazy.Char8 as C
 instance (Monad m) => Stream C.ByteString m Char where
     uncons = return . C.uncons
 
-type Parser a = Parsec C.ByteString () a
-type GenParser t st a = Parsec C.ByteString st a
+type Parser = Parsec C.ByteString ()
+type GenParser t st = Parsec C.ByteString st
 
 -- | @parseFromFile p filePath@ runs a lazy bytestring parser @p@ on the
 -- input read from @filePath@ using 'ByteString.Lazy.Char8.readFile'. Returns either a 'ParseError'

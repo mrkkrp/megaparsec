@@ -13,7 +13,16 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Language
-    ( module Text.Parsec.Language
+    ( haskellDef,
+      haskell,
+      mondrianDef,
+      mondrian,
+      emptyDef,
+      haskellStyle,
+      javaStyle,
+      LanguageDef,
+      GenLanguageDef(..),
     ) where
 
+import Text.Parsec.Token
 import Text.Parsec.Language

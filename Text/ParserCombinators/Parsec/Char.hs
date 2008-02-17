@@ -13,7 +13,28 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Char
-    ( module Text.Parsec.Char
+    ( CharParser,
+      spaces,
+      space,
+      newline,
+      tab,
+      upper,
+      lower,
+      alphaNum,
+      letter,
+      digit,
+      hexDigit,
+      octDigit,
+      char,
+      string,
+      anyChar,
+      oneOf,
+      noneOf,
+      satisfy
     ) where
 
+
 import Text.Parsec.Char
+import Text.Parsec.String
+
+type CharParser st = GenParser Char st

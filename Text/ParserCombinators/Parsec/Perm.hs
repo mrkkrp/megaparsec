@@ -13,7 +13,12 @@
 -----------------------------------------------------------------------------
 
 module Text.ParserCombinators.Parsec.Perm
-    ( module Text.Parsec.Perm
+    ( PermParser,
+      permute,
+      (<||>),
+      (<$$>),
+      (<|?>),
+      (<$?>)
     ) where
 
 import Text.Parsec.Perm

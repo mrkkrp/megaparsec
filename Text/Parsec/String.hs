@@ -26,8 +26,8 @@ instance (Monad m) => Stream [tok] m tok where
     uncons []     = return $ Nothing
     uncons (t:ts) = return $ Just (t,ts)
 
-type Parser a = Parsec String () a
-type GenParser tok st a = Parsec [tok] st a
+type Parser = Parsec String ()
+type GenParser tok st = Parsec [tok] st
 
 -- | @parseFromFile p filePath@ runs a string parser @p@ on the
 -- input read from @filePath@ using 'Prelude.readFile'. Returns either a 'ParseError'
