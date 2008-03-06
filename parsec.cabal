@@ -1,5 +1,5 @@
 name:		parsec
-version:	2.99.3
+version:	3.00.0
 license:	BSD3
 license-file:	LICENSE
 author:		Daan Leijen <daan@cs.uu.nl>, Paolo Martini <paolo@nemail.it>
