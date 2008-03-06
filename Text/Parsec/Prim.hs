@@ -273,7 +273,15 @@ labels p msgs
             = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
                     (setErrorMessage (Expect msg) err) msgs
 
+-- TODO: There should be a stronger statement that can be made about this
+
 -- | An instance of @Stream@ has stream type @s@, underlying monad @m@ and token type @t@ determined by the stream
+-- 
+-- Some rough guidelines for a \"correct\" instance of Stream:
+--
+--    * unfoldM uncons gives the [t] corresponding to the stream
+--    * A Stream instance is responsible for maintaining the \"position within the stream\" in the stream state @s@.  This is trivial unless you are using the monad in a non-trivial way.
+
 class (Monad m) => Stream s m t | s -> t where
     uncons :: s -> m (Maybe (t,s))
 
