@@ -31,7 +31,7 @@ module Text.ParserCombinators.Parsec
 
     ) where
 
-import Text.Parsec.String
+import Text.Parsec.String()
 
 import Text.ParserCombinators.Parsec.Prim
 import Text.ParserCombinators.Parsec.Combinator
