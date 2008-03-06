@@ -280,7 +280,8 @@ labels p msgs
 -- Some rough guidelines for a \"correct\" instance of Stream:
 --
 --    * unfoldM uncons gives the [t] corresponding to the stream
---    * A Stream instance is responsible for maintaining the \"position within the stream\" in the stream state @s@.  This is trivial unless you are using the monad in a non-trivial way.
+--
+--    * A @Stream@ instance is responsible for maintaining the \"position within the stream\" in the stream state @s@.  This is trivial unless you are using the monad in a non-trivial way.
 
 class (Monad m) => Stream s m t | s -> t where
     uncons :: s -> m (Maybe (t,s))
