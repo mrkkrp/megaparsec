@@ -27,12 +27,14 @@ import Control.Monad.Identity
 
 data Operator tok st a   = Infix  (GenParser tok st (a -> a -> a)) Assoc
                          | Prefix (GenParser tok st (a -> a))
+                         | Postfix (GenParser tok st (a -> a))
 
 type OperatorTable tok st a = [[Operator tok st a]]
 
 convert :: Operator tok st a -> N.Operator [tok] st Identity a
 convert (Infix p a) = N.Infix p a
 convert (Prefix p)  = N.Prefix p
+convert (Postfix p)  = N.Postfix p
 
 buildExpressionParser :: OperatorTable tok st a
                       -> GenParser tok st a
