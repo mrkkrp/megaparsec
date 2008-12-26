@@ -1,5 +1,5 @@
 name:		parsec
-version:	3.0.0
+version:	3.0.1
 cabal-version: >= 1.2
 license:	BSD3
 license-file:	LICENSE
@@ -42,7 +42,7 @@ library
         Text.ParserCombinators.Parsec.Pos,
         Text.ParserCombinators.Parsec.Prim,
         Text.ParserCombinators.Parsec.Token
-    build-depends:	base, mtl, bytestring
-    extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts
+    build-depends:	base, mtl, bytestring, syb
+    extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable
     ghc-options:	-O2
     ghc-prof-options:	-auto-all

@@ -22,6 +22,8 @@ module Text.Parsec.Pos
     , updatePosChar, updatePosString
     ) where
 
+import Data.Generics
+
 -- < Source positions: a file name, a line and a column
 -- upper left is (1,1)
 
@@ -35,7 +37,7 @@ type Column     = Int
 -- 'Ord' class. 
 
 data SourcePos  = SourcePos SourceName !Line !Column
-    deriving ( Eq, Ord )
+    deriving ( Eq, Ord, Data, Typeable)
 
 -- | Create a new 'SourcePos' with the given source name,
 -- line number and column number.
