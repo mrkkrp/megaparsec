@@ -52,7 +52,9 @@ unexpected msg
 -- | ParserT monad transformer and Parser type
 
 -- | @ParsecT s u m a@ is a parser with stream type @s@, user state type @u@,
--- underlying monad @m@ and return type @a@
+-- underlying monad @m@ and return type @a@.  Parsec is strict in the user state.
+-- If this is undesirable, simply used a data type like @data Box a = Box a@ and
+-- the state type @Box YourStateType@ to add a level of indirection.
 
 data ParsecT s u m a
     = ParsecT { runParsecT :: State s u -> m (Consumed (m (Reply s u a))) }
@@ -62,7 +64,7 @@ type Parsec s u = ParsecT s u Identity
 data Consumed a  = Consumed a
                  | Empty !a
 
-data Reply s u a = Ok !a !(State s u) ParseError
+data Reply s u a = Ok a !(State s u) ParseError
                  | Error ParseError
 
 data State s u = State {
