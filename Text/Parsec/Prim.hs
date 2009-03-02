@@ -46,8 +46,8 @@ sysUnExpectError msg pos  = Error (newErrorMessage (SysUnExpect msg) pos)
 
 unexpected :: (Stream s m t) => String -> ParsecT s u m a
 unexpected msg
-    = ParsecT $ \s -> return $ Empty $ return $ 
-                        Error (newErrorMessage (UnExpect msg) (statePos s))
+    = ParsecT $ \s _ _ _ eerr ->
+      eerr $ newErrorMessage (UnExpect msg) (statePos s)
 
 -- | ParserT monad transformer and Parser type
 
@@ -56,8 +56,37 @@ unexpected msg
 -- If this is undesirable, simply used a data type like @data Box a = Box a@ and
 -- the state type @Box YourStateType@ to add a level of indirection.
 
-data ParsecT s u m a
-    = ParsecT { runParsecT :: State s u -> m (Consumed (m (Reply s u a))) }
+newtype ParsecT s u m a
+    = ParsecT {unParser :: forall b .
+                 State s u
+              -> (a -> State s u -> ParseError -> m b) -- consumed ok
+              -> (ParseError -> m b)                   -- consumed err
+              -> (a -> State s u -> ParseError -> m b) -- empty ok
+              -> (ParseError -> m b)                   -- empty err
+              -> m b
+             }
+
+runParsecT :: Monad m => ParsecT s u m a -> State s u -> m (Consumed (m (Reply s u a)))
+runParsecT p s = unParser p s cok cerr eok eerr
+    where cok a s' err = return . Consumed . return $ Ok a s' err
+          cerr err = return . Consumed . return $ Error err
+          eok a s' err = return . Empty . return $ Ok a s' err
+          eerr err = return . Empty . return $ Error err
+
+mkPT :: Monad m => (State s u -> m (Consumed (m (Reply s u a)))) -> ParsecT s u m a
+mkPT k = ParsecT $ \s cok cerr eok eerr -> do
+           cons <- k s
+           case cons of
+             Consumed mrep -> do
+                       rep <- mrep
+                       case rep of
+                         Ok x s' err -> cok x s' err
+                         Error err -> cerr err
+             Empty mrep -> do
+                       rep <- mrep
+                       case rep of
+                         Ok x s' err -> eok x s' err
+                         Error err -> eerr err
 
 type Parsec s u = ParsecT s u Identity
 
@@ -81,22 +110,23 @@ instance Functor (Reply s u) where
     fmap f (Ok x s e) = Ok (f x) s e
     fmap _ (Error e) = Error e -- XXX
 
-instance (Monad m) => Functor (ParsecT s u m) where
+instance Functor (ParsecT s u m) where
     fmap f p = parsecMap f p
 
-parsecMap :: (Monad m) => (a -> b) -> ParsecT s u m a -> ParsecT s u m b
+parsecMap :: (a -> b) -> ParsecT s u m a -> ParsecT s u m b
 parsecMap f p
-    = ParsecT $ \s -> liftM (fmap (liftM (fmap f))) (runParsecT p s)
+    = ParsecT $ \s cok cerr eok eerr ->
+      unParser p s (cok . f) cerr (eok . f) eerr
 
-instance (Monad m) => Applicative.Applicative (ParsecT s u m) where
+instance Applicative.Applicative (ParsecT s u m) where
     pure = return
     (<*>) = ap -- TODO: Can this be optimized?
 
-instance (Monad m) => Applicative.Alternative (ParsecT s u m) where
+instance Applicative.Alternative (ParsecT s u m) where
     empty = mzero
     (<|>) = mplus
 
-instance (Monad m) => Monad (ParsecT s u m) where
+instance Monad (ParsecT s u m) where
     return x = parserReturn x
     p >>= f  = parserBind p f
     fail msg = parserFail msg
@@ -106,7 +136,7 @@ instance (MonadIO m) => MonadIO (ParsecT s u m) where
 
 instance (MonadReader r m) => MonadReader r (ParsecT s u m) where
     ask = lift ask
-    local f p = ParsecT $ \s -> local f (runParsecT p s)
+    local f p = mkPT $ \s -> local f (runParsecT p s)
 
 -- I'm presuming the user might want a separate, non-backtracking
 -- state aside from the Parsec user state.
@@ -115,56 +145,61 @@ instance (MonadState s m) => MonadState s (ParsecT s' u m) where
     put = lift . put
 
 instance (MonadCont m) => MonadCont (ParsecT s u m) where
-    callCC f = ParsecT $ \s ->
+    callCC f = mkPT $ \s ->
           callCC $ \c ->
-          runParsecT (f (\a -> ParsecT $ \s' -> c (pack s' a))) s
+          runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
 
      where pack s a= Empty $ return (Ok a s (unknownError s))
 
 instance (MonadError e m) => MonadError e (ParsecT s u m) where
     throwError = lift . throwError
-    p `catchError` h = ParsecT $ \s ->
+    p `catchError` h = mkPT $ \s ->
         runParsecT p s `catchError` \e ->
             runParsecT (h e) s
 
-parserReturn :: (Monad m) => a -> ParsecT s u m a
+parserReturn :: a -> ParsecT s u m a
 parserReturn x
-    = ParsecT $ \s -> return $ Empty $ return (Ok x s (unknownError s))
+    = ParsecT $ \s _ _ eok _ ->
+      eok x s (unknownError s)
 
-parserBind :: (Monad m)
-           => ParsecT s u m a -> (a -> ParsecT s u m b) -> ParsecT s u m b
+parserBind :: ParsecT s u m a -> (a -> ParsecT s u m b) -> ParsecT s u m b
+{-# INLINE parserBind #-}
+parserBind m k
+  = ParsecT $ \s cok cerr eok eerr ->
+    let
+        -- consumed-okay case for m
+        mcok x s err =
+            let
+                 -- if (k x) consumes, those go straigt up
+                 pcok = cok
+                 pcerr = cerr
+                                               
+                 -- if (k x) doesn't consume input, but is okay,
+                 -- we still return in the consumed continuation
+                 peok = cok
 
-parserBind p f
-    = ParsecT $ \s -> do -- TODO: This was \s@(State _ u _) ???
-        res1 <- runParsecT p s
-        case res1 of
+                 -- if (k x) doesn't consume input, but errors,
+                 -- we return the error in the 'consumed-error'
+                 -- continuation
+                 peerr err' = cerr (mergeError err err')
+            in  unParser (k x) s pcok pcerr peok peerr                      
 
-          Empty mReply1
-            -> do reply1 <- mReply1
-                  case reply1 of
-                    Ok x s' err1 -> do
-                      res2 <- runParsecT (f x) s'
-                      case res2 of
-                        Empty mReply2
-                          -> do reply2 <- mReply2
-                                return $ Empty $
-                                            return $ mergeErrorReply err1 reply2
-                        other
-                          -> do return $ other
-                    Error err1 -> return $ Empty $ return $ Error err1
+        -- empty-ok case for m
+        meok x s err =
+            let
+                -- in these cases, (k x) can return as empty
+                pcok = cok
+                peok = eok
+                pcerr = cerr
+                peerr err' = eerr (mergeError err err') 
+            in  unParser (k x) s pcok pcerr peok peerr
+        -- consumed-error case for m
+        mcerr = cerr
 
-          Consumed mReply1
-            -> do reply1 <- mReply1
-                  return $ Consumed $ -- `early' returning
-                    case reply1 of
-                      Ok x s' err1 -> do
-                        res2 <- runParsecT (f x) s'
-                        case res2 of
-                          Empty mReply2
-                            -> do reply2 <- mReply2
-                                  return $ mergeErrorReply err1 reply2
-                          Consumed reply2 -> reply2
-                      Error err1   -> return $ Error err1
+        -- empty-error case for m
+        meerr = eerr
+
+    in unParser m s mcok mcerr meok meerr
 
 
 mergeErrorReply :: ParseError -> Reply s u a -> Reply s u a
@@ -173,12 +208,12 @@ mergeErrorReply err1 reply -- XXX where to put it?
         Ok x state err2 -> Ok x state (mergeError err1 err2)
         Error err2      -> Error (mergeError err1 err2)
 
-parserFail :: (Monad m) => String -> ParsecT s u m a
+parserFail :: String -> ParsecT s u m a
 parserFail msg
-    = ParsecT $ \s -> return $ Empty $ return $
-        Error (newErrorMessage (Message msg) (statePos s))
+    = ParsecT $ \s _ _ _ eerr ->
+      eerr $ newErrorMessage (Message msg) (statePos s)
 
-instance (Monad m) => MonadPlus (ParsecT s u m) where
+instance MonadPlus (ParsecT s u m) where
     mzero = parserZero
     mplus p1 p2 = parserPlus p1 p2
 
@@ -186,34 +221,27 @@ instance (Monad m) => MonadPlus (ParsecT s u m) where
 -- equal to the 'mzero' member of the 'MonadPlus' class and to the 'Control.Applicative.empty' member 
 -- of the 'Control.Applicative.Applicative' class.
 
-parserZero :: (Monad m) => ParsecT s u m a
+parserZero :: ParsecT s u m a
 parserZero
-    = ParsecT $ \s -> return $ Empty $ return $ Error (unknownError s)
+    = ParsecT $ \s _ _ _ eerr ->
+      eerr $ unknownError s
 
-parserPlus :: (Monad m)
-           => ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
-parserPlus (ParsecT p1) (ParsecT p2)
-    = ParsecT $ \s -> do
-        c1 <- p1 s
-        case c1 of
-          Empty mReply1
-            -> do r1 <- mReply1
-                  case r1 of
-                    Error err -> do
-                      c2 <- p2 s
-                      case c2 of
-                        Empty mReply2
-                          -> do reply2 <- mReply2
-                                return $ Empty $ return (mergeErrorReply err reply2)
-                        consumed
-                          -> return $ consumed
-                    other -> return $ Empty $ return $ other
-          other -> return $ other
+parserPlus :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
+{-# INLINE parserPlus #-}
+parserPlus m n
+    = ParsecT $ \s cok cerr eok eerr ->
+      let
+          meerr err =
+              let
+                  neok y s' err' = eok y s' (mergeError err err')
+                  neerr err' = eerr $ mergeError err err'
+              in unParser n s cok cerr neok neerr
+      in unParser m s cok cerr eok meerr
 
 instance MonadTrans (ParsecT s u) where
-    lift amb = ParsecT $ \s -> do
-                 a <- amb
-                 return $ Empty $ return $ Ok a s (unknownError s)
+    lift amb = ParsecT $ \s _ _ eok _ -> do
+               a <- amb
+               eok a s $ unknownError s
 
 infix  0 <?>
 infixr 1 <|>
@@ -230,8 +258,7 @@ infixr 1 <|>
 -- combinator, the message would be like '...: expecting \"let\" or
 -- letter', which is less friendly.
 
-(<?>) :: (Monad m)
-      => (ParsecT s u m a) -> String -> (ParsecT s u m a)
+(<?>) :: (ParsecT s u m a) -> String -> (ParsecT s u m a)
 p <?> msg = label p msg
 
 -- | This combinator implements choice. The parser @p \<|> q@ first
@@ -246,34 +273,29 @@ p <?> msg = label p msg
 -- implementation of the parser combinators and the generation of good
 -- error messages.
 
-(<|>) :: (Monad m)
-      => (ParsecT s u m a) -> (ParsecT s u m a) -> (ParsecT s u m a)
+(<|>) :: (ParsecT s u m a) -> (ParsecT s u m a) -> (ParsecT s u m a)
 p1 <|> p2 = mplus p1 p2
 
-label :: (Monad m) => ParsecT s u m a -> String -> ParsecT s u m a
+label :: ParsecT s u m a -> String -> ParsecT s u m a
 label p msg
   = labels p [msg]
 
-labels :: (Monad m) => ParsecT s u m a -> [String] -> ParsecT s u m a
-labels p msgs
-    = ParsecT $ \s -> do
-        r <- runParsecT p s
-        case r of
-          Empty mReply -> do
-            reply <- mReply
-            return $ Empty $ case reply of
-              Error err
-                -> return $ Error (setExpectErrors err msgs)
-              Ok x s' err
-                | errorIsUnknown err -> return $ reply
-                | otherwise -> return (Ok x s' (setExpectErrors err msgs))
-          other        -> return $ other
-    where
-        setExpectErrors err []         = setErrorMessage (Expect "") err
-        setExpectErrors err [msg]      = setErrorMessage (Expect msg) err
-        setExpectErrors err (msg:msgs)
-            = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
-                    (setErrorMessage (Expect msg) err) msgs
+labels :: ParsecT s u m a -> [String] -> ParsecT s u m a
+labels p msgs =
+    ParsecT $ \s cok cerr eok eerr ->
+    let eok' x s' error = eok x s' $ if errorIsUnknown error
+                  then error
+                  else setExpectErrors error msgs
+        eerr' err = eerr $ setExpectErrors err msgs
+
+    in unParser p s cok cerr eok' eerr'
+
+ where
+   setExpectErrors err []         = setErrorMessage (Expect "") err
+   setExpectErrors err [msg]      = setErrorMessage (Expect msg) err
+   setExpectErrors err (msg:msgs)
+       = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
+         (setErrorMessage (Expect msg) err) msgs
 
 -- TODO: There should be a stronger statement that can be made about this
 
@@ -293,32 +315,37 @@ tokens :: (Stream s m t, Eq t)
        -> (SourcePos -> [t] -> SourcePos)
        -> [t]                  -- List of tokens to parse
        -> ParsecT s u m [t]
+{-# INLINE tokens #-}
 tokens _ _ []
-    = ParsecT $ \s -> return $ Empty $ return $ Ok [] s (unknownError s)
+    = ParsecT $ \s _ _ eok _ ->
+      eok [] s $ unknownError s
 tokens showTokens nextposs tts@(tok:toks)
-    = ParsecT $ \(State input pos u) -> 
+    = ParsecT $ \(State input pos u) cok cerr eok eerr -> 
     let
-        errEof = return $ Error (setErrorMessage (Expect (showTokens tts))
-                                 (newErrorMessage (SysUnExpect "") pos))
-        errExpect x = return $ Error (setErrorMessage (Expect (showTokens tts))
-                                 (newErrorMessage (SysUnExpect (showTokens [x])) pos))
-        walk []     rs = return (ok rs)
+        errEof = (setErrorMessage (Expect (showTokens tts))
+                  (newErrorMessage (SysUnExpect "") pos))
+
+        errExpect x = (setErrorMessage (Expect (showTokens tts))
+                       (newErrorMessage (SysUnExpect (showTokens [x])) pos))
+
+        walk []     rs = ok rs
         walk (t:ts) rs = do
           sr <- uncons rs
           case sr of
-            Nothing                 -> errEof
+            Nothing                 -> cerr $ errEof
             Just (x,xs) | t == x    -> walk ts xs
-                        | otherwise -> errExpect x
+                        | otherwise -> cerr $ errExpect x
+
         ok rs = let pos' = nextposs pos tts
                     s' = State rs pos' u
-                in Ok tts s' (newErrorUnknown pos')
+                in cok tts s' (newErrorUnknown pos')
     in do
         sr <- uncons input
-        return $ case sr of
-            Nothing         -> Empty    $ errEof
+        case sr of
+            Nothing         -> eerr $ errEof
             Just (x,xs)
-                | tok == x    -> Consumed $ walk toks xs
-                | otherwise -> Empty    $ errExpect x
+                | tok == x  -> walk toks xs
+                | otherwise -> eerr $ errExpect x
         
 -- | The parser @try p@ behaves like parser @p@, except that it
 -- pretends that it hasn't consumed any input when an error occurs.
@@ -351,17 +378,11 @@ tokens showTokens nextposs tts@(tok:toks)
 -- >  letExpr     = do{ try (string "let"); ... }
 -- >  identifier  = many1 letter
 
-try :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m a
-try (ParsecT p)
-    = ParsecT $ \s@(State _ pos _) -> do
-        res <- p s
-        case res of
-          Consumed rep -> do r <- rep
-                             case r of
-                               Error err -> return $ Empty $ return $ Error
-                                                         (setErrorPos pos err)
-                               ok        -> return $ Consumed $ return $ ok
-          empty        -> return $ empty
+try :: ParsecT s u m a -> ParsecT s u m a
+try p =
+    ParsecT $ \s@(State _ pos _) cok _ eok eerr ->
+    let pcerr parseError = eerr $ setErrorPos pos parseError 
+    in unParser p s cok pcerr eok eerr
 
 -- | The parser @token showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
@@ -413,6 +434,7 @@ tokenPrim :: (Stream s m t)
           -> (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
           -> (t -> Maybe a)                     -- ^ Matching function for the token to parse.
           -> ParsecT s u m a
+{-# INLINE tokenPrim #-}
 tokenPrim showToken nextpos test = tokenPrimEx showToken nextpos Nothing test
 
 tokenPrimEx :: (Stream s m t)
@@ -421,37 +443,35 @@ tokenPrimEx :: (Stream s m t)
             -> Maybe (SourcePos -> t -> s -> u -> u)
             -> (t -> Maybe a)     
             -> ParsecT s u m a
-tokenPrimEx showToken nextpos mbNextState test
-    = case mbNextState of
-        Nothing
-          -> ParsecT $ \(State input pos user) -> do
-              r <- uncons input
-              case r of
-                Nothing -> return $ Empty $ return (sysUnExpectError "" pos)
-                Just (c,cs)
-                  -> case test c of
-                       Just x  -> let newpos   = nextpos pos c cs
-                                      newstate = State cs newpos user
-                                  in seq newpos $ seq newstate $
-                                     return $ Consumed $ return $
-                                       (Ok x newstate (newErrorUnknown newpos))
-                       Nothing -> return $ Empty $ return $
-                                    (sysUnExpectError (showToken c) pos)
-        Just nextState
-          -> ParsecT $ \(State input pos user) -> do
-              r <- uncons input
-              case r of
-                Nothing -> return $ Empty $ return (sysUnExpectError "" pos)
-                Just (c,cs)
-                  -> case test c of
-                       Just x  -> let newpos   = nextpos pos c cs
-                                      newuser  = nextState pos c cs user
-                                      newstate = State cs newpos newuser
-                                  in seq newpos $ seq newstate $
-                                     return $ Consumed $ return $
-                                       (Ok x newstate (newErrorUnknown newpos))
-                       Nothing -> return $ Empty $ return $
-                                    (sysUnExpectError (showToken c) pos)
+{-# INLINE tokenPrimEx #-}
+tokenPrimEx showToken nextpos Nothing test
+  = ParsecT $ \(State input pos user) cok cerr eok eerr -> do
+      r <- uncons input
+      case r of
+        Nothing -> eerr $ unexpectError "" pos
+        Just (c,cs)
+         -> case test c of
+              Just x -> let newpos = nextpos pos c cs
+                            newstate = State cs newpos user
+                        in seq newpos $ seq newstate $
+                           cok x newstate (newErrorUnknown newpos)
+              Nothing -> eerr $ unexpectError (showToken c) pos
+tokenPrimEx showToken nextpos (Just nextState) test
+  = ParsecT $ \(State input pos user) cok cerr eok eerr -> do
+      r <- uncons input
+      case r of
+        Nothing -> eerr $ unexpectError "" pos
+        Just (c,cs)
+         -> case test c of
+              Just x -> let newpos = nextpos pos c cs
+                            newUser = nextState pos c cs user
+                            newstate = State cs newpos newUser
+                        in seq newpos $ seq newstate $
+                           cok x newstate $ newErrorUnknown newpos
+              Nothing -> eerr $ unexpectError (showToken c) pos
+
+unexpectError msg pos = newErrorMessage (SysUnExpect msg) pos
+
 
 -- | @many p@ applies the parser @p@ /zero/ or more times. Returns a
 --    list of the returned values of @p@.
@@ -461,7 +481,7 @@ tokenPrimEx showToken nextpos mbNextState test
 -- >                  ; return (c:cs)
 -- >                  }
 
-many :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m [a]
+many :: ParsecT s u m a -> ParsecT s u m [a]
 many p
   = do xs <- manyAccum (:) p
        return (reverse xs)
@@ -471,44 +491,25 @@ many p
 --
 -- >  spaces  = skipMany space
 
-skipMany :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m ()
+skipMany :: ParsecT s u m a -> ParsecT s u m ()
 skipMany p
   = do manyAccum (\_ _ -> []) p
        return ()
 
-manyAccum :: (Stream s m t)
-          => (a -> [a] -> [a])
+manyAccum :: (a -> [a] -> [a])
           -> ParsecT s u m a
           -> ParsecT s u m [a]
-manyAccum accum p
-    = ParsecT $ \s ->
-        let walk xs state mr
-              = do r <- mr
-                   case r of
-                     Empty mReply
-                         -> do reply <- mReply
-                               case reply of
-                                 Error err -> return $ Ok xs state err
-                                 _         -> error "Text.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
-                     Consumed mReply
-                         -> do reply <- mReply
-                               case reply of
-                                 Error err
-                                     -> return $ Error err
-                                 Ok x s' _err
-                                     -> let ys = accum x xs
-                                        in seq ys (walk ys s' (runParsecT p s'))
-        in do r <- runParsecT p s
-              case r of
-                Empty mReply
-                    -> do reply <- mReply
-                          case reply of
-                            Ok _ _ _
-                                -> error "Text.ParserCombinators.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
-                            Error err
-                                -> return $ Empty $ return (Ok [] s err)
-                consumed
-                    -> return $ Consumed $ walk [] s (return consumed)
+manyAccum acc p =
+    ParsecT $ \s cok cerr _eok eerr ->
+    let walk xs x s' err =
+            unParser p s'
+              (seq xs $ walk $ acc x xs)  -- consumed-ok
+              cerr                        -- consumed-err
+              manyErr                     -- empty-ok
+              (\e -> cok xs s' e)         -- empty-err
+    in unParser p s (walk []) cerr manyErr (\e -> cok [] s e)
+
+manyErr = error "Text.ParserCombinators.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
 
 
 -- < Running a parser: monadic (runPT) and pure (runP)
@@ -627,11 +628,11 @@ setParserState st = updateParserState (const st)
 
 -- | @updateParserState f@ applies function @f@ to the parser state.
 
-updateParserState :: (Monad m)
-                  => (State s u -> State s u) -> ParsecT s u m (State s u)
-updateParserState f
-    = ParsecT $ \s -> let s' = f s
-                      in return $ Empty $ return (Ok s' s' (unknownError s'))
+updateParserState :: (State s u -> State s u) -> ParsecT s u m (State s u)
+updateParserState f =
+    ParsecT $ \s _ _ eok _ ->
+    let s' = f s 
+    in eok s' s' $ unknownError s' 
 
 -- < User state combinators
 

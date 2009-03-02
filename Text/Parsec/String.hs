@@ -25,6 +25,7 @@ import Text.Parsec.Prim
 instance (Monad m) => Stream [tok] m tok where
     uncons []     = return $ Nothing
     uncons (t:ts) = return $ Just (t,ts)
+    {-# INLINE uncons #-}
 
 type Parser = Parsec String ()
 type GenParser tok st = Parsec [tok] st
