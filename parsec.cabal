@@ -1,6 +1,6 @@
 name:		parsec
 version:	3.0.1
-cabal-version: >= 1.2
+cabal-version: >= 1.2.3
 license:	BSD3
 license-file:	LICENSE
 author:		Daan Leijen <daan@cs.uu.nl>, Paolo Martini <paolo@nemail.it>
@@ -16,6 +16,10 @@ description:
 	and is also fast.  It is defined as a monad transformer that can be
 	stacked on arbitrary monads, and it is also parametric in the
 	input stream type.
+
+flag base4
+    Description: Use base-4.*
+    Default:    True
 
 library    
     exposed-modules:
@@ -42,7 +46,11 @@ library
         Text.ParserCombinators.Parsec.Pos,
         Text.ParserCombinators.Parsec.Prim,
         Text.ParserCombinators.Parsec.Token
-    build-depends:	base, mtl, bytestring, syb
+    if flag(base4)
+        build-depends: base >= 4 && < 5, syb
+    else
+        build-depends: base >= 3.0.3 && < 4
+    build-depends: mtl, bytestring
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable
     ghc-options:	-O2
     ghc-prof-options:	-auto-all
