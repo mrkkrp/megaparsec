@@ -189,8 +189,8 @@ chainl p op x       = chainl1 p op <|> return x
 -- by @p@. . This parser can for example be used to eliminate left
 -- recursion which typically occurs in expression grammars.
 --
--- >  expr    = term   `chainl1` mulop
--- >  term    = factor `chainl1` addop
+-- >  expr    = term   `chainl1` addop
+-- >  term    = factor `chainl1` mulop
 -- >  factor  = parens expr <|> integer
 -- >
 -- >  mulop   =   do{ symbol "*"; return (*)   }
