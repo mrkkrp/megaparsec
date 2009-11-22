@@ -46,11 +46,7 @@ library
         Text.ParserCombinators.Parsec.Pos,
         Text.ParserCombinators.Parsec.Prim,
         Text.ParserCombinators.Parsec.Token
-    if flag(base4)
-        build-depends: base >= 4 && < 5, syb
-    else
-        build-depends: base >= 3.0.3 && < 4
-    build-depends: mtl, bytestring
+    build-depends:	base, mtl, bytestring, syb
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable
     ghc-options:	-O2
     ghc-prof-options:	-auto-all
