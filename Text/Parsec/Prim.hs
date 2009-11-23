@@ -500,14 +500,14 @@ manyAccum :: (a -> [a] -> [a])
           -> ParsecT s u m a
           -> ParsecT s u m [a]
 manyAccum acc p =
-    ParsecT $ \s cok cerr _eok eerr ->
+    ParsecT $ \s cok cerr eok eerr ->
     let walk xs x s' err =
             unParser p s'
               (seq xs $ walk $ acc x xs)  -- consumed-ok
               cerr                        -- consumed-err
               manyErr                     -- empty-ok
               (\e -> cok (acc x xs) s' e) -- empty-err
-    in unParser p s (walk []) cerr manyErr (\e -> cok [] s e)
+    in unParser p s (walk []) cerr manyErr (\e -> eok [] s e)
 
 manyErr = error "Text.ParserCombinators.Parsec.Prim.many: combinator 'many' is applied to a parser that accepts an empty string."
 
