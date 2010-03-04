@@ -66,6 +66,8 @@ newtype ParsecT s u m a
               -> m b
              }
 
+-- | Low-level unpacking of the ParsecT type. To run your parser, please look to
+-- runPT, runP, runParserT, runParser and other such functions.
 runParsecT :: Monad m => ParsecT s u m a -> State s u -> m (Consumed (m (Reply s u a)))
 runParsecT p s = unParser p s cok cerr eok eerr
     where cok a s' err = return . Consumed . return $ Ok a s' err
@@ -73,6 +75,7 @@ runParsecT p s = unParser p s cok cerr eok eerr
           eok a s' err = return . Empty . return $ Ok a s' err
           eerr err = return . Empty . return $ Error err
 
+-- | Low-level creation of the ParsecT type. You really shouldn't have to do this.
 mkPT :: Monad m => (State s u -> m (Consumed (m (Reply s u a)))) -> ParsecT s u m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
            cons <- k s
