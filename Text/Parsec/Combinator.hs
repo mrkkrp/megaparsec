@@ -253,8 +253,8 @@ eof                 = notFollowedBy anyToken <?> "end of input"
 -- >                       ; notFollowedBy alphaNum
 -- >                       })
 
-notFollowedBy :: (Stream s m t, Show t) => ParsecT s u m t -> ParsecT s u m ()
-notFollowedBy p     = try (do{ c <- p; unexpected (show [c]) }
+notFollowedBy :: (Stream s m t, Show a) => ParsecT s u m a -> ParsecT s u m ()
+notFollowedBy p     = try (do{ c <- try p; unexpected (show c) }
                            <|> return ()
                           )
 
