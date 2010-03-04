@@ -15,7 +15,56 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
              UndecidableInstances #-}
 
-module Text.Parsec.Prim where
+module Text.Parsec.Prim
+    ( unknownError
+    , sysUnExpectError
+    , unexpected
+    , ParsecT
+    , runParsecT
+    , mkPT
+    , Parsec
+    , Consumed(..)
+    , Reply(..)
+    , State(..)
+    , parsecMap
+    , parserReturn
+    , parserBind
+    , mergeErrorReply
+    , parserFail
+    , parserZero
+    , parserPlus
+    , (<?>)
+    , (<|>)
+    , label
+    , labels
+    , Stream(..)
+    , tokens
+    , try
+    , token
+    , tokenPrim
+    , tokenPrimEx
+    , many
+    , skipMany
+    , manyAccum
+    , runPT
+    , runP
+    , runParserT
+    , runParser
+    , parse
+    , parseTest
+    , getPosition
+    , getInput
+    , setPosition
+    , setInput
+    , getParserState
+    , setParserState
+    , updateParserState
+    , getState
+    , putState
+    , modifyState
+    , setState
+    , updateState
+    ) where
 
 import qualified Control.Applicative as Applicative ( Applicative(..), Alternative(..) )
 import Control.Monad()
