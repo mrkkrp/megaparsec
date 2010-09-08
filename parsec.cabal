@@ -47,10 +47,11 @@ library
         Text.ParserCombinators.Parsec.Prim,
         Text.ParserCombinators.Parsec.Token
     if flag(base4)
-        build-depends: base >= 4 && < 5, syb
+        build-depends: base >= 4 && < 5
     else
         build-depends: base >= 3.0.3 && < 4
+        cpp-options: -DBASE3
     build-depends: mtl, bytestring
-    extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable
+    extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable, CPP
     ghc-options:	-O2
     ghc-prof-options:	-auto-all
