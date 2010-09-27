@@ -436,7 +436,7 @@ try p =
     let pcerr parseError = eerr $ setErrorPos pos parseError 
     in unParser p s cok pcerr eok eerr
 
--- | The parser @token showTok posFromTok testTok@ accepts a token @t@
+-- | The parser @tokenPrim showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
 -- source position of the @t@ should be returned by @posFromTok t@ and
 -- the token can be shown using @showTok t@.

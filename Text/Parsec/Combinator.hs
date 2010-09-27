@@ -50,7 +50,7 @@ choice ps           = foldr (<|>) mzero ps
 option :: (Stream s m t) => a -> ParsecT s u m a -> ParsecT s u m a
 option x p          = p <|> return x
 
--- | @option p@ tries to apply parser @p@.  If @p@ fails without
+-- | @optionMaybe p@ tries to apply parser @p@.  If @p@ fails without
 -- consuming input, it return 'Nothing', otherwise it returns
 -- 'Just' the value returned by @p@.
 
@@ -85,7 +85,7 @@ skipMany p          = scan
                       scan  = do{ p; scan } <|> return ()
 -}
 
--- | @many p@ applies the parser @p@ /one/ or more times. Returns a
+-- | @many1 p@ applies the parser @p@ /one/ or more times. Returns a
 -- list of the returned values of @p@.
 --
 -- >  word  = many1 letter
@@ -266,7 +266,7 @@ notFollowedBy p     = try (do{ c <- try p; unexpected (show c) }
 -- >                      ; manyTill anyChar (try (string "-->"))
 -- >                      }
 --
---    Note the overlapping parsers @anyChar@ and @string \"<!--\"@, and
+--    Note the overlapping parsers @anyChar@ and @string \"-->\"@, and
 --    therefore the use of the 'try' combinator.
 
 manyTill :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
