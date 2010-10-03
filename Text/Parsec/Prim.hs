@@ -228,7 +228,7 @@ parserBind m k
                                                
                  -- if (k x) doesn't consume input, but is okay,
                  -- we still return in the consumed continuation
-                 peok = cok
+                 peok x s err' = cok x s (mergeError err err')
 
                  -- if (k x) doesn't consume input, but errors,
                  -- we return the error in the 'consumed-error'
@@ -241,7 +241,7 @@ parserBind m k
             let
                 -- in these cases, (k x) can return as empty
                 pcok = cok
-                peok = eok
+                peok x s err' = eok x s (mergeError err err')
                 pcerr = cerr
                 peerr err' = eerr (mergeError err err') 
             in  unParser (k x) s pcok pcerr peok peerr
