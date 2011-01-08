@@ -22,7 +22,7 @@ module Text.Parsec.Pos
     , updatePosChar, updatePosString
     ) where
 
-#ifdef BASE3 then
+#ifdef BASE3
 import Data.Generics
 #else
 import Data.Data (Data)
