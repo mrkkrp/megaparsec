@@ -1,6 +1,6 @@
 name:		parsec
 version:	3.1.1
-cabal-version: >= 1.2.3
+cabal-version: >= 1.6
 license:	BSD3
 license-file:	LICENSE
 author:		Daan Leijen <daan@microsoft.com>, Paolo Martini <paolo@nemail.it>
@@ -16,6 +16,15 @@ description:
 	and is also fast.  It is defined as a monad transformer that can be
 	stacked on arbitrary monads, and it is also parametric in the
 	input stream type.
+
+source-repository head
+    type: darcs
+    location: http://code.haskell.org/parsec3
+
+source-repository this
+    type: darcs
+    location: http://code.haskell.org/parsec3
+    tag: 3.1.1
 
 flag base4
     Description: Use base-4.*
