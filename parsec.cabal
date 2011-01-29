@@ -54,4 +54,3 @@ library
     build-depends: mtl, bytestring
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable, CPP
     ghc-options:	-O2
-    ghc-prof-options:	-auto-all
