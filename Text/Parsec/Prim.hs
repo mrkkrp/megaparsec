@@ -432,9 +432,8 @@ tokens showTokens nextposs tts@(tok:toks)
 
 try :: ParsecT s u m a -> ParsecT s u m a
 try p =
-    ParsecT $ \s@(State _ pos _) cok _ eok eerr ->
-    let pcerr parseError = eerr $ setErrorPos pos parseError 
-    in unParser p s cok pcerr eok eerr
+    ParsecT $ \s cok _ eok eerr ->
+    unParser p s cok eerr eok eerr
 
 -- | The parser @tokenPrim showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
