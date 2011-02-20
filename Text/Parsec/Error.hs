@@ -134,8 +134,12 @@ setErrorMessage msg (ParseError pos msgs)
     = ParseError pos (msg : filter (msg /=) msgs)
 
 mergeError :: ParseError -> ParseError -> ParseError
-mergeError (ParseError pos msgs1) (ParseError _ msgs2)
-    = ParseError pos (msgs1 ++ msgs2)
+mergeError (ParseError pos1 msgs1) (ParseError pos2 msgs2)
+    = case pos1 `compare` pos2 of
+        -- select the longest match
+        EQ -> ParseError pos1 (msgs1 ++ msgs2)
+        GT -> ParseError pos1 msgs1
+        LT -> ParseError pos2 msgs2
 
 instance Show ParseError where
     show err
