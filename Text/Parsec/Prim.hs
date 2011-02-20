@@ -37,6 +37,7 @@ module Text.Parsec.Prim
     , (<|>)
     , label
     , labels
+    , lookAhead
     , Stream(..)
     , tokens
     , try
@@ -434,6 +435,21 @@ try :: ParsecT s u m a -> ParsecT s u m a
 try p =
     ParsecT $ \s cok _ eok eerr ->
     unParser p s cok eerr eok eerr
+
+-- | @lookAhead p@ parses @p@ without consuming any input.
+--
+-- If @p@ fails and consumes some input, so does @lookAhead@. Combine with 'try'
+-- if this is undesirable.
+
+lookAhead :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m a
+lookAhead p         = do{ state <- getParserState
+                        ; x <- p'
+                        ; setParserState state
+                        ; return x
+                        }
+    where
+    p' = ParsecT $ \s cok cerr eok eerr ->
+         unParser p s eok cerr eok eerr
 
 -- | The parser @tokenPrim showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The

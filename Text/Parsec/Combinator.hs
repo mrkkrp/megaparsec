@@ -275,12 +275,3 @@ manyTill p end      = scan
                       scan  = do{ end; return [] }
                             <|>
                               do{ x <- p; xs <- scan; return (x:xs) }
-
--- | @lookAhead p@ parses @p@ without consuming any input.
-
-lookAhead :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m a
-lookAhead p         = do{ state <- getParserState
-                        ; x <- p
-                        ; setParserState state
-                        ; return x
-                        }
