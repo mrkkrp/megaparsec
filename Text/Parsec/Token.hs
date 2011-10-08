@@ -658,10 +658,10 @@ makeTokenParser languageDef
                             GT  -> False
 
     theReservedNames
-        | caseSensitive languageDef  = sortedNames
-        | otherwise               = map (map toLower) sortedNames
+        | caseSensitive languageDef  = sort reserved
+        | otherwise                  = sort . map (map toLower) $ reserved
         where
-          sortedNames   = sort (reservedNames languageDef)
+          reserved = reservedNames languageDef
 
 
 
