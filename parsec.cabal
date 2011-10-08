@@ -36,6 +36,8 @@ library
         Text.Parsec.String,
         Text.Parsec.ByteString,
         Text.Parsec.ByteString.Lazy,
+        Text.Parsec.Text,
+        Text.Parsec.Text.Lazy,
         Text.Parsec.Pos,
         Text.Parsec.Error,
         Text.Parsec.Prim,
@@ -60,6 +62,6 @@ library
     else
         build-depends: base >= 3.0.3 && < 4
         cpp-options: -DBASE3
-    build-depends: mtl, bytestring
+    build-depends: mtl, bytestring, text >= 0.2 && < 0.12
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable, CPP
     ghc-options:	-O2
