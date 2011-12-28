@@ -451,7 +451,7 @@ lookAhead p         = do{ state <- getParserState
     p' = ParsecT $ \s cok cerr eok eerr ->
          unParser p s eok cerr eok eerr
 
--- | The parser @tokenPrim showTok posFromTok testTok@ accepts a token @t@
+-- | The parser @token showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
 -- source position of the @t@ should be returned by @posFromTok t@ and
 -- the token can be shown using @showTok t@.
@@ -479,7 +479,7 @@ token showToken tokpos test = tokenPrim showToken nextpos test
                              Nothing -> tokpos tok
                              Just (tok',_) -> tokpos tok'
 
--- | The parser @token showTok nextPos testTok@ accepts a token @t@
+-- | The parser @tokenPrim showTok nextPos testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
 -- token can be shown using @showTok t@. The position of the /next/
 -- token should be returned when @nextPos@ is called with the current
