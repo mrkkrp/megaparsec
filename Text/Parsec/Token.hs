@@ -38,7 +38,7 @@ import Text.Parsec.Combinator
 type LanguageDef st = GenLanguageDef String st Identity
 
 -- | The @GenLanguageDef@ type is a record that contains all parameterizable
--- features of the 'Text.Parsec.Token' module. The module 'Text.Parsec.Language'
+-- features of the "Text.Parsec.Token" module. The module "Text.Parsec.Language"
 -- contains some default definitions.
 
 data GenLanguageDef s u m
