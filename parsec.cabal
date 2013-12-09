@@ -63,6 +63,6 @@ library
     else
         build-depends: base >= 3.0.3 && < 4
         cpp-options: -DBASE3
-    build-depends: mtl, bytestring, text >= 0.2 && < 0.12
+    build-depends: mtl, bytestring, text >= 0.2 && < 1.1
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable, CPP
     ghc-options:	-O2
