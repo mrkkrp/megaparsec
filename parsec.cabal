@@ -1,5 +1,5 @@
 name:		parsec
-version:	3.1.5
+version:	3.1.6
 cabal-version: >= 1.6
 license:	BSD3
 license-file:	LICENSE
@@ -19,13 +19,13 @@ description:
 extra-source-files: CHANGES
 
 source-repository head
-    type: darcs
-    location: http://code.haskell.org/parsec3
+    type: git
+    location: https://github.com/aslatter/parsec
 
 source-repository this
     type: darcs
-    location: http://code.haskell.org/parsec3
-    tag: 3.1.4
+    location: https://github.com/aslatter/parsec
+    tag: 3.1.6
 
 flag base4
     Description: Use base-4.*
