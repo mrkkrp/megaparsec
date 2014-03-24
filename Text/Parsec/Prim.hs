@@ -14,6 +14,7 @@
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
              UndecidableInstances #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 module Text.Parsec.Prim
     ( unknownError
