@@ -299,7 +299,7 @@ instance MonadTrans (ParsecT s u) where
 infix  0 <?>
 infixr 1 <|>
 
--- | The parser @p <?> msg@ behaves as parser @p@, but whenever the
+-- | The parser @p \<?> msg@ behaves as parser @p@, but whenever the
 -- parser @p@ fails /without consuming any input/, it replaces expect
 -- error messages with the expect error message @msg@.
 --
@@ -329,6 +329,7 @@ p <?> msg = label p msg
 (<|>) :: (ParsecT s u m a) -> (ParsecT s u m a) -> (ParsecT s u m a)
 p1 <|> p2 = mplus p1 p2
 
+-- | A synonym for @<?>@, but as a function instead of an operator.
 label :: ParsecT s u m a -> String -> ParsecT s u m a
 label p msg
   = labels p [msg]
