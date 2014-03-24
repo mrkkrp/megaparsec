@@ -365,6 +365,11 @@ labels p msgs =
 class (Monad m) => Stream s m t | s -> t where
     uncons :: s -> m (Maybe (t,s))
 
+instance (Monad m) => Stream [tok] m tok where
+    uncons []     = return $ Nothing
+    uncons (t:ts) = return $ Just (t,ts)
+    {-# INLINE uncons #-}
+
 tokens :: (Stream s m t, Eq t)
        => ([t] -> String)      -- Pretty print a list of tokens
        -> (SourcePos -> [t] -> SourcePos)
