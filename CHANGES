@@ -1,3 +1,9 @@
+3.1.6
+
+- Export 'Text' instances from Text.Parsec
+- Make Text.Parsec exports more visible
+- Re-arrange Text.Parsec exports
+
 3.1.4 & 3.1.5
 
 - Bump dependency on 'text'
