@@ -12,8 +12,6 @@
 --
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances #-}
-
 module Text.Parsec.String
     ( Parser, GenParser, parseFromFile
     ) where

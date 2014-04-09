@@ -117,10 +117,3 @@ import Text.Parsec.Error
 import Text.Parsec.Prim
 import Text.Parsec.Char
 import Text.Parsec.Combinator
-
--- Class instances
-import Text.Parsec.String           hiding ( Parser, GenParser, parseFromFile )
-import Text.Parsec.ByteString       hiding ( Parser, GenParser, parseFromFile )
-import Text.Parsec.ByteString.Lazy  hiding ( Parser, GenParser, parseFromFile )
-import Text.Parsec.Text             hiding ( Parser, GenParser )
-import Text.Parsec.Text.Lazy        hiding ( Parser, GenParser )

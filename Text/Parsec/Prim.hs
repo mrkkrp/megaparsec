@@ -68,6 +68,13 @@ module Text.Parsec.Prim
     , updateState
     ) where
 
+
+import qualified Data.ByteString.Lazy.Char8 as CL
+import qualified Data.ByteString.Char8 as C
+
+import qualified Data.Text as Text
+import qualified Data.Text.Lazy as TextL
+
 import qualified Control.Applicative as Applicative ( Applicative(..), Alternative(..) )
 import Control.Monad()
 import Control.Monad.Trans
@@ -369,6 +376,22 @@ instance (Monad m) => Stream [tok] m tok where
     uncons []     = return $ Nothing
     uncons (t:ts) = return $ Just (t,ts)
     {-# INLINE uncons #-}
+
+
+instance (Monad m) => Stream CL.ByteString m Char where
+    uncons = return . CL.uncons
+
+instance (Monad m) => Stream C.ByteString m Char where
+    uncons = return . C.uncons
+
+instance (Monad m) => Stream Text.Text m Char where
+    uncons = return . Text.uncons
+    {-# INLINE uncons #-}
+
+instance (Monad m) => Stream TextL.Text m Char where
+    uncons = return . TextL.uncons
+    {-# INLINE uncons #-}
+
 
 tokens :: forall u s m t .
           (Stream s m t, Eq t)

@@ -8,12 +8,9 @@
 -- Stability   :  provisional
 -- Portability :  portable
 -- 
--- Make strict ByteStrings an instance of 'Stream' with 'Char' token type.
+-- Convinience definitions for working with 'C.ByteString's.
 --
 -----------------------------------------------------------------------------
-
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Text.Parsec.ByteString
     ( Parser, GenParser, parseFromFile
@@ -23,9 +20,6 @@ import Text.Parsec.Error
 import Text.Parsec.Prim
 
 import qualified Data.ByteString.Char8 as C
-
-instance (Monad m) => Stream C.ByteString m Char where
-    uncons = return . C.uncons
 
 type Parser = Parsec C.ByteString ()
 type GenParser t st = Parsec C.ByteString st

@@ -8,12 +8,9 @@
 -- Stability   :  provisional
 -- Portability :  portable
 -- 
--- Make Text an instance of 'Stream' with 'Char' token type.
+-- Convinience definitions for working with lazy 'Text.Text'.
 --
 -----------------------------------------------------------------------------
-
-{-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Text.Parsec.Text.Lazy
     ( Parser, GenParser
@@ -22,10 +19,6 @@ module Text.Parsec.Text.Lazy
 import qualified Data.Text.Lazy as Text
 import Text.Parsec.Error
 import Text.Parsec.Prim
-
-instance (Monad m) => Stream Text.Text m Char where
-    uncons = return . Text.uncons
-    {-# INLINE uncons #-}
 
 type Parser = Parsec Text.Text ()
 type GenParser st = Parsec Text.Text st
