@@ -19,6 +19,7 @@ module Text.Parsec.Char where
 import Data.Char
 import Text.Parsec.Pos
 import Text.Parsec.Prim
+import Control.Applicative ((*>))
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
 -- list of characters @cs@. Returns the parsed character. See also
@@ -52,7 +53,22 @@ space               = satisfy isSpace       <?> "space"
 -- | Parses a newline character (\'\\n\'). Returns a newline character. 
 
 newline :: (Stream s m Char) => ParsecT s u m Char
-newline             = char '\n'             <?> "new-line"
+newline             = char '\n'             <?> "lf new-line"
+
+-- | Parses a carriage return character (\'\\r\') followed by a newline character (\'\\n\').
+-- Returns a newline character. 
+
+crlf :: (Stream s m Char) => ParsecT s u m Char
+crlf                = char '\r' *> char '\n' <?> "crlf new-line"
+
+-- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
+-- Returns a newline character.
+--
+-- > anyNewline = newline <|> crlf
+--
+
+anyNewline :: (Stream s m Char) => ParsecT s u m Char
+anyNewline          = newline <|> crlf       <?> "new-line"
 
 -- | Parses a tab character (\'\\t\'). Returns a tab character. 
 
