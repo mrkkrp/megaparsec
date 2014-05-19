@@ -62,13 +62,13 @@ crlf :: (Stream s m Char) => ParsecT s u m Char
 crlf                = char '\r' *> char '\n' <?> "crlf new-line"
 
 -- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
--- Returns a newline character.
+-- Returns a newline character (\'\\n\').
 --
--- > anyNewline = newline <|> crlf
+-- > endOfLine = newline <|> crlf
 --
 
-anyNewline :: (Stream s m Char) => ParsecT s u m Char
-anyNewline          = newline <|> crlf       <?> "new-line"
+endOfLine :: (Stream s m Char) => ParsecT s u m Char
+endOfLine           = newline <|> crlf       <?> "new-line"
 
 -- | Parses a tab character (\'\\t\'). Returns a tab character. 
 
