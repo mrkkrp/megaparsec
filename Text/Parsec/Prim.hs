@@ -472,14 +472,10 @@ try p =
 -- if this is undesirable.
 
 lookAhead :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m a
-lookAhead p         = do{ state <- getParserState
-                        ; x <- p'
-                        ; setParserState state
-                        ; return x
-                        }
-    where
-    p' = ParsecT $ \s cok cerr eok eerr ->
-         unParser p s eok cerr eok eerr
+lookAhead p =
+    ParsecT $ \s _ cerr eok eerr -> do
+        let eok' a _ _ = eok a s (newErrorUnknown (statePos s))
+        unParser p s eok' cerr eok' eerr
 
 -- | The parser @token showTok posFromTok testTok@ accepts a token @t@
 -- with result @x@ when the function @testTok t@ returns @'Just' x@. The
