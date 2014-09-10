@@ -448,7 +448,7 @@ makeTokenParser languageDef
 
     charControl     = do{ char '^'
                         ; code <- upper
-                        ; return (toEnum (fromEnum code - fromEnum 'A'))
+                        ; return (toEnum (fromEnum code - fromEnum 'A' + 1))
                         }
 
     charNum         = do{ code <- decimal

@@ -1,6 +1,6 @@
 name:		parsec
 version:	3.1.6
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 license:	BSD3
 license-file:	LICENSE
 author:		Daan Leijen <daan@microsoft.com>, Paolo Martini <paolo@nemail.it>
@@ -63,3 +63,16 @@ library
     build-depends: mtl, bytestring, text >= 0.2 && < 1.3
     extensions:	ExistentialQuantification, PolymorphicComponents, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DeriveDataTypeable, CPP
     ghc-options:	-O2
+
+Test-Suite tests
+    type:        exitcode-stdio-1.0
+    hs-source-dirs:  test
+    main-is:     Main.hs
+    other-modules:
+                 Tokens
+    build-depends:
+       base,
+       parsec,
+       HUnit == 1.2.*,
+       test-framework >= 0.6 && < 0.9,
+       test-framework-hunit >= 0.2 && < 0.4
