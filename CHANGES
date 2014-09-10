@@ -3,6 +3,9 @@
 - Export 'Text' instances from Text.Parsec
 - Make Text.Parsec exports more visible
 - Re-arrange Text.Parsec exports
+- Add functions 'crlf' and 'endOfLine' to Text.Parsec.Char for handling
+  input streams that do not have normalized line terminators.
+- Fix off-by-one error in Token.charControl
 
 3.1.4 & 3.1.5
 
