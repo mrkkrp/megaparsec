@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------   
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts,
-             UndecidableInstances, ScopedTypeVariables #-}
+             UndecidableInstances #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Text.Parsec.Prim
@@ -393,8 +393,7 @@ instance (Monad m) => Stream TextL.Text m Char where
     {-# INLINE uncons #-}
 
 
-tokens :: forall u s m t .
-          (Stream s m t, Eq t)
+tokens :: (Stream s m t, Eq t)
        => ([t] -> String)      -- Pretty print a list of tokens
        -> (SourcePos -> [t] -> SourcePos)
        -> [t]                  -- List of tokens to parse
@@ -404,38 +403,32 @@ tokens _ _ []
     = ParsecT $ \s _ _ eok _ ->
       eok [] s $ unknownError s
 tokens showTokens nextposs tts@(tok:toks)
-    = ParsecT $ \(State input pos0 u) cok cerr eok eerr -> 
+    = ParsecT $ \(State input pos u) cok cerr eok eerr -> 
     let
-        nextpos :: SourcePos -> t -> SourcePos
-        nextpos pos t = nextposs pos [t]
+        errEof = (setErrorMessage (Expect (showTokens tts))
+                  (newErrorMessage (SysUnExpect "") pos))
 
-        errEof pos ts =
-            (setErrorMessage (Expect (showTokens ts))
-             (newErrorMessage (SysUnExpect "") pos))
+        errExpect x = (setErrorMessage (Expect (showTokens tts))
+                       (newErrorMessage (SysUnExpect (showTokens [x])) pos))
 
-        errExpect pos ts x =
-            (setErrorMessage (Expect (showTokens ts))
-             (newErrorMessage (SysUnExpect (showTokens [x])) pos))
-
-        -- 'pos' is the position of the first token in the stream
-        walk []     pos rs = ok pos rs
-        walk allTs@(t:ts) pos rs = do
+        walk []     rs = ok rs
+        walk (t:ts) rs = do
           sr <- uncons rs
           case sr of
-            Nothing                 -> cerr $ errEof pos allTs
-            Just (x,xs) | t == x    -> walk ts (nextpos pos x) xs
-                        | otherwise -> cerr $ errExpect pos allTs x
+            Nothing                 -> cerr $ errEof
+            Just (x,xs) | t == x    -> walk ts xs
+                        | otherwise -> cerr $ errExpect x
 
-        ok pos rs =
-            let s' = State rs pos u
-            in cok tts s' (newErrorUnknown pos)
+        ok rs = let pos' = nextposs pos tts
+                    s' = State rs pos' u
+                in cok tts s' (newErrorUnknown pos')
     in do
         sr <- uncons input
         case sr of
-            Nothing         -> eerr $ errEof pos0 tts
+            Nothing         -> eerr $ errEof
             Just (x,xs)
-                | tok == x  -> walk toks (nextpos pos0 x) xs
-                | otherwise -> eerr $ errExpect pos0 tts x
+                | tok == x  -> walk toks xs
+                | otherwise -> eerr $ errExpect x
         
 -- | The parser @try p@ behaves like parser @p@, except that it
 -- pretends that it hasn't consumed any input when an error occurs.
