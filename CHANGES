@@ -1,3 +1,9 @@
+3.1.7
+
+- Fix a regression from 3.1.6 related to the reported position of error messages.
+  See bug #9 for details.
+- Reset the current error position on success of 'lookAhead'.
+
 3.1.6
 
 - Export 'Text' instances from Text.Parsec
