@@ -71,7 +71,9 @@ Test-Suite tests
     other-modules:
                  Bugs,
                  Bugs.Bug2,
-                 Bugs.Bug9
+                 Bugs.Bug6,
+                 Bugs.Bug9,
+                 Util
     build-depends:
        base,
        parsec,

@@ -13,6 +13,8 @@ import Test.HUnit hiding ( Test )
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
+import Util
+
 data Expr = Const Integer | Op Expr Expr
   deriving Show
 
@@ -23,11 +25,7 @@ main =
 
   where
     result :: [String]
-    result =
-      case parse parseTopLevel "" "4 >> 5" of
-        Left err ->
-          drop 1 $ lines $ show err
-        Right{} -> []
+    result = parseErrors parseTopLevel "4 >> 5"
 
 -- Syntax analaysis
 
