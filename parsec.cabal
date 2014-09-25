@@ -69,7 +69,9 @@ Test-Suite tests
     hs-source-dirs:  test
     main-is:     Main.hs
     other-modules:
-                 Tokens
+                 Bugs,
+                 Bugs.Bug2,
+                 Bugs.Bug9
     build-depends:
        base,
        parsec,

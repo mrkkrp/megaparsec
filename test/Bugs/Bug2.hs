@@ -1,6 +1,6 @@
 
-module Tokens
-       ( tokensTests
+module Bugs.Bug2
+       ( main
        ) where
 
 import Test.HUnit hiding ( Test )
@@ -12,10 +12,9 @@ import Text.Parsec.String
 import qualified Text.Parsec.Token as P
 import Text.Parsec.Language (haskellDef)
 
-tokensTests :: [Test]
-tokensTests =
-  return $
-  testCase "Control Char Parsing" $
+main :: Test
+main =
+  testCase "Control Char Parsing (#2)" $
   parseString "\"test\\^Bstring\"" @?= "test\^Bstring"
 
  where

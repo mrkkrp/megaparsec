@@ -1,10 +1,10 @@
 
 import Test.Framework
 
-import Tokens ( tokensTests )
+import Bugs ( bugs )
 
 main :: IO ()
 main = do
   defaultMain
-    [ testGroup "Text.Parsec.Tokens" tokensTests
+    [ testGroup "Bugs" bugs
     ]
