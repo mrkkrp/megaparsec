@@ -9,8 +9,6 @@ import Test.Framework.Providers.HUnit
 
 import Text.Parsec
 import Text.Parsec.String
-import qualified Text.Parsec.Token as P
-import Text.Parsec.Language (haskellDef)
 
 import Util
 

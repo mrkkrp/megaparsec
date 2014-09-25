@@ -5,7 +5,6 @@ import Control.Applicative ((<*), (<$>), (<$))
 import Text.Parsec
 import Text.Parsec.Language (haskellStyle)
 import Text.Parsec.String (Parser)
-import Text.Parsec.Error ( errorMessages, messageString )
 import Text.Parsec.Expr
 import qualified Text.Parsec.Token as P
 

@@ -3,9 +3,7 @@ module Bugs
        ( bugs
        ) where
 
-import Test.HUnit hiding ( Test )
 import Test.Framework
-import Test.Framework.Providers.HUnit
 
 import qualified Bugs.Bug2
 import qualified Bugs.Bug6
