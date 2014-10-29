@@ -337,7 +337,7 @@ p <?> msg = label p msg
 (<|>) :: (ParsecT s u m a) -> (ParsecT s u m a) -> (ParsecT s u m a)
 p1 <|> p2 = mplus p1 p2
 
--- | A synonym for @<?>@, but as a function instead of an operator.
+-- | A synonym for @\<?>@, but as a function instead of an operator.
 label :: ParsecT s u m a -> String -> ParsecT s u m a
 label p msg
   = labels p [msg]
