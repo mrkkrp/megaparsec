@@ -196,10 +196,10 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
       commasOr [m]      = m
       commasOr ms       = commaSep (init ms) ++ " " ++ msgOr ++ " " ++ last ms
 
-      commaSep          = seperate ", " . clean
+      commaSep          = separate ", " . clean
 
-      seperate   _ []     = ""
-      seperate   _ [m]    = m
-      seperate sep (m:ms) = m ++ sep ++ seperate sep ms
+      separate   _ []     = ""
+      separate   _ [m]    = m
+      separate sep (m:ms) = m ++ sep ++ separate sep ms
 
       clean             = nub . filter (not . null)

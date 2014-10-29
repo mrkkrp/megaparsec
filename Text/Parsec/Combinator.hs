@@ -143,13 +143,13 @@ sepEndBy :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m sep -> ParsecT s 
 sepEndBy p sep      = sepEndBy1 p sep <|> return []
 
 
--- | @endBy1 p sep@ parses /one/ or more occurrences of @p@, seperated
+-- | @endBy1 p sep@ parses /one/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@. 
 
 endBy1 :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
 endBy1 p sep        = many1 (do{ x <- p; sep; return x })
 
--- | @endBy p sep@ parses /zero/ or more occurrences of @p@, seperated
+-- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.
 --
 -- >   cStatements  = cStatement `endBy` semi
