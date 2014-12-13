@@ -91,7 +91,7 @@ messageString (Message     s) = s
 -- provides the source position ('SourcePos') of the error
 -- and a list of error messages ('Message'). A @ParseError@
 -- can be returned by the function 'Text.Parsec.Prim.parse'. @ParseError@ is an
--- instance of the 'Show' class. 
+-- instance of the 'Show' and 'Eq' classes.
 
 data ParseError = ParseError !SourcePos [Message]
 
@@ -151,6 +151,12 @@ instance Show ParseError where
           showErrorMessages "or" "unknown parse error"
                             "expecting" "unexpected" "end of input"
                            (errorMessages err)
+
+instance Eq ParseError where
+    l == r
+        = errorPos l == errorPos r && messageStrs l == messageStrs r
+        where
+          messageStrs = map messageString . errorMessages
 
 -- Language independent show function
 
