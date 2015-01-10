@@ -5,16 +5,16 @@ license:	BSD3
 license-file:	LICENSE
 author:		Daan Leijen <daan@microsoft.com>, Paolo Martini <paolo@nemail.it>
 maintainer:	Antoine Latter <aslatter@gmail.com>
-homepage:	http://www.cs.uu.nl/~daan/parsec.html
+homepage:	https://github.com/aslatter/parsec
 bug-reports:    https://github.com/aslatter/parsec/issues
 category:	Parsing
 synopsis:	Monadic parser combinators
-build-type: Simple
+build-type:     Simple
 description:
 	Parsec is designed from scratch as an industrial-strength parser
 	library.  It is simple, safe, well documented (on the package
-	homepage), has extensive libraries and good error messages,
-	and is also fast.  It is defined as a monad transformer that can be
+	homepage), has extensive libraries, good error messages,
+	and is fast.  It is defined as a monad transformer that can be
 	stacked on arbitrary monads, and it is also parametric in the
 	input stream type.
 extra-source-files: CHANGES
@@ -27,7 +27,7 @@ flag base4
     Description: Use base-4.*
     Default:    True
 
-library    
+library
     exposed-modules:
         Text.Parsec,
         Text.Parsec.String,
