@@ -165,7 +165,7 @@ count :: (Stream s m t) => Int -> ParsecT s u m a -> ParsecT s u m [a]
 count n p           | n <= 0    = return []
                     | otherwise = sequence (replicate n p)
 
--- | @chainr p op x@ parser /zero/ or more occurrences of @p@,
+-- | @chainr p op x@ parses /zero/ or more occurrences of @p@,
 -- separated by @op@ Returns a value obtained by a /right/ associative
 -- application of all functions returned by @op@ to the values returned
 -- by @p@. If there are no occurrences of @p@, the value @x@ is
@@ -174,7 +174,7 @@ count n p           | n <= 0    = return []
 chainr :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
 chainr p op x       = chainr1 p op <|> return x
 
--- | @chainl p op x@ parser /zero/ or more occurrences of @p@,
+-- | @chainl p op x@ parses /zero/ or more occurrences of @p@,
 -- separated by @op@. Returns a value obtained by a /left/ associative
 -- application of all functions returned by @op@ to the values returned
 -- by @p@. If there are zero occurrences of @p@, the value @x@ is
@@ -183,7 +183,7 @@ chainr p op x       = chainr1 p op <|> return x
 chainl :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
 chainl p op x       = chainl1 p op <|> return x
 
--- | @chainl1 p op x@ parser /one/ or more occurrences of @p@,
+-- | @chainl1 p op x@ parses /one/ or more occurrences of @p@,
 -- separated by @op@ Returns a value obtained by a /left/ associative
 -- application of all functions returned by @op@ to the values returned
 -- by @p@. . This parser can for example be used to eliminate left
@@ -208,7 +208,7 @@ chainl1 p op        = do{ x <- p; rest x }
                                     }
                                 <|> return x
 
--- | @chainr1 p op x@ parser /one/ or more occurrences of |p|,
+-- | @chainr1 p op x@ parses /one/ or more occurrences of |p|,
 -- separated by @op@ Returns a value obtained by a /right/ associative
 -- application of all functions returned by @op@ to the values returned
 -- by @p@.
