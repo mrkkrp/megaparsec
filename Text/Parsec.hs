@@ -93,12 +93,12 @@ module Text.Parsec
     , getParserState
     , setParserState
     , updateParserState
-    , Stream
+    , Stream (..)
     , runParsecT
     , mkPT
-    , Consumed
-    , Reply
-    , State
+    , Consumed (..)
+    , Reply (..)
+    , State (..)
     , setPosition
     , setInput
      -- * Other stuff
