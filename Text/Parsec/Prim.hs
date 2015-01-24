@@ -280,7 +280,7 @@ instance MonadPlus (ParsecT s u m) where
 
 -- | @parserZero@ always fails without consuming any input. @parserZero@ is defined
 -- equal to the 'mzero' member of the 'MonadPlus' class and to the 'Control.Applicative.empty' member 
--- of the 'Control.Applicative.Applicative' class.
+-- of the 'Control.Applicative.Alternative' class.
 
 parserZero :: ParsecT s u m a
 parserZero
