@@ -64,12 +64,12 @@ data GenLanguageDef s u m
     nestedComments :: Bool,
 
     -- | This parser should accept any start characters of identifiers. For
-    -- example @letter \<|> char \"_\"@. 
+    -- example @letter \<|> char \'_\'@. 
 
     identStart     :: ParsecT s u m Char,
 
     -- | This parser should accept any legal tail characters of identifiers.
-    -- For example @alphaNum \<|> char \"_\"@. 
+    -- For example @alphaNum \<|> char \'_\'@. 
 
     identLetter    :: ParsecT s u m Char,
 
