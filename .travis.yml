@@ -1,0 +1,5 @@
+# TODO - build against multiple versions.
+#  I don't think we need complex platform-style builds, though.
+language: haskell
+
+sudo: false

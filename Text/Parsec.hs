@@ -96,6 +96,7 @@ module Text.Parsec
     , Stream (..)
     , runParsecT
     , mkPT
+    , runP
     , Consumed (..)
     , Reply (..)
     , State (..)
