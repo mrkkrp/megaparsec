@@ -1,3 +1,11 @@
+3.1.9
+
+- Many and various updates to documentation and package description (inlcuding
+  the homepage links).
+- Add an 'Eq' instance for 'ParseError'
+- Fixed a regression from 3.1.6: 'runP' is again exported from module
+  Text.Parsec.
+
 3.1.8
 
 - Fix a regression from 3.1.6 related to exports from the main module.
