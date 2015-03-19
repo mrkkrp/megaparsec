@@ -1,5 +1,5 @@
 name:		parsec
-version:	3.1.8
+version:	3.1.9
 cabal-version: >= 1.8
 license:	BSD3
 license-file:	LICENSE
