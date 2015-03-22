@@ -65,7 +65,6 @@ library
        FlexibleContexts,
        DeriveDataTypeable,
        CPP
-    ghc-options:	-O2
 
 Test-Suite tests
     type:        exitcode-stdio-1.0
