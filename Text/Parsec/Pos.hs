@@ -22,12 +22,8 @@ module Text.Parsec.Pos
     , updatePosChar, updatePosString
     ) where
 
-#ifdef BASE3
-import Data.Generics
-#else
 import Data.Data (Data)
 import Data.Typeable (Typeable)
-#endif
 
 -- < Source positions: a file name, a line and a column
 -- upper left is (1,1)
