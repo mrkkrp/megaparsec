@@ -70,8 +70,7 @@ javaStyle   = emptyDef
 -- minimal language definition
 --------------------------------------------------------
 
--- TODO: This seems wrong
--- < This is the most minimal token definition. It is recommended to use
+-- | This is the most minimal token definition. It is recommended to use
 -- this definition as the basis for other definitions. @emptyDef@ has
 -- no reserved names or operators, is case sensitive and doesn't accept
 -- comments, identifiers or operators.
