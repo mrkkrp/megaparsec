@@ -740,12 +740,12 @@ putState :: (Monad m) => u -> ParsecT s u m ()
 putState u = do updateParserState $ \s -> s { stateUser = u }
                 return ()
 
--- | @updateState f@ applies function @f@ to the user state. Suppose
+-- | @modifyState f@ applies function @f@ to the user state. Suppose
 -- that we want to count identifiers in a source, we could use the user
 -- state as:
 --
 -- >  expr  = do{ x <- identifier
--- >            ; updateState (+1)
+-- >            ; modifyState (+1)
 -- >            ; return (Id x)
 -- >            }
 
