@@ -1,4 +1,8 @@
-Copyright 1999-2000, Daan Leijen; 2007, Paolo Martini. All rights reserved.
+Copyright © 1999-2000, Daan Leijen
+Copyright © 2007, Paolo Martini
+Copyright © 2015 MegaParsec contributors
+
+All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
