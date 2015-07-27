@@ -10,13 +10,31 @@ Names below are sorted alphabetically.
 
 ## Author
 
-Daan Leijen
+* Daan Leijen
 
 ## Maintainer
 
-Mark Karpov
+* Mark Karpov
 
 ## Contributors
 
-Antoine Latter
-Paolo Martini
+* Antoine Latter
+* Ben Pence
+* Björn Buckwalter
+* Bryan O'Sullivan
+* Cies Breijs
+* Daniel Díaz
+* Daniel Gorín
+* Dennis Gosnell
+* Derek Elkins
+* Emil Sköldberg
+* Joel Williamson
+* Paolo Martini
+* redneb
+* Reto Kramer
+* Rogan Creswick
+* Roman Cheplyaka
+* Ryan Scott
+* Simon Vandel
+* Slava Shklyaev
+* Tal Walter
