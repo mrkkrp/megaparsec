@@ -1,6 +1,7 @@
 # MegaParsec
 
 [![License BSD3](https://img.shields.io/badge/license-BSD3-brightgreen.svg)](http://opensource.org/licenses/BSD-3-Clause)
+[![Build Status](https://travis-ci.org/mrkkrp/megaparsec.svg?branch=master)](https://travis-ci.org/mrkkrp/megaparsec)
 
 This is industrial-strength monadic parser combinator library. MegaParsec is
 a fork of original Parsec library written by Daan Leijen. This library is
