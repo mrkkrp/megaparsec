@@ -40,7 +40,7 @@ merged quickly if they are good).
 ## License
 
 Copyright © 1999–2000 Daan Leijen<br>
-Copyright © 2007, Paolo Martini<br>
+Copyright © 2007 Paolo Martini<br>
 Copyright © 2015 MegaParsec contributors
 
 Distributed under BSD3 license.
