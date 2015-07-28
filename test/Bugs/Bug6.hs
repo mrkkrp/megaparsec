@@ -1,14 +1,12 @@
 
-module Bugs.Bug6
-       ( main
-       ) where
+module Bugs.Bug6 (main) where
 
-import Test.HUnit hiding ( Test )
+import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
-import Text.Parsec
-import Text.Parsec.String
+import Text.MegaParsec
+import Text.MegaParsec.String
 
 import Util
 

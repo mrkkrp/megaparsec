@@ -1,25 +1,24 @@
------------------------------------------------------------------------------
 -- |
--- Module      :  Text.Parsec.Expr
--- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007
--- License     :  BSD-style (see the LICENSE file)
--- 
--- Maintainer  :  derek.a.elkins@gmail.com
+-- Module      :  Text.MegaParsec.Expr
+-- Copyright   :  © 1999–2001 Daan Leijen, © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- License     :  BSD3
+--
+-- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  provisional
 -- Portability :  non-portable
--- 
+--
 -- A helper module to parse \"expressions\".
 -- Builds a parser given a table of operators and associativities.
--- 
------------------------------------------------------------------------------
 
-module Text.Parsec.Expr
-    ( Assoc(..), Operator(..), OperatorTable
-    , buildExpressionParser
-    ) where
+module Text.MegaParsec.Expr
+    ( Assoc (..)
+    , Operator (..)
+    , OperatorTable
+    , buildExpressionParser )
+where
 
-import Text.Parsec.Prim
-import Text.Parsec.Combinator
+import Text.MegaParsec.Combinator
+import Text.MegaParsec.Prim
 
 -----------------------------------------------------------
 -- Assoc and OperatorTable
@@ -68,7 +67,7 @@ type OperatorTable s u m a = [[Operator s u m a]]
 -- >  expr    = buildExpressionParser table term
 -- >          <?> "expression"
 -- >
--- >  term    =  parens expr 
+-- >  term    =  parens expr
 -- >          <|> natural
 -- >          <?> "simple expression"
 -- >
@@ -77,7 +76,7 @@ type OperatorTable s u m a = [[Operator s u m a]]
 -- >            , [binary "*" (*) AssocLeft, binary "/" (div) AssocLeft ]
 -- >            , [binary "+" (+) AssocLeft, binary "-" (-)   AssocLeft ]
 -- >            ]
--- >          
+-- >
 -- >  binary  name fun assoc = Infix (do{ reservedOp name; return fun }) assoc
 -- >  prefix  name fun       = Prefix (do{ reservedOp name; return fun })
 -- >  postfix name fun       = Postfix (do{ reservedOp name; return fun })

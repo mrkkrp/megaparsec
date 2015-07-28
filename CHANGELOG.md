@@ -1,3 +1,10 @@
+## MegaParsec 4.0.0
+
+* Cosmetic changes in entire source code, numerous improvements and
+  elimination of warnings.
+
+* Fixed typos in source code and other files.
+
 ## Parsec 3.1.9
 
 * Many and various updates to documentation and package description

@@ -1,41 +1,37 @@
------------------------------------------------------------------------------
 -- |
--- Module      :  Text.Parsec.Perm
--- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007
--- License     :  BSD-style (see the file libraries/parsec/LICENSE)
--- 
--- Maintainer  :  derek.a.elkins@gmail.com
+-- Module      :  Text.MegaParsec.Perm
+-- Copyright   :  © 1999–2001 Daan Leijen, © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- License     :  BSD3
+--
+-- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  provisional
 -- Portability :  non-portable (uses existentially quantified data constructors)
--- 
--- This module implements permutation parsers. The algorithm used
--- is fairly complex since we push the type system to its limits :-)
--- The algorithm is described in:
--- 
--- /Parsing Permutation Phrases,/
--- by Arthur Baars, Andres Loh and Doaitse Swierstra.
--- Published as a functional pearl at the Haskell Workshop 2001.
--- 
------------------------------------------------------------------------------
+--
+-- This module implements permutation parsers. The algorithm used is fairly
+-- complex since we push the type system to its limits :-) The algorithm is
+-- described in:
+--
+-- /Parsing Permutation Phrases,/ by Arthur Baars, Andres Loh and Doaitse
+-- Swierstra. Published as a functional pearl at the Haskell Workshop 2001.
 
 {-# LANGUAGE ExistentialQuantification #-}
 
-module Text.Parsec.Perm
+module Text.MegaParsec.Perm
     ( PermParser
     , StreamPermParser -- abstract
-
     , permute
-    , (<||>), (<$$>)
-    , (<|?>), (<$?>)
-    ) where
-
-import Text.Parsec
+    , (<||>)
+    , (<$$>)
+    , (<|?>)
+    , (<$?>) )
+where
 
 import Control.Monad.Identity
 
+import Text.MegaParsec
+
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>
-
 
 {---------------------------------------------------------------
   test -- parse a permutation of
@@ -62,7 +58,7 @@ ptest
 -- | The expression @perm \<||> p@ adds parser @p@ to the permutation
 -- parser @perm@. The parser @p@ is not allowed to accept empty input -
 -- use the optional combinator ('<|?>') instead. Returns a
--- new permutation parser that includes @p@. 
+-- new permutation parser that includes @p@.
 
 (<||>) :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> Parsec s st a -> StreamPermParser s st b
 (<||>) perm p     = add perm p
@@ -87,7 +83,7 @@ ptest
 -- | The expression @perm \<||> (x,p)@ adds parser @p@ to the
 -- permutation parser @perm@. The parser @p@ is optional - if it can
 -- not be applied, the default value @x@ will be used instead. Returns
--- a new permutation parser that includes the optional parser @p@. 
+-- a new permutation parser that includes the optional parser @p@.
 
 (<|?>) :: (Stream s Identity tok) => StreamPermParser s st (a -> b) -> (a, Parsec s st a) -> StreamPermParser s st b
 (<|?>) perm (x,p) = addopt perm x p
@@ -96,7 +92,7 @@ ptest
 -- consisting of parser @p@. The the final result of the permutation
 -- parser is the function @f@ applied to the return value of @p@. The
 -- parser @p@ is optional - if it can not be applied, the default value
--- @x@ will be used instead. 
+-- @x@ will be used instead.
 
 (<$?>) :: (Stream s Identity tok) => (a -> b) -> (a, Parsec s st a) -> StreamPermParser s st b
 (<$?>) f (x,p)    = newperm f <|?> (x,p)
@@ -110,7 +106,7 @@ ptest
 type PermParser tok st a = StreamPermParser String st a
 
 -- | The type @StreamPermParser s st a@ denotes a permutation parser that,
--- when converted by the 'permute' function, parses 
+-- when converted by the 'permute' function, parses
 -- @s@ streams with user state @st@ and returns a value of
 -- type @a@ on success.
 --
@@ -130,7 +126,7 @@ data StreamBranch s st a = forall b. Branch (StreamPermParser s st (b -> a)) (Pa
 -- This can be described by:
 --
 -- >  test  = permute (tuple <$?> ("",many1 (char 'a'))
--- >                         <||> char 'b' 
+-- >                         <||> char 'b'
 -- >                         <|?> ('_',char 'c'))
 -- >        where
 -- >          tuple a b c  = (a,b,c)

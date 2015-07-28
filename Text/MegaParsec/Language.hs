@@ -1,30 +1,29 @@
------------------------------------------------------------------------------
 -- |
--- Module      :  Text.Parsec.Language
--- Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007
--- License     :  BSD-style (see the LICENSE file)
--- 
--- Maintainer  :  derek.a.elkins@gmail.com
+-- Module      :  Text.MegaParsec.Language
+-- Copyright   :  © 1999–2001 Daan Leijen, © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- License     :  BSD3
+--
+-- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  provisional
 -- Portability :  non-portable (uses non-portable module Text.Parsec.Token)
 --
 -- A helper module that defines some language definitions that can be used
 -- to instantiate a token parser (see "Text.Parsec.Token").
--- 
------------------------------------------------------------------------------
 
-module Text.Parsec.Language
-    ( haskellDef, haskell
-    , mondrianDef, mondrian
+module Text.MegaParsec.Language
+    ( haskellDef
+    , haskell
+    , mondrianDef
+    , mondrian
     , emptyDef
     , haskellStyle
     , javaStyle
     , LanguageDef
-    , GenLanguageDef
-    ) where
+    , GenLanguageDef )
+where
 
-import Text.Parsec
-import Text.Parsec.Token
+import Text.MegaParsec
+import Text.MegaParsec.Token
 
 -----------------------------------------------------------
 -- Styles: haskellStyle, javaStyle
@@ -41,9 +40,9 @@ haskellStyle = emptyDef
                 , commentLine    = "--"
                 , nestedComments = True
                 , identStart     = letter
-                , identLetter	 = alphaNum <|> oneOf "_'"
-                , opStart	 = opLetter haskellStyle
-                , opLetter	 = oneOf ":!#$%&*+./<=>?@\\^|-~"
+                , identLetter    = alphaNum <|> oneOf "_'"
+                , opStart        = opLetter haskellStyle
+                , opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
                 , reservedOpNames= []
                 , reservedNames  = []
                 , caseSensitive  = True
@@ -55,16 +54,16 @@ haskellStyle = emptyDef
 
 javaStyle  :: LanguageDef st
 javaStyle   = emptyDef
-		{ commentStart	 = "/*"
-		, commentEnd	 = "*/"
-		, commentLine	 = "//"
-		, nestedComments = True
-		, identStart	 = letter
-		, identLetter	 = alphaNum <|> oneOf "_'"
-		, reservedNames  = []
-		, reservedOpNames= []
+                { commentStart   = "/*"
+                , commentEnd     = "*/"
+                , commentLine    = "//"
+                , nestedComments = True
+                , identStart     = letter
+                , identLetter    = alphaNum <|> oneOf "_'"
+                , reservedNames  = []
+                , reservedOpNames= []
                 , caseSensitive  = False
-		}
+                }
 
 -----------------------------------------------------------
 -- minimal language definition
@@ -105,12 +104,12 @@ haskell      = makeTokenParser haskellDef
 
 haskellDef  :: LanguageDef st
 haskellDef   = haskell98Def
-	        { identLetter	 = identLetter haskell98Def <|> char '#'
-	        , reservedNames	 = reservedNames haskell98Def ++
-    				   ["foreign","import","export","primitive"
-    				   ,"_ccall_","_casm_"
-    				   ,"forall"
-    				   ]
+                { identLetter    = identLetter haskell98Def <|> char '#'
+                , reservedNames  = reservedNames haskell98Def ++
+                                   ["foreign","import","export","primitive"
+                                   ,"_ccall_","_casm_"
+                                   ,"forall"
+                                   ]
                 }
 
 -- | The language definition for the language Haskell98.
@@ -142,8 +141,8 @@ mondrian    = makeTokenParser mondrianDef
 
 mondrianDef :: LanguageDef st
 mondrianDef = javaStyle
-		{ reservedNames = [ "case", "class", "default", "extends"
-				  , "import", "in", "let", "new", "of", "package"
-				  ]
+                { reservedNames = [ "case", "class", "default", "extends"
+                                  , "import", "in", "let", "new", "of", "package"
+                                  ]
                 , caseSensitive  = True
-		}
+                }

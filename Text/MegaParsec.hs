@@ -1,31 +1,29 @@
-{-|
-Module      :  Text.Parsec
-Copyright   :  (c) Daan Leijen 1999-2001, (c) Paolo Martini 2007
-License     :  BSD-style (see the LICENSE file)
+-- |
+-- Module      :  Text.MegaParsec
+-- Copyright   :  © 1999–2001 Daan Leijen, © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- License     :  BSD3
+--
+-- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- This module includes everything you need to get started writing a parser.
+--
+-- By default this module is set up to parse character data. If you'd like to
+-- parse the result of your own tokenizer you should start with the following
+-- imports:
+--
+-- @
+--  import Text.MegaParsec.Prim
+--  import Text.MegaParsec.Combinator
+-- @
+--
+-- Then you can implement your own version of 'satisfy' on top of the
+-- 'tokenPrim' primitive.
 
-Maintainer  :  aslatter@gmail.com
-Stability   :  provisional
-Portability :  portable
-
-This module includes everything you need to get started writing a
-parser.
-
-By default this module is set up to parse character data. If you'd like
-to parse the result of your own tokenizer you should start with the following
-imports:
-
-@
- import Text.Parsec.Prim
- import Text.Parsec.Combinator
-@
-
-Then you can implement your own version of 'satisfy' on top of the 'tokenPrim'
-primitive.
-
--}
-
-module Text.Parsec
-    ( -- * Parsers
+module Text.MegaParsec
+    (
+-- * Parsers
       ParsecT
     , Parsec
     , token
@@ -39,7 +37,7 @@ module Text.Parsec
     , getState
     , putState
     , modifyState
-     -- * Combinators
+-- * Combinators
     , (<|>)
     , (<?>)
     , label
@@ -71,18 +69,36 @@ module Text.Parsec
     , manyTill
     , lookAhead
     , anyToken
-     -- * Character Parsing
-    , module Text.Parsec.Char
-     -- * Error messages
+-- * Character parsing
+    , oneOf
+    , noneOf
+    , spaces
+    , space
+    , newline
+    , crlf
+    , endOfLine
+    , tab
+    , upper
+    , lower
+    , alphaNum
+    , letter
+    , digit
+    , hexDigit
+    , octDigit
+    , char
+    , anyChar
+    , satisfy
+    , string
+-- * Error messages
     , ParseError
     , errorPos
-     -- * Position
+-- * Position
     , SourcePos
     , SourceName, Line, Column
     , sourceName, sourceLine, sourceColumn
     , incSourceLine, incSourceColumn
     , setSourceLine, setSourceColumn, setSourceName
-     -- * Low-level operations
+-- * Low-level operations
     , manyAccum
     , tokenPrim
     , tokenPrimEx
@@ -102,7 +118,7 @@ module Text.Parsec
     , State (..)
     , setPosition
     , setInput
-     -- * Other stuff
+-- * Other
     , setState
     , updateState
     , parsecMap
@@ -110,11 +126,11 @@ module Text.Parsec
     , parserBind
     , parserFail
     , parserZero
-    , parserPlus
-    ) where
+    , parserPlus )
+where
 
-import Text.Parsec.Pos
-import Text.Parsec.Error
-import Text.Parsec.Prim
-import Text.Parsec.Char
-import Text.Parsec.Combinator
+import Text.MegaParsec.Char
+import Text.MegaParsec.Combinator
+import Text.MegaParsec.Error
+import Text.MegaParsec.Pos
+import Text.MegaParsec.Prim
