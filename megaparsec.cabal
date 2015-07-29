@@ -29,10 +29,12 @@
 
 name:                megaparsec
 version:             4.0.0
-cabal-version:       >= 1.8
+cabal-version:       >= 1.10
 license:             BSD3
 license-file:        LICENSE.md
-author:              Daan Leijen <daan@microsoft.com>, Paolo Martini <paolo@nemail.it>
+author:              Daan Leijen <daan@microsoft.com>,
+                     Paolo Martini <paolo@nemail.it>,
+                     MegaParsec contributors
 maintainer:          Mark Karpov <markkarpov@opmbx.org>
 homepage:            https://github.com/mrkkrp/megaparsec
 bug-reports:         https://github.com/mrkkrp/megaparsec/issues
@@ -51,13 +53,15 @@ library
                    , mtl
                    , bytestring
                    , text                   >= 0.2 && < 1.3
-  extensions:        ExistentialQuantification
-                   , PolymorphicComponents
-                   , MultiParamTypeClasses
-                   , FlexibleInstances
+  default-extensions:
+                     DeriveDataTypeable
+                   , ExistentialQuantification
                    , FlexibleContexts
-                   , DeriveDataTypeable
-                   , CPP
+                   , FlexibleInstances
+                   , FunctionalDependencies
+                   , MultiParamTypeClasses
+                   , PolymorphicComponents
+                   , UndecidableInstances
   exposed-modules:   Text.MegaParsec
                    , Text.MegaParsec.String
                    , Text.MegaParsec.ByteString
@@ -73,27 +77,29 @@ library
                    , Text.MegaParsec.Expr
                    , Text.MegaParsec.Language
                    , Text.MegaParsec.Perm
-  ghc-options:     -O2 -Wall
+  ghc-options:       -O2 -Wall
+  default-language:  Haskell2010
 
 -- The test-suite should be rewritten using QuickCheck. For now let the old
 -- tests be here.
 
 test-suite tests
-    main-is:         Main.hs
-    hs-source-dirs:  test
-    type:            exitcode-stdio-1.0
-    other-modules:   Bugs
+  main-is:           Main.hs
+  hs-source-dirs:    test
+  type:              exitcode-stdio-1.0
+  other-modules:     Bugs
                    , Bugs.Bug2
                    , Bugs.Bug6
                    , Bugs.Bug9
                    , Util
-    build-depends:   base
+  build-depends:     base
                    , megaparsec             >= 4.0.0
                    , HUnit                  == 1.2.*
                    , test-framework         >= 0.6 && < 0.9
                    , test-framework-hunit >= 0.2 && < 0.4
-    ghc-options: -O2 -Wall
+  ghc-options:       -O2 -Wall
+  default-language:  Haskell2010
 
 source-repository head
-    type:            git
-    location:        https://github.com/mrkkrp/megaparsec.git
+  type:              git
+  location:          https://github.com/mrkkrp/megaparsec.git

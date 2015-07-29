@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  non-portable (uses existentially quantified data constructors)
 --
 -- This module implements permutation parsers. The algorithm used is fairly
@@ -13,8 +13,6 @@
 --
 -- /Parsing Permutation Phrases,/ by Arthur Baars, Andres Loh and Doaitse
 -- Swierstra. Published as a functional pearl at the Haskell Workshop 2001.
-
-{-# LANGUAGE ExistentialQuantification #-}
 
 module Text.MegaParsec.Perm
     ( PermParser

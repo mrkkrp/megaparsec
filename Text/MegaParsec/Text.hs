@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- Convenience definitions for working with 'Text.Text'.

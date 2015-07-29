@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- Commonly used generic combinators.
@@ -168,7 +168,7 @@ chainl :: Stream s m t => ParsecT s u m a ->
           ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
 chainl p op x = chainl1 p op <|> return x
 
--- | @chainl1 p op x@ parses /one/ or more occurrences of @p@,
+-- | @chainl1 p op@ parses /one/ or more occurrences of @p@,
 -- separated by @op@ Returns a value obtained by a /left/ associative
 -- application of all functions returned by @op@ to the values returned by
 -- @p@. This parser can for example be used to eliminate left recursion
@@ -186,28 +186,18 @@ chainl p op x = chainl1 p op <|> return x
 
 chainl1 :: Stream s m t =>
            ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainl1 p op = do{ x <- p; rest x }
-    where rest x = do{ f <- op
-                     ; y <- p
-                     ; rest (f x y)
-                     }
-                   <|> return x
+chainl1 p op = p >>= rest
+    where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
 
--- | @chainr1 p op x@ parses /one/ or more occurrences of |p|,
+-- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
 -- separated by @op@ Returns a value obtained by a /right/ associative
 -- application of all functions returned by @op@ to the values returned by
 -- @p@.
 
 chainr1 :: Stream s m t =>
            ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainr1 p op = scan
-             where
-               scan      = do{ x <- p; rest x }
-               rest x    = do{ f <- op
-                             ; y <- scan
-                             ; return (f x y)
-                             }
-                         <|> return x
+chainr1 p op = p >>= rest
+    where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
 
 -- | The parser @anyToken@ accepts any kind of token. It is for example
 -- used to implement 'eof'. Returns the accepted token.
@@ -240,17 +230,11 @@ notFollowedBy p = try ((try p >>= (unexpected . show)) <|> return ())
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This
 -- parser can be used to scan comments:
 --
--- > simpleComment = do{ string "<!--"
--- >                   ; manyTill anyChar (try (string "-->"))
--- >                   }
+-- > simpleComment = string "<!--" >> manyTill anyChar (string "-->")
 --
---    Note the overlapping parsers @anyChar@ and @string \"-->\"@, and
---    therefore the use of the 'try' combinator.
+-- Note that although parsers @anyChar@ and @string \"-->\"@ overlap, the
+-- combinator uses 'try' internally to parse @end@, so it's OK.
 
 manyTill :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
-manyTill p end      = scan
-                    where
-                      scan  = do{ end; return [] }
-                            <|>
-                              do{ x <- p; xs <- scan; return (x:xs) }
+manyTill p end = (try end *> return []) <|> ((:) <$> p <*> manyTill p end)

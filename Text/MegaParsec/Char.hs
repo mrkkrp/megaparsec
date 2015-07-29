@@ -4,12 +4,10 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- Commonly used character parsers.
-
-{-# LANGUAGE FlexibleContexts #-}
 
 module Text.MegaParsec.Char
     ( oneOf
@@ -129,7 +127,7 @@ octDigit = satisfy isOctDigit <?> "octal digit"
 
 -- | @char c@ parses a single character @c@.
 --
--- > semiColon  = char ';'
+-- > semiColon = char ';'
 
 char :: Stream s m Char => Char -> ParsecT s u m Char
 char c = satisfy (== c) <?> show [c]

@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- This module includes everything you need to get started writing a parser.
@@ -13,10 +13,8 @@
 -- parse the result of your own tokenizer you should start with the following
 -- imports:
 --
--- @
---  import Text.MegaParsec.Prim
---  import Text.MegaParsec.Combinator
--- @
+-- > import Text.MegaParsec.Prim
+-- > import Text.MegaParsec.Combinator
 --
 -- Then you can implement your own version of 'satisfy' on top of the
 -- 'tokenPrim' primitive.
@@ -119,8 +117,6 @@ module Text.MegaParsec
     , setPosition
     , setInput
 -- * Other
-    , setState
-    , updateState
     , parsecMap
     , parserReturn
     , parserBind

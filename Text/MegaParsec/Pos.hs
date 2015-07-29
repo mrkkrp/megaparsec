@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- Textual source positions.
@@ -29,6 +29,7 @@ module Text.MegaParsec.Pos
 where
 
 import Data.Data (Data)
+import Data.List (foldl')
 import Data.Typeable (Typeable)
 
 -- Source positions: a file name, a line and a column upper left is (1,1)
@@ -42,8 +43,20 @@ type Column     = Int
 -- column number. @SourcePos@ is an instance of the 'Show', 'Eq' and 'Ord'
 -- class.
 
-data SourcePos = SourcePos SourceName !Line !Column
-    deriving ( Eq, Ord, Data, Typeable)
+data SourcePos = SourcePos
+    { -- | Extract the name of the source from a source position.
+      sourceName   :: SourceName
+      -- | Extract the line number from a source position.
+    , sourceLine   :: !Line
+      -- | Extract the column number from a source position.
+    , sourceColumn :: !Column }
+    deriving (Eq, Ord, Data, Typeable)
+
+instance Show SourcePos where
+  show (SourcePos n l c)
+    | null n    = showLC
+    | otherwise = "\"" ++ n ++ "\" " ++ showLC
+    where showLC = "(line " ++ show l ++ ", column " ++ show c ++ ")"
 
 -- | Create a new 'SourcePos' with the given source name,
 -- line number and column number.
@@ -55,76 +68,49 @@ newPos = SourcePos
 -- and line number and column number set to 1, the upper left.
 
 initialPos :: SourceName -> SourcePos
-initialPos name
-    = newPos name 1 1
+initialPos name = newPos name 1 1
 
--- | Extracts the name of the source from a source position.
-
-sourceName :: SourcePos -> SourceName
-sourceName (SourcePos name _line _column) = name
-
--- | Extracts the line number from a source position.
-
-sourceLine :: SourcePos -> Line
-sourceLine (SourcePos _name line _column) = line
-
--- | Extracts the column number from a source position.
-
-sourceColumn :: SourcePos -> Column
-sourceColumn (SourcePos _name _line column) = column
-
--- | Increments the line number of a source position.
+-- | Increment the line number of a source position.
 
 incSourceLine :: SourcePos -> Line -> SourcePos
-incSourceLine (SourcePos name line column) n = SourcePos name (line+n) column
+incSourceLine (SourcePos n l c) d = SourcePos n (l + d) c
 
 -- | Increments the column number of a source position.
 
 incSourceColumn :: SourcePos -> Column -> SourcePos
-incSourceColumn (SourcePos name line column) n = SourcePos name line (column+n)
+incSourceColumn (SourcePos n l c) d = SourcePos n l (c + d)
 
 -- | Set the name of the source.
 
 setSourceName :: SourcePos -> SourceName -> SourcePos
-setSourceName (SourcePos _name line column) n = SourcePos n line column
+setSourceName (SourcePos _ l c) n = SourcePos n l c
 
 -- | Set the line number of a source position.
 
 setSourceLine :: SourcePos -> Line -> SourcePos
-setSourceLine (SourcePos name _line column) n = SourcePos name n column
+setSourceLine (SourcePos n _ c) l = SourcePos n l c
 
 -- | Set the column number of a source position.
 
 setSourceColumn :: SourcePos -> Column -> SourcePos
-setSourceColumn (SourcePos name line _column) n = SourcePos name line n
+setSourceColumn (SourcePos n l _) = SourcePos n l
 
 -- | The expression @updatePosString pos s@ updates the source position
--- @pos@ by calling 'updatePosChar' on every character in @s@, ie.
--- @foldl updatePosChar pos string@.
+-- @pos@ by calling 'updatePosChar' on every character in @s@, i.e. @foldl
+-- updatePosChar pos string@.
 
 updatePosString :: SourcePos -> String -> SourcePos
-updatePosString pos string
-    = foldl updatePosChar pos string
+updatePosString = foldl' updatePosChar
 
 -- | Update a source position given a character. If the character is a
 -- newline (\'\\n\') or carriage return (\'\\r\') the line number is
--- incremented by 1. If the character is a tab (\'\t\') the column
--- number is incremented to the nearest 8'th column, ie. @column + 8 -
--- ((column-1) \`mod\` 8)@. In all other cases, the column is
--- incremented by 1.
+-- incremented by 1. If the character is a tab (\'\t\') the column number is
+-- incremented to the nearest 8'th column, i.e. @column + 8 - ((column-1)
+-- \`mod\` 8)@. In all other cases, the column is incremented by 1.
 
-updatePosChar   :: SourcePos -> Char -> SourcePos
-updatePosChar (SourcePos name line column) c
-    = case c of
-        '\n' -> SourcePos name (line+1) 1
-        '\t' -> SourcePos name line (column + 8 - ((column-1) `mod` 8))
-        _    -> SourcePos name line (column + 1)
-
-instance Show SourcePos where
-  show (SourcePos name line column)
-    | null name = showLineColumn
-    | otherwise = "\"" ++ name ++ "\" " ++ showLineColumn
-    where
-      showLineColumn    = "(line " ++ show line ++
-                          ", column " ++ show column ++
-                          ")"
+updatePosChar :: SourcePos -> Char -> SourcePos
+updatePosChar (SourcePos n l c) ch =
+    case ch of
+      '\n' -> SourcePos n (l + 1) 1
+      '\t' -> SourcePos n l (c + 8 - ((c - 1) `mod` 8))
+      _    -> SourcePos n l (c + 1)

@@ -4,13 +4,12 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 --
 -- A helper module to parse lexical elements (tokens). See 'makeTokenParser'
 -- for a description of how to use it.
 
-{-# LANGUAGE PolymorphicComponents #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Text.MegaParsec.Token

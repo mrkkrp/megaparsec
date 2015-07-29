@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  portable
 --
 -- Convenience definitions for working with lazy 'Text.Text'.
@@ -27,13 +27,11 @@ type GenParser st = Parsec T.Text st
 -- input read from @filePath@ using 'Prelude.readFile'. Returns either a
 -- 'ParseError' ('Left') or a value of type @a@ ('Right').
 --
--- @
---  main = do
---    result <- parseFromFile numbers "digits.txt"
---    case result of
---      Left err  -> print err
---      Right xs  -> print (sum xs)
--- @
+-- > main = do
+-- >   result <- parseFromFile numbers "digits.txt"
+-- >   case result of
+-- >     Left err  -> print err
+-- >     Right xs  -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
 parseFromFile p fname = runP p () fname <$> T.readFile fname
