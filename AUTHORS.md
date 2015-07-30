@@ -16,6 +16,11 @@ Names below are sorted alphabetically.
 
 * Mark Karpov
 
+## Retired maintainers
+
+* Antoine Latter
+* Derek Elkins
+
 ## Contributors
 
 * Antoine Latter
