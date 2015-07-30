@@ -7,10 +7,10 @@ This is industrial-strength monadic parser combinator library. MegaParsec is
 a fork of original Parsec library written by Daan Leijen. This library is
 different from Parsec in the following ways:
 
-* Original Parsec consists of quite ancient code-base and has code-smell
-  that's anyone who tries to compile Parsec with `-Wall` option can
-  notice. This has been refreshed in MegaParsec. The changes are mainly
-  cosmetic but not limited to them.
+* Original Parsec consists of quite ancient code-base and has certain
+  stylistic problems that's anyone who tries to compile Parsec with `-Wall`
+  option can notice. This has been refreshed in MegaParsec. The changes are
+  mainly cosmetic but not limited to them.
 
 * Some quirks and old «buggy features» (as well as plain bugs) are fixed.
 
