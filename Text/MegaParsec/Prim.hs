@@ -25,6 +25,7 @@ module Text.MegaParsec.Prim
     , unknownError
     , sysUnExpectError
     , unexpected
+    , mergeErrorReply
     , (<?>)
     , label
     , (<|>)
@@ -49,8 +50,7 @@ module Text.MegaParsec.Prim
     , updateParserState
     , getState
     , putState
-    , modifyState
-    , mergeErrorReply )
+    , modifyState )
 where
 
 import qualified Data.ByteString.Char8 as C
@@ -71,6 +71,9 @@ import qualified Control.Applicative as A (Applicative (..), Alternative (..))
 
 import Text.MegaParsec.Pos
 import Text.MegaParsec.Error
+
+-- | This is Parsec state, this is parametrized over stream type @s@, and
+-- user state @u@.
 
 data State s u = State
     { stateInput :: s
@@ -110,6 +113,16 @@ instance Monad m => Stream TL.Text m Char where
     uncons = return . TL.uncons
     {-# INLINE uncons #-}
 
+-- | This data structure represents an aspect of result of parser's
+-- work. The two constructors have the following meaning:
+--
+--     * @Cosumed@ is a wrapper for result when some part of input stream
+--     was consumed.
+--
+--     * @Empty@ is a wrapper for result when input stream is empty.
+--
+-- You shouldn't really need to know this. See also: 'Reply'.
+
 data Consumed a = Consumed a
                 | Empty !a
 
@@ -117,14 +130,20 @@ instance Functor Consumed where
     fmap f (Consumed x) = Consumed (f x)
     fmap f (Empty x)    = Empty (f x)
 
+-- | This data structure represents an aspect of result of parser's
+-- work. The two constructors have the following meaning:
+--
+--     * @Ok@ for successfully run parser.
+--     * @Error@ for failed parser.
+--
+-- You shouldn't really need to know this. See also 'Consumed'.
+
 data Reply s u a = Ok a !(State s u) ParseError
                  | Error ParseError
 
 instance Functor (Reply s u) where
     fmap f (Ok x s e) = Ok (f x) s e
     fmap _ (Error e)  = Error e
-
--- | ParserT monad transformer and Parser type
 
 -- | @ParsecT s u m a@ is a parser with stream type @s@, user state type @u@,
 -- underlying monad @m@ and return type @a@. Parsec is strict in the user
@@ -139,6 +158,9 @@ newtype ParsecT s u m a = ParsecT
                -> (a -> State s u -> ParseError -> m b) -- empty ok
                -> (ParseError -> m b)                   -- empty err
                -> m b }
+
+-- | @Parsec@ is non-transformer variant of more general @ParsecT@
+-- monad-transformer.
 
 type Parsec s u = ParsecT s u Identity
 
@@ -228,12 +250,12 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
                        rep <- mrep
                        case rep of
                          Ok x s' err -> cok x s' err
-                         Error err -> cerr err
+                         Error   err -> cerr err
              Empty mrep -> do
                        rep <- mrep
                        case rep of
                          Ok x s' err -> eok x s' err
-                         Error err -> eerr err
+                         Error   err -> eerr err
 
 instance MonadIO m => MonadIO (ParsecT s u m) where
     liftIO = lift . liftIO
@@ -288,8 +310,14 @@ instance MonadTrans (ParsecT s u) where
 
 -- Errors
 
+-- | Create new @ParseError@ object. It will contain information about
+-- position at which error is happened and nothing more.
+
 unknownError :: State s u -> ParseError
 unknownError state = newErrorUnknown (statePos state)
+
+-- | @sysUnExpectError m pos@ creates 'Reply' that represents \"unexpected\"
+-- error with associated message @m@ and position @pos@.
 
 sysUnExpectError :: String -> SourcePos -> Reply s u a
 sysUnExpectError msg pos = Error (newErrorMessage (SysUnExpect msg) pos)
@@ -305,6 +333,14 @@ sysUnExpectError msg pos = Error (newErrorMessage (SysUnExpect msg) pos)
 unexpected :: Stream s m t => String -> ParsecT s u m a
 unexpected msg = ParsecT $ \s _ _ _ eerr ->
       eerr $ newErrorMessage (UnExpect msg) (statePos s)
+
+-- | @mergeErrorReply e reply@ returns @reply@ with error @e@ added.
+
+mergeErrorReply :: ParseError -> Reply s u a -> Reply s u a
+mergeErrorReply err1 reply
+    = case reply of
+        Ok x state err2 -> Ok x state (mergeError err1 err2)
+        Error err2      -> Error (mergeError err1 err2)
 
 -- Basic combinators
 
@@ -404,7 +440,7 @@ runParser p u name s = runIdentity $ runParserT p u name s
 -- >
 -- > numbers = commaSep integer
 
-parse :: (Stream s Identity t) =>
+parse :: Stream s Identity t =>
          Parsec s () a -> SourceName -> s -> Either ParseError a
 parse p = runParser p ()
 
@@ -695,11 +731,3 @@ putState u = void $ updateParserState (\s -> s { stateUser = u })
 
 modifyState :: Monad m => (u -> u) -> ParsecT s u m ()
 modifyState f = void $ updateParserState (\s -> s { stateUser = f (stateUser s)})
-
--- XXX Where to put it?
-
-mergeErrorReply :: ParseError -> Reply s u a -> Reply s u a
-mergeErrorReply err1 reply
-    = case reply of
-        Ok x state err2 -> Ok x state (mergeError err1 err2)
-        Error err2      -> Error (mergeError err1 err2)

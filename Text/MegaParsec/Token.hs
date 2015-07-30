@@ -15,17 +15,15 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Text.MegaParsec.Token
-    ( LanguageDef
-    , GenLanguageDef (..)
-    , TokenParser
-    , GenTokenParser (..)
+    ( LanguageDef (..)
+    , TokenParser (..)
     , makeTokenParser )
 where
 
 import Data.Char (isAlpha, toLower, toUpper, isSpace, digitToInt)
 import Data.List (nub, sort)
 
-import Control.Monad.Identity
+import Control.Monad (void)
 
 import Text.MegaParsec.Prim
 import Text.MegaParsec.Char
@@ -33,13 +31,11 @@ import Text.MegaParsec.Combinator
 
 -- Language definition
 
-type LanguageDef st = GenLanguageDef String st Identity
-
--- | The @GenLanguageDef@ type is a record that contains all parameterizable
+-- | The @LanguageDef@ type is a record that contains all parameterizable
 -- features of the "Text.Parsec.Token" module. The module
 -- "Text.Parsec.Language" contains some default definitions.
 
-data GenLanguageDef s u m =
+data LanguageDef s u m =
     LanguageDef {
 
     -- | Describes the start of a block comment. Use the empty string if the
@@ -95,14 +91,12 @@ data GenLanguageDef s u m =
 
     , caseSensitive :: Bool }
 
--- A first class module: TokenParser
-
-type TokenParser st = GenTokenParser String st Identity
+-- Token parser
 
 -- | The type of the record that holds lexical parsers that work on
 -- @s@ streams with state @u@ over a monad @m@.
 
-data GenTokenParser s u m =
+data TokenParser s u m =
     TokenParser {
 
     -- | This lexeme parser parses a legal identifier. Returns the identifier
@@ -283,13 +277,13 @@ data GenTokenParser s u m =
 
 -- Given a LanguageDef, create a token parser
 
--- | The expression @makeTokenParser language@ creates a 'GenTokenParser'
+-- | The expression @makeTokenParser language@ creates a 'TokenParser'
 -- record that contains lexical parsers that are defined using the
 -- definitions in the @language@ record.
 --
 -- The use of this function is quite stylized — one imports the appropriate
 -- language definition and selects the lexical parsers that are needed from
--- the resulting 'GenTokenParser'.
+-- the resulting 'TokenParser'.
 --
 -- > module Main (main) where
 -- >
@@ -313,8 +307,7 @@ data GenTokenParser s u m =
 -- > reserved   = Token.reserved   lexer
 -- > ...
 
-makeTokenParser :: Stream s m Char =>
-                   GenLanguageDef s u m -> GenTokenParser s u m
+makeTokenParser :: Stream s m Char => LanguageDef s u m -> TokenParser s u m
 makeTokenParser languageDef =
     TokenParser
     { identifier     = identifier

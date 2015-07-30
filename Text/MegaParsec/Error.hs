@@ -109,25 +109,48 @@ errorPos (ParseError pos _) = pos
 errorMessages :: ParseError -> [Message]
 errorMessages (ParseError _ ms) = sort ms
 
+-- | Test whether given @ParseError@ has associated collection of error
+-- messages. Return @True@ if it has none and @False@ otherwise.
+
 errorIsUnknown :: ParseError -> Bool
 errorIsUnknown (ParseError _ ms) = null ms
 
 -- Creation of parse errors
 
+-- | @newErrorUnknown pos@ creates @ParseError@ without any associated
+-- message but with specified position @pos@.
+
 newErrorUnknown :: SourcePos -> ParseError
 newErrorUnknown pos = ParseError pos []
+
+-- | @newErrorMessage m pos@ creates @ParseError@ with message @m@ and
+-- associated position @pos@.
 
 newErrorMessage :: Message -> SourcePos -> ParseError
 newErrorMessage m pos = ParseError pos [m]
 
+-- | @addErrorMessage m err@ returns @ParseError@ @err@ with message @m@
+-- added.
+
 addErrorMessage :: Message -> ParseError -> ParseError
 addErrorMessage m (ParseError pos ms) = ParseError pos (m:ms)
+
+-- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
+-- position @pos@.
 
 setErrorPos :: SourcePos -> ParseError -> ParseError
 setErrorPos pos (ParseError _ ms) = ParseError pos ms
 
+-- | @setErrorMessage m err@ returns @ParseError@ identical to @err@, but
+-- with added message @m@. This is different from 'addErrorMessage' in that
+-- it makes sure that collection of messages contains only one instance of
+-- @m@.
+
 setErrorMessage :: Message -> ParseError -> ParseError
 setErrorMessage m (ParseError pos ms) = ParseError pos (m : filter (m /=) ms)
+
+-- | Merge two error data structures into one joining their collections of
+-- messages and preferring longest match (that is, greater position).
 
 mergeError :: ParseError -> ParseError -> ParseError
 mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2)
@@ -140,6 +163,9 @@ mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2)
             EQ -> ParseError pos1 (ms1 ++ ms2)
             GT -> e1
             LT -> e2
+
+-- | @showErrorMessages ms@ transforms list of error messages @ms@ into
+-- their textual representation.
 
 showErrorMessages :: [Message] -> String
 showErrorMessages ms

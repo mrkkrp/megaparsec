@@ -21,20 +21,27 @@ import Text.MegaParsec.Prim
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
-type Parser       = Parsec T.Text ()
+-- | Different modules corresponding to various types of streams (@String@,
+-- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
+-- @Parser@ type and easily change it by importing different \"type
+-- modules\".
+
+type Parser = Parsec T.Text ()
+
+-- | @GenParser@ is similar to @Parser@ but it's parametrized over user
+-- state type.
+
 type GenParser st = Parsec T.Text st
 
 -- | @parseFromFile p filePath@ runs a lazy text parser @p@ on the
--- input read from @filePath@ using 'Prelude.readFile'. Returns either a
--- 'ParseError' ('Left') or a value of type @a@ ('Right').
+-- input read from @filePath@ using 'Data.Text.IO.readFile'. Returns either
+-- a 'ParseError' ('Left') or a value of type @a@ ('Right').
 --
--- @
---  main = do
---    result <- parseFromFile numbers "digits.txt"
---    case result of
---      Left err  -> print err
---      Right xs  -> print (sum xs)
--- @
+-- > main = do
+-- >   result <- parseFromFile numbers "digits.txt"
+-- >   case result of
+-- >     Left err -> print err
+-- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
 parseFromFile p fname = runParser p () fname <$> T.readFile fname

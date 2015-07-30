@@ -34,11 +34,17 @@ import Data.Data (Data)
 import Data.List (foldl')
 import Data.Typeable (Typeable)
 
--- Source positions: a file name, a line and a column upper left is (1,1)
+-- | @SourceName@ is a file name, in our case it's @String@.
 
 type SourceName = String
-type Line       = Int
-type Column     = Int
+
+-- | @Line@ represents line number, 1 is the minimum.
+
+type Line = Int
+
+-- | @Column@ is column number, 1 is the the minimum.
+
+type Column = Int
 
 -- | The abstract data type @SourcePos@ represents source positions. It
 -- contains the name of the source (i.e. file name), a line number and a

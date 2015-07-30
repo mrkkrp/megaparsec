@@ -14,13 +14,14 @@
 
 module Text.MegaParsec.Language
     ( LanguageDef
-    , GenLanguageDef
     , emptyDef
     , haskellStyle
     , javaStyle
     , haskellDef
     , mondrianDef )
 where
+
+import Control.Monad.Identity
 
 import Text.MegaParsec
 import Text.MegaParsec.Token
@@ -30,7 +31,7 @@ import Text.MegaParsec.Token
 -- reserved names or operators, is case sensitive and doesn't accept
 -- comments, identifiers or operators.
 
-emptyDef :: LanguageDef st
+emptyDef :: LanguageDef String st Identity
 emptyDef =
     LanguageDef
     { commentStart    = ""
@@ -49,7 +50,7 @@ emptyDef =
 -- defines the style of comments, valid identifiers and case sensitivity. It
 -- does not define any reserved words or operators.
 
-haskellStyle :: LanguageDef st
+haskellStyle :: LanguageDef String u Identity
 haskellStyle =
     emptyDef
     { commentStart    = "{-"
@@ -68,7 +69,7 @@ haskellStyle =
 -- defines the style of comments, valid identifiers and case sensitivity. It
 -- does not define any reserved words or operators.
 
-javaStyle  :: LanguageDef st
+javaStyle  :: LanguageDef String u Identity
 javaStyle =
     emptyDef
     { commentStart    = "/*"
@@ -83,7 +84,7 @@ javaStyle =
 
 -- | The language definition for the Haskell language.
 
-haskellDef  :: LanguageDef st
+haskellDef  :: LanguageDef String u Identity
 haskellDef =
     haskell98Def
     { identLetter   = identLetter haskell98Def <|> char '#'
@@ -93,7 +94,7 @@ haskellDef =
 
 -- | The language definition for the language Haskell98.
 
-haskell98Def :: LanguageDef st
+haskell98Def :: LanguageDef String u Identity
 haskell98Def =
     haskellStyle
     { reservedOpNames = ["::","..","=","\\","|","<-","->","@","~","=>"]
@@ -105,7 +106,7 @@ haskell98Def =
 
 -- | The language definition for the language Mondrian.
 
-mondrianDef :: LanguageDef st
+mondrianDef :: LanguageDef String u Identity
 mondrianDef =
     javaStyle
     { reservedNames = [ "case", "class", "default", "extends"
