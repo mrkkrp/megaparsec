@@ -1,6 +1,7 @@
 -- |
 -- Module      :  Text.MegaParsec.Text.Lazy
--- Copyright   :  © 2011 Antoine Latter, © 2015 MegaParsec contributors
+-- Copyright   :  © 2015 MegaParsec contributors
+--                © 2011 Antoine Latter
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>

@@ -1,6 +1,7 @@
 -- |
 -- Module      :  Text.MegaParsec.ByteString.Lazy
--- Copyright   :  © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- Copyright   :  © 2015 MegaParsec contributors
+--                © 2007 Paolo Martini
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>

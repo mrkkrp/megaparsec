@@ -1,6 +1,8 @@
 -- |
 -- Module      :  Text.MegaParsec.Char
--- Copyright   :  © 1999–2001 Daan Leijen, © 2007 Paolo Martini, © 2015 MegaParsec contributors
+-- Copyright   :  © 2015 MegaParsec contributors
+--                © 2007 Paolo Martini
+--                © 1999–2001 Daan Leijen
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
