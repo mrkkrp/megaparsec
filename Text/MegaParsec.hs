@@ -29,6 +29,7 @@ module Text.MegaParsec
     , runParserT
     , runParser
     , parse
+    , parseMaybe
     , parseTest
     , getPosition
     , getInput
@@ -39,7 +40,6 @@ module Text.MegaParsec
     , (<|>)
     , (<?>)
     , label
-    , labels
     , try
     , unexpected
     , choice
@@ -97,10 +97,7 @@ module Text.MegaParsec
     , incSourceLine, incSourceColumn
     , setSourceLine, setSourceColumn, setSourceName
 -- * Low-level operations
-    , manyAccum
     , tokenPrim
-    , tokenPrimEx
-    , runPT
     , unknownError
     , sysUnExpectError
     , mergeErrorReply
@@ -110,19 +107,11 @@ module Text.MegaParsec
     , Stream (..)
     , runParsecT
     , mkPT
-    , runP
     , Consumed (..)
     , Reply (..)
     , State (..)
     , setPosition
-    , setInput
--- * Other
-    , parsecMap
-    , parserReturn
-    , parserBind
-    , parserFail
-    , parserZero
-    , parserPlus )
+    , setInput )
 where
 
 import Text.MegaParsec.Char

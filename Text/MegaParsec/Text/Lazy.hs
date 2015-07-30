@@ -34,4 +34,4 @@ type GenParser st = Parsec T.Text st
 -- >     Right xs  -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runP p () fname <$> T.readFile fname
+parseFromFile p fname = runParser p () fname <$> T.readFile fname

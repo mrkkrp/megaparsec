@@ -34,4 +34,4 @@ type GenParser tok st = Parsec [tok] st
 -- @
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runP p () fname <$> readFile fname
+parseFromFile p fname = runParser p () fname <$> readFile fname

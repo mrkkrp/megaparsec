@@ -35,4 +35,4 @@ type GenParser t st = Parsec C.ByteString st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runP p () fname <$> C.readFile fname
+parseFromFile p fname = runParser p () fname <$> C.readFile fname

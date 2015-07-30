@@ -4,7 +4,7 @@
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
--- Stability   :  provisional
+-- Stability   :  experimental
 -- Portability :  non-portable
 --
 -- A helper module to parse \"expressions\".
@@ -17,149 +17,129 @@ module Text.MegaParsec.Expr
     , buildExpressionParser )
 where
 
+import Data.List (foldl')
+
 import Text.MegaParsec.Combinator
 import Text.MegaParsec.Prim
 
------------------------------------------------------------
--- Assoc and OperatorTable
------------------------------------------------------------
-
--- |  This data type specifies the associativity of operators: left, right
+-- | This data type specifies the associativity of operators: left, right
 -- or none.
 
-data Assoc                = AssocNone
-                          | AssocLeft
-                          | AssocRight
+data Assoc
+    = AssocNone
+    | AssocLeft
+    | AssocRight
 
 -- | This data type specifies operators that work on values of type @a@.
--- An operator is either binary infix or unary prefix or postfix. A
--- binary operator has also an associated associativity.
+-- An operator is either binary infix or unary prefix or postfix. A binary
+-- operator has also an associated associativity.
 
-data Operator s u m a   = Infix (ParsecT s u m (a -> a -> a)) Assoc
-                        | Prefix (ParsecT s u m (a -> a))
-                        | Postfix (ParsecT s u m (a -> a))
+data Operator s u m a
+    = Infix   (ParsecT s u m (a -> a -> a)) Assoc
+    | Prefix  (ParsecT s u m (a -> a))
+    | Postfix (ParsecT s u m (a -> a))
 
 -- | An @OperatorTable s u m a@ is a list of @Operator s u m a@
--- lists. The list is ordered in descending
--- precedence. All operators in one list have the same precedence (but
--- may have a different associativity).
+-- lists. The list is ordered in descending precedence. All operators in one
+-- list have the same precedence (but may have a different associativity).
 
 type OperatorTable s u m a = [[Operator s u m a]]
 
------------------------------------------------------------
--- Convert an OperatorTable and basic term parser into
--- a full fledged expression parser
------------------------------------------------------------
-
 -- | @buildExpressionParser table term@ builds an expression parser for
--- terms @term@ with operators from @table@, taking the associativity
--- and precedence specified in @table@ into account. Prefix and postfix
--- operators of the same precedence can only occur once (i.e. @--2@ is
--- not allowed if @-@ is prefix negate). Prefix and postfix operators
--- of the same precedence associate to the left (i.e. if @++@ is
--- postfix increment, than @-2++@ equals @-1@, not @-3@).
+-- terms @term@ with operators from @table@, taking the associativity and
+-- precedence specified in @table@ into account. Prefix and postfix
+-- operators of the same precedence can only occur once (i.e. @--2@ is not
+-- allowed if @-@ is prefix negate). Prefix and postfix operators of the
+-- same precedence associate to the left (i.e. if @++@ is postfix increment,
+-- than @-2++@ equals @-1@, not @-3@).
 --
--- The @buildExpressionParser@ takes care of all the complexity
--- involved in building expression parser. Here is an example of an
--- expression parser that handles prefix signs, postfix increment and
--- basic arithmetic.
+-- The @buildExpressionParser@ takes care of all the complexity involved in
+-- building expression parser. Here is an example of an expression parser
+-- that handles prefix signs, postfix increment and basic arithmetic.
 --
--- >  expr    = buildExpressionParser table term
--- >          <?> "expression"
+-- > expr = buildExpressionParser table term <?> "expression"
 -- >
--- >  term    =  parens expr
--- >          <|> natural
--- >          <?> "simple expression"
+-- > term = parens expr <|> natural <?> "simple expression"
 -- >
--- >  table   = [ [prefix "-" negate, prefix "+" id ]
--- >            , [postfix "++" (+1)]
--- >            , [binary "*" (*) AssocLeft, binary "/" (div) AssocLeft ]
--- >            , [binary "+" (+) AssocLeft, binary "-" (-)   AssocLeft ]
--- >            ]
+-- > table = [ [ prefix  "-"  negate
+-- >           , prefix  "+"  id ]
+-- >         , [ postfix "++" (+1) ]
+-- >         , [ binary  "*"  (*) AssocLeft
+-- >           , binary  "/"  div AssocLeft ]
+-- >         , [ binary  "+"  (+) AssocLeft
+-- >           , binary  "-"  (-) AssocLeft ] ]
 -- >
--- >  binary  name fun assoc = Infix (do{ reservedOp name; return fun }) assoc
--- >  prefix  name fun       = Prefix (do{ reservedOp name; return fun })
--- >  postfix name fun       = Postfix (do{ reservedOp name; return fun })
+-- > binary  name fun assoc = Infix   (reservedOp name >> return fun) assoc
+-- > prefix  name fun       = Prefix  (reservedOp name >> return fun)
+-- > postfix name fun       = Postfix (reservedOp name >> return fun)
 
-buildExpressionParser :: (Stream s m t)
-                      => OperatorTable s u m a
-                      -> ParsecT s u m a
-                      -> ParsecT s u m a
-buildExpressionParser operators simpleExpr
-    = foldl (makeParser) simpleExpr operators
-    where
-      makeParser term ops
-        = let (rassoc,lassoc,nassoc
-               ,prefix,postfix)      = foldr splitOp ([],[],[],[],[]) ops
+buildExpressionParser :: Stream s m t => OperatorTable s u m a ->
+                         ParsecT s u m a -> ParsecT s u m a
+buildExpressionParser ops simpleExpr = foldl' makeParser simpleExpr ops
 
-              rassocOp   = choice rassoc
-              lassocOp   = choice lassoc
-              nassocOp   = choice nassoc
-              prefixOp   = choice prefix  <?> ""
-              postfixOp  = choice postfix <?> ""
+makeParser :: (Foldable t, Stream s m t1) =>
+              ParsecT s u m b -> t (Operator s u m b) -> ParsecT s u m b
+makeParser term ops =
+    termP >>= \x -> rasP x <|> lasP x <|> nasP x <|> return x <?> "operator"
+    where (ras, las, nas, prefix, postfix) = foldr splitOp ([],[],[],[],[]) ops
 
-              ambigious assoc op= try $
-                                  do{ op; fail ("ambiguous use of a " ++ assoc
-                                                 ++ " associative operator")
-                                    }
+          rasOp     = choice ras
+          lasOp     = choice las
+          nasOp     = choice nas
+          prefixOp  = choice prefix  <?> ""
+          postfixOp = choice postfix <?> ""
 
-              ambigiousRight    = ambigious "right" rassocOp
-              ambigiousLeft     = ambigious "left" lassocOp
-              ambigiousNon      = ambigious "non" nassocOp
+          ambigious assoc op =
+              try $ op >> fail ("ambiguous use of a " ++ assoc
+                               ++ " associative operator")
 
-              termP      = do{ pre  <- prefixP
-                             ; x    <- term
-                             ; post <- postfixP
-                             ; return (post (pre x))
-                             }
+          ambigiousRight = ambigious "right" rasOp
+          ambigiousLeft  = ambigious "left"  lasOp
+          ambigiousNon   = ambigious "non"   nasOp
 
-              postfixP   = postfixOp <|> return id
+          termP = do
+            pre  <- prefixP
+            x    <- term
+            post <- postfixP
+            return $ post (pre x)
 
-              prefixP    = prefixOp <|> return id
+          postfixP = postfixOp <|> return id
+          prefixP  = prefixOp  <|> return id
 
-              rassocP x  = do{ f <- rassocOp
-                             ; y  <- do{ z <- termP; rassocP1 z }
-                             ; return (f x y)
-                             }
-                           <|> ambigiousLeft
-                           <|> ambigiousNon
-                           -- <|> return x
+          rasP x = do { f <- rasOp; y <- termP >>= rasP1; return (f x y)}
+                   <|> ambigiousLeft
+                   <|> ambigiousNon
 
-              rassocP1 x = rassocP x  <|> return x
+          rasP1 x = rasP x <|> return x
 
-              lassocP x  = do{ f <- lassocOp
-                             ; y <- termP
-                             ; lassocP1 (f x y)
-                             }
-                           <|> ambigiousRight
-                           <|> ambigiousNon
-                           -- <|> return x
+          lasP x = do { f <- lasOp; y <- termP; lasP1 (f x y) }
+                   <|> ambigiousRight
+                   <|> ambigiousNon
 
-              lassocP1 x = lassocP x <|> return x
+          lasP1 x = lasP x <|> return x
 
-              nassocP x  = do{ f <- nassocOp
-                             ; y <- termP
-                             ;    ambigiousRight
-                              <|> ambigiousLeft
-                              <|> ambigiousNon
-                              <|> return (f x y)
-                             }
-                           -- <|> return x
+          nasP x = do
+            f <- nasOp
+            y <- termP
+            ambigiousRight <|> ambigiousLeft <|> ambigiousNon <|> return (f x y)
 
-           in  do{ x <- termP
-                 ; rassocP x <|> lassocP  x <|> nassocP x <|> return x
-                   <?> "operator"
-                 }
-
-
-      splitOp (Infix op assoc) (rassoc,lassoc,nassoc,prefix,postfix)
-        = case assoc of
-            AssocNone  -> (rassoc,lassoc,op:nassoc,prefix,postfix)
-            AssocLeft  -> (rassoc,op:lassoc,nassoc,prefix,postfix)
-            AssocRight -> (op:rassoc,lassoc,nassoc,prefix,postfix)
-
-      splitOp (Prefix op) (rassoc,lassoc,nassoc,prefix,postfix)
-        = (rassoc,lassoc,nassoc,op:prefix,postfix)
-
-      splitOp (Postfix op) (rassoc,lassoc,nassoc,prefix,postfix)
-        = (rassoc,lassoc,nassoc,prefix,op:postfix)
+splitOp :: Operator s u m a ->
+           ( [ParsecT s u m (a -> a -> a)]
+           , [ParsecT s u m (a -> a -> a)]
+           , [ParsecT s u m (a -> a -> a)]
+           , [ParsecT s u m (a -> a)]
+           , [ParsecT s u m (a -> a)] ) ->
+          ( [ParsecT s u m (a -> a -> a)]
+          , [ParsecT s u m (a -> a -> a)]
+          , [ParsecT s u m (a -> a -> a)]
+          , [ParsecT s u m (a -> a)]
+          , [ParsecT s u m (a -> a)] )
+splitOp (Infix op assoc) (ras, las, nas, prefix, postfix) =
+    case assoc of
+      AssocNone  -> (ras,    las,    op:nas, prefix, postfix)
+      AssocLeft  -> (ras,    op:las, nas,    prefix, postfix)
+      AssocRight -> (op:ras, las,    nas,    prefix, postfix)
+splitOp (Prefix  op) (ras, las, nas, prefix, postfix) =
+    (ras, las, nas, op:prefix, postfix)
+splitOp (Postfix op) (ras, las, nas, prefix, postfix) =
+    (ras, las, nas, prefix, op:postfix)
