@@ -172,8 +172,10 @@ parsecMap f p = ParsecT $ \s cok cerr eok eerr ->
                 unParser p s (cok . f) cerr (eok . f) eerr
 
 instance A.Applicative (ParsecT s u m) where
-    pure  = return
-    (<*>) = ap -- TODO: Can this be optimized?
+    pure     = return
+    (<*>)    = ap -- TODO: Can this be optimized?
+    (*>)     = (>>)
+    p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 instance A.Alternative (ParsecT s u m) where
     empty = mzero
