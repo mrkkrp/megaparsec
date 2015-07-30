@@ -20,6 +20,9 @@ different from Parsec in the following ways:
   for this test-suite if you look at `CHANGELOG.md` file that includes
   Parsec-era changes. The word «regression» mentioned quite frequently.
 
+* MegaParsec looks into future, it does not contain code that serves for
+  compatibility purposes, it also requires more recent version of `base`.
+
 * Finally, we have fixed numerous typos and other minor flaws.
 
 The reason for creating separate version of the project was inactivity of
