@@ -20,7 +20,7 @@ module Text.MegaParsec.Token
     , makeTokenParser )
 where
 
-import Data.Char (isAlpha, toLower, toUpper, isSpace, digitToInt)
+import Data.Char (isAlpha, toLower, toUpper, isSpace)
 import Data.List (nub, sort)
 
 import Control.Monad (void)
@@ -99,7 +99,7 @@ data LanguageDef s u m =
 data TokenParser s u m =
     TokenParser {
 
-    -- | This lexeme parser parses a legal identifier. Returns the identifier
+    -- | The lexeme parser parses a legal identifier. Returns the identifier
     -- string. This parser will fail on identifiers that are reserved
     -- words. Legal identifier (start) characters and reserved words are
     -- defined in the 'LanguageDef' that is passed to 'makeTokenParser'. An
@@ -114,7 +114,7 @@ data TokenParser s u m =
 
     , reserved :: String -> ParsecT s u m ()
 
-    -- | This lexeme parser parses a legal operator. Returns the name of the
+    -- | The lexeme parser parses a legal operator. Returns the name of the
     -- operator. This parser will fail on any operators that are reserved
     -- operators. Legal operator (start) characters and reserved operators
     -- are defined in the 'LanguageDef' that is passed to
@@ -129,7 +129,7 @@ data TokenParser s u m =
 
     , reservedOp :: String -> ParsecT s u m ()
 
-    -- | This lexeme parser parses a single literal character. Returns the
+    -- | The lexeme parser parses a single literal character. Returns the
     -- literal character value. This parsers deals correctly with escape
     -- sequences. The literal character is parsed according to the grammar
     -- rules defined in the Haskell report (which matches most programming
@@ -137,7 +137,7 @@ data TokenParser s u m =
 
     , charLiteral :: ParsecT s u m Char
 
-    -- | This lexeme parser parses a literal string. Returns the literal
+    -- | The lexeme parser parses a literal string. Returns the literal
     -- string value. This parsers deals correctly with escape sequences and
     -- gaps. The literal string is parsed according to the grammar rules
     -- defined in the Haskell report (which matches most programming
@@ -145,50 +145,61 @@ data TokenParser s u m =
 
     , stringLiteral :: ParsecT s u m String
 
-    -- | This lexeme parser parses a natural number (a positive whole
-    -- number). Returns the value of the number. The number can be specified
-    -- in 'decimal', 'hexadecimal' or 'octal'. The number is parsed
-    -- according to the grammar rules in the Haskell report.
-
-    , natural :: ParsecT s u m Integer
-
-    -- | This lexeme parser parses an integer (a whole number). This parser
-    -- is like 'natural' except that it can be prefixed with sign
-    -- (i.e. \'-\' or \'+\'). Returns the value of the number. The number
+    -- | The lexeme parser parses an integer (a whole number). This parser
+    -- /does not/ parse sign. Returns the value of the number. The number
     -- can be specified in 'decimal', 'hexadecimal' or 'octal'. The number
     -- is parsed according to the grammar rules in the Haskell report.
 
     , integer :: ParsecT s u m Integer
 
-    -- | This lexeme parser parses a floating point value. Returns the value
-    -- of the number. The number is parsed according to the grammar rules
-    -- defined in the Haskell report.
+    -- | This is just like 'integer', except it can parse sign.
 
-    , float :: ParsecT s u m Double
+    , integer' :: ParsecT s u m Integer
 
-    -- | This lexeme parser parses either 'natural' or a 'float'.
-    -- Returns the value of the number. This parsers deals with any overlap
-    -- in the grammar rules for naturals and floats. The number is parsed
-    -- according to the grammar rules defined in the Haskell report.
-
-    , naturalOrFloat :: ParsecT s u m (Either Integer Double)
-
-    -- | Parses a positive whole number in the decimal system. Returns the
-    -- value of the number.
+    -- | The lexeme parses a positive whole number in the decimal system.
+    -- Returns the value of the number.
 
     , decimal :: ParsecT s u m Integer
 
-    -- | Parses a positive whole number in the hexadecimal system. The number
-    -- should be prefixed with \"0x\" or \"0X\". Returns the value of the
-    -- number.
+    -- | The lexeme parses a positive whole number in the hexadecimal
+    -- system. The number should be prefixed with \"0x\" or \"0X\". Returns
+    -- the value of the number.
 
     , hexadecimal :: ParsecT s u m Integer
 
-    -- | Parses a positive whole number in the octal system. The number
-    -- should be prefixed with \"0o\" or \"0O\". Returns the value of the
-    -- number.
+    -- | The lexeme parses a positive whole number in the octal system.
+    -- The number should be prefixed with \"0o\" or \"0O\". Returns the
+    -- value of the number.
 
     , octal :: ParsecT s u m Integer
+
+    -- | @signed p@ tries to parse sign (i.e. \'+\', \'-\', or nothing) and
+    -- then runs parser @p@, changing sign of its result accordingly. Note
+    -- that there may be white space after the sign but not before it.
+
+    , signed :: forall a . Num a => ParsecT s u m a -> ParsecT s u m a
+
+    -- | The lexeme parser parses a floating point value. Returns the value
+    -- of the number. The number is parsed according to the grammar rules
+    -- defined in the Haskell report, sign is /not/ parsed, use 'signed' to
+    -- achieve parsing of signed floating point values.
+
+    , float :: ParsecT s u m Double
+
+    -- | This is just like 'float', except it can parse sign.
+
+    , float' :: ParsecT s u m Double
+
+    -- | The lexeme parser parses either 'integer' or a 'float'.
+    -- Returns the value of the number. This parser deals with any overlap
+    -- in the grammar rules for integers and floats. The number is parsed
+    -- according to the grammar rules defined in the Haskell report.
+
+    , number :: ParsecT s u m (Either Integer Double)
+
+    -- | This is just like 'number', except it can parse sign.
+
+    , number' :: ParsecT s u m (Either Integer Double)
 
     -- | Lexeme parser @symbol s@ parses 'string' @s@ and skips
     -- trailing white space.
@@ -310,37 +321,41 @@ data TokenParser s u m =
 makeTokenParser :: Stream s m Char => LanguageDef s u m -> TokenParser s u m
 makeTokenParser languageDef =
     TokenParser
-    { identifier     = identifier
-    , reserved       = reserved
-    , operator       = operator
-    , reservedOp     = reservedOp
+    { identifier    = identifier
+    , reserved      = reserved
+    , operator      = operator
+    , reservedOp    = reservedOp
 
-    , charLiteral    = charLiteral
-    , stringLiteral  = stringLiteral
-    , natural        = natural
-    , integer        = integer
-    , float          = float
-    , naturalOrFloat = naturalOrFloat
-    , decimal        = decimal
-    , hexadecimal    = hexadecimal
-    , octal          = octal
+    , charLiteral   = charLiteral
+    , stringLiteral = stringLiteral
 
-    , symbol         = symbol
-    , lexeme         = lexeme
-    , whiteSpace     = whiteSpace
+    , integer       = integer
+    , integer'      = integer'
+    , decimal       = decimal
+    , hexadecimal   = hexadecimal
+    , octal         = octal
+    , signed        = signed
+    , float         = float
+    , float'        = float'
+    , number        = number
+    , number'       = number'
 
-    , parens         = parens
-    , braces         = braces
-    , angles         = angles
-    , brackets       = brackets
-    , semi           = semi
-    , comma          = comma
-    , colon          = colon
-    , dot            = dot
-    , semiSep        = semiSep
-    , semiSep1       = semiSep1
-    , commaSep       = commaSep
-    , commaSep1      = commaSep1 }
+    , symbol        = symbol
+    , lexeme        = lexeme
+    , whiteSpace    = whiteSpace
+
+    , parens        = parens
+    , braces        = braces
+    , angles        = angles
+    , brackets      = brackets
+    , semi          = semi
+    , comma         = comma
+    , colon         = colon
+    , dot           = dot
+    , semiSep       = semiSep
+    , semiSep1      = semiSep1
+    , commaSep      = commaSep
+    , commaSep1     = commaSep1 }
     where
 
     -- bracketing
@@ -395,18 +410,18 @@ makeTokenParser languageDef =
     escapeCode = charEsc <|> charNum <|> charAscii <|> charControl
                  <?> "escape code"
 
-    charControl = toEnum . subtract 64 . fromEnum <$> (char '^' >> upper)
-
-    charNum = toEnum . fromInteger <$>
-              ( decimal <|>
-               (char 'o' >> number 8 octDigit) <|>
-               (char 'x' >> number 16 hexDigit) )
-
     charEsc = choice (parseEsc <$> escMap)
         where parseEsc (c, code) = char c >> return code
 
+    charNum = toEnum . fromInteger <$>
+              ( decimal <|>
+               (char 'o' >> nump "0o" octDigit) <|>
+               (char 'x' >> nump "0x" hexDigit) )
+
     charAscii = choice (parseAscii <$> asciiMap)
         where parseAscii (asc, code) = try (string asc >> return code)
+
+    charControl = toEnum . subtract 64 . fromEnum <$> (char '^' >> upper)
 
     -- escape code tables
 
@@ -422,72 +437,53 @@ makeTokenParser languageDef =
     ascii2 = "\b\t\n\v\f\r\SO\SI\EM\FS\GS\RS\US "
     ascii3 = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\SUB\ESC\DEL"
 
-    -- numbers
+    -- numbers — integers
 
-    naturalOrFloat = lexeme natFloat <?> "number"
+    integer  = decimal        <?> "unsigned integer"
+    integer' = signed integer <?> "integer"
 
-    float   = lexeme floating <?> "float"
-    integer = lexeme int      <?> "integer"
-    natural = lexeme nat      <?> "natural"
+    decimal     = lexeme $ nump "" digit
+    hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigit
+    octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigit
 
-    -- floats
+    nump prefix baseDigit = read . (prefix ++) <$> many1 baseDigit
 
-    floating = decimal >>= fractExponent
+    signed p = ($) <$> option id (lexeme sign) <*> p
 
-    natFloat = (char '0' >> zeroNumFloat) <|> decimalFloat
+    sign :: (Stream s m Char, Num a) => ParsecT s u m (a -> a)
+    sign = (char '+' *> return id) <|> (char '-' *> return negate)
 
-    zeroNumFloat = (Left <$> (hexadecimal <|> octal)) <|>
-                   decimalFloat <|>
-                   fractFloat 0 <|>
-                   return (Left 0)
+    -- numbers — floats
 
-    decimalFloat = decimal >>= \n -> option (Left n) (fractFloat n)
+    float  = lexeme ffloat <?> "unsigned float"
+    float' = signed float  <?> "float"
 
-    fractFloat n = Right <$> fractExponent n
+    ffloat = read <$> (ffir <|> fsec)
 
-    fractExponent n =
-        do { fract <- fraction
-           ; expo  <- option 1.0 exponent'
-           ; return $ (n' + fract) * expo
-           } <|> ((* n') <$> exponent')
-        where n' = fromInteger n
+    ffir = do
+      decimal1 <- fDec
+      void $ char '.'
+      decimal2 <- fDec
+      exponent <- option "" fExp
+      return $ decimal1 ++ "." ++ decimal2 ++ exponent
 
-    fraction =
-        do { void $ char '.'
-           ; digits <- many1 digit <?> "fraction"
-           ; return $ foldr op 0.0 digits
-           } <?> "fraction"
-        where op d f = (f + fromIntegral (digitToInt d)) / 10.0
+    fsec = do
+      decimal  <- fDec
+      exponent <- fExp
+      return $ decimal ++ exponent
 
-    exponent' =
-        do { void $ oneOf "eE"
-           ; f <- sign
-           ; e <- decimal <?> "exponent"
-           ; return $ power (f e)
-           } <?> "exponent"
-        where power e
-                  | e < 0     = 1.0 / power (-e)
-                  | otherwise = fromInteger (10^e)
+    fDec = many1 digit
 
-    -- integers and naturals
+    fExp = do
+      expChar <- oneOf "eE"
+      signStr <- option "" (pure <$> oneOf "+-")
+      decimal <- fDec
+      return $ expChar : signStr ++ decimal
 
-    int = ($) <$> lexeme sign <*> nat
+    -- numbers — a more general case
 
-    sign = (char '-' >> return negate) <|> (char '+' >> return id) <|> return id
-
-    nat = zeroNumber <|> decimal
-
-    zeroNumber = (char '0' >> (hexadecimal <|> octal <|> decimal <|> return 0))
-                 <?> ""
-
-    decimal     = number 10 digit
-    hexadecimal = oneOf "xX" >> number 16 hexDigit
-    octal       = oneOf "oO" >> number 8  octDigit
-
-    number base baseDigit = do
-      digits <- many1 baseDigit
-      let n = foldl (\x d -> base * x + toInteger (digitToInt d)) 0 digits
-      n `seq` return n
+    number  = (Right <$> try float) <|> (Left <$> integer) <?> "unsigned number"
+    number' = (Right <$> try float') <|> (Left <$> integer') <?> "number"
 
     -- operators & reserved ops
 
