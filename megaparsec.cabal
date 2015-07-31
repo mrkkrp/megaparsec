@@ -103,12 +103,22 @@ test-suite tests
   hs-source-dirs:    tests
   type:              exitcode-stdio-1.0
   ghc-options:       -O2 -Wall -rtsopts
-  default-language:  Haskell2010
   build-depends:     base                   >= 4.8 && < 5
                    , megaparsec             >= 4.0.0
                    , QuickCheck             >= 2.4 && < 3
                    , test-framework         >= 0.6 && < 1
                    , test-framework-quickcheck2 >= 0.3 && < 0.4
+  default-language:  Haskell2010
+
+benchmark benchmarks
+  main-is:           Main.hs
+  hs-source-dirs:    benchmarks
+  type:              exitcode-stdio-1.0
+  ghc-options:       -O2 -Wall -rtsopts
+  build-depends:     base                   >= 4.8 && < 5
+                   , megaparsec             >= 4.0.0
+                   , criterion              >= 0.6.2.1 && < 1.2
+  default-language:  Haskell2010
 
 source-repository head
   type:              git
