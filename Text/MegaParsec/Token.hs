@@ -458,7 +458,7 @@ makeTokenParser languageDef =
     float  = lexeme ffloat <?> "unsigned float"
     float' = signed float  <?> "float"
 
-    ffloat = read <$> (ffir <|> fsec)
+    ffloat = read <$> (try ffir <|> fsec)
 
     ffir = do
       decimal1 <- fDec
