@@ -3,6 +3,25 @@
 * Cosmetic changes in entire source code, numerous improvements and
   elimination of warnings.
 
+* Rewritten parsing of numbers, fixed #2 and #3 (in old Parsec project these
+  are number 35 and 39 respectively), added per bug tests.
+
+    * Since Haskell report doesn't say anything about sign, I've made
+      ‘integer’ and ‘float’ parse numbers without sign.
+
+    * Removed ‘natural’ parser, it's equal to new ‘integer’ now.
+
+    * Renamed ‘naturalOrFloat’ → ‘number’ — this doesn't parse sign too.
+
+    * Added new combinator ‘signed’ to parse all sorts of signed numbers.
+
+    * For the sake of convenience I've added ‘integer'’, ‘float'’, and
+     ‘number'’ combinators that also can parse signed numbers out of box.
+
+* Added comprehensive QuickCheck test suite.
+
+* Added benchmarks.
+
 * Fixed typos in source code and other files.
 
 ## Parsec 3.1.9
