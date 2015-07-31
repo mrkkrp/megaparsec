@@ -81,12 +81,9 @@ library
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
 
--- The test-suite should be rewritten using QuickCheck. For now let the old
--- tests be here.
-
-test-suite tests
+test-suite oldtests
   main-is:           Main.hs
-  hs-source-dirs:    test
+  hs-source-dirs:    oldtests
   type:              exitcode-stdio-1.0
   other-modules:     Bugs
                    , Bugs.Bug2
@@ -96,10 +93,22 @@ test-suite tests
   build-depends:     base
                    , megaparsec             >= 4.0.0
                    , HUnit                  == 1.2.*
-                   , test-framework         >= 0.6 && < 0.9
-                   , test-framework-hunit >= 0.2 && < 0.4
+                   , test-framework         >= 0.6 && < 1
+                   , test-framework-hunit   >= 0.2 && < 0.4
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
+
+test-suite tests
+  main-is:           Main.hs
+  hs-source-dirs:    tests
+  type:              exitcode-stdio-1.0
+  ghc-options:       -O2 -Wall -rtsopts
+  default-language:  Haskell2010
+  build-depends:     base
+                   , megaparsec             >= 4.0.0
+                   , QuickCheck             >= 2.4 && < 3
+                   , test-framework         >= 0.6 && < 1
+                   , test-framework-quickcheck2 >= 0.3 && < 0.4
 
 source-repository head
   type:              git
