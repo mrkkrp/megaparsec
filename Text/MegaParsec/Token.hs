@@ -439,8 +439,8 @@ makeTokenParser languageDef =
 
     -- numbers — integers
 
-    integer  = decimal        <?> "unsigned integer"
-    integer' = signed integer <?> "integer"
+    integer  = decimal <?> "integer"
+    integer' = signed integer
 
     decimal     = lexeme $ nump "" digit
     hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigit
@@ -455,8 +455,8 @@ makeTokenParser languageDef =
 
     -- numbers — floats
 
-    float  = lexeme ffloat <?> "unsigned float"
-    float' = signed float  <?> "float"
+    float  = lexeme ffloat <?> "float"
+    float' = signed float
 
     ffloat = read <$> (try ffir <|> fsec)
 
@@ -482,7 +482,7 @@ makeTokenParser languageDef =
 
     -- numbers — a more general case
 
-    number  = (Right <$> try float) <|> (Left <$> integer) <?> "unsigned number"
+    number  = (Right <$> try float)  <|> (Left <$> integer)  <?> "number"
     number' = (Right <$> try float') <|> (Left <$> integer') <?> "number"
 
     -- operators & reserved ops
