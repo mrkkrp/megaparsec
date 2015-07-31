@@ -32,9 +32,10 @@ version:             4.0.0
 cabal-version:       >= 1.10
 license:             BSD3
 license-file:        LICENSE.md
-author:              Daan Leijen <daan@microsoft.com>,
+author:              MegaParsec contributors,
                      Paolo Martini <paolo@nemail.it>,
-                     MegaParsec contributors
+                     Daan Leijen <daan@microsoft.com>
+
 maintainer:          Mark Karpov <markkarpov@opmbx.org>
 homepage:            https://github.com/mrkkrp/megaparsec
 bug-reports:         https://github.com/mrkkrp/megaparsec/issues
