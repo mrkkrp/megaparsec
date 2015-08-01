@@ -23,6 +23,7 @@ Names below are sorted alphabetically.
 
 ## Contributors
 
+* Albert Netymk
 * Antoine Latter
 * Ben Pence
 * Björn Buckwalter
