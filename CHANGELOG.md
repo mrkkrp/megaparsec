@@ -7,16 +7,22 @@
   are number 35 and 39 respectively), added per bug tests.
 
     * Since Haskell report doesn't say anything about sign, I've made
-      ‘integer’ and ‘float’ parse numbers without sign.
+      `integer` and `float` parse numbers without sign.
 
-    * Removed ‘natural’ parser, it's equal to new ‘integer’ now.
+    * Removed `natural` parser, it's equal to new `integer` now.
 
-    * Renamed ‘naturalOrFloat’ → ‘number’ — this doesn't parse sign too.
+    * Renamed `naturalOrFloat` → `number` — this doesn't parse sign too.
 
-    * Added new combinator ‘signed’ to parse all sorts of signed numbers.
+    * Added new combinator `signed` to parse all sorts of signed numbers.
 
-    * For the sake of convenience I've added ‘integer'’, ‘float'’, and
-     ‘number'’ combinators that also can parse signed numbers out of box.
+    * For the sake of convenience I've added `integer'`, `float'`, and
+     `number'` combinators that also can parse signed numbers out of box.
+
+* Renamed `many1` → `some` as well as other parsers that had `many1` part in
+  their names.
+
+* The following functions are now re-exported from ‘Control.Applicative’:
+  `(<|>)`, `many`, `some`, `optional`. See #9.
 
 * Added comprehensive QuickCheck test suite.
 

@@ -17,9 +17,7 @@ module Text.MegaParsec.Combinator
     , between
     , option
     , optionMaybe
-    , optional
-    , skipMany1
-    , many1
+    , skipSome
     , sepBy
     , sepBy1
     , endBy
@@ -37,6 +35,7 @@ module Text.MegaParsec.Combinator
     , anyToken )
 where
 
+import Control.Applicative ((<|>), many, some)
 import Control.Monad
 
 import Text.MegaParsec.Prim
@@ -63,12 +62,12 @@ option x p = p <|> return x
 optionMaybe :: Stream s m t => ParsecT s u m a -> ParsecT s u m (Maybe a)
 optionMaybe p = option Nothing (Just <$> p)
 
--- | @optional p@ tries to apply parser @p@. It will parse @p@ or nothing.
--- It only fails if @p@ fails after consuming input. It discards the result
--- of @p@.
+-- -- | @optional p@ tries to apply parser @p@. It will parse @p@ or nothing.
+-- -- It only fails if @p@ fails after consuming input. It discards the result
+-- -- of @p@.
 
-optional :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
-optional p = (p *> return ()) <|> return ()
+-- optional :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
+-- optional p = (p *> return ()) <|> return ()
 
 -- | @between open close p@ parses @open@, followed by @p@ and @close@.
 -- Returns the value returned by @p@.
@@ -79,19 +78,11 @@ between :: Stream s m t => ParsecT s u m open ->
            ParsecT s u m close -> ParsecT s u m a -> ParsecT s u m a
 between open close p = open *> p <* close
 
--- | @skipMany1 p@ applies the parser @p@ /one/ or more times, skipping
+-- | @skipSome p@ applies the parser @p@ /one/ or more times, skipping
 -- its result.
 
-skipMany1 :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
-skipMany1 p = p *> skipMany p
-
--- | @many1 p@ applies the parser @p@ /one/ or more times. Returns a
--- list of the returned values of @p@.
---
--- > word = many1 letter
-
-many1 :: Stream s m t => ParsecT s u m a -> ParsecT s u m [a]
-many1 p = (:) <$> p <*> many p
+skipSome :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
+skipSome p = p *> skipMany p
 
 -- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.
@@ -132,7 +123,7 @@ sepEndBy p sep = sepEndBy1 p sep <|> return []
 
 endBy1 :: Stream s m t =>
           ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
-endBy1 p sep = many1 (p <* sep)
+endBy1 p sep = some (p <* sep)
 
 -- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.

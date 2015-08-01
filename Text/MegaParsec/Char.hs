@@ -33,6 +33,7 @@ module Text.MegaParsec.Char
     , string )
 where
 
+import Control.Applicative ((<|>))
 import Data.Char
 
 import Text.MegaParsec.Pos

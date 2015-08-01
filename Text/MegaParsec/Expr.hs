@@ -19,6 +19,7 @@ module Text.MegaParsec.Expr
     , buildExpressionParser )
 where
 
+import Control.Applicative ((<|>))
 import Data.List (foldl')
 
 import Text.MegaParsec.Combinator

@@ -20,10 +20,10 @@ module Text.MegaParsec.Token
     , makeTokenParser )
 where
 
+import Control.Applicative ((<|>), many, some)
+import Control.Monad (void)
 import Data.Char (isAlpha, toLower, toUpper, isSpace)
 import Data.List (nub, sort)
-
-import Control.Monad (void)
 
 import Text.MegaParsec.Prim
 import Text.MegaParsec.Char
@@ -403,7 +403,7 @@ makeTokenParser languageDef =
                      (Just <$> escapeCode) )
 
     escapeEmpty = char '&'
-    escapeGap   = many1 space >> char '\\' <?> "end of string gap"
+    escapeGap   = some space >> char '\\' <?> "end of string gap"
 
     -- escape codes
 
@@ -446,7 +446,7 @@ makeTokenParser languageDef =
     hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigit
     octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigit
 
-    nump prefix baseDigit = read . (prefix ++) <$> many1 baseDigit
+    nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
     signed p = ($) <$> option id (lexeme sign) <*> p
 
@@ -471,7 +471,7 @@ makeTokenParser languageDef =
       exp <- option "" fExp
       return $ '.' : decimal ++  exp
 
-    fDec = many1 digit
+    fDec = some digit
 
     fExp = do
       expChar <- oneOf "eE"
@@ -564,7 +564,7 @@ makeTokenParser languageDef =
           noLine  = null (commentLine languageDef)
           noMulti = null (commentStart languageDef)
 
-    simpleSpace = skipMany1 (satisfy isSpace)
+    simpleSpace = skipSome (satisfy isSpace)
 
     oneLineComment = void (try (string (commentLine languageDef))
                           >> skipMany (satisfy (/= '\n')))
@@ -578,13 +578,13 @@ makeTokenParser languageDef =
     inCommentMulti
         =  void (try . string $ commentEnd languageDef)
        <|> (multiLineComment            >> inCommentMulti)
-       <|> (skipMany1 (noneOf startEnd) >> inCommentMulti)
+       <|> (skipSome (noneOf startEnd) >> inCommentMulti)
        <|> (oneOf startEnd              >> inCommentMulti)
        <?> "end of comment"
 
     inCommentSingle
         =  void (try . string $ commentEnd languageDef)
-       <|> (skipMany1 (noneOf startEnd) >> inCommentSingle)
+       <|> (skipSome (noneOf startEnd) >> inCommentSingle)
        <|> (oneOf startEnd              >> inCommentSingle)
        <?> "end of comment"
 

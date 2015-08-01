@@ -98,7 +98,7 @@ data StreamBranch s st a =
 -- optional string of @a@'s, the character @b@ and an optional @c@. This can
 -- be described by:
 --
--- > test = permute (tuple <$?> ("", many1 (char 'a'))
+-- > test = permute (tuple <$?> ("", some (char 'a'))
 -- >                       <||> char 'b'
 -- >                       <|?> ('_', char 'c'))
 -- >          where tuple a b c  = (a, b, c)
@@ -110,7 +110,7 @@ permute (Perm def xs) = choice (fmap branch xs ++ empty)
   where empty = case def of
                   Nothing -> []
                   Just x  -> [return x]
-        branch (Branch perm p) = (flip ($)) <$> p <*> permute perm
+        branch (Branch perm p) = flip ($) <$> p <*> permute perm
 
 -- Build permutation trees
 

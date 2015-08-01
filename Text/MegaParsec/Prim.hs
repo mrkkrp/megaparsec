@@ -28,7 +28,6 @@ module Text.MegaParsec.Prim
     , mergeErrorReply
     , (<?>)
     , label
-    , (<|>)
     , runParserT
     , runParser
     , parse
@@ -39,7 +38,6 @@ module Text.MegaParsec.Prim
     , token
     , tokens
     , tokenPrim
-    , many
     , skipMany
     , getPosition
     , getInput
@@ -67,7 +65,7 @@ import Control.Monad.State.Class hiding (state)
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
 
-import qualified Control.Applicative as A (Applicative (..), Alternative (..))
+import qualified Control.Applicative as A
 
 import Text.MegaParsec.Pos
 import Text.MegaParsec.Error
@@ -178,8 +176,9 @@ instance A.Applicative (ParsecT s u m) where
     p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 instance A.Alternative (ParsecT s u m) where
-    empty = mzero
-    (<|>) = mplus
+    empty  = mzero
+    (<|>)  = mplus
+    many p = reverse <$> manyAccum (:) p
 
 instance Monad (ParsecT s u m) where
     return = parserReturn
@@ -347,7 +346,6 @@ mergeErrorReply err1 reply
 -- Basic combinators
 
 infix  0 <?>
-infixr 1 <|>
 
 -- | The parser @p \<?> msg@ behaves as parser @p@, but whenever the
 -- parser @p@ fails /without consuming any input/, it replaces expect error
@@ -381,20 +379,6 @@ labels p msgs = ParsecT $ \s cok cerr eok eerr ->
    setExpectErrors err (m:ms)
        = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
          (setErrorMessage (Expect m) err) ms
-
--- | This combinator implements choice. The parser @p \<|> q@ first
--- applies @p@. If it succeeds, the value of @p@ is returned. If @p@ fails
--- /without consuming any input/, parser @q@ is tried. This combinator is
--- defined equal to the 'mplus' member of the 'MonadPlus' class and the
--- ('Control.Applicative.<|>') member of 'Control.Applicative.Alternative'.
---
--- The parser is called /predictive/ since @q@ is only tried when parser @p@
--- didn't consume any input (i.e. the look ahead is 1).  This
--- non-backtracking behaviour allows for both an efficient implementation of
--- the parser combinators and the generation of good error messages.
-
-(<|>) :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
-p1 <|> p2 = mplus p1 p2
 
 -- Running a parser
 
@@ -481,7 +465,7 @@ parseTest p input =
 -- > expr       = letExpr <|> identifier <?> "expression"
 -- >
 -- > letExpr    = string "let" >> …
--- > identifier = many1 letter
+-- > identifier = some letter
 --
 -- If the user writes \"lexical\", the parser fails with: @unexpected \'x\',
 -- expecting \'t\' in \"let\"@. Indeed, since the ('<|>') combinator only
@@ -493,7 +477,7 @@ parseTest p input =
 -- > expr       = letExpr <|> identifier <?> "expression"
 -- >
 -- > letExpr    = try (string "let") >> …
--- > identifier = many1 letter
+-- > identifier = some letter
 
 try :: ParsecT s u m a -> ParsecT s u m a
 try p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
@@ -640,14 +624,6 @@ tokenPrimEx showToken nextpos (Just nextState) test
 
 unexpectError :: String -> SourcePos -> ParseError
 unexpectError msg = newErrorMessage (SysUnExpect msg)
-
--- | @many p@ applies the parser @p@ /zero/ or more times. Returns a
--- list of the returned values of @p@.
---
--- > identifier = (:) <$> letter <*> many (alphaNum <|> char '_')
-
-many :: ParsecT s u m a -> ParsecT s u m [a]
-many p = reverse <$> manyAccum (:) p
 
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.
