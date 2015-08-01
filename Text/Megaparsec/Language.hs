@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Language
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Language
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -12,7 +12,7 @@
 -- A helper module that defines some language definitions that can be used
 -- to instantiate a token parser (see "Text.Parsec.Token").
 
-module Text.MegaParsec.Language
+module Text.Megaparsec.Language
     ( LanguageDef
     , emptyDef
     , haskellStyle
@@ -23,8 +23,8 @@ where
 
 import Control.Monad.Identity
 
-import Text.MegaParsec
-import Text.MegaParsec.Token
+import Text.Megaparsec
+import Text.Megaparsec.Token
 
 -- | This is the most minimal token definition. It is recommended to use
 -- this definition as the basis for other definitions. @emptyDef@ has no

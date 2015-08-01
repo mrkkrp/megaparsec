@@ -5,9 +5,9 @@ import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
-import Text.MegaParsec
-import Text.MegaParsec.Language (haskellDef)
-import qualified Text.MegaParsec.Token as P
+import Text.Megaparsec
+import Text.Megaparsec.Language (haskellDef)
+import qualified Text.Megaparsec.Token as P
 
 main :: Test
 main =

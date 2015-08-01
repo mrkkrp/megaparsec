@@ -1,8 +1,8 @@
 -- -*- Mode: Haskell-Cabal; -*-
 --
--- Cabal config for MegaParsec.
+-- Cabal config for Megaparsec.
 --
--- Copyright © 2015 MegaParsec contributors
+-- Copyright © 2015 Megaparsec contributors
 --
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@ version:             4.0.0
 cabal-version:       >= 1.10
 license:             BSD3
 license-file:        LICENSE.md
-author:              MegaParsec contributors,
+author:              Megaparsec contributors,
                      Paolo Martini <paolo@nemail.it>,
                      Daan Leijen <daan@microsoft.com>
 
@@ -44,7 +44,7 @@ synopsis:            Monadic parser combinators
 build-type:          Simple
 description:
 
-  This is industrial-strength monadic parser combinator library. MegaParsec
+  This is industrial-strength monadic parser combinator library. Megaparsec
   is a fork of original Parsec library written by Daan Leijen.
 
 extra-source-files:  AUTHORS.md, CHANGELOG.md
@@ -63,21 +63,21 @@ library
                    , MultiParamTypeClasses
                    , PolymorphicComponents
                    , UndecidableInstances
-  exposed-modules:   Text.MegaParsec
-                   , Text.MegaParsec.String
-                   , Text.MegaParsec.ByteString
-                   , Text.MegaParsec.ByteString.Lazy
-                   , Text.MegaParsec.Text
-                   , Text.MegaParsec.Text.Lazy
-                   , Text.MegaParsec.Pos
-                   , Text.MegaParsec.Error
-                   , Text.MegaParsec.Prim
-                   , Text.MegaParsec.Char
-                   , Text.MegaParsec.Combinator
-                   , Text.MegaParsec.Token
-                   , Text.MegaParsec.Expr
-                   , Text.MegaParsec.Language
-                   , Text.MegaParsec.Perm
+  exposed-modules:   Text.Megaparsec
+                   , Text.Megaparsec.String
+                   , Text.Megaparsec.ByteString
+                   , Text.Megaparsec.ByteString.Lazy
+                   , Text.Megaparsec.Text
+                   , Text.Megaparsec.Text.Lazy
+                   , Text.Megaparsec.Pos
+                   , Text.Megaparsec.Error
+                   , Text.Megaparsec.Prim
+                   , Text.Megaparsec.Char
+                   , Text.Megaparsec.Combinator
+                   , Text.Megaparsec.Token
+                   , Text.Megaparsec.Expr
+                   , Text.Megaparsec.Language
+                   , Text.Megaparsec.Perm
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
 

@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.ByteString
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.String
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 -- License     :  BSD3
 --
@@ -8,34 +8,32 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Convenience definitions for working with 'C.ByteString's.
+-- Make Strings an instance of 'Stream' with 'Char' token type.
 
-module Text.MegaParsec.ByteString
+module Text.Megaparsec.String
     ( Parser
     , GenParser
     , parseFromFile )
 where
 
-import Text.MegaParsec.Error
-import Text.MegaParsec.Prim
-
-import qualified Data.ByteString.Char8 as C
+import Text.Megaparsec.Error
+import Text.Megaparsec.Prim
 
 -- | Different modules corresponding to various types of streams (@String@,
 -- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
 -- @Parser@ type and easily change it by importing different \"type
 -- modules\".
 
-type Parser = Parsec C.ByteString ()
+type Parser = Parsec String ()
 
 -- | @GenParser@ is similar to @Parser@ but it's parametrized over user
 -- state type.
 
-type GenParser t st = Parsec C.ByteString st
+type GenParser tok st = Parsec [tok] st
 
--- | @parseFromFile p filePath@ runs a strict bytestring parser @p@ on the
--- input read from @filePath@ using 'ByteString.Char8.readFile'. Returns
--- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
+-- | @parseFromFile p filePath@ runs a string parser @p@ on the
+-- input read from @filePath@ using 'Prelude.readFile'. Returns either a
+-- 'ParseError' ('Left') or a value of type @a@ ('Right').
 --
 -- > main = do
 -- >   result <- parseFromFile numbers "digits.txt"
@@ -44,4 +42,4 @@ type GenParser t st = Parsec C.ByteString st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> C.readFile fname
+parseFromFile p fname = runParser p () fname <$> readFile fname

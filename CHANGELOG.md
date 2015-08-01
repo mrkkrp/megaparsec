@@ -1,4 +1,4 @@
-## MegaParsec 4.0.0
+## Megaparsec 4.0.0
 
 * Cosmetic changes in entire source code, numerous improvements and
   elimination of warnings.

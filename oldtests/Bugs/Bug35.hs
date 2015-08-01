@@ -1,10 +1,10 @@
 
 module Bugs.Bug35 (main) where
 
-import Text.MegaParsec
-import Text.MegaParsec.Language
-import Text.MegaParsec.String
-import qualified Text.MegaParsec.Token as Token
+import Text.Megaparsec
+import Text.Megaparsec.Language
+import Text.Megaparsec.String
+import qualified Text.Megaparsec.Token as Token
 
 import Test.HUnit hiding (Test)
 import Test.Framework

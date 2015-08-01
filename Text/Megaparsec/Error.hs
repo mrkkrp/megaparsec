@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Error
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Error
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -11,7 +11,7 @@
 --
 -- Parse errors.
 
-module Text.MegaParsec.Error
+module Text.Megaparsec.Error
     ( Message (SysUnExpect, UnExpect, Expect, Message)
     , messageString
     , ParseError
@@ -29,7 +29,7 @@ where
 
 import Data.List (nub, sort, intercalate)
 
-import Text.MegaParsec.Pos
+import Text.Megaparsec.Pos
 
 -- | This abstract data type represents parse error messages. There are
 -- four kinds of messages:

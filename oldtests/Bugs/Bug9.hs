@@ -1,11 +1,11 @@
 
 module Bugs.Bug9 (main) where
 
-import Text.MegaParsec
-import Text.MegaParsec.Language (haskellStyle)
-import Text.MegaParsec.String (Parser)
-import Text.MegaParsec.Expr
-import qualified Text.MegaParsec.Token as P
+import Text.Megaparsec
+import Text.Megaparsec.Language (haskellStyle)
+import Text.Megaparsec.String (Parser)
+import Text.Megaparsec.Expr
+import qualified Text.Megaparsec.Token as P
 
 import Test.HUnit hiding (Test)
 import Test.Framework

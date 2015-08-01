@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Token
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Token
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -14,7 +14,7 @@
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
-module Text.MegaParsec.Token
+module Text.Megaparsec.Token
     ( LanguageDef (..)
     , TokenParser (..)
     , makeTokenParser )
@@ -25,9 +25,9 @@ import Control.Monad (void)
 import Data.Char (isAlpha, toLower, toUpper, isSpace)
 import Data.List (nub, sort)
 
-import Text.MegaParsec.Prim
-import Text.MegaParsec.Char
-import Text.MegaParsec.Combinator
+import Text.Megaparsec.Prim
+import Text.Megaparsec.Char
+import Text.Megaparsec.Combinator
 
 -- Language definition
 

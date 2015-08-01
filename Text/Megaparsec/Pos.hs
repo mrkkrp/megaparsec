@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Pos
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Pos
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -11,7 +11,7 @@
 --
 -- Textual source positions.
 
-module Text.MegaParsec.Pos
+module Text.Megaparsec.Pos
     ( SourceName
     , Line
     , Column

@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Expr
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Expr
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -12,7 +12,7 @@
 -- A helper module to parse \"expressions\".
 -- Builds a parser given a table of operators and associativities.
 
-module Text.MegaParsec.Expr
+module Text.Megaparsec.Expr
     ( Assoc (..)
     , Operator (..)
     , OperatorTable
@@ -22,8 +22,8 @@ where
 import Control.Applicative ((<|>))
 import Data.List (foldl')
 
-import Text.MegaParsec.Combinator
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Combinator
+import Text.Megaparsec.Prim
 
 -- | This data type specifies the associativity of operators: left, right
 -- or none.

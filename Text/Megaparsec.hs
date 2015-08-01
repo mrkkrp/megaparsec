@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -15,13 +15,13 @@
 -- parse the result of your own tokenizer you should start with the following
 -- imports:
 --
--- > import Text.MegaParsec.Prim
--- > import Text.MegaParsec.Combinator
+-- > import Text.Megaparsec.Prim
+-- > import Text.Megaparsec.Combinator
 --
 -- Then you can implement your own version of 'satisfy' on top of the
 -- 'tokenPrim' primitive.
 
-module Text.MegaParsec
+module Text.Megaparsec
     (
 -- * Parsers
       ParsecT
@@ -122,11 +122,11 @@ where
 
 import qualified Control.Applicative as A
 
-import Text.MegaParsec.Char
-import Text.MegaParsec.Combinator
-import Text.MegaParsec.Error
-import Text.MegaParsec.Pos
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Char
+import Text.Megaparsec.Combinator
+import Text.Megaparsec.Error
+import Text.Megaparsec.Pos
+import Text.Megaparsec.Prim
 
 -- $assocbo
 --

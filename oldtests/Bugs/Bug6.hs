@@ -5,8 +5,8 @@ import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
-import Text.MegaParsec
-import Text.MegaParsec.String
+import Text.Megaparsec
+import Text.Megaparsec.String
 
 import Util
 

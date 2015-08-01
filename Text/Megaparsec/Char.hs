@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Char
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Char
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -11,7 +11,7 @@
 --
 -- Commonly used character parsers.
 
-module Text.MegaParsec.Char
+module Text.Megaparsec.Char
     ( oneOf
     , noneOf
     , spaces
@@ -36,8 +36,8 @@ where
 import Control.Applicative ((<|>))
 import Data.Char
 
-import Text.MegaParsec.Pos
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Pos
+import Text.Megaparsec.Prim
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
 -- list of characters @cs@. Returns the parsed character. See also

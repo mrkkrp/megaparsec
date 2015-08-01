@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Combinator
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Combinator
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -11,7 +11,7 @@
 --
 -- Commonly used generic combinators.
 
-module Text.MegaParsec.Combinator
+module Text.Megaparsec.Combinator
     ( choice
     , count
     , between
@@ -38,7 +38,7 @@ where
 import Control.Applicative ((<|>), many, some)
 import Control.Monad
 
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Prim
 
 -- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
 -- until one of them succeeds. Returns the value of the succeeding parser.

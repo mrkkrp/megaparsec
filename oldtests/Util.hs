@@ -1,8 +1,8 @@
 
 module Util where
 
-import Text.MegaParsec
-import Text.MegaParsec.String (Parser)
+import Text.Megaparsec
+import Text.Megaparsec.String (Parser)
 
 -- | Returns the error messages associated with a failed parse.
 

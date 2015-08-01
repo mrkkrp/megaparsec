@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Perm
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Perm
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -16,7 +16,7 @@
 -- /Parsing Permutation Phrases,/ by Arthur Baars, Andres Loh and Doaitse
 -- Swierstra. Published as a functional pearl at the Haskell Workshop 2001.
 
-module Text.MegaParsec.Perm
+module Text.Megaparsec.Perm
     ( StreamPermParser -- abstract
     , permute
     , (<||>)
@@ -27,7 +27,7 @@ where
 
 import Control.Monad.Identity
 
-import Text.MegaParsec
+import Text.Megaparsec
 
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>

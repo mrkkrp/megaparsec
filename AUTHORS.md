@@ -1,6 +1,6 @@
 # Authors
 
-The following people have contributed to MegaParsec/Parsec library. Due to
+The following people have contributed to Megaparsec/Parsec library. Due to
 the fact that original Parsec project has not been keeping this sort of
 file, many contributors are missing from this list, if you've contributed to
 Parsec project in the Past, please open an issue or a pull request, so we

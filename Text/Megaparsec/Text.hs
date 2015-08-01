@@ -1,39 +1,41 @@
 -- |
--- Module      :  Text.MegaParsec.String
--- Copyright   :  © 2015 MegaParsec contributors
---                © 2007 Paolo Martini
+-- Module      :  Text.Megaparsec.Text
+-- Copyright   :  © 2015 Megaparsec contributors
+--                © 2011 Antoine Latter
 -- License     :  BSD3
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Make Strings an instance of 'Stream' with 'Char' token type.
+-- Convenience definitions for working with 'Text.Text'.
 
-module Text.MegaParsec.String
+module Text.Megaparsec.Text
     ( Parser
     , GenParser
     , parseFromFile )
 where
 
-import Text.MegaParsec.Error
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Error
+import Text.Megaparsec.Prim
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 
 -- | Different modules corresponding to various types of streams (@String@,
 -- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
 -- @Parser@ type and easily change it by importing different \"type
 -- modules\".
 
-type Parser = Parsec String ()
+type Parser = Parsec T.Text ()
 
 -- | @GenParser@ is similar to @Parser@ but it's parametrized over user
 -- state type.
 
-type GenParser tok st = Parsec [tok] st
+type GenParser st = Parsec T.Text st
 
--- | @parseFromFile p filePath@ runs a string parser @p@ on the
--- input read from @filePath@ using 'Prelude.readFile'. Returns either a
--- 'ParseError' ('Left') or a value of type @a@ ('Right').
+-- | @parseFromFile p filePath@ runs a lazy text parser @p@ on the
+-- input read from @filePath@ using 'Data.Text.IO.readFile'. Returns either
+-- a 'ParseError' ('Left') or a value of type @a@ ('Right').
 --
 -- > main = do
 -- >   result <- parseFromFile numbers "digits.txt"
@@ -42,4 +44,4 @@ type GenParser tok st = Parsec [tok] st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> readFile fname
+parseFromFile p fname = runParser p () fname <$> T.readFile fname

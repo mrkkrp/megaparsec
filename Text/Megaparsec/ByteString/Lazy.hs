@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.ByteString.Lazy
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.ByteString.Lazy
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 -- License     :  BSD3
 --
@@ -10,14 +10,14 @@
 --
 -- Convenience definitions for working with lazy 'C.ByteString's.
 
-module Text.MegaParsec.ByteString.Lazy
+module Text.Megaparsec.ByteString.Lazy
     ( Parser
     , GenParser
     , parseFromFile )
 where
 
-import Text.MegaParsec.Error
-import Text.MegaParsec.Prim
+import Text.Megaparsec.Error
+import Text.Megaparsec.Prim
 
 import qualified Data.ByteString.Lazy.Char8 as C
 

@@ -1,6 +1,6 @@
 -- |
--- Module      :  Text.MegaParsec.Prim
--- Copyright   :  © 2015 MegaParsec contributors
+-- Module      :  Text.Megaparsec.Prim
+-- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  BSD3
@@ -13,7 +13,7 @@
 
 {-# OPTIONS_HADDOCK not-home #-}
 
-module Text.MegaParsec.Prim
+module Text.Megaparsec.Prim
     ( State (..)
     , Stream (..)
     , Consumed (..)
@@ -67,8 +67,8 @@ import Control.Monad.Error.Class
 
 import qualified Control.Applicative as A
 
-import Text.MegaParsec.Pos
-import Text.MegaParsec.Error
+import Text.Megaparsec.Pos
+import Text.Megaparsec.Error
 
 -- | This is Parsec state, this is parametrized over stream type @s@, and
 -- user state @u@.
@@ -329,7 +329,7 @@ sysUnExpectError msg pos = Error (newErrorMessage (SysUnExpect msg) pos)
 -- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
 -- to generate error messages. Of these, only ('<?>') is commonly used. For
 -- an example of the use of @unexpected@, see the definition of
--- 'Text.MegaParsec.Combinator.notFollowedBy'.
+-- 'Text.Megaparsec.Combinator.notFollowedBy'.
 
 unexpected :: Stream s m t => String -> ParsecT s u m a
 unexpected msg = ParsecT $ \s _ _ _ eerr ->
@@ -523,7 +523,7 @@ token showToken tokpos = tokenPrim showToken nextpos
 -- returns it. The resulting parser will use @showToks@ to pretty-print the
 -- collection of tokens.
 --
--- This can be used to example to write 'Text.MegaParsec.Char.string':
+-- This can be used to example to write 'Text.Megaparsec.Char.string':
 --
 -- > string = tokens show updatePosString
 
@@ -572,7 +572,7 @@ tokens showTokens nextposs tts@(tok:toks)
 -- @nextPos pos t toks@.
 --
 -- This is the most primitive combinator for accepting tokens. For example,
--- the 'Text.MegaParsec.Char.char' parser could be implemented as:
+-- the 'Text.Megaparsec.Char.char' parser could be implemented as:
 --
 -- > char c  = tokenPrim showChar nextPos testChar
 -- >   where showChar x       = "'" ++ x ++ "'"
@@ -647,7 +647,7 @@ manyAccum acc p =
 manyErr :: forall t . t
 manyErr =
     error
-    "Text.MegaParsec.Prim.many: combinator 'many' is applied to a parser \
+    "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
     \that accepts an empty string."
 
 -- Parser state combinators

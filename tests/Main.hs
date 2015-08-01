@@ -1,8 +1,8 @@
 -- -*- Mode: Haskell; -*-
 --
--- QuickCheck tests for MegaParsec, main module.
+-- QuickCheck tests for Megaparsec, main module.
 --
--- Copyright © 2015 MegaParsec contributors
+-- Copyright © 2015 Megaparsec contributors
 --
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions are

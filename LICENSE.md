@@ -1,4 +1,4 @@
-Copyright © 2015 MegaParsec contributors<br>
+Copyright © 2015 Megaparsec contributors<br>
 Copyright © 2007 Paolo Martini<br>
 Copyright © 1999–2000 Daan Leijen
 
