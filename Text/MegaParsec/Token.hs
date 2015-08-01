@@ -458,19 +458,18 @@ makeTokenParser languageDef =
     float  = lexeme ffloat <?> "float"
     float' = signed float
 
-    ffloat = read <$> (try ffir <|> fsec)
+    ffloat = read <$> ffloat'
+      where
+        ffloat' = do
+          decimal <- fDec
+          rest <- fraction <|> fExp
+          return $ decimal ++ rest
 
-    ffir = do
-      decimal1 <- fDec
+    fraction = do
       void $ char '.'
-      decimal2 <- fDec
-      exponent <- option "" fExp
-      return $ decimal1 ++ "." ++ decimal2 ++ exponent
-
-    fsec = do
-      decimal  <- fDec
-      exponent <- fExp
-      return $ decimal ++ exponent
+      decimal <- fDec
+      exp <- option "" fExp
+      return $ '.' : decimal ++  exp
 
     fDec = many1 digit
 
