@@ -21,11 +21,20 @@ install:
  - cabal install --only-dependencies --enable-tests
 
 script:
- - cabal configure --enable-tests -v2
+ - cabal configure --enable-tests --enable-coverage -v2
  - cabal build
- - cabal test
+ - cabal test --show-details=always
  - cabal sdist
  - cabal haddock
+
+after_script:
+ - cabal install hpc-coveralls
+ - export PATH=~/.cabal/bin:$PATH
+ - hpc-coveralls --coverage-mode=StrictlyFullLines
+                 --exclude-dir=tests
+                 --exclude-dir=oldtests
+                 --exclude-dir=benchmarks
+                 tests oldtests
 
 notifications:
   email: false
