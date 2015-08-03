@@ -98,24 +98,21 @@ module Text.Megaparsec
     , errorPos
 -- * Position
     , SourcePos
-    , SourceName, Line, Column
-    , sourceName, sourceLine, sourceColumn
-    , incSourceLine, incSourceColumn
-    , setSourceLine, setSourceColumn, setSourceName
+    , SourceName
+    , Line
+    , Column
+    , sourceName
+    , sourceLine
+    , sourceColumn
 -- * Low-level operations
-    , tokenPrim
-    , unknownError
-    , sysUnExpectError
-    , mergeErrorReply
-    , getParserState
-    , setParserState
-    , updateParserState
     , Stream (..)
-    , runParsecT
-    , mkPT
     , Consumed (..)
     , Reply (..)
     , State (..)
+    , tokenPrim
+    , getParserState
+    , setParserState
+    , updateParserState
     , setPosition
     , setInput )
 where
