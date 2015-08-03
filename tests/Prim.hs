@@ -1,6 +1,6 @@
 -- -*- Mode: Haskell; -*-
 --
--- QuickCheck tests for Megaparsec, main module.
+-- QuickCheck tests for Megaparsec's primitive parser combinators.
 --
 -- Copyright © 2015 Megaparsec contributors
 --
@@ -27,26 +27,12 @@
 -- any way out of the use of this software, even if advised of the
 -- possibility of such damage.
 
-module Main (main) where
+module Prim (tests) where
 
-import Test.Framework (defaultMain)
+import Test.Framework
 
-import qualified Pos
-import qualified Error
-import qualified Prim
-import qualified Combinator
-import qualified Expr
-import qualified Char
-import qualified Token
-import qualified Perm
+import Text.Megaparsec.Prim
 
-main :: IO ()
-main = defaultMain
-       [ Pos.tests
-       , Error.tests
-       , Prim.tests
-       , Combinator.tests
-       , Expr.tests
-       , Char.tests
-       , Token.tests
-       , Perm.tests ]
+tests :: Test
+tests = testGroup "Primitive parser combinators"
+        []
