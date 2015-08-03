@@ -228,8 +228,8 @@ parserFail :: String -> ParsecT s u m a
 parserFail msg = ParsecT $ \s _ _ _ eerr ->
                  eerr $ newErrorMessage (Message msg) (statePos s)
 
--- | Low-level unpacking of the ParsecT type. To run your parser, please look to
--- 'runPT', 'runP', 'runParserT', 'runParser' and other such functions.
+-- | Low-level unpacking of the ParsecT type. To actually run parser see
+-- 'runParserT' and 'runParser'.
 
 runParsecT :: Monad m =>
               ParsecT s u m a -> State s u -> m (Consumed (m (Reply s u a)))
