@@ -18,16 +18,15 @@ module Text.Megaparsec.Error
     , errorPos
     , errorMessages
     , errorIsUnknown
-    , showErrorMessages
     , newErrorMessage
     , newErrorUnknown
     , addErrorMessage
     , setErrorPos
-    , setErrorMessage
-    , mergeError )
+    , mergeError
+    , showMessages )
 where
 
-import Data.List (nub, sort, intercalate)
+import Data.List (sort, intercalate)
 
 import Text.Megaparsec.Pos
 
@@ -62,13 +61,14 @@ data Message = SysUnExpect !String -- @ library generated unexpect
              | UnExpect    !String -- @ unexpected something
              | Expect      !String -- @ expecting something
              | Message     !String -- @ raw message
+               deriving Show
 
 instance Enum Message where
     fromEnum (SysUnExpect _) = 0
     fromEnum (UnExpect    _) = 1
     fromEnum (Expect      _) = 2
     fromEnum (Message     _) = 3
-    toEnum _ = error "toEnum is undefined for Message"
+    toEnum _ = error "Text.Megaparsec.Error: toEnum is undefined for Message"
 
 instance Eq Message where
     m1 == m2 = fromEnum m1 == fromEnum m2
@@ -90,24 +90,18 @@ messageString (Message     s) = s
 -- function 'Text.Parsec.Prim.parse'. @ParseError@ is an instance of the
 -- 'Show' and 'Eq' classes.
 
-data ParseError = ParseError !SourcePos [Message]
+data ParseError = ParseError
+    { -- | Extract the source position from the parse error.
+      errorPos :: !SourcePos
+      -- | Extract the list of error messages from the parse error.
+    , errorMessages :: [Message] }
 
 instance Show ParseError where
-    show e = show (errorPos e) ++ ":" ++ showErrorMessages (errorMessages e)
+    show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
 
 instance Eq ParseError where
     l == r = errorPos l == errorPos r && mStrs l == mStrs r
         where mStrs = fmap messageString . errorMessages
-
--- | Extract the source position from the parse error.
-
-errorPos :: ParseError -> SourcePos
-errorPos (ParseError pos _) = pos
-
--- | Extract the list of error messages from the parse error.
-
-errorMessages :: ParseError -> [Message]
-errorMessages (ParseError _ ms) = sort ms
 
 -- | Test whether given @ParseError@ has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
@@ -130,10 +124,13 @@ newErrorMessage :: Message -> SourcePos -> ParseError
 newErrorMessage m pos = ParseError pos [m]
 
 -- | @addErrorMessage m err@ returns @ParseError@ @err@ with message @m@
--- added.
+-- added. This function makes sure that list of messages is always ordered
+-- and doesn't contain duplicates.
 
 addErrorMessage :: Message -> ParseError -> ParseError
-addErrorMessage m (ParseError pos ms) = ParseError pos (m:ms)
+addErrorMessage m (ParseError pos ms) = ParseError pos (pre ++ [m] ++ post)
+    where pre  = filter (< m) ms
+          post = filter (> m) ms
 
 -- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
 -- position @pos@.
@@ -141,61 +138,45 @@ addErrorMessage m (ParseError pos ms) = ParseError pos (m:ms)
 setErrorPos :: SourcePos -> ParseError -> ParseError
 setErrorPos pos (ParseError _ ms) = ParseError pos ms
 
--- | @setErrorMessage m err@ returns @ParseError@ identical to @err@, but
--- with added message @m@. This is different from 'addErrorMessage' in that
--- it makes sure that collection of messages contains only one instance of
--- @m@.
-
-setErrorMessage :: Message -> ParseError -> ParseError
-setErrorMessage m (ParseError pos ms) = ParseError pos (m : filter (m /=) ms)
-
 -- | Merge two error data structures into one joining their collections of
--- messages and preferring longest match (that is, greater position).
+-- messages and preferring shortest match.
 
 mergeError :: ParseError -> ParseError -> ParseError
-mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2)
-    -- prefer meaningful errors
-    | null ms2 && not (null ms1) = e1
-    | null ms1 && not (null ms2) = e2
-    | otherwise
-        = case pos1 `compare` pos2 of
-            -- select the longest match
-            EQ -> ParseError pos1 (ms1 ++ ms2)
-            GT -> e1
-            LT -> e2
+mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2) =
+    case pos1 `compare` pos2 of
+      LT -> e1
+      EQ -> ParseError pos1 (sort $ ms1 ++ ms2)
+      GT -> e2
 
--- | @showErrorMessages ms@ transforms list of error messages @ms@ into
+-- | @showMessages ms@ transforms list of error messages @ms@ into
 -- their textual representation.
 
-showErrorMessages :: [Message] -> String
-showErrorMessages ms
-    | null ms   = "unknown parse error"
-    | otherwise = concatMap ("\n" ++) $ clean
-                  [showSysUnExpect, showUnExpect, showExpect, showMessages]
+showMessages :: [Message] -> String
+showMessages [] = "unknown parse error"
+showMessages ms =
+    intercalate "\n" $ clean [sysUnExpect', unExpect', expect', msgs']
     where
       (sysUnExpect, ms1) = span (SysUnExpect "" ==) ms
       (unExpect,    ms2) = span (UnExpect    "" ==) ms1
       (expect, messages) = span (Expect      "" ==) ms2
 
-      firstMsg     = messageString (head sysUnExpect)
-      showExpect   = showMany "expecting"  expect
-      showUnExpect = showMany "unexpected" unExpect
-      showSysUnExpect
+      sysUnExpect'
           | not (null unExpect) || null sysUnExpect = ""
           | null firstMsg = "unexpected end of input"
-          | otherwise     = "unexpected " ++ firstMsg
-      showMessages = showMany "" messages
+          | otherwise     = showMany "unexpected " sysUnExpect
+          where firstMsg  = messageString . head $ sysUnExpect
+      unExpect' = showMany "unexpected " unExpect
+      expect'   = showMany "expecting "  expect
+      msgs'     = showMany "" messages
 
       showMany pre msgs =
           case clean (messageString <$> msgs) of
             [] -> ""
             xs | null pre  -> commasOr xs
-               | otherwise -> pre ++ " " ++ commasOr xs
+               | otherwise -> pre ++ commasOr xs
 
       commasOr []  = ""
       commasOr [x] = x
-      commasOr xs  = commaSep (init xs) ++ " or " ++ last xs
+      commasOr xs  = intercalate ", " (init xs) ++ " or " ++ last xs
 
-      commaSep = intercalate ", " . clean
-
-      clean = nub . filter (not . null)
+      clean = filter (not . null)
