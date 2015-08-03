@@ -64,7 +64,7 @@ instance Show SourcePos where
   show (SourcePos n l c)
     | null n    = showLC
     | otherwise = "\"" ++ n ++ "\" " ++ showLC
-    where showLC = "(line " ++ show l ++ ", column " ++ show c ++ ")"
+    where showLC = "line " ++ show l ++ ", column " ++ show c
 
 -- | Create a new 'SourcePos' with the given source name,
 -- line number and column number.
