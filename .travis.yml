@@ -34,7 +34,7 @@ after_script:
                  --exclude-dir=tests
                  --exclude-dir=oldtests
                  --exclude-dir=benchmarks
-                 tests oldtests
+                 tests old-tests
 
 notifications:
   email: false
