@@ -20,6 +20,24 @@
 --
 -- Then you can implement your own version of 'satisfy' on top of the
 -- 'tokenPrim' primitive.
+--
+-- Typical import section looks like this:
+--
+-- > import Text.Megaparsec
+-- > import Text.Megaparsec.String
+-- > -- import Text.Megaparsec.ByteString
+-- > -- import Text.Megaparsec.ByteString.Lazy
+-- > -- import Text.Megaparsec.Text
+-- > -- import Text.Megaparsec.Text.Lazy
+--
+-- As you can see the second import depends on data type you want to use as
+-- input stream. It just defines useful type-synonyms @Parser@ and
+-- @GenParser@ and @parseFromFile@ function.
+--
+-- Megaparsec is capable of a lot. Apart from this standard functionality
+-- you can parse permutation phrases with "Text.Megaparsec.Perm" and even
+-- entire languages with "Text.Megaparsec.Token". These modules should be
+-- imported explicitly along with two modules mentioned above.
 
 module Text.Megaparsec
     (
