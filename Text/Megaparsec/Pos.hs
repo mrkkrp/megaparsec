@@ -103,22 +103,25 @@ setSourceLine (SourcePos n _ c) l = SourcePos n l c
 setSourceColumn :: SourcePos -> Column -> SourcePos
 setSourceColumn (SourcePos n l _) = SourcePos n l
 
+-- | Update a source position given a character. If the character is a
+-- newline (\'\\n\') the line number is incremented by 1. If the character
+-- is carriage return (\'\\r\') the line number is unaltered, but column
+-- number is reset to 1. If the character is a tab (\'\\t\') the column
+-- number is incremented to the nearest 8'th column, i.e. @column + 8 -
+-- ((column - 1) \`rem\` 8)@. In all other cases, the column is incremented
+-- by 1.
+
+updatePosChar :: SourcePos -> Char -> SourcePos
+updatePosChar (SourcePos n l c) ch =
+    case ch of
+      '\n' -> SourcePos n (l + 1) 1
+      '\r' -> SourcePos n l 1
+      '\t' -> SourcePos n l (c + 8 - ((c - 1) `rem` 8))
+      _    -> SourcePos n l (c + 1)
+
 -- | The expression @updatePosString pos s@ updates the source position
 -- @pos@ by calling 'updatePosChar' on every character in @s@, i.e. @foldl
 -- updatePosChar pos string@.
 
 updatePosString :: SourcePos -> String -> SourcePos
 updatePosString = foldl' updatePosChar
-
--- | Update a source position given a character. If the character is a
--- newline (\'\\n\') or carriage return (\'\\r\') the line number is
--- incremented by 1. If the character is a tab (\'\t\') the column number is
--- incremented to the nearest 8'th column, i.e. @column + 8 - ((column-1)
--- \`mod\` 8)@. In all other cases, the column is incremented by 1.
-
-updatePosChar :: SourcePos -> Char -> SourcePos
-updatePosChar (SourcePos n l c) ch =
-    case ch of
-      '\n' -> SourcePos n (l + 1) 1
-      '\t' -> SourcePos n l (c + 8 - ((c - 1) `mod` 8))
-      _    -> SourcePos n l (c + 1)
