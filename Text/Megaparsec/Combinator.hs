@@ -39,6 +39,7 @@ import Control.Applicative ((<|>), many, some)
 import Control.Monad
 
 import Text.Megaparsec.Prim
+import Text.Megaparsec.ShowToken
 
 -- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
 -- until one of them succeeds. Returns the value of the succeeding parser.
@@ -195,15 +196,15 @@ chainr1 p op = p >>= rest
 -- | The parser @anyToken@ accepts any kind of token. It is for example
 -- used to implement 'eof'. Returns the accepted token.
 
-anyToken :: (Stream s m t, Show t) => ParsecT s u m t
-anyToken = tokenPrim show (\pos _ _ -> pos) Just
+anyToken :: Stream s m t => ParsecT s u m t
+anyToken = tokenPrim (\pos _ _ -> pos) Just
 
 -- | This parser only succeeds at the end of the input. This is not a
 -- primitive parser but it is defined using 'notFollowedBy'.
 --
 -- > eof = notFollowedBy anyToken <?> "end of input"
 
-eof :: (Stream s m t, Show t) => ParsecT s u m ()
+eof :: Stream s m t => ParsecT s u m ()
 eof = notFollowedBy anyToken <?> "end of input"
 
 -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
@@ -216,8 +217,9 @@ eof = notFollowedBy anyToken <?> "end of input"
 --
 -- > keywordLet = try (string "let" >> notFollowedBy alphaNum)
 
-notFollowedBy :: (Stream s m t, Show a) => ParsecT s u m a -> ParsecT s u m ()
-notFollowedBy p = try ((try p >>= (unexpected . show)) <|> return ())
+notFollowedBy :: (Stream s m t, ShowToken a) =>
+                 ParsecT s u m a -> ParsecT s u m ()
+notFollowedBy p = try ((try p >>= (unexpected . showToken)) <|> return ())
 
 -- | @manyTill p end@ applies parser @p@ /zero/ or more times until
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This

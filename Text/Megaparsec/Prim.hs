@@ -67,8 +67,9 @@ import Control.Monad.Error.Class
 
 import qualified Control.Applicative as A
 
-import Text.Megaparsec.Pos
 import Text.Megaparsec.Error
+import Text.Megaparsec.Pos
+import Text.Megaparsec.ShowToken
 
 -- | This is Parsec state, this is parametrized over stream type @s@, and
 -- user state @u@.
@@ -89,10 +90,10 @@ data State s u = State
 --      within the stream\" in the stream state @s@.  This is trivial unless
 --      you are using the monad in a non-trivial way.
 
-class Monad m => Stream s m t | s -> t where
+class (Monad m, ShowToken t) => Stream s m t | s -> t where
     uncons :: s -> m (Maybe (t, s))
 
-instance Monad m => Stream [tok] m tok where
+instance (Monad m, ShowToken t) => Stream [t] m t where
     uncons []     = return Nothing
     uncons (t:ts) = return $ Just (t, ts)
     {-# INLINE uncons #-}
@@ -492,57 +493,51 @@ lookAhead p = ParsecT $ \s _ cerr eok eerr -> do
                 let eok' a _ _ = eok a s (newErrorUnknown (statePos s))
                 unParser p s eok' cerr eok' eerr
 
--- | The parser @token showTok posFromTok testTok@ accepts a token @t@
--- with result @x@ when the function @testTok t@ returns @'Just' x@. The
--- source position of the @t@ should be returned by @posFromTok t@ and the
--- token can be shown using @showTok t@.
+-- | The parser @token posFromTok testTok@ accepts a token @t@ with result
+-- @x@ when the function @testTok t@ returns @'Just' x@. The source position
+-- of the @t@ should be returned by @posFromTok t@. Token will be shown with
+-- 'showToken' function.
 --
 -- This combinator is expressed in terms of 'tokenPrim'. It is used to
 -- accept user defined token streams. For example, suppose that we have a
 -- stream of basic tokens tupled with source positions. We can than define a
 -- parser that accepts single tokens as:
 --
--- > mytoken x = token showTok posFromTok testTok
--- >   where
--- >     showTok    (pos,t) = show t
--- >     posFromTok (pos,t) = pos
--- >     testTok    (pos,t) = if x == t then Just t else Nothing
+-- > mytoken x = token posFromTok testTok
+-- >   where posFromTok (pos,t) = pos
+-- >         testTok    (pos,t) = if x == t then Just t else Nothing
 
 token :: Stream s Identity t =>
-         (t -> String)    -- ^ Token pretty-printing function.
-      -> (t -> SourcePos) -- ^ Computes the position of a token.
+         (t -> SourcePos) -- ^ Computes the position of a token.
       -> (t -> Maybe a)   -- ^ Matching function for the token to parse.
       -> Parsec s u a
-token showToken tokpos = tokenPrim showToken nextpos
+token tokpos = tokenPrim nextpos
     where nextpos _ tok ts =
               case runIdentity (uncons ts) of
                 Nothing        -> tokpos tok
                 Just (tok', _) -> tokpos tok'
 
--- | The parser @tokens showToks posFromTok@ parses list of tokens and
--- returns it. The resulting parser will use @showToks@ to pretty-print the
+-- | The parser @tokens posFromTok@ parses list of tokens and returns
+-- it. The resulting parser will use @showToks@ to pretty-print the
 -- collection of tokens.
 --
 -- This can be used to example to write 'Text.Megaparsec.Char.string':
 --
--- > string = tokens show updatePosString
+-- > string = tokens updatePosString
 
-tokens :: (Stream s m t, Eq t) =>
-          ([t] -> String)                 -- ^ Pretty print a list of tokens
-       -> (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
+tokens :: (Stream s m t, Eq t, ShowToken [t]) =>
+          (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
        -> [t]                             -- ^ List of tokens to parse
        -> ParsecT s u m [t]
 {-# INLINE tokens #-}
-tokens _ _ []
-    = ParsecT $ \s _ _ eok _ ->
-      eok [] s $ unknownError s
-tokens showTokens nextposs tts@(tok:toks)
+tokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s $ unknownError s
+tokens nextposs tts@(tok:toks)
     = ParsecT $ \(State input pos u) cok cerr _ eerr ->
     let
-        errEof = addErrorMessage (Expect (showTokens tts))
+        errEof = addErrorMessage (Expect (showToken tts))
                  (newErrorMessage (SysUnExpect "") pos)
-        errExpect x = addErrorMessage (Expect (showTokens tts))
-                      (newErrorMessage (SysUnExpect (showTokens [x])) pos)
+        errExpect x = addErrorMessage (Expect (showToken tts))
+                      (newErrorMessage (SysUnExpect (showToken [x])) pos)
 
         walk []     rs = ok rs
         walk (t:ts) rs = do
@@ -564,38 +559,34 @@ tokens showTokens nextposs tts@(tok:toks)
                 | tok == x  -> walk toks xs
                 | otherwise -> eerr $ errExpect x
 
--- | The parser @tokenPrim showTok nextPos testTok@ accepts a token @t@
--- with result @x@ when the function @testTok t@ returns @'Just' x@. The
--- token can be shown using @showTok t@. The position of the /next/ token
--- should be returned when @nextPos@ is called with the current source
--- position @pos@, the current token @t@ and the rest of the tokens @toks@,
--- @nextPos pos t toks@.
+-- | The parser @tokenPrim nextPos testTok@ accepts a token @t@ with result
+-- @x@ when the function @testTok t@ returns @'Just' x@. The position of the
+-- /next/ token should be returned when @nextPos@ is called with the current
+-- source position @pos@, the current token @t@ and the rest of the tokens
+-- @toks@, @nextPos pos t toks@.
 --
 -- This is the most primitive combinator for accepting tokens. For example,
 -- the 'Text.Megaparsec.Char.char' parser could be implemented as:
 --
--- > char c  = tokenPrim showChar nextPos testChar
--- >   where showChar x       = "'" ++ x ++ "'"
--- >         testChar x       = if x == c then Just x else Nothing
+-- > char c  = tokenPrim nextPos testChar
+-- >   where testChar x       = if x == c then Just x else Nothing
 -- >         nextPos pos x xs = updatePosChar pos x
 
 tokenPrim :: Stream s m t =>
-             (t -> String) -- ^ Token pretty-printing function.
-          -> (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
+             (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
           -> (t -> Maybe a) -- ^ Matching function for the token to parse.
           -> ParsecT s u m a
 {-# INLINE tokenPrim #-}
-tokenPrim showToken nextpos = tokenPrimEx showToken nextpos Nothing
+tokenPrim nextpos = tokenPrimEx nextpos Nothing
 
-tokenPrimEx :: Stream s m t
-            => (t -> String)
-            -> (SourcePos -> t -> s -> SourcePos)
+tokenPrimEx :: Stream s m t =>
+               (SourcePos -> t -> s -> SourcePos)
             -> Maybe (SourcePos -> t -> s -> u -> u)
             -> (t -> Maybe a)
             -> ParsecT s u m a
 {-# INLINE tokenPrimEx #-}
 
-tokenPrimEx showToken nextpos Nothing test
+tokenPrimEx nextpos Nothing test
   = ParsecT $ \(State input pos user) cok _ _ eerr -> do
       r <- uncons input
       case r of
@@ -608,7 +599,7 @@ tokenPrimEx showToken nextpos Nothing test
                            cok x newstate (newErrorUnknown newpos)
               Nothing -> eerr $ unexpectError (showToken c) pos
 
-tokenPrimEx showToken nextpos (Just nextState) test
+tokenPrimEx nextpos (Just nextState) test
   = ParsecT $ \(State input pos user) cok _ _ eerr -> do
       r <- uncons input
       case r of

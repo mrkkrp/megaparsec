@@ -64,20 +64,21 @@ library
                    , PolymorphicComponents
                    , UndecidableInstances
   exposed-modules:   Text.Megaparsec
-                   , Text.Megaparsec.String
                    , Text.Megaparsec.ByteString
                    , Text.Megaparsec.ByteString.Lazy
-                   , Text.Megaparsec.Text
-                   , Text.Megaparsec.Text.Lazy
-                   , Text.Megaparsec.Pos
-                   , Text.Megaparsec.Error
-                   , Text.Megaparsec.Prim
                    , Text.Megaparsec.Char
                    , Text.Megaparsec.Combinator
-                   , Text.Megaparsec.Token
+                   , Text.Megaparsec.Error
                    , Text.Megaparsec.Expr
                    , Text.Megaparsec.Language
                    , Text.Megaparsec.Perm
+                   , Text.Megaparsec.Pos
+                   , Text.Megaparsec.Prim
+                   , Text.Megaparsec.ShowToken
+                   , Text.Megaparsec.String
+                   , Text.Megaparsec.Text
+                   , Text.Megaparsec.Text.Lazy
+                   , Text.Megaparsec.Token
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
 

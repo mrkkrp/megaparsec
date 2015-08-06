@@ -148,9 +148,8 @@ anyChar = satisfy (const True)
 -- > oneOf cs = satisfy (`elem` cs)
 
 satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
-satisfy f = tokenPrim showCh nextPos testChar
-    where showCh x        = show [x]
-          nextPos pos x _ = updatePosChar pos x
+satisfy f = tokenPrim nextPos testChar
+    where nextPos pos x _ = updatePosChar pos x
           testChar x      = if f x then Just x else Nothing
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns
@@ -159,4 +158,4 @@ satisfy f = tokenPrim showCh nextPos testChar
 -- > divOrMod = string "div" <|> string "mod"
 
 string :: Stream s m Char => String -> ParsecT s u m String
-string = tokens show updatePosString
+string = tokens updatePosString

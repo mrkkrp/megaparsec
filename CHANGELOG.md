@@ -24,6 +24,9 @@
 * The following functions are now re-exported from ‘Control.Applicative’:
   `(<|>)`, `many`, `some`, `optional`. See #9.
 
+* Introduces type class `ShowToken` and improved representation of
+  characters and stings in error messages, see #12.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
