@@ -1,1 +1,2 @@
-((configure "--enable-coverage"))
+((configure "--enable-coverage")
+ (test "--test-option=--threads=2"))
