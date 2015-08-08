@@ -18,7 +18,7 @@ module Text.Megaparsec.Char
     , space
     , newline
     , crlf
-    , endOfLine
+    , eol
     , tab
     , upper
     , lower
@@ -38,12 +38,13 @@ import Data.Char
 
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
+import Text.Megaparsec.ShowToken
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
 -- list of characters @cs@. Returns the parsed character. See also
 -- 'satisfy'.
 --
--- > vowel = oneOf "aeiou" <?> "a vowel"
+-- > vowel = oneOf "aeiou" <?> "vowel"
 
 oneOf :: Stream s m Char => String -> ParsecT s u m Char
 oneOf cs = satisfy (`elem` cs)
@@ -52,7 +53,7 @@ oneOf cs = satisfy (`elem` cs)
 -- character /not/ in the supplied list of characters @cs@. Returns the
 -- parsed character.
 --
--- > consonant = noneOf "aeiou" <?> "a consonant"
+-- > consonant = noneOf "aeiou" <?> "consonant"
 
 noneOf :: Stream s m Char => String -> ParsecT s u m Char
 noneOf cs = satisfy (`notElem` cs)
@@ -71,7 +72,7 @@ space = satisfy isSpace <?> "white space"
 -- | Parses a newline character (\'\\n\'). Returns a newline character.
 
 newline :: Stream s m Char => ParsecT s u m Char
-newline = char '\n' <?> "lf newline"
+newline = char '\n' <?> "newline"
 
 -- | Parses a carriage return character (\'\\r\') followed by a newline
 -- character (\'\\n\'). Returns a newline character.
@@ -82,10 +83,10 @@ crlf = char '\r' *> char '\n' <?> "crlf newline"
 -- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
 -- Returns a newline character (\'\\n\').
 --
--- > endOfLine = newline <|> crlf
+-- > eol = newline <|> crlf
 
-endOfLine :: Stream s m Char => ParsecT s u m Char
-endOfLine = newline <|> crlf <?> "newline"
+eol :: Stream s m Char => ParsecT s u m Char
+eol = newline <|> crlf <?> "end of line"
 
 -- | Parses a tab character (\'\\t\').
 
@@ -133,12 +134,12 @@ octDigit = satisfy isOctDigit <?> "octal digit"
 -- > semiColon = char ';'
 
 char :: Stream s m Char => Char -> ParsecT s u m Char
-char c = satisfy (== c) <?> show [c]
+char c = satisfy (== c) <?> showToken c
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
 anyChar :: Stream s m Char => ParsecT s u m Char
-anyChar = satisfy (const True)
+anyChar = satisfy (const True) <?> "character"
 
 -- | The parser @satisfy f@ succeeds for any character for which the
 -- supplied function @f@ returns 'True'. Returns the character that is

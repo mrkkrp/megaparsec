@@ -98,7 +98,7 @@ module Text.Megaparsec
     , space
     , newline
     , crlf
-    , endOfLine
+    , eol
     , tab
     , upper
     , lower

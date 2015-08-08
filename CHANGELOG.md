@@ -24,8 +24,10 @@
 * The following functions are now re-exported from ‘Control.Applicative’:
   `(<|>)`, `many`, `some`, `optional`. See #9.
 
-* Introduces type class `ShowToken` and improved representation of
+* Introduced type class `ShowToken` and improved representation of
   characters and stings in error messages, see #12.
+
+* Renamed parser `endOfLine` to `eol` (module `Text.Megaparsec.Char`).
 
 * Added comprehensive QuickCheck test suite.
 
