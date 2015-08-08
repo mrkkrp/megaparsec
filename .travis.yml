@@ -24,6 +24,8 @@ script:
  - cabal configure --enable-tests --enable-coverage -v2
  - cabal build
  - cabal test --show-details=always
+              --test-option=--threads=2
+              --test-option=--maximum-generated-tests=500
  - cabal sdist
  - cabal haddock
 
