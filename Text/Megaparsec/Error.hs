@@ -139,8 +139,8 @@ addErrorMessage m (ParseError pos ms) = ParseError pos (pre ++ [m] ++ post)
           post = filter (> m) ms
 
 -- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
--- function also deletes all already existing error messages that were
--- created with the same constructor of @m@.
+-- function also deletes all existing error messages that were created with
+-- the same constructor as @m@.
 
 setErrorMessage :: Message -> ParseError -> ParseError
 setErrorMessage m (ParseError pos ms) = ParseError pos (m:xs)
