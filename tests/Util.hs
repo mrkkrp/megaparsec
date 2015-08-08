@@ -29,6 +29,7 @@
 
 module Util
     ( checkParser
+    , singleChar
     , posErr
     , suneStr
     , suneCh
@@ -36,8 +37,11 @@ module Util
     , uneCh
     , exStr
     , exCh
-    , exSpec )
+    , exSpec
+    , showToken )
 where
+
+import Data.Maybe (maybeToList)
 
 import Test.QuickCheck
 
@@ -48,13 +52,28 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
 import Text.Megaparsec.String
 
--- | @checkParser p s r@ tries to run parser @p@ on input @s@ to parse
+-- | @checkParser p r s@ tries to run parser @p@ on input @s@ to parse
 -- entire @s@. Result of the parsing is compared with expected result @r@,
 -- it should match, otherwise the property doesn't hold and the test fails.
 
 checkParser :: (Eq a, Show a) =>
-               Parser a -> String -> Either ParseError a -> Property
-checkParser p s r = parse (p <* eof) "" s === r
+               Parser a -> Either ParseError a -> String -> Property
+checkParser p r s = parse (p <* eof) "" s === r
+
+-- | @singleChar p test label s@ runs parser @p@ on input @s@ and checks if
+-- the parser correctly parses single character that satisfies @test@. The
+-- character may be labelled, in this case @label@ is used to check quality
+-- of error messages.
+
+singleChar :: Parser Char -> (Char -> Bool) ->
+              Maybe String -> String -> Property
+singleChar p f l' s = checkParser p r s
+    where h = head s
+          l = exSpec <$> maybeToList l'
+          r | null s = posErr 0 s (suneStr "" : l)
+            | length s == 1 && f h = Right h
+            | not (f h) = posErr 0 s (suneCh h : l)
+            | otherwise = posErr 1 s [uneCh (s !! 1), exStr ""]
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before
