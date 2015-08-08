@@ -143,7 +143,7 @@ addErrorMessage m (ParseError pos ms) = ParseError pos (pre ++ [m] ++ post)
 -- the same constructor as @m@.
 
 setErrorMessage :: Message -> ParseError -> ParseError
-setErrorMessage m (ParseError pos ms) = ParseError pos (m:xs)
+setErrorMessage m (ParseError pos ms) = addErrorMessage m (ParseError pos xs)
     where xs = filter ((/= fromEnum m) . fromEnum) ms
 
 -- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with

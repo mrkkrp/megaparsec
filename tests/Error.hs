@@ -50,6 +50,7 @@ tests = testGroup "Parse errors"
         , testProperty "copying of error positions" prop_parseErrorCopy
         , testProperty "setting of error position" prop_setErrorPos
         , testProperty "addition of error message" prop_addErrorMessage
+        , testProperty "setting of error message" prop_setErrorMessage
         , testProperty "position of merged error" prop_mergeErrorPos
         , testProperty "messages of merged error" prop_mergeErrorMsgs
         , testProperty "position of error is visible" prop_visiblePos
@@ -79,7 +80,6 @@ prop_newErrorMessage msg pos =
 
 prop_sortedMessages :: ParseError -> Bool
 prop_sortedMessages err = isSorted $ errorMessages err
-    where isSorted xs = and $ zipWith (<=) xs (tail xs)
 
 prop_parseErrorCopy :: ParseError -> Bool
 prop_parseErrorCopy err =
@@ -94,8 +94,17 @@ prop_setErrorPos pos err =
 
 prop_addErrorMessage :: Message -> ParseError -> Bool
 prop_addErrorMessage msg err =
-    msg `elem` errorMessages new && not (errorIsUnknown new)
-    where new = addErrorMessage msg err
+    msg `elem` msgs && not (errorIsUnknown new) && isSorted msgs
+    where new  = addErrorMessage msg err
+          msgs = errorMessages new
+
+prop_setErrorMessage :: Message -> ParseError -> Bool
+prop_setErrorMessage msg err =
+    msg `elem` msgs && not (errorIsUnknown new) &&
+        unique && isSorted msgs
+    where new  = setErrorMessage msg err
+          msgs = errorMessages new
+          unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
 
 prop_mergeErrorPos :: ParseError -> ParseError -> Bool
 prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == min pos1 pos2
@@ -105,7 +114,7 @@ prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == min pos1 pos2
 prop_mergeErrorMsgs :: ParseError -> ParseError -> Bool
 prop_mergeErrorMsgs e1 e2' =
     errorPos e1 /= errorPos e2 || msgsm == sort (msgs1 ++ msgs2)
-    where e2 = setErrorPos (errorPos e1) e2'
+    where e2    = setErrorPos (errorPos e1) e2'
           msgsm = errorMessages $ mergeError e1 e2
           msgs1 = errorMessages e1
           msgs2 = errorMessages e2
@@ -127,3 +136,6 @@ prop_visibleMsgs err = all (`isInfixOf` shown) msgelts
           f (Expect       s) = ["expecting", s]
           f (Message     "") = []
           f (Message      s) = [s]
+
+isSorted :: Ord a => [a] -> Bool
+isSorted xs = and $ zipWith (<=) xs (tail xs)
