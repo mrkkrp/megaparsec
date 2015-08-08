@@ -43,7 +43,7 @@ import Text.Megaparsec.Prim
 -- list of characters @cs@. Returns the parsed character. See also
 -- 'satisfy'.
 --
--- > vowel = oneOf "aeiou"
+-- > vowel = oneOf "aeiou" <?> "a vowel"
 
 oneOf :: Stream s m Char => String -> ParsecT s u m Char
 oneOf cs = satisfy (`elem` cs)
@@ -52,7 +52,7 @@ oneOf cs = satisfy (`elem` cs)
 -- character /not/ in the supplied list of characters @cs@. Returns the
 -- parsed character.
 --
--- > consonant = noneOf "aeiou"
+-- > consonant = noneOf "aeiou" <?> "a consonant"
 
 noneOf :: Stream s m Char => String -> ParsecT s u m Char
 noneOf cs = satisfy (`notElem` cs)
@@ -60,24 +60,24 @@ noneOf cs = satisfy (`notElem` cs)
 -- | Skips /zero/ or more white space characters. See also 'skipMany'.
 
 spaces :: Stream s m Char => ParsecT s u m ()
-spaces = skipMany space <?> "white space"
+spaces = skipMany space
 
 -- | Parses a white space character (any character which satisfies 'isSpace')
 -- Returns the parsed character.
 
 space :: Stream s m Char => ParsecT s u m Char
-space = satisfy isSpace <?> "space"
+space = satisfy isSpace <?> "white space"
 
 -- | Parses a newline character (\'\\n\'). Returns a newline character.
 
 newline :: Stream s m Char => ParsecT s u m Char
-newline = char '\n' <?> "lf new-line"
+newline = char '\n' <?> "lf newline"
 
 -- | Parses a carriage return character (\'\\r\') followed by a newline
 -- character (\'\\n\'). Returns a newline character.
 
 crlf :: Stream s m Char => ParsecT s u m Char
-crlf = char '\r' *> char '\n' <?> "crlf new-line"
+crlf = char '\r' *> char '\n' <?> "crlf newline"
 
 -- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
 -- Returns a newline character (\'\\n\').
@@ -85,7 +85,7 @@ crlf = char '\r' *> char '\n' <?> "crlf new-line"
 -- > endOfLine = newline <|> crlf
 
 endOfLine :: Stream s m Char => ParsecT s u m Char
-endOfLine = newline <|> crlf <?> "new-line"
+endOfLine = newline <|> crlf <?> "newline"
 
 -- | Parses a tab character (\'\\t\').
 
