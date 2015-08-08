@@ -18,7 +18,7 @@ data Expr = Const Integer | Op Expr Expr deriving Show
 main :: Test
 main =
   testCase "Tracing of current position in error message (#9)"
-  $ result @?= ["unexpected '>'", "expecting operator or end of input"]
+  $ result @?= ["unexpected '>'", "expecting end of input or operator"]
   where
     result :: [String]
     result = parseErrors parseTopLevel "4 >> 5"

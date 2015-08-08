@@ -21,6 +21,7 @@ module Text.Megaparsec.Error
     , newErrorMessage
     , newErrorUnknown
     , addErrorMessage
+    , setErrorMessage
     , setErrorPos
     , mergeError
     , showMessages )
@@ -71,10 +72,15 @@ instance Enum Message where
     toEnum _ = error "Text.Megaparsec.Error: toEnum is undefined for Message"
 
 instance Eq Message where
-    m1 == m2 = fromEnum m1 == fromEnum m2
+    m1 == m2 =
+        fromEnum m1 == fromEnum m2 && messageString m1 == messageString m2
 
 instance Ord Message where
-    compare m1 m2 = compare (fromEnum m1) (fromEnum m2)
+    compare m1 m2 =
+        case compare (fromEnum m1) (fromEnum m2) of
+          LT -> LT
+          EQ -> compare (messageString m1) (messageString m2)
+          GT -> GT
 
 -- | Extract the message string from an error message
 
@@ -100,8 +106,8 @@ instance Show ParseError where
     show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
 
 instance Eq ParseError where
-    l == r = errorPos l == errorPos r && mStrs l == mStrs r
-        where mStrs = fmap messageString . errorMessages
+    l == r =
+        errorPos l == errorPos r && errorMessages l == errorMessages r
 
 -- | Test whether given @ParseError@ has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
@@ -132,6 +138,14 @@ addErrorMessage m (ParseError pos ms) = ParseError pos (pre ++ [m] ++ post)
     where pre  = filter (< m) ms
           post = filter (> m) ms
 
+-- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
+-- function also deletes all already existing error messages that were
+-- created with the same constructor of @m@.
+
+setErrorMessage :: Message -> ParseError -> ParseError
+setErrorMessage m (ParseError pos ms) = ParseError pos (m:xs)
+    where xs = filter ((/= fromEnum m) . fromEnum) ms
+
 -- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
 -- position @pos@.
 
@@ -156,18 +170,20 @@ showMessages [] = "unknown parse error"
 showMessages ms =
     intercalate "\n" $ clean [sysUnExpect', unExpect', expect', msgs']
     where
-      (sysUnExpect, ms1) = span (SysUnExpect "" ==) ms
-      (unExpect,    ms2) = span (UnExpect    "" ==) ms1
-      (expect, messages) = span (Expect      "" ==) ms2
+      (sysUnExpect, ms1) = span ((== 0) . fromEnum) ms
+      (unExpect,    ms2) = span ((== 1) . fromEnum) ms1
+      (expect, messages) = span ((== 2) . fromEnum) ms2
 
       sysUnExpect'
           | not (null unExpect) || null sysUnExpect = ""
-          | null firstMsg = "unexpected end of input"
-          | otherwise     = showMany "unexpected " sysUnExpect
-          where firstMsg  = messageString . head $ sysUnExpect
+          | otherwise = showMany "unexpected " (emptyToEnd <$> sysUnExpect)
       unExpect' = showMany "unexpected " unExpect
       expect'   = showMany "expecting "  expect
       msgs'     = showMany "" messages
+
+      emptyToEnd (SysUnExpect x) =
+          SysUnExpect $ if null x then "end of input" else x
+      emptyToEnd x = x
 
       showMany pre msgs =
           case clean (messageString <$> msgs) of

@@ -375,11 +375,11 @@ labels p msgs = ParsecT $ \s cok cerr eok eerr ->
         eerr' err = eerr $ setExpectErrors err msgs
     in unParser p s cok cerr eok' eerr'
  where
-   setExpectErrors err []       = addErrorMessage (Expect "") err
-   setExpectErrors err [m]      = addErrorMessage (Expect m) err
+   setExpectErrors err []       = setErrorMessage (Expect "") err
+   setExpectErrors err [m]      = setErrorMessage (Expect m) err
    setExpectErrors err (m:ms)
        = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
-         (addErrorMessage (Expect m) err) ms
+         (setErrorMessage (Expect m) err) ms
 
 -- Running a parser
 
@@ -534,9 +534,9 @@ tokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s $ unknownError s
 tokens nextposs tts@(tok:toks)
     = ParsecT $ \(State input pos u) cok cerr _ eerr ->
     let
-        errEof = addErrorMessage (Expect (showToken tts))
+        errEof = setErrorMessage (Expect (showToken tts))
                  (newErrorMessage (SysUnExpect "") pos)
-        errExpect x = addErrorMessage (Expect (showToken tts))
+        errExpect x = setErrorMessage (Expect (showToken tts))
                       (newErrorMessage (SysUnExpect (showToken [x])) pos)
 
         walk []     rs = ok rs
