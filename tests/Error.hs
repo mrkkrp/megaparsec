@@ -32,7 +32,7 @@
 module Error (tests) where
 
 import Data.Bool (bool)
-import Data.List (nub, sort, isPrefixOf, isInfixOf)
+import Data.List (nub, isPrefixOf, isInfixOf)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -46,7 +46,7 @@ tests :: Test
 tests = testGroup "Parse errors"
         [ testProperty "extracting message string" prop_messageString
         , testProperty "creation of new error messages" prop_newErrorMessage
-        , testProperty "error messages are always sorted" prop_sortedMessages
+        , testProperty "messages are always well-formed" prop_wellFormedMessages
         , testProperty "copying of error positions" prop_parseErrorCopy
         , testProperty "setting of error position" prop_setErrorPos
         , testProperty "addition of error message" prop_addErrorMessage
@@ -78,8 +78,8 @@ prop_newErrorMessage msg pos =
     errorMessages new == [msg] && errorPos new == pos
     where new = newErrorMessage msg pos
 
-prop_sortedMessages :: ParseError -> Bool
-prop_sortedMessages err = isSorted $ errorMessages err
+prop_wellFormedMessages :: ParseError -> Bool
+prop_wellFormedMessages err = wellFormed $ errorMessages err
 
 prop_parseErrorCopy :: ParseError -> Bool
 prop_parseErrorCopy err =
@@ -94,14 +94,14 @@ prop_setErrorPos pos err =
 
 prop_addErrorMessage :: Message -> ParseError -> Bool
 prop_addErrorMessage msg err =
-    msg `elem` msgs && not (errorIsUnknown new) && isSorted msgs
+    msg `elem` msgs && not (errorIsUnknown new) && wellFormed msgs
     where new  = addErrorMessage msg err
           msgs = errorMessages new
 
 prop_setErrorMessage :: Message -> ParseError -> Bool
 prop_setErrorMessage msg err =
     msg `elem` msgs && not (errorIsUnknown new) &&
-        unique && isSorted msgs
+        unique && wellFormed msgs
     where new  = setErrorMessage msg err
           msgs = errorMessages new
           unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
@@ -112,12 +112,9 @@ prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == min pos1 pos2
           pos2 = errorPos e2
 
 prop_mergeErrorMsgs :: ParseError -> ParseError -> Bool
-prop_mergeErrorMsgs e1 e2' =
-    errorPos e1 /= errorPos e2 || msgsm == sort (msgs1 ++ msgs2)
+prop_mergeErrorMsgs e1 e2' = errorPos e1 /= errorPos e2 || wellFormed msgsm
     where e2    = setErrorPos (errorPos e1) e2'
           msgsm = errorMessages $ mergeError e1 e2
-          msgs1 = errorMessages e1
-          msgs2 = errorMessages e2
 
 prop_visiblePos :: ParseError -> Bool
 prop_visiblePos err = show (errorPos err) `isPrefixOf` show err
@@ -137,5 +134,8 @@ prop_visibleMsgs err = all (`isInfixOf` shown) msgelts
           f (Message     "") = []
           f (Message      s) = [s]
 
-isSorted :: Ord a => [a] -> Bool
-isSorted xs = and $ zipWith (<=) xs (tail xs)
+-- | @iwellFormed xs@ checks that list @xs@ is sorted and contains no
+-- duplicates.
+
+wellFormed :: Ord a => [a] -> Bool
+wellFormed xs = and $ zipWith (<) xs (tail xs)

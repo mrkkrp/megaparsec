@@ -27,7 +27,7 @@ module Text.Megaparsec.Error
     , showMessages )
 where
 
-import Data.List (sort, intercalate)
+import Data.List (intercalate)
 
 import Text.Megaparsec.Pos
 
@@ -159,7 +159,7 @@ mergeError :: ParseError -> ParseError -> ParseError
 mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2) =
     case pos1 `compare` pos2 of
       LT -> e1
-      EQ -> ParseError pos1 (sort $ ms1 ++ ms2)
+      EQ -> foldr addErrorMessage (ParseError pos1 ms1) ms2
       GT -> e2
 
 -- | @showMessages ms@ transforms list of error messages @ms@ into
