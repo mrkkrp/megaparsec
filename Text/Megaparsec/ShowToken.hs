@@ -33,6 +33,7 @@ prettyChar '\n' = "newline"
 prettyChar '\v' = "vertical tab"
 prettyChar '\f' = "form feed"
 prettyChar '\r' = "carriage return"
+prettyChar ' '  = "space"
 prettyChar x    = "'" ++ [x] ++ "'"
 
 instance ShowToken String where
@@ -42,6 +43,7 @@ instance ShowToken String where
 -- used when printing string tokens in error messages.
 
 prettyString :: String -> String
-prettyString ""  = ""
--- prettyString [x] = prettyChar x -- FIXME enable this later
-prettyString xs  = "\"" ++ xs ++ "\""
+prettyString ""     = ""
+prettyString [x]    = prettyChar x
+prettyString "\r\n" = "crlf newline"
+prettyString xs     = "\"" ++ xs ++ "\""

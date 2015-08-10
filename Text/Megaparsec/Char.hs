@@ -75,18 +75,18 @@ newline :: Stream s m Char => ParsecT s u m Char
 newline = char '\n' <?> "newline"
 
 -- | Parses a carriage return character (\'\\r\') followed by a newline
--- character (\'\\n\'). Returns a newline character.
+-- character (\'\\n\'). Returns sequence of characters parsed.
 
-crlf :: Stream s m Char => ParsecT s u m Char
-crlf = char '\r' *> char '\n' <?> "crlf newline"
+crlf :: Stream s m Char => ParsecT s u m String
+crlf = string "\r\n"
 
 -- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
--- Returns a newline character (\'\\n\').
+-- Returns sequence of characters parsed.
 --
 -- > eol = newline <|> crlf
 
-eol :: Stream s m Char => ParsecT s u m Char
-eol = newline <|> crlf <?> "end of line"
+eol :: Stream s m Char => ParsecT s u m String
+eol = (pure <$> newline) <|> crlf <?> "end of line"
 
 -- | Parses a tab character (\'\\t\').
 

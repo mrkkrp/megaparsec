@@ -531,33 +531,25 @@ tokens :: (Stream s m t, Eq t, ShowToken [t]) =>
        -> ParsecT s u m [t]
 {-# INLINE tokens #-}
 tokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s $ unknownError s
-tokens nextposs tts@(tok:toks)
+tokens nextposs tts
     = ParsecT $ \(State input pos u) cok cerr _ eerr ->
-    let
-        errEof = setErrorMessage (Expect (showToken tts))
-                 (newErrorMessage (SysUnExpect "") pos)
-        errExpect x = setErrorMessage (Expect (showToken tts))
-                      (newErrorMessage (SysUnExpect (showToken [x])) pos)
+    let errExpect x = setErrorMessage (Expect $ showToken tts)
+                      (newErrorMessage (SysUnExpect $ showToken x) pos)
 
-        walk []     rs = ok rs
-        walk (t:ts) rs = do
+        walk []     _ rs = let pos' = nextposs pos tts
+                               s'   = State rs pos' u
+                           in cok tts s' $ newErrorUnknown pos'
+        walk (t:ts) i rs = do
           sr <- uncons rs
+          let errorCont = if i == 0 then eerr else cerr
           case sr of
-            Nothing -> cerr errEof
+            Nothing -> errorCont $
+                       errExpect (if i == 0 then [] else take i tts)
             Just (x,xs)
-                | t == x    -> walk ts xs
-                | otherwise -> cerr $ errExpect x
+                | t == x    -> walk ts (succ i) xs
+                | otherwise -> errorCont $ errExpect (take i tts ++ [x])
 
-        ok rs = let pos' = nextposs pos tts
-                    s' = State rs pos' u
-                in cok tts s' (newErrorUnknown pos')
-    in do
-        sr <- uncons input
-        case sr of
-            Nothing -> eerr errEof
-            Just (x,xs)
-                | tok == x  -> walk toks xs
-                | otherwise -> eerr $ errExpect x
+    in walk tts 0 input
 
 -- | The parser @tokenPrim nextPos testTok@ accepts a token @t@ with result
 -- @x@ when the function @testTok t@ returns @'Just' x@. The position of the
