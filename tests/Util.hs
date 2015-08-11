@@ -33,8 +33,6 @@ module Util
     , checkChar
     , checkString
     , posErr
-    , suneStr
-    , suneCh
     , uneStr
     , uneCh
     , exStr
@@ -80,9 +78,9 @@ checkChar :: Parser Char -> (Char -> Bool) ->
 checkChar p f l' s = checkParser p r s
     where h = head s
           l = exSpec <$> maybeToList l'
-          r | null s = posErr 0 s (suneStr "" : l)
+          r | null s = posErr 0 s (uneStr "" : l)
             | length s == 1 && f h = Right h
-            | not (f h) = posErr 0 s (suneCh h : l)
+            | not (f h) = posErr 0 s (uneCh h : l)
             | otherwise = posErr 1 s [uneCh (s !! 1), exStr ""]
 
 -- | @checkString p a label s@ runs parser @p@ on input @s@ and checks if
@@ -93,11 +91,11 @@ checkString :: Parser String -> String -> String -> String -> Property
 checkString p a' l s' = checkParser p (w a' 0 s') s'
     where w [] _ []    = Right a'
           w [] i (s:_) = posErr i s' [uneCh s, exStr ""]
-          w _  0 []    = posErr 0 s' [suneStr "", exSpec l]
-          w _  i []    = posErr 0 s' [suneStr (take i s'), exSpec l]
+          w _  0 []    = posErr 0 s' [uneStr "", exSpec l]
+          w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
           w (a:as) i (s:ss)
             | a == s    = w as i' ss
-            | otherwise = posErr 0 s' [suneStr (take i' s'), exSpec l]
+            | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
               where i'  = succ i
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
@@ -110,42 +108,31 @@ posErr :: Int -> String -> [Message] -> Either ParseError a
 posErr pos s = Left . foldr addErrorMessage (newErrorUnknown errPos)
     where errPos = updatePosString (initialPos "") (take pos s)
 
--- | @suneStr s@ returns message created with 'SysUnExpect' constructor that
--- tells the system that string @s@ is unexpected.
-
-suneStr :: String -> Message
-suneStr s = SysUnExpect $ showToken s
-
--- | @suneCh s@ returns message created with 'SysUnExpect' constructor that
--- tells the system that char @s@ is unexpected.
-
-suneCh :: Char -> Message
-suneCh s = SysUnExpect $ showToken s
-
 -- | @uneStr s@ returns message created with 'UnExpect' constructor that
--- tells the system that string @s@ is unexpected.
+-- tells the system that string @s@ is unexpected. This can be used to
+-- expect end of input, if @s@ is empty.
 
 uneStr :: String -> Message
-uneStr s = UnExpect $ showToken s
+uneStr s = Unexpected $ if null s then "end of input" else showToken s
 
 -- | @uneCh s@ returns message created with 'UnExpect' constructor that
 -- tells the system that char @s@ is unexpected.
 
 uneCh :: Char -> Message
-uneCh s = UnExpect $ showToken s
+uneCh s = Unexpected $ showToken s
 
 -- | @exStr s@ returns message created with 'Expect' constructor that tells
 -- the system that string @s@ is expected. This can be used to expect end of
 -- input, if @s@ is empty.
 
 exStr :: String -> Message
-exStr s = Expect $ if null s then "end of input" else showToken s
+exStr s = Expected $ if null s then "end of input" else showToken s
 
 -- | @exCh s@ returns message created with 'Expect' constructor that tells
 -- the system that character @s@ is expected.
 
 exCh :: Char -> Message
-exCh s = Expect $ showToken s
+exCh s = Expected $ showToken s
 
 -- | @exSpec s@ returns message created with 'Expect' constructor that tells
 -- the system that string @s@ is expected. This is different from 'exStr' in
@@ -153,4 +140,4 @@ exCh s = Expect $ showToken s
 -- allowing for “special” labels.
 
 exSpec :: String -> Message
-exSpec = Expect
+exSpec = Expected

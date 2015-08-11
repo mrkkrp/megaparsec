@@ -73,8 +73,8 @@ prop_spaces s = checkParser spaces r s
                 Just x  ->
                     let ch = s !! x
                     in posErr x s
-                           [ suneCh ch
-                           , uneCh  ch
+                           [ uneCh ch
+                           , uneCh ch
                            , exSpec "white space"
                            , exStr "" ]
                 Nothing -> Right ()

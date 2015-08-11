@@ -23,7 +23,6 @@ module Text.Megaparsec.Prim
     , runParsecT
     , mkPT
     , unknownError
-    , sysUnExpectError
     , unexpected
     , mergeErrorReply
     , (<?>)
@@ -50,6 +49,8 @@ module Text.Megaparsec.Prim
     , putState
     , modifyState )
 where
+
+import Data.Bool (bool)
 
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy.Char8 as CL
@@ -318,12 +319,6 @@ instance MonadTrans (ParsecT s u) where
 unknownError :: State s u -> ParseError
 unknownError state = newErrorUnknown (statePos state)
 
--- | @sysUnExpectError m pos@ creates 'Reply' that represents \"unexpected\"
--- error with associated message @m@ and position @pos@.
-
-sysUnExpectError :: String -> SourcePos -> Reply s u a
-sysUnExpectError msg pos = Error (newErrorMessage (SysUnExpect msg) pos)
-
 -- | The parser @unexpected msg@ always fails with an unexpected error
 -- message @msg@ without consuming any input.
 --
@@ -334,7 +329,7 @@ sysUnExpectError msg pos = Error (newErrorMessage (SysUnExpect msg) pos)
 
 unexpected :: Stream s m t => String -> ParsecT s u m a
 unexpected msg = ParsecT $ \s _ _ _ eerr ->
-      eerr $ newErrorMessage (UnExpect msg) (statePos s)
+      eerr $ newErrorMessage (Unexpected msg) (statePos s)
 
 -- | @mergeErrorReply e reply@ returns @reply@ with error @e@ added.
 
@@ -375,11 +370,11 @@ labels p msgs = ParsecT $ \s cok cerr eok eerr ->
         eerr' err = eerr $ setExpectErrors err msgs
     in unParser p s cok cerr eok' eerr'
  where
-   setExpectErrors err []       = setErrorMessage (Expect "") err
-   setExpectErrors err [m]      = setErrorMessage (Expect m) err
+   setExpectErrors err []  = setErrorMessage (Expected "end of input") err
+   setExpectErrors err [m] = setErrorMessage (Expected m) err
    setExpectErrors err (m:ms)
-       = foldr (\msg' err' -> addErrorMessage (Expect msg') err')
-         (setErrorMessage (Expect m) err) ms
+       = foldr (\msg' err' -> addErrorMessage (Expected msg') err')
+         (setErrorMessage (Expected m) err) ms
 
 -- Running a parser
 
@@ -518,7 +513,7 @@ token tokpos = tokenPrim nextpos
                 Just (tok', _) -> tokpos tok'
 
 -- | The parser @tokens posFromTok@ parses list of tokens and returns
--- it. The resulting parser will use @showToks@ to pretty-print the
+-- it. The resulting parser will use @showToken@ to pretty-print the
 -- collection of tokens.
 --
 -- This can be used to example to write 'Text.Megaparsec.Char.string':
@@ -533,8 +528,8 @@ tokens :: (Stream s m t, Eq t, ShowToken [t]) =>
 tokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s $ unknownError s
 tokens nextposs tts
     = ParsecT $ \(State input pos u) cok cerr _ eerr ->
-    let errExpect x = setErrorMessage (Expect $ showToken tts)
-                      (newErrorMessage (SysUnExpect $ showToken x) pos)
+    let errExpect x = setErrorMessage (Expected $ showToken tts)
+                      (newErrorMessage (Unexpected x) pos)
 
         walk []     _ rs = let pos' = nextposs pos tts
                                s'   = State rs pos' u
@@ -542,12 +537,13 @@ tokens nextposs tts
         walk (t:ts) i rs = do
           sr <- uncons rs
           let errorCont = if i == 0 then eerr else cerr
+              what = bool (showToken $ take i tts) "end of input" (i == 0)
           case sr of
-            Nothing -> errorCont $
-                       errExpect (if i == 0 then [] else take i tts)
+            Nothing -> errorCont . errExpect $ what
             Just (x,xs)
                 | t == x    -> walk ts (succ i) xs
-                | otherwise -> errorCont $ errExpect (take i tts ++ [x])
+                | otherwise -> errorCont . errExpect . showToken $
+                               take i tts ++ [x]
 
     in walk tts 0 input
 
@@ -582,7 +578,7 @@ tokenPrimEx nextpos Nothing test
   = ParsecT $ \(State input pos user) cok _ _ eerr -> do
       r <- uncons input
       case r of
-        Nothing -> eerr $ unexpectError "" pos
+        Nothing -> eerr $ unexpectError "end of input" pos
         Just (c,cs)
          -> case test c of
               Just x -> let newpos = nextpos pos c cs
@@ -595,18 +591,18 @@ tokenPrimEx nextpos (Just nextState) test
   = ParsecT $ \(State input pos user) cok _ _ eerr -> do
       r <- uncons input
       case r of
-        Nothing -> eerr $ unexpectError "" pos
+        Nothing -> eerr $ unexpectError "end of input" pos
         Just (c,cs)
          -> case test c of
               Just x -> let newpos = nextpos pos c cs
                             newUser = nextState pos c cs user
                             newstate = State cs newpos newUser
                         in seq newpos $ seq newstate $
-                           cok x newstate $ newErrorUnknown newpos
+                           cok x newstate (newErrorUnknown newpos)
               Nothing -> eerr $ unexpectError (showToken c) pos
 
 unexpectError :: String -> SourcePos -> ParseError
-unexpectError msg = newErrorMessage (SysUnExpect msg)
+unexpectError msg = newErrorMessage (Unexpected msg)
 
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.

@@ -32,7 +32,7 @@
 module Error (tests) where
 
 import Data.Bool (bool)
-import Data.List (nub, isPrefixOf, isInfixOf)
+import Data.List (isPrefixOf, isInfixOf)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -58,7 +58,7 @@ tests = testGroup "Parse errors"
 
 instance Arbitrary Message where
     arbitrary = ($) <$> elements constructors <*> arbitrary
-        where constructors = [SysUnExpect, UnExpect, Expect, Message]
+        where constructors = [Unexpected, Expected, Message]
 
 instance Arbitrary ParseError where
     arbitrary = do
@@ -68,15 +68,14 @@ instance Arbitrary ParseError where
       return $ foldr addErrorMessage pe ms
 
 prop_messageString :: Message -> Bool
-prop_messageString m@(SysUnExpect s) = s == messageString m
-prop_messageString m@(UnExpect    s) = s == messageString m
-prop_messageString m@(Expect      s) = s == messageString m
-prop_messageString m@(Message     s) = s == messageString m
+prop_messageString m@(Unexpected s) = s == messageString m
+prop_messageString m@(Expected   s) = s == messageString m
+prop_messageString m@(Message    s) = s == messageString m
 
 prop_newErrorMessage :: Message -> SourcePos -> Bool
-prop_newErrorMessage msg pos =
-    errorMessages new == [msg] && errorPos new == pos
-    where new = newErrorMessage msg pos
+prop_newErrorMessage msg pos = added && errorPos new == pos
+    where new   = newErrorMessage msg pos
+          added = errorMessages new == bool [msg] [] (badMessage msg)
 
 prop_wellFormedMessages :: ParseError -> Bool
 prop_wellFormedMessages err = wellFormed $ errorMessages err
@@ -94,16 +93,17 @@ prop_setErrorPos pos err =
 
 prop_addErrorMessage :: Message -> ParseError -> Bool
 prop_addErrorMessage msg err =
-    msg `elem` msgs && not (errorIsUnknown new) && wellFormed msgs
-    where new  = addErrorMessage msg err
-          msgs = errorMessages new
+    wellFormed msgs && (badMessage msg || added)
+    where new   = addErrorMessage msg err
+          msgs  = errorMessages new
+          added = msg `elem` msgs && not (errorIsUnknown new)
 
 prop_setErrorMessage :: Message -> ParseError -> Bool
 prop_setErrorMessage msg err =
-    msg `elem` msgs && not (errorIsUnknown new) &&
-        unique && wellFormed msgs
-    where new  = setErrorMessage msg err
-          msgs = errorMessages new
+    wellFormed msgs && (badMessage msg || (added && unique))
+    where new    = setErrorMessage msg err
+          msgs   = errorMessages new
+          added  = msg `elem` msgs && not (errorIsUnknown new)
           unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
 
 prop_mergeErrorPos :: ParseError -> ParseError -> Bool
@@ -120,22 +120,14 @@ prop_visiblePos :: ParseError -> Bool
 prop_visiblePos err = show (errorPos err) `isPrefixOf` show err
 
 prop_visibleMsgs :: ParseError -> Bool
-prop_visibleMsgs err = all (`isInfixOf` shown) msgelts
-    where shown   = show err
-          msgs    = errorMessages err
-          msgelts = nub $ msgs >>= f
-          unexps  = 1 `elem` (fromEnum <$> msgs)
-          f (SysUnExpect "") = bool ["unexpected", "end of input"] [] unexps
-          f (SysUnExpect  s) = bool ["unexpected", s] [] unexps
-          f (UnExpect    "") = []
-          f (UnExpect     s) = ["unexpected", s]
-          f (Expect      "") = []
-          f (Expect       s) = ["expecting", s]
-          f (Message     "") = []
-          f (Message      s) = [s]
+prop_visibleMsgs err = all (`isInfixOf` shown) (errorMessages err >>= f)
+    where shown = show err
+          f (Unexpected s) = ["unexpected", s]
+          f (Expected   s) = ["expecting", s]
+          f (Message    s) = [s]
 
 -- | @iwellFormed xs@ checks that list @xs@ is sorted and contains no
--- duplicates.
+-- duplicates and no empty messages.
 
-wellFormed :: Ord a => [a] -> Bool
-wellFormed xs = and $ zipWith (<) xs (tail xs)
+wellFormed :: [Message] -> Bool
+wellFormed xs = and (zipWith (<) xs (tail xs)) && not (any badMessage xs)
