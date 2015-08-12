@@ -22,7 +22,7 @@ where
 
 import Control.Applicative ((<|>), many, some)
 import Control.Monad (void)
-import Data.Char (isAlpha, toLower, toUpper, isSpace)
+import Data.Char (isAlpha, toLower, toUpper)
 import Data.List (nub, sort)
 
 import Text.Megaparsec.Prim
@@ -398,7 +398,7 @@ makeTokenParser languageDef =
                      (Just <$> escapeCode) )
 
     escapeEmpty = char '&'
-    escapeGap   = some space >> char '\\' <?> "end of string gap"
+    escapeGap   = some spaceChar >> char '\\' <?> "end of string gap"
 
     -- escape codes
 
@@ -410,13 +410,13 @@ makeTokenParser languageDef =
 
     charNum = toEnum . fromInteger <$>
               ( decimal <|>
-               (char 'o' >> nump "0o" octDigit) <|>
-               (char 'x' >> nump "0x" hexDigit) )
+               (char 'o' >> nump "0o" octDigitChar) <|>
+               (char 'x' >> nump "0x" hexDigitChar) )
 
     charAscii = choice (parseAscii <$> asciiMap)
         where parseAscii (asc, code) = try (string asc >> return code)
 
-    charControl = toEnum . subtract 64 . fromEnum <$> (char '^' >> upper)
+    charControl = toEnum . subtract 64 . fromEnum <$> (char '^' >> upperChar)
 
     -- escape code tables
 
@@ -437,9 +437,9 @@ makeTokenParser languageDef =
     integer  = decimal <?> "integer"
     integer' = signed integer
 
-    decimal     = lexeme $ nump "" digit
-    hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigit
-    octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigit
+    decimal     = lexeme $ nump "" digitChar
+    hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigitChar
+    octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigitChar
 
     nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
@@ -466,7 +466,7 @@ makeTokenParser languageDef =
       exp <- option "" fExp
       return $ '.' : decimal ++  exp
 
-    fDec = some digit
+    fDec = some digitChar
 
     fExp = do
       expChar <- oneOf "eE"
@@ -559,7 +559,7 @@ makeTokenParser languageDef =
           noLine  = null (commentLine languageDef)
           noMulti = null (commentStart languageDef)
 
-    simpleSpace = skipSome (satisfy isSpace)
+    simpleSpace = skipSome spaceChar
 
     oneLineComment = void (try (string (commentLine languageDef))
                           >> skipMany (satisfy (/= '\n')))

@@ -42,6 +42,37 @@
 * Renamed `semi` to `semicolon` and other associated parasers in
   `Text.Megaparsec.Token`.
 
+* Added new character parsers in `Text.Megaparsec.Char`:
+
+    * `controlChar`
+    * `printChar`
+    * `markChar`
+    * `numberChar`
+    * `punctuationChar`
+    * `symbolChar`
+    * `separatorChar`
+    * `asciiChar`
+    * `latin1Char`
+    * `charCategory`
+
+* Renamed some parsers:
+
+    * `spaces` → `space`
+    * `space` → `spaceChar`
+    * `lower` → `lowerChar`
+    * `upper` → `upperChar`
+    * `letter` → `letterChar`
+    * `alphaNum` → `alphaNumChar`
+    * `digit` → `digitChar`
+    * `octDigit` → `octDigitChar`
+    * `hexDigit` → `hexDigitChar`
+
+* Descriptions of old parsers have been updated to accent some
+  Unicode-specific moments. For example, old description of `letter` stated
+  that it parses letters from “a” to “z” and from “A” to “Z”. This is wrong,
+  since it used `Data.Char.isAlpha` predicate internally and thus parsed
+  many more characters.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.

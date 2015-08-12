@@ -17,7 +17,7 @@ main =
 
 variable :: Parser String
 variable = do
-      x <- lookAhead (some letter)
+      x <- lookAhead (some letterChar)
       if x == "return"
        then fail "'return' is a reserved keyword"
        else string x

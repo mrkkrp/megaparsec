@@ -27,6 +27,8 @@
 -- any way out of the use of this software, even if advised of the
 -- possibility of such damage.
 
+{-# OPTIONS -fno-warn-orphans #-}
+
 module Char (tests) where
 
 import Data.Char
@@ -42,45 +44,67 @@ import Util
 
 tests :: Test
 tests = testGroup "Character parsers"
-        [ testProperty "oneOf" prop_oneOf
-        , testProperty "noneOf" prop_noneOf
-        , testProperty "spaces" prop_spaces
-        , testProperty "space" prop_space
-        , testProperty "newline" prop_newline
-        , testProperty "crlf" prop_crlf
-        , testProperty "eol" prop_eol
-        , testProperty "tab" prop_tab
-        , testProperty "upper" prop_upper
-        , testProperty "lower" prop_lower
-        , testProperty "alphaNum" prop_alphaNum
-        , testProperty "letter" prop_letter
-        , testProperty "digit" prop_digit
-        , testProperty "hexDigit" prop_hexDigit
-        , testProperty "octDigit" prop_octDigit
-        , testProperty "char" prop_char
-        , testProperty "anyChar" prop_anyChar
-        , testProperty "string" prop_string ]
+        [ testProperty "newline"         prop_newline
+        , testProperty "crlf"            prop_crlf
+        , testProperty "eol"             prop_eol
+        , testProperty "tab"             prop_tab
+        , testProperty "space"           prop_space
+        , testProperty "controlChar"     prop_controlChar
+        , testProperty "spaceChar"       prop_spaceChar
+        , testProperty "upperChar"       prop_upperChar
+        , testProperty "lowerChar"       prop_lowerChar
+        , testProperty "letterChar"      prop_letterChar
+        , testProperty "alphaNumChar"    prop_alphaNumChar
+        , testProperty "printChar"       prop_printChar
+        , testProperty "digitChar"       prop_digitChar
+        , testProperty "hexDigitChar"    prop_hexDigitChar
+        , testProperty "octDigitChar"    prop_octDigitChar
+        , testProperty "markChar"        prop_markChar
+        , testProperty "numberChar"      prop_numberChar
+        , testProperty "punctuationChar" prop_punctuationChar
+        , testProperty "symbolChar"      prop_symbolChar
+        , testProperty "separatorChar"   prop_separatorChar
+        , testProperty "asciiChar"       prop_asciiChar
+        , testProperty "latin1Char"      prop_latin1Char
+        , testProperty "charCategory"    prop_charCategory
+        , testProperty "char"            prop_char
+        , testProperty "anyChar"         prop_anyChar
+        , testProperty "oneOf"           prop_oneOf
+        , testProperty "noneOf"          prop_noneOf
+        , testProperty "string"          prop_string ]
 
-prop_oneOf :: String -> String -> Property
-prop_oneOf a = checkChar (oneOf a) (`elem` a) Nothing
-
-prop_noneOf :: String -> String -> Property
-prop_noneOf a = checkChar (noneOf a) (`notElem` a) Nothing
-
-prop_spaces :: String -> Property
-prop_spaces s = checkParser spaces r s
-    where r = case findIndex (not . isSpace) s of
-                Just x  ->
-                    let ch = s !! x
-                    in posErr x s
-                           [ uneCh ch
-                           , uneCh ch
-                           , exSpec "white space"
-                           , exStr "" ]
-                Nothing -> Right ()
-
-prop_space :: String -> Property
-prop_space = checkChar space isSpace (Just "white space")
+instance Arbitrary GeneralCategory where
+  arbitrary = elements
+                [ UppercaseLetter
+                , LowercaseLetter
+                , TitlecaseLetter
+                , ModifierLetter
+                , OtherLetter
+                , NonSpacingMark
+                , SpacingCombiningMark
+                , EnclosingMark
+                , DecimalNumber
+                , LetterNumber
+                , OtherNumber
+                , ConnectorPunctuation
+                , DashPunctuation
+                , OpenPunctuation
+                , ClosePunctuation
+                , InitialQuote
+                , FinalQuote
+                , OtherPunctuation
+                , MathSymbol
+                , CurrencySymbol
+                , ModifierSymbol
+                , OtherSymbol
+                , Space
+                , LineSeparator
+                , ParagraphSeparator
+                , Control
+                , Format
+                , Surrogate
+                , PrivateUse
+                , NotAssigned ]
 
 prop_newline :: String -> Property
 prop_newline = checkChar newline (== '\n') (Just "newline")
@@ -96,32 +120,86 @@ prop_eol s = checkParser eol r s
 prop_tab :: String -> Property
 prop_tab = checkChar tab (== '\t') (Just "tab")
 
-prop_upper :: String -> Property
-prop_upper = checkChar upper isUpper (Just "uppercase letter")
+prop_space :: String -> Property
+prop_space s = checkParser space r s
+    where r = case findIndex (not . isSpace) s of
+                Just x  ->
+                    let ch = s !! x
+                    in posErr x s
+                           [ uneCh ch
+                           , uneCh ch
+                           , exSpec "white space"
+                           , exStr "" ]
+                Nothing -> Right ()
 
-prop_lower :: String -> Property
-prop_lower = checkChar lower isLower (Just "lowercase letter")
+prop_controlChar :: String -> Property
+prop_controlChar = checkChar controlChar isControl (Just "control character")
 
-prop_alphaNum :: String -> Property
-prop_alphaNum = checkChar alphaNum isAlphaNum (Just "letter or digit")
+prop_spaceChar :: String -> Property
+prop_spaceChar = checkChar spaceChar isSpace (Just "white space")
 
-prop_letter :: String -> Property
-prop_letter = checkChar letter isAlpha (Just "letter")
+prop_upperChar :: String -> Property
+prop_upperChar = checkChar upperChar isUpper (Just "uppercase letter")
 
-prop_digit :: String -> Property
-prop_digit = checkChar digit isDigit (Just "digit")
+prop_lowerChar :: String -> Property
+prop_lowerChar = checkChar lowerChar isLower (Just "lowercase letter")
 
-prop_hexDigit :: String -> Property
-prop_hexDigit = checkChar hexDigit isHexDigit (Just "hexadecimal digit")
+prop_letterChar :: String -> Property
+prop_letterChar = checkChar letterChar isAlpha (Just "letter")
 
-prop_octDigit :: String -> Property
-prop_octDigit = checkChar octDigit isOctDigit (Just "octal digit")
+prop_alphaNumChar :: String -> Property
+prop_alphaNumChar = checkChar alphaNumChar isAlphaNum
+                    (Just "alphanumeric character")
+
+prop_printChar :: String -> Property
+prop_printChar = checkChar printChar isPrint (Just "printable character")
+
+prop_digitChar :: String -> Property
+prop_digitChar = checkChar digitChar isDigit (Just "digit")
+
+prop_octDigitChar :: String -> Property
+prop_octDigitChar = checkChar octDigitChar isOctDigit (Just "octal digit")
+
+prop_hexDigitChar :: String -> Property
+prop_hexDigitChar = checkChar hexDigitChar isHexDigit (Just "hexadecimal digit")
+
+prop_markChar :: String -> Property
+prop_markChar = checkChar markChar isMark (Just "mark character")
+
+prop_numberChar :: String -> Property
+prop_numberChar = checkChar numberChar isNumber (Just "numeric character")
+
+prop_punctuationChar :: String -> Property
+prop_punctuationChar = checkChar punctuationChar isPunctuation
+                       (Just "punctuation")
+
+prop_symbolChar :: String -> Property
+prop_symbolChar = checkChar symbolChar isSymbol (Just "symbol")
+
+prop_separatorChar :: String -> Property
+prop_separatorChar = checkChar separatorChar isSeparator (Just "separator")
+
+prop_asciiChar :: String -> Property
+prop_asciiChar = checkChar asciiChar isAscii (Just "ASCII character")
+
+prop_latin1Char :: String -> Property
+prop_latin1Char = checkChar latin1Char isLatin1 (Just "Latin-1 character")
+
+prop_charCategory :: GeneralCategory -> String -> Property
+prop_charCategory cat = checkChar (charCategory cat) p (Just $ categoryName cat)
+  where p c = generalCategory c == cat
 
 prop_char :: Char -> String -> Property
 prop_char c = checkChar (char c) (== c) (Just $ showToken c)
 
 prop_anyChar :: String -> Property
 prop_anyChar = checkChar anyChar (const True) (Just "character")
+
+prop_oneOf :: String -> String -> Property
+prop_oneOf a = checkChar (oneOf a) (`elem` a) Nothing
+
+prop_noneOf :: String -> String -> Property
+prop_noneOf a = checkChar (noneOf a) (`notElem` a) Nothing
 
 prop_string :: String -> String -> Property
 prop_string a = checkString (string a) a (showToken a)

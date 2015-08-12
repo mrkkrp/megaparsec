@@ -23,7 +23,8 @@ where
 
 import Control.Monad.Identity
 
-import Text.Megaparsec
+import Control.Applicative ((<|>))
+import Text.Megaparsec.Char
 import Text.Megaparsec.Token
 
 -- | This is the most minimal token definition. It is recommended to use
@@ -38,8 +39,8 @@ emptyDef =
     , commentEnd      = ""
     , commentLine     = ""
     , nestedComments  = True
-    , identStart      = letter <|> char '_'
-    , identLetter     = alphaNum <|> oneOf "_'"
+    , identStart      = letterChar <|> char '_'
+    , identLetter     = alphaNumChar <|> oneOf "_'"
     , opStart         = opLetter emptyDef
     , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
     , reservedOpNames = []
@@ -57,8 +58,8 @@ haskellStyle =
     , commentEnd      = "-}"
     , commentLine     = "--"
     , nestedComments  = True
-    , identStart      = letter
-    , identLetter     = alphaNum <|> oneOf "_'"
+    , identStart      = letterChar
+    , identLetter     = alphaNumChar <|> oneOf "_'"
     , opStart         = opLetter haskellStyle
     , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
     , reservedOpNames = []
@@ -76,8 +77,8 @@ javaStyle =
     , commentEnd      = "*/"
     , commentLine     = "//"
     , nestedComments  = True
-    , identStart      = letter
-    , identLetter     = alphaNum <|> oneOf "_'"
+    , identStart      = letterChar
+    , identLetter     = alphaNumChar <|> oneOf "_'"
     , reservedNames   = []
     , reservedOpNames = []
     , caseSensitive   = False }

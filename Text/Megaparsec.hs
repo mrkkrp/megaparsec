@@ -92,23 +92,33 @@ module Text.Megaparsec
     , lookAhead
     , anyToken
 -- * Character parsing
-    , oneOf
-    , noneOf
-    , spaces
-    , space
     , newline
     , crlf
     , eol
     , tab
-    , letter
-    , upper
-    , lower
-    , digit
-    , hexDigit
-    , octDigit
-    , alphaNum
+    , space
+    , controlChar
+    , spaceChar
+    , upperChar
+    , lowerChar
+    , letterChar
+    , alphaNumChar
+    , printChar
+    , digitChar
+    , octDigitChar
+    , hexDigitChar
+    , markChar
+    , numberChar
+    , punctuationChar
+    , symbolChar
+    , separatorChar
+    , asciiChar
+    , latin1Char
+    , charCategory
     , char
     , anyChar
+    , oneOf
+    , noneOf
     , satisfy
     , string
 -- * Error messages
