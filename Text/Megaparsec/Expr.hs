@@ -9,8 +9,8 @@
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
--- A helper module to parse \"expressions\".
--- Builds a parser given a table of operators and associativities.
+-- A helper module to parse expressions. Builds a parser given a table of
+-- operators.
 
 module Text.Megaparsec.Expr
     ( Assoc (..)

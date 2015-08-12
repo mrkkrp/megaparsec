@@ -36,7 +36,9 @@ import Text.Megaparsec.Pos
 -- | This data type represents parse error messages. There are three kinds
 -- of messages:
 --
--- > data Message = Unexpected String > | Expected String > | Message String
+-- > data Message = Unexpected String
+-- >              | Expected   String
+-- >              | Message    String
 --
 -- The fine distinction between different kinds of parse errors allows the
 -- system to generate quite good error messages for the user.
@@ -63,7 +65,7 @@ instance Ord Message where
           EQ -> compare (messageString m1) (messageString m2)
           GT -> GT
 
--- | Extract the message string from an error message
+-- | Extract the message string from an error message.
 
 messageString :: Message -> String
 messageString (Unexpected s) = s
@@ -82,9 +84,9 @@ badMessage = null . messageString
 -- 'Eq' type classes.
 
 data ParseError = ParseError
-    { -- | Extract the source position from the parse error.
+    { -- | Extract the source position from @ParseError@.
       errorPos :: !SourcePos
-      -- | Extract the list of error messages from the parse error.
+      -- | Extract the list of error messages from @ParseError@.
     , errorMessages :: [Message] }
 
 instance Show ParseError where

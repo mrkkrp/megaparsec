@@ -17,6 +17,7 @@ module Text.Megaparsec.Combinator
     , between
     , option
     , optionMaybe
+    , skipMany
     , skipSome
     , sepBy
     , sepBy1
@@ -79,11 +80,19 @@ between :: Stream s m t => ParsecT s u m open ->
            ParsecT s u m close -> ParsecT s u m a -> ParsecT s u m a
 between open close p = open *> p <* close
 
+-- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
+-- its result.
+--
+-- > spaces = skipMany space
+
+skipMany :: ParsecT s u m a -> ParsecT s u m ()
+skipMany p = void $ many p
+
 -- | @skipSome p@ applies the parser @p@ /one/ or more times, skipping
 -- its result.
 
 skipSome :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
-skipSome p = p *> skipMany p
+skipSome p = void $ some p
 
 -- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.
@@ -110,10 +119,10 @@ sepEndBy1 :: Stream s m t =>
 sepEndBy1 p sep = p >>= \x -> ((x:) <$> (sep *> sepEndBy p sep)) <|> return [x]
 
 -- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
--- separated and optionally ended by @sep@, i.e. haskell style
--- statements. Returns a list of values returned by @p@.
+-- separated and optionally ended by @sep@, i.e. C-style statements. Returns
+-- a list of values returned by @p@.
 --
--- > haskellStatements = haskellStatement `sepEndBy` semi
+-- > statements = statement `sepEndBy` semicolon
 
 sepEndBy :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
@@ -193,12 +202,6 @@ chainr1 :: Stream s m t =>
 chainr1 p op = p >>= rest
     where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
 
--- | The parser @anyToken@ accepts any kind of token. It is for example
--- used to implement 'eof'. Returns the accepted token.
-
-anyToken :: Stream s m t => ParsecT s u m t
-anyToken = tokenPrim (\pos _ _ -> pos) Just
-
 -- | This parser only succeeds at the end of the input. This is not a
 -- primitive parser but it is defined using 'notFollowedBy'.
 --
@@ -208,14 +211,8 @@ eof :: Stream s m t => ParsecT s u m ()
 eof = notFollowedBy anyToken <?> "end of input"
 
 -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
--- does not consume any input. This parser can be used to implement the
--- \'longest match\' rule. For example, when recognizing keywords (for
--- example @let@), we want to make sure that a keyword is not followed by a
--- legal identifier character, in which case the keyword is actually an
--- identifier (for example @lets@). We can program this behaviour as
--- follows:
---
--- > keywordLet = try (string "let" >> notFollowedBy alphaNum)
+-- does not consume any input and can be used to implement the “longest
+-- match” rule.
 
 notFollowedBy :: (Stream s m t, ShowToken a) =>
                  ParsecT s u m a -> ParsecT s u m ()
@@ -233,3 +230,10 @@ notFollowedBy p = try ((try p >>= (unexpected . showToken)) <|> return ())
 manyTill :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
 manyTill p end = (try end *> return []) <|> ((:) <$> p <*> manyTill p end)
+
+-- | The parser @anyToken@ accepts any kind of token. It is for example
+-- used to implement 'eof'. Returns the accepted token. N.B. this token
+-- doesn't change position in input stream, use with care.
+
+anyToken :: Stream s m t => ParsecT s u m t
+anyToken = tokenPrim (\pos _ _ -> pos) Just

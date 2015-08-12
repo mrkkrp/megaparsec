@@ -31,25 +31,25 @@ import Text.Megaparsec.Combinator
 
 -- Language definition
 
--- | The @LanguageDef@ type is a record that contains all parameterizable
--- features of the "Text.Parsec.Token" module. The module
--- "Text.Parsec.Language" contains some default definitions.
+-- | The @LanguageDef@ type is a record that contains all parameters used to
+-- control features of the "Text.Megaparsec.Token" module. The module
+-- "Text.Megaparsec.Language" contains some default definitions.
 
 data LanguageDef s u m =
     LanguageDef {
 
     -- | Describes the start of a block comment. Use the empty string if the
-    -- language doesn't support block comments. For example \"\/*\".
+    -- language doesn't support block comments.
 
       commentStart :: String
 
     -- | Describes the end of a block comment. Use the empty string if the
-    -- language doesn't support block comments. For example \"*\/\".
+    -- language doesn't support block comments.
 
     , commentEnd :: String
 
     -- | Describes the start of a line comment. Use the empty string if the
-    -- language doesn't support line comments. For example \"\/\/\".
+    -- language doesn't support line comments.
 
     , commentLine :: String
 
@@ -57,17 +57,17 @@ data LanguageDef s u m =
 
     , nestedComments :: Bool
 
-    -- | This parser should accept any start characters of identifiers. For
+    -- | This parser should accept any start characters of identifiers, for
     -- example @letter \<|> char \'_\'@.
 
     , identStart :: ParsecT s u m Char
 
-    -- | This parser should accept any legal tail characters of identifiers.
-    -- For example @alphaNum \<|> char \'_\'@.
+    -- | This parser should accept any legal tail characters of identifiers,
+    -- for example @alphaNum \<|> char \'_\'@.
 
     , identLetter :: ParsecT s u m Char
 
-    -- | This parser should accept any start characters of operators. For
+    -- | This parser should accept any start characters of operators, for
     -- example @oneOf \":!#$%&*+.\/\<=>?\@\\\\^|-~\"@
 
     , opStart :: ParsecT s u m Char
@@ -102,15 +102,12 @@ data TokenParser s u m =
     -- | The lexeme parser parses a legal identifier. Returns the identifier
     -- string. This parser will fail on identifiers that are reserved
     -- words. Legal identifier (start) characters and reserved words are
-    -- defined in the 'LanguageDef' that is passed to 'makeTokenParser'. An
-    -- @identifier@ is treated as a single token using 'try'.
+    -- defined in the 'LanguageDef' that is passed to 'makeTokenParser'.
 
       identifier :: ParsecT s u m String
 
-    -- | The lexeme parser @reserved name@ parses @symbol
-    -- name@, but it also checks that the @name@ is not a prefix of a valid
-    -- identifier. A @reserved@ word is treated as a single token using
-    -- 'try'.
+    -- | The lexeme parser @reserved name@ parses @symbol name@, but it also
+    -- checks that the @name@ is not a prefix of a valid identifier.
 
     , reserved :: String -> ParsecT s u m ()
 
@@ -118,14 +115,12 @@ data TokenParser s u m =
     -- operator. This parser will fail on any operators that are reserved
     -- operators. Legal operator (start) characters and reserved operators
     -- are defined in the 'LanguageDef' that is passed to
-    -- 'makeTokenParser'. An @operator@ is treated as a single token using
-    -- 'try'.
+    -- 'makeTokenParser'.
 
     , operator :: ParsecT s u m String
 
-    -- |The lexeme parser @reservedOp name@ parses @symbol
-    -- name@, but it also checks that the @name@ is not a prefix of a valid
-    -- operator. A @reservedOp@ is treated as a single token using 'try'.
+    -- | The lexeme parser @reservedOp name@ parses @symbol name@, but it
+    -- also checks that the @name@ is not a prefix of a valid operator.
 
     , reservedOp :: String -> ParsecT s u m ()
 
@@ -162,18 +157,18 @@ data TokenParser s u m =
     , decimal :: ParsecT s u m Integer
 
     -- | The lexeme parses a positive whole number in the hexadecimal
-    -- system. The number should be prefixed with \"0x\" or \"0X\". Returns
-    -- the value of the number.
+    -- system. The number should be prefixed with “0x” or “0X”. Returns the
+    -- value of the number.
 
     , hexadecimal :: ParsecT s u m Integer
 
     -- | The lexeme parses a positive whole number in the octal system.
-    -- The number should be prefixed with \"0o\" or \"0O\". Returns the
-    -- value of the number.
+    -- The number should be prefixed with “0o” or “0O”. Returns the value of
+    -- the number.
 
     , octal :: ParsecT s u m Integer
 
-    -- | @signed p@ tries to parse sign (i.e. \'+\', \'-\', or nothing) and
+    -- | @signed p@ tries to parse sign (i.e. “+”, “-”, or nothing) and
     -- then runs parser @p@, changing sign of its result accordingly. Note
     -- that there may be white space after the sign but not before it.
 
@@ -181,7 +176,7 @@ data TokenParser s u m =
 
     -- | The lexeme parser parses a floating point value. Returns the value
     -- of the number. The number is parsed according to the grammar rules
-    -- defined in the Haskell report, sign is /not/ parsed, use 'signed' to
+    -- defined in the Haskell report, sign is /not/ parsed, use 'float\'' to
     -- achieve parsing of signed floating point values.
 
     , float :: ParsecT s u m Double
@@ -231,50 +226,50 @@ data TokenParser s u m =
 
     , parens :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-    -- | Lexeme parser @braces p@ parses @p@ enclosed in braces (\'{\' and
-    -- \'}\'), returning the value of @p@.
+    -- | Lexeme parser @braces p@ parses @p@ enclosed in braces (“{” and
+    -- “}”), returning the value of @p@.
 
     , braces :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-    -- | Lexeme parser @angles p@ parses @p@ enclosed in angle brackets (\'\<\'
-    -- and \'>\'), returning the value of @p@.
+    -- | Lexeme parser @angles p@ parses @p@ enclosed in angle brackets (“\<”
+    -- and “>”), returning the value of @p@.
 
     , angles :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-    -- | Lexeme parser @brackets p@ parses @p@ enclosed in brackets (\'[\'
-    -- and \']\'), returning the value of @p@.
+    -- | Lexeme parser @brackets p@ parses @p@ enclosed in brackets (“[”
+    -- and “]”), returning the value of @p@.
 
     , brackets :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-    -- | Lexeme parser |semi| parses the character \';\' and skips any
-    -- trailing white space. Returns the string \";\".
+    -- | Lexeme parser @semicolon@ parses the character “;” and skips any
+    -- trailing white space. Returns the string “;”.
 
-    , semi :: ParsecT s u m String
+    , semicolon :: ParsecT s u m String
 
-    -- | Lexeme parser @comma@ parses the character \',\' and skips any
-    -- trailing white space. Returns the string \",\".
+    -- | Lexeme parser @comma@ parses the character “,” and skips any
+    -- trailing white space. Returns the string “,”.
 
     , comma :: ParsecT s u m String
 
-    -- | Lexeme parser @colon@ parses the character \':\' and skips any
-    -- trailing white space. Returns the string \":\".
+    -- | Lexeme parser @colon@ parses the character “:” and skips any
+    -- trailing white space. Returns the string “:”.
 
     , colon :: ParsecT s u m String
 
-    -- | Lexeme parser @dot@ parses the character \'.\' and skips any
-    -- trailing white space. Returns the string \".\".
+    -- | Lexeme parser @dot@ parses the character “.” and skips any
+    -- trailing white space. Returns the string “.”.
 
     , dot :: ParsecT s u m String
 
     -- | Lexeme parser @semiSep p@ parses /zero/ or more occurrences of @p@
-    -- separated by 'semi'. Returns a list of values returned by @p@.
+    -- separated by 'semicolon'. Returns a list of values returned by @p@.
 
-    , semiSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
+    , semicolonSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
 
     -- | Lexeme parser @semiSep1 p@ parses /one/ or more occurrences of @p@
     -- separated by 'semi'. Returns a list of values returned by @p@.
 
-    , semiSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a]
+    , semicolonSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a]
 
     -- | Lexeme parser @commaSep p@ parses /zero/ or more occurrences of
     -- @p@ separated by 'comma'. Returns a list of values returned by @p@.
@@ -348,12 +343,12 @@ makeTokenParser languageDef =
     , braces        = braces
     , angles        = angles
     , brackets      = brackets
-    , semi          = semi
+    , semicolon     = semicolon
     , comma         = comma
     , colon         = colon
     , dot           = dot
-    , semiSep       = semiSep
-    , semiSep1      = semiSep1
+    , semicolonSep  = semicolonSep
+    , semicolonSep1 = semicolonSep1
     , commaSep      = commaSep
     , commaSep1     = commaSep1 }
     where
@@ -365,16 +360,16 @@ makeTokenParser languageDef =
     angles    = between (symbol "<") (symbol ">")
     brackets  = between (symbol "[") (symbol "]")
 
-    semi      = symbol ";"
+    semicolon = symbol ";"
     comma     = symbol ","
     dot       = symbol "."
     colon     = symbol ":"
 
     commaSep  = (`sepBy` comma)
-    semiSep   = (`sepBy` semi)
+    semicolonSep = (`sepBy` semicolon)
 
     commaSep1 = (`sepBy1` comma)
-    semiSep1  = (`sepBy1` semi)
+    semicolonSep1 = (`sepBy1` semicolon)
 
     -- chars & strings
 

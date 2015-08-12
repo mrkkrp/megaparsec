@@ -8,7 +8,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Convenience definitions for working with lazy 'C.ByteString's.
+-- Convenience definitions for working with lazy 'C.ByteString'.
 
 module Text.Megaparsec.ByteString.Lazy
     ( Parser
@@ -22,9 +22,9 @@ import Text.Megaparsec.Prim
 import qualified Data.ByteString.Lazy.Char8 as C
 
 -- | Different modules corresponding to various types of streams (@String@,
--- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
--- @Parser@ type and easily change it by importing different \"type
--- modules\".
+-- @Text@, @ByteString@) define it differently, so user can use “abstract”
+-- @Parser@ type and easily change it by importing different “type
+-- modules”. This one is for lazy bytestrings.
 
 type Parser = Parsec C.ByteString ()
 
@@ -34,9 +34,8 @@ type Parser = Parsec C.ByteString ()
 type GenParser t st = Parsec C.ByteString st
 
 -- | @parseFromFile p filePath@ runs a lazy bytestring parser @p@ on the
--- input read from @filePath@ using
--- 'ByteString.Lazy.Char8.readFile'. Returns either a 'ParseError' ('Left')
--- or a value of type @a@ ('Right').
+-- input read from @filePath@ using 'ByteString.Lazy.Char8.readFile'.
+-- Returns either a 'ParseError' ('Left') or a value of type @a@ ('Right').
 --
 -- > main = do
 -- >   result <- parseFromFile numbers "digits.txt"

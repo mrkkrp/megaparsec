@@ -8,7 +8,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Convenience definitions for working with 'C.ByteString's.
+-- Convenience definitions for working with 'C.ByteString'.
 
 module Text.Megaparsec.ByteString
     ( Parser
@@ -22,9 +22,9 @@ import Text.Megaparsec.Prim
 import qualified Data.ByteString.Char8 as C
 
 -- | Different modules corresponding to various types of streams (@String@,
--- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
--- @Parser@ type and easily change it by importing different \"type
--- modules\".
+-- @Text@, @ByteString@) define it differently, so user can use “abstract”
+-- @Parser@ type and easily change it by importing different “type
+-- modules”. This one is for strict bytestrings.
 
 type Parser = Parsec C.ByteString ()
 

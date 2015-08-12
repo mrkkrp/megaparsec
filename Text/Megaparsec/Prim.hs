@@ -37,7 +37,6 @@ module Text.Megaparsec.Prim
     , token
     , tokens
     , tokenPrim
-    , skipMany
     , getPosition
     , getInput
     , setPosition
@@ -83,13 +82,12 @@ data State s u = State
 -- | An instance of @Stream s m t@ has stream type @s@, underlying monad @m@
 -- and token type @t@ determined by the stream.
 --
--- Some rough guidelines for a \"correct\" instance of Stream:
+-- Some rough guidelines for a “correct” instance of Stream:
 --
---    * unfoldM uncons gives the [t] corresponding to the stream
---
---    * A @Stream@ instance is responsible for maintaining the \"position
---      within the stream\" in the stream state @s@.  This is trivial unless
---      you are using the monad in a non-trivial way.
+--     * @unfoldM uncons@ gives the @[t]@ corresponding to the stream.
+--     * A @Stream@ instance is responsible for maintaining the “position
+--       within the stream” in the stream state @s@. This is trivial unless
+--       you are using the monad in a non-trivial way.
 
 class (Monad m, ShowToken t) => Stream s m t | s -> t where
     uncons :: s -> m (Maybe (t, s))
@@ -117,18 +115,13 @@ instance Monad m => Stream TL.Text m Char where
 -- work. The two constructors have the following meaning:
 --
 --     * @Cosumed@ is a wrapper for result when some part of input stream
---     was consumed.
---
+--       was consumed.
 --     * @Empty@ is a wrapper for result when input stream is empty.
 --
 -- You shouldn't really need to know this. See also: 'Reply'.
 
 data Consumed a = Consumed a
                 | Empty !a
-
-instance Functor Consumed where
-    fmap f (Consumed x) = Consumed (f x)
-    fmap f (Empty x)    = Empty (f x)
 
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
@@ -140,10 +133,6 @@ instance Functor Consumed where
 
 data Reply s u a = Ok a !(State s u) ParseError
                  | Error ParseError
-
-instance Functor (Reply s u) where
-    fmap f (Ok x s e) = Ok (f x) s e
-    fmap _ (Error e)  = Error e
 
 -- | @ParsecT s u m a@ is a parser with stream type @s@, user state type @u@,
 -- underlying monad @m@ and return type @a@. Parsec is strict in the user
@@ -173,7 +162,7 @@ parsecMap f p = ParsecT $ \s cok cerr eok eerr ->
 
 instance A.Applicative (ParsecT s u m) where
     pure     = return
-    (<*>)    = ap -- TODO: Can this be optimized?
+    (<*>)    = ap
     (*>)     = (>>)
     p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
@@ -267,9 +256,6 @@ instance MonadReader r m => MonadReader r (ParsecT s u m) where
     ask       = lift ask
     local f p = mkPT $ \s -> local f (runParsecT p s)
 
--- I'm presuming the user might want a separate, non-backtracking state
--- aside from the Parsec user state.
-
 instance MonadState s m => MonadState s (ParsecT s' u m) where
     get = lift get
     put = lift . put
@@ -323,9 +309,7 @@ unknownError state = newErrorUnknown (statePos state)
 -- message @msg@ without consuming any input.
 --
 -- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
--- to generate error messages. Of these, only ('<?>') is commonly used. For
--- an example of the use of @unexpected@, see the definition of
--- 'Text.Megaparsec.Combinator.notFollowedBy'.
+-- to generate error messages. Of these, only ('<?>') is commonly used.
 
 unexpected :: Stream s m t => String -> ParsecT s u m a
 unexpected msg = ParsecT $ \s _ _ _ eerr ->
@@ -334,10 +318,10 @@ unexpected msg = ParsecT $ \s _ _ _ eerr ->
 -- | @mergeErrorReply e reply@ returns @reply@ with error @e@ added.
 
 mergeErrorReply :: ParseError -> Reply s u a -> Reply s u a
-mergeErrorReply err1 reply
+mergeErrorReply e1 reply
     = case reply of
-        Ok x state err2 -> Ok x state (mergeError err1 err2)
-        Error err2      -> Error (mergeError err1 err2)
+        Ok x state e2 -> Ok x state (mergeError e1 e2)
+        Error e2      -> Error (mergeError e1 e2)
 
 -- Basic combinators
 
@@ -350,9 +334,9 @@ infix  0 <?>
 -- This is normally used at the end of a set alternatives where we want to
 -- return an error message in terms of a higher level construct rather than
 -- returning all possible characters. For example, if the @expr@ parser from
--- the 'try' example would fail, the error message is: '…: expecting
--- expression'. Without the @(\<?>)@ combinator, the message would be like
--- '…: expecting \"let\" or letter', which is less friendly.
+-- the “try” example would fail, the error message is: “…: expecting
+-- expression”. Without the @(\<?>)@ combinator, the message would be like
+-- “…: expecting \"let\" or letter”, which is less friendly.
 
 (<?>) :: ParsecT s u m a -> String -> ParsecT s u m a
 p <?> msg = label p msg
@@ -398,12 +382,12 @@ runParserT p u name s
                   Consumed r -> r
                   Empty    r -> r
 
--- | The most general way to run a parser over the Identity
--- monad. @runParser p state filePath input@ runs parser @p@ on the input
--- list of tokens @input@, obtained from source @filePath@ with the initial
--- user state @st@.  The @filePath@ is only used in error messages and may
--- be the empty string. Returns either a 'ParseError' ('Left') or a value of
--- type @a@ ('Right').
+-- | The most general way to run a parser over the identity monad.
+-- @runParser p state filePath input@ runs parser @p@ on the input list of
+-- tokens @input@, obtained from source @filePath@ with the initial user
+-- state @st@.  The @filePath@ is only used in error messages and may be the
+-- empty string. Returns either a 'ParseError' ('Left') or a value of type
+-- @a@ ('Right').
 --
 -- > parseFromFile p fname = runParser p () fname <$> readFile fname
 
@@ -411,7 +395,7 @@ runParser :: Stream s Identity t =>
              Parsec s u a -> u -> SourceName -> s -> Either ParseError a
 runParser p u name s = runIdentity $ runParserT p u name s
 
--- | @parse p filePath input@ runs a parser @p@ over Identity without user
+-- | @parse p filePath input@ runs a parser @p@ over identity without user
 -- state. The @filePath@ is only used in error messages and may be the empty
 -- string. Returns either a 'ParseError' ('Left') or a value of type @a@
 -- ('Right').
@@ -427,7 +411,7 @@ parse :: Stream s Identity t =>
 parse p = runParser p ()
 
 -- | @parseMaybe p input@ runs parser @p@ on @input@ and returns result
--- inside @Just@ on success and @Nothing@ on failure.
+-- inside 'Just' on success and 'Nothing' on failure.
 
 parseMaybe :: Stream s Identity t => Parsec s () a -> s -> Maybe a
 parseMaybe p s =
@@ -463,10 +447,10 @@ parseTest p input =
 -- > letExpr    = string "let" >> …
 -- > identifier = some letter
 --
--- If the user writes \"lexical\", the parser fails with: @unexpected \'x\',
+-- If the user writes “lexical”, the parser fails with: @unexpected \'x\',
 -- expecting \'t\' in \"let\"@. Indeed, since the ('<|>') combinator only
 -- tries alternatives when the first alternative hasn't consumed input, the
--- @identifier@ parser is never tried (because the prefix \"le\" of the
+-- @identifier@ parser is never tried (because the prefix “le” of the
 -- @string \"let\"@ parser is already consumed). The right behaviour can be
 -- obtained by adding the @try@ combinator:
 --
@@ -483,7 +467,7 @@ try p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
 -- If @p@ fails and consumes some input, so does @lookAhead@. Combine with
 -- 'try' if this is undesirable.
 
-lookAhead :: (Stream s m t) => ParsecT s u m a -> ParsecT s u m a
+lookAhead :: Stream s m t => ParsecT s u m a -> ParsecT s u m a
 lookAhead p = ParsecT $ \s _ cerr eok eerr -> do
                 let eok' a _ _ = eok a s (newErrorUnknown (statePos s))
                 unParser p s eok' cerr eok' eerr
@@ -513,7 +497,7 @@ token tokpos = tokenPrim nextpos
                 Just (tok', _) -> tokpos tok'
 
 -- | The parser @tokens posFromTok@ parses list of tokens and returns
--- it. The resulting parser will use @showToken@ to pretty-print the
+-- it. The resulting parser will use 'showToken' to pretty-print the
 -- collection of tokens.
 --
 -- This can be used to example to write 'Text.Megaparsec.Char.string':
@@ -556,7 +540,7 @@ tokens nextposs tts
 -- This is the most primitive combinator for accepting tokens. For example,
 -- the 'Text.Megaparsec.Char.char' parser could be implemented as:
 --
--- > char c  = tokenPrim nextPos testChar
+-- > char c = tokenPrim nextPos testChar
 -- >   where testChar x       = if x == c then Just x else Nothing
 -- >         nextPos pos x xs = updatePosChar pos x
 
@@ -603,14 +587,6 @@ tokenPrimEx nextpos (Just nextState) test
 
 unexpectError :: String -> SourcePos -> ParseError
 unexpectError msg = newErrorMessage (Unexpected msg)
-
--- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
--- its result.
---
--- > spaces = skipMany space
-
-skipMany :: ParsecT s u m a -> ParsecT s u m ()
-skipMany p = void $ manyAccum (\_ _ -> []) p
 
 manyAccum :: (a -> [a] -> [a]) -> ParsecT s u m a -> ParsecT s u m [a]
 manyAccum acc p =
@@ -673,7 +649,7 @@ updateParserState f =
 -- | Returns the current user state.
 
 getState :: Monad m => ParsecT s u m u
-getState = stateUser `liftM` getParserState
+getState = stateUser <$> getParserState
 
 -- | @putState st@ set the user state to @st@.
 

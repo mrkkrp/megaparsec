@@ -10,7 +10,7 @@
 -- Portability :  non-portable (uses non-portable module Text.Parsec.Token)
 --
 -- A helper module that defines some language definitions that can be used
--- to instantiate a token parser (see "Text.Parsec.Token").
+-- to instantiate a token parser (see "Text.Megaparsec.Token").
 
 module Text.Megaparsec.Language
     ( LanguageDef
@@ -46,7 +46,7 @@ emptyDef =
     , reservedNames   = []
     , caseSensitive   = True }
 
--- | This is a minimal token definition for Haskell style languages. It
+-- | This is a minimal token definition for Haskell-style languages. It
 -- defines the style of comments, valid identifiers and case sensitivity. It
 -- does not define any reserved words or operators.
 
@@ -65,7 +65,7 @@ haskellStyle =
     , reservedNames   = []
     , caseSensitive   = True }
 
--- | This is a minimal token definition for Java style languages. It
+-- | This is a minimal token definition for Java-style languages. It
 -- defines the style of comments, valid identifiers and case sensitivity. It
 -- does not define any reserved words or operators.
 

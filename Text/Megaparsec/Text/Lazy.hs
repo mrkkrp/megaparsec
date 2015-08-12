@@ -22,9 +22,9 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
 -- | Different modules corresponding to various types of streams (@String@,
--- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
--- @Parser@ type and easily change it by importing different \"type
--- modules\".
+-- @Text@, @ByteString@) define it differently, so user can use “abstract”
+-- @Parser@ type and easily change it by importing different “type
+-- modules”. This one is for lazy text.
 
 type Parser = Parsec T.Text ()
 

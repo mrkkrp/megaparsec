@@ -100,20 +100,25 @@ module Text.Megaparsec
     , crlf
     , eol
     , tab
+    , letter
     , upper
     , lower
-    , alphaNum
-    , letter
     , digit
     , hexDigit
     , octDigit
+    , alphaNum
     , char
     , anyChar
     , satisfy
     , string
 -- * Error messages
+    , Message (..)
+    , messageString
+    , badMessage
     , ParseError
     , errorPos
+    , errorMessages
+    , errorIsUnknown
 -- * Position
     , SourcePos
     , SourceName

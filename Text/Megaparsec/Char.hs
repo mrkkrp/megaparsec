@@ -20,13 +20,13 @@ module Text.Megaparsec.Char
     , crlf
     , eol
     , tab
+    , letter
     , upper
     , lower
-    , alphaNum
-    , letter
     , digit
     , hexDigit
     , octDigit
+    , alphaNum
     , char
     , anyChar
     , satisfy
@@ -36,6 +36,7 @@ where
 import Control.Applicative ((<|>))
 import Data.Char
 
+import Text.Megaparsec.Combinator
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
@@ -63,75 +64,75 @@ noneOf cs = satisfy (`notElem` cs)
 spaces :: Stream s m Char => ParsecT s u m ()
 spaces = skipMany space
 
--- | Parses a white space character (any character which satisfies 'isSpace')
+-- | Parses a white space character (any character which satisfies 'isSpace').
 -- Returns the parsed character.
 
 space :: Stream s m Char => ParsecT s u m Char
 space = satisfy isSpace <?> "white space"
 
--- | Parses a newline character (\'\\n\'). Returns a newline character.
+-- | Parses a newline character.
 
 newline :: Stream s m Char => ParsecT s u m Char
 newline = char '\n' <?> "newline"
 
--- | Parses a carriage return character (\'\\r\') followed by a newline
--- character (\'\\n\'). Returns sequence of characters parsed.
+-- | Parses a carriage return character followed by a newline
+-- character. Returns sequence of characters parsed.
 
 crlf :: Stream s m Char => ParsecT s u m String
 crlf = string "\r\n"
 
--- | Parses a CRLF (see 'crlf') or LF (see 'newline') end-of-line.
--- Returns sequence of characters parsed.
+-- | Parses a CRLF (see 'crlf') or LF (see 'newline') end of line.
+-- Returns the sequence of characters parsed.
 --
--- > eol = newline <|> crlf
+-- > eol = (pure <$> newline) <|> crlf
 
 eol :: Stream s m Char => ParsecT s u m String
 eol = (pure <$> newline) <|> crlf <?> "end of line"
 
--- | Parses a tab character (\'\\t\').
+-- | Parses a tab character.
 
 tab :: Stream s m Char => ParsecT s u m Char
 tab = char '\t' <?> "tab"
-
--- | Parses an upper case letter (a character between \'A\' and \'Z\').
-
-upper :: Stream s m Char => ParsecT s u m Char
-upper = satisfy isUpper <?> "uppercase letter"
-
--- | Parses a lower case character (a character between \'a\' and \'z\').
-
-lower :: Stream s m Char => ParsecT s u m Char
-lower = satisfy isLower <?> "lowercase letter"
-
--- | Parses a letter or digit (a character between \'0\' and \'9\').
-
-alphaNum :: Stream s m Char => ParsecT s u m Char
-alphaNum = satisfy isAlphaNum <?> "letter or digit"
 
 -- | Parses a letter (an upper case or lower case character).
 
 letter :: Stream s m Char => ParsecT s u m Char
 letter = satisfy isAlpha <?> "letter"
 
+-- | Parses an upper case letter.
+
+upper :: Stream s m Char => ParsecT s u m Char
+upper = satisfy isUpper <?> "uppercase letter"
+
+-- | Parses a lower case character.
+
+lower :: Stream s m Char => ParsecT s u m Char
+lower = satisfy isLower <?> "lowercase letter"
+
 -- | Parses a digit.
 
 digit :: Stream s m Char => ParsecT s u m Char
 digit = satisfy isDigit <?> "digit"
 
--- | Parses a hexadecimal digit (a digit or a letter between \'a\' and
--- \'f\' or \'A\' and \'F\').
+-- | Parses a hexadecimal digit (a digit or a letter between “a” and
+-- “f” or “A” and “F”).
 
 hexDigit :: Stream s m Char => ParsecT s u m Char
 hexDigit = satisfy isHexDigit <?> "hexadecimal digit"
 
--- | Parses an octal digit (a character between \'0\' and \'7\').
+-- | Parses an octal digit (a character between “0” and “7”).
 
 octDigit :: Stream s m Char => ParsecT s u m Char
 octDigit = satisfy isOctDigit <?> "octal digit"
 
+-- | Parses a letter or digit.
+
+alphaNum :: Stream s m Char => ParsecT s u m Char
+alphaNum = satisfy isAlphaNum <?> "letter or digit"
+
 -- | @char c@ parses a single character @c@.
 --
--- > semiColon = char ';'
+-- > semicolon = char ';'
 
 char :: Stream s m Char => Char -> ParsecT s u m Char
 char c = satisfy (== c) <?> showToken c

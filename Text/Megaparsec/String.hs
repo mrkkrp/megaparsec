@@ -20,9 +20,9 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Prim
 
 -- | Different modules corresponding to various types of streams (@String@,
--- @Text@, @ByteString@) define it differently, so user can use \"abstract\"
--- @Parser@ type and easily change it by importing different \"type
--- modules\".
+-- @Text@, @ByteString@) define it differently, so user can use “abstract”
+-- @Parser@ type and easily change it by importing different “type
+-- modules”. This one is for strings.
 
 type Parser = Parsec String ()
 

@@ -9,12 +9,10 @@
 -- Stability   :  experimental
 -- Portability :  non-portable (uses existentially quantified data constructors)
 --
--- This module implements permutation parsers. The algorithm used is fairly
--- complex since we push the type system to its limits :-) The algorithm is
--- described in:
---
--- /Parsing Permutation Phrases,/ by Arthur Baars, Andres Loh and Doaitse
--- Swierstra. Published as a functional pearl at the Haskell Workshop 2001.
+-- This module implements permutation parsers. The algorithm is described
+-- in: /Parsing Permutation Phrases,/ by Arthur Baars, Andres Loh and
+-- Doaitse Swierstra. Published as a functional pearl at the Haskell
+-- Workshop 2001.
 
 module Text.Megaparsec.Perm
     ( StreamPermParser -- abstract
