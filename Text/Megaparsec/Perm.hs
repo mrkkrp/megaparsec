@@ -15,12 +15,12 @@
 -- Workshop 2001.
 
 module Text.Megaparsec.Perm
-    ( StreamPermParser -- abstract
-    , permute
-    , (<||>)
-    , (<$$>)
-    , (<|?>)
-    , (<$?>) )
+  ( StreamPermParser -- abstract
+  , permute
+  , (<||>)
+  , (<$$>)
+  , (<|?>)
+  , (<$?>) )
 where
 
 import Control.Monad.Identity
@@ -89,7 +89,7 @@ f <$?> xp = newperm f <|?> xp
 data StreamPermParser s st a = Perm (Maybe a) [StreamBranch s st a]
 
 data StreamBranch s st a =
-    forall b. Branch (StreamPermParser s st (b -> a)) (Parsec s st b)
+  forall b. Branch (StreamPermParser s st (b -> a)) (Parsec s st b)
 
 -- | The parser @permute perm@ parses a permutation of parser described
 -- by @perm@. For example, suppose we want to parse a permutation of: an
@@ -123,8 +123,7 @@ add perm@(Perm _mf fs) p = Perm Nothing (first : fmap insert fs)
 
 addopt :: Stream s Identity tok => StreamPermParser s st (a -> b) ->
           a -> Parsec s st a -> StreamPermParser s st b
-addopt perm@(Perm mf fs) x p
-  = Perm (fmap ($ x) mf) (first:map insert fs)
+addopt perm@(Perm mf fs) x p = Perm (fmap ($ x) mf) (first : map insert fs)
   where first   = Branch perm p
         insert (Branch perm' p') = Branch (addopt (mapPerms flip perm') x p) p'
 

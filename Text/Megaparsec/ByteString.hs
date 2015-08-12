@@ -11,9 +11,9 @@
 -- Convenience definitions for working with 'C.ByteString'.
 
 module Text.Megaparsec.ByteString
-    ( Parser
-    , GenParser
-    , parseFromFile )
+  ( Parser
+  , GenParser
+  , parseFromFile )
 where
 
 import Text.Megaparsec.Error

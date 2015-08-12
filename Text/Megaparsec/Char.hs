@@ -12,36 +12,36 @@
 -- Commonly used character parsers.
 
 module Text.Megaparsec.Char
-    ( newline
-    , crlf
-    , eol
-    , tab
-    , space
-    , controlChar
-    , spaceChar
-    , upperChar
-    , lowerChar
-    , letterChar
-    , alphaNumChar
-    , printChar
-    , digitChar
-    , octDigitChar
-    , hexDigitChar
-    , markChar
-    , numberChar
-    , punctuationChar
-    , symbolChar
-    , separatorChar
-    , asciiChar
-    , latin1Char
-    , charCategory
-    , categoryName
-    , char
-    , anyChar
-    , oneOf
-    , noneOf
-    , satisfy
-    , string )
+  ( newline
+  , crlf
+  , eol
+  , tab
+  , space
+  , controlChar
+  , spaceChar
+  , upperChar
+  , lowerChar
+  , letterChar
+  , alphaNumChar
+  , printChar
+  , digitChar
+  , octDigitChar
+  , hexDigitChar
+  , markChar
+  , numberChar
+  , punctuationChar
+  , symbolChar
+  , separatorChar
+  , asciiChar
+  , latin1Char
+  , charCategory
+  , categoryName
+  , char
+  , anyChar
+  , oneOf
+  , noneOf
+  , satisfy
+  , string )
 where
 
 import Control.Applicative ((<|>))
@@ -267,8 +267,8 @@ noneOf cs = satisfy (`notElem` cs)
 
 satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
 satisfy f = tokenPrim nextPos testChar
-    where nextPos pos x _ = updatePosChar pos x
-          testChar x      = if f x then Just x else Nothing
+  where nextPos pos x _ = updatePosChar pos x
+        testChar x      = if f x then Just x else Nothing
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns
 -- the parsed string (i.e. @s@).

@@ -57,15 +57,15 @@ tests = testGroup "Parse errors"
         , testProperty "message components are visible" prop_visibleMsgs ]
 
 instance Arbitrary Message where
-    arbitrary = ($) <$> elements constructors <*> arbitrary
-        where constructors = [Unexpected, Expected, Message]
+  arbitrary = ($) <$> elements constructors <*> arbitrary
+    where constructors = [Unexpected, Expected, Message]
 
 instance Arbitrary ParseError where
-    arbitrary = do
-      ms <- listOf arbitrary
-      pe <- oneof [ newErrorUnknown <$> arbitrary
-                  , newErrorMessage <$> arbitrary <*> arbitrary ]
-      return $ foldr addErrorMessage pe ms
+  arbitrary = do
+    ms <- listOf arbitrary
+    pe <- oneof [ newErrorUnknown <$> arbitrary
+                , newErrorMessage <$> arbitrary <*> arbitrary ]
+    return $ foldr addErrorMessage pe ms
 
 prop_messageString :: Message -> Bool
 prop_messageString m@(Unexpected s) = s == messageString m
@@ -74,57 +74,57 @@ prop_messageString m@(Message    s) = s == messageString m
 
 prop_newErrorMessage :: Message -> SourcePos -> Bool
 prop_newErrorMessage msg pos = added && errorPos new == pos
-    where new   = newErrorMessage msg pos
-          added = errorMessages new == bool [msg] [] (badMessage msg)
+  where new   = newErrorMessage msg pos
+        added = errorMessages new == bool [msg] [] (badMessage msg)
 
 prop_wellFormedMessages :: ParseError -> Bool
 prop_wellFormedMessages err = wellFormed $ errorMessages err
 
 prop_parseErrorCopy :: ParseError -> Bool
 prop_parseErrorCopy err =
-    foldr addErrorMessage (newErrorUnknown pos) messages == err
-    where pos      = errorPos err
-          messages = errorMessages err
+  foldr addErrorMessage (newErrorUnknown pos) msgs == err
+  where pos  = errorPos err
+        msgs = errorMessages err
 
 prop_setErrorPos :: SourcePos -> ParseError -> Bool
 prop_setErrorPos pos err =
-    errorPos new == pos && errorMessages new == errorMessages err
-    where new = setErrorPos pos err
+  errorPos new == pos && errorMessages new == errorMessages err
+  where new = setErrorPos pos err
 
 prop_addErrorMessage :: Message -> ParseError -> Bool
 prop_addErrorMessage msg err =
-    wellFormed msgs && (badMessage msg || added)
-    where new   = addErrorMessage msg err
-          msgs  = errorMessages new
-          added = msg `elem` msgs && not (errorIsUnknown new)
+  wellFormed msgs && (badMessage msg || added)
+  where new   = addErrorMessage msg err
+        msgs  = errorMessages new
+        added = msg `elem` msgs && not (errorIsUnknown new)
 
 prop_setErrorMessage :: Message -> ParseError -> Bool
 prop_setErrorMessage msg err =
-    wellFormed msgs && (badMessage msg || (added && unique))
-    where new    = setErrorMessage msg err
-          msgs   = errorMessages new
-          added  = msg `elem` msgs && not (errorIsUnknown new)
-          unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
+  wellFormed msgs && (badMessage msg || (added && unique))
+  where new    = setErrorMessage msg err
+        msgs   = errorMessages new
+        added  = msg `elem` msgs && not (errorIsUnknown new)
+        unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
 
 prop_mergeErrorPos :: ParseError -> ParseError -> Bool
 prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == min pos1 pos2
-    where pos1 = errorPos e1
-          pos2 = errorPos e2
+  where pos1 = errorPos e1
+        pos2 = errorPos e2
 
 prop_mergeErrorMsgs :: ParseError -> ParseError -> Bool
 prop_mergeErrorMsgs e1 e2' = errorPos e1 /= errorPos e2 || wellFormed msgsm
-    where e2    = setErrorPos (errorPos e1) e2'
-          msgsm = errorMessages $ mergeError e1 e2
+  where e2    = setErrorPos (errorPos e1) e2'
+        msgsm = errorMessages $ mergeError e1 e2
 
 prop_visiblePos :: ParseError -> Bool
 prop_visiblePos err = show (errorPos err) `isPrefixOf` show err
 
 prop_visibleMsgs :: ParseError -> Bool
 prop_visibleMsgs err = all (`isInfixOf` shown) (errorMessages err >>= f)
-    where shown = show err
-          f (Unexpected s) = ["unexpected", s]
-          f (Expected   s) = ["expecting", s]
-          f (Message    s) = [s]
+  where shown = show err
+        f (Unexpected s) = ["unexpected", s]
+        f (Expected   s) = ["expecting", s]
+        f (Message    s) = [s]
 
 -- | @iwellFormed xs@ checks that list @xs@ is sorted and contains no
 -- duplicates and no empty messages.

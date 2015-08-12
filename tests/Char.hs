@@ -75,36 +75,36 @@ tests = testGroup "Character parsers"
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements
-                [ UppercaseLetter
-                , LowercaseLetter
-                , TitlecaseLetter
-                , ModifierLetter
-                , OtherLetter
-                , NonSpacingMark
-                , SpacingCombiningMark
-                , EnclosingMark
-                , DecimalNumber
-                , LetterNumber
-                , OtherNumber
-                , ConnectorPunctuation
-                , DashPunctuation
-                , OpenPunctuation
-                , ClosePunctuation
-                , InitialQuote
-                , FinalQuote
-                , OtherPunctuation
-                , MathSymbol
-                , CurrencySymbol
-                , ModifierSymbol
-                , OtherSymbol
-                , Space
-                , LineSeparator
-                , ParagraphSeparator
-                , Control
-                , Format
-                , Surrogate
-                , PrivateUse
-                , NotAssigned ]
+              [ UppercaseLetter
+              , LowercaseLetter
+              , TitlecaseLetter
+              , ModifierLetter
+              , OtherLetter
+              , NonSpacingMark
+              , SpacingCombiningMark
+              , EnclosingMark
+              , DecimalNumber
+              , LetterNumber
+              , OtherNumber
+              , ConnectorPunctuation
+              , DashPunctuation
+              , OpenPunctuation
+              , ClosePunctuation
+              , InitialQuote
+              , FinalQuote
+              , OtherPunctuation
+              , MathSymbol
+              , CurrencySymbol
+              , ModifierSymbol
+              , OtherSymbol
+              , Space
+              , LineSeparator
+              , ParagraphSeparator
+              , Control
+              , Format
+              , Surrogate
+              , PrivateUse
+              , NotAssigned ]
 
 prop_newline :: String -> Property
 prop_newline = checkChar newline (== '\n') (Just "newline")
@@ -122,15 +122,15 @@ prop_tab = checkChar tab (== '\t') (Just "tab")
 
 prop_space :: String -> Property
 prop_space s = checkParser space r s
-    where r = case findIndex (not . isSpace) s of
-                Just x  ->
-                    let ch = s !! x
-                    in posErr x s
-                           [ uneCh ch
-                           , uneCh ch
-                           , exSpec "white space"
-                           , exStr "" ]
-                Nothing -> Right ()
+  where r = case findIndex (not . isSpace) s of
+              Just x  ->
+                  let ch = s !! x
+                  in posErr x s
+                         [ uneCh ch
+                         , uneCh ch
+                         , exSpec "white space"
+                         , exStr "" ]
+              Nothing -> Right ()
 
 prop_controlChar :: String -> Property
 prop_controlChar = checkChar controlChar isControl (Just "control character")
@@ -148,8 +148,8 @@ prop_letterChar :: String -> Property
 prop_letterChar = checkChar letterChar isAlpha (Just "letter")
 
 prop_alphaNumChar :: String -> Property
-prop_alphaNumChar = checkChar alphaNumChar isAlphaNum
-                    (Just "alphanumeric character")
+prop_alphaNumChar =
+  checkChar alphaNumChar isAlphaNum (Just "alphanumeric character")
 
 prop_printChar :: String -> Property
 prop_printChar = checkChar printChar isPrint (Just "printable character")
@@ -170,8 +170,8 @@ prop_numberChar :: String -> Property
 prop_numberChar = checkChar numberChar isNumber (Just "numeric character")
 
 prop_punctuationChar :: String -> Property
-prop_punctuationChar = checkChar punctuationChar isPunctuation
-                       (Just "punctuation")
+prop_punctuationChar =
+  checkChar punctuationChar isPunctuation (Just "punctuation")
 
 prop_symbolChar :: String -> Property
 prop_symbolChar = checkChar symbolChar isSymbol (Just "symbol")

@@ -16,10 +16,10 @@ module Text.Megaparsec.ShowToken (ShowToken (..)) where
 -- instances are defined, but you can add your own, of course.
 
 class Show a => ShowToken a where
-    showToken :: a -> String
+  showToken :: a -> String
 
 instance ShowToken Char where
-    showToken = prettyChar
+  showToken = prettyChar
 
 -- | @prettyChar ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages, for example.
@@ -37,7 +37,7 @@ prettyChar ' '  = "space"
 prettyChar x    = "'" ++ [x] ++ "'"
 
 instance ShowToken String where
-    showToken = prettyString
+  showToken = prettyString
 
 -- | @prettyString s@ returns pretty representation of string @s@. This is
 -- used when printing string tokens in error messages.

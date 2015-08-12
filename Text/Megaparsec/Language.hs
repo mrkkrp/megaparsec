@@ -13,12 +13,12 @@
 -- to instantiate a token parser (see "Text.Megaparsec.Token").
 
 module Text.Megaparsec.Language
-    ( LanguageDef
-    , emptyDef
-    , haskellStyle
-    , javaStyle
-    , haskellDef
-    , mondrianDef )
+  ( LanguageDef
+  , emptyDef
+  , haskellStyle
+  , javaStyle
+  , haskellDef
+  , mondrianDef )
 where
 
 import Control.Monad.Identity
@@ -34,18 +34,18 @@ import Text.Megaparsec.Token
 
 emptyDef :: LanguageDef String st Identity
 emptyDef =
-    LanguageDef
-    { commentStart    = ""
-    , commentEnd      = ""
-    , commentLine     = ""
-    , nestedComments  = True
-    , identStart      = letterChar <|> char '_'
-    , identLetter     = alphaNumChar <|> oneOf "_'"
-    , opStart         = opLetter emptyDef
-    , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
-    , reservedOpNames = []
-    , reservedNames   = []
-    , caseSensitive   = True }
+  LanguageDef
+  { commentStart    = ""
+  , commentEnd      = ""
+  , commentLine     = ""
+  , nestedComments  = True
+  , identStart      = letterChar <|> char '_'
+  , identLetter     = alphaNumChar <|> oneOf "_'"
+  , opStart         = opLetter emptyDef
+  , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
+  , reservedOpNames = []
+  , reservedNames   = []
+  , caseSensitive   = True }
 
 -- | This is a minimal token definition for Haskell-style languages. It
 -- defines the style of comments, valid identifiers and case sensitivity. It
@@ -53,18 +53,18 @@ emptyDef =
 
 haskellStyle :: LanguageDef String u Identity
 haskellStyle =
-    emptyDef
-    { commentStart    = "{-"
-    , commentEnd      = "-}"
-    , commentLine     = "--"
-    , nestedComments  = True
-    , identStart      = letterChar
-    , identLetter     = alphaNumChar <|> oneOf "_'"
-    , opStart         = opLetter haskellStyle
-    , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
-    , reservedOpNames = []
-    , reservedNames   = []
-    , caseSensitive   = True }
+  emptyDef
+  { commentStart    = "{-"
+  , commentEnd      = "-}"
+  , commentLine     = "--"
+  , nestedComments  = True
+  , identStart      = letterChar
+  , identLetter     = alphaNumChar <|> oneOf "_'"
+  , opStart         = opLetter haskellStyle
+  , opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
+  , reservedOpNames = []
+  , reservedNames   = []
+  , caseSensitive   = True }
 
 -- | This is a minimal token definition for Java-style languages. It
 -- defines the style of comments, valid identifiers and case sensitivity. It
@@ -72,44 +72,44 @@ haskellStyle =
 
 javaStyle  :: LanguageDef String u Identity
 javaStyle =
-    emptyDef
-    { commentStart    = "/*"
-    , commentEnd      = "*/"
-    , commentLine     = "//"
-    , nestedComments  = True
-    , identStart      = letterChar
-    , identLetter     = alphaNumChar <|> oneOf "_'"
-    , reservedNames   = []
-    , reservedOpNames = []
-    , caseSensitive   = False }
+  emptyDef
+  { commentStart    = "/*"
+  , commentEnd      = "*/"
+  , commentLine     = "//"
+  , nestedComments  = True
+  , identStart      = letterChar
+  , identLetter     = alphaNumChar <|> oneOf "_'"
+  , reservedNames   = []
+  , reservedOpNames = []
+  , caseSensitive   = False }
 
 -- | The language definition for the Haskell language.
 
 haskellDef  :: LanguageDef String u Identity
 haskellDef =
-    haskell98Def
-    { identLetter   = identLetter haskell98Def <|> char '#'
-    , reservedNames = reservedNames haskell98Def ++
-                       [ "foreign", "import", "export", "primitive"
-                       , "_ccall_", "_casm_", "forall"] }
+  haskell98Def
+  { identLetter   = identLetter haskell98Def <|> char '#'
+  , reservedNames = reservedNames haskell98Def ++
+                     [ "foreign", "import", "export", "primitive"
+                     , "_ccall_", "_casm_", "forall"] }
 
 -- | The language definition for the language Haskell98.
 
 haskell98Def :: LanguageDef String u Identity
 haskell98Def =
-    haskellStyle
-    { reservedOpNames = ["::","..","=","\\","|","<-","->","@","~","=>"]
-    , reservedNames   = [ "let", "in", "case", "of", "if", "then", "else"
-                        , "data", "type", "class", "default", "deriving"
-                        , "do", "import", "infix", "infixl", "infixr"
-                        , "instance", "module", "newtype", "where"
-                        , "primitive" ] }
+  haskellStyle
+  { reservedOpNames = ["::","..","=","\\","|","<-","->","@","~","=>"]
+  , reservedNames   = [ "let", "in", "case", "of", "if", "then", "else"
+                      , "data", "type", "class", "default", "deriving"
+                      , "do", "import", "infix", "infixl", "infixr"
+                      , "instance", "module", "newtype", "where"
+                      , "primitive" ] }
 
 -- | The language definition for the language Mondrian.
 
 mondrianDef :: LanguageDef String u Identity
 mondrianDef =
-    javaStyle
-    { reservedNames = [ "case", "class", "default", "extends"
-                      , "import", "in", "let", "new", "of", "package" ]
-    , caseSensitive = True }
+  javaStyle
+  { reservedNames = [ "case", "class", "default", "extends"
+                    , "import", "in", "let", "new", "of", "package" ]
+  , caseSensitive = True }

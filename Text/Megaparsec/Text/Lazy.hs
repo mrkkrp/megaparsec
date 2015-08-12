@@ -11,9 +11,9 @@
 -- Convenience definitions for working with lazy 'Text.Text'.
 
 module Text.Megaparsec.Text.Lazy
-    ( Parser
-    , GenParser
-    , parseFromFile )
+  ( Parser
+  , GenParser
+  , parseFromFile )
 where
 
 import Text.Megaparsec.Error

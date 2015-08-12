@@ -40,114 +40,113 @@
 -- imported explicitly along with two modules mentioned above.
 
 module Text.Megaparsec
-    (
--- * Parsers
-      ParsecT
-    , Parsec
-    , token
-    , tokens
-    , runParserT
-    , runParser
-    , parse
-    , parseMaybe
-    , parseTest
-    , getPosition
-    , getInput
-    , getState
-    , putState
-    , modifyState
--- * Combinators
-    , (A.<|>)
-    -- $assocbo
-    , A.many
-    -- $many
-    , A.some
-    -- $some
-    , A.optional
-    -- $optional
-    , (<?>)
-    , label
-    , try
-    , unexpected
-    , choice
-    , skipMany
-    , skipSome
-    , count
-    , between
-    , option
-    , optionMaybe
-    , sepBy
-    , sepBy1
-    , endBy
-    , endBy1
-    , sepEndBy
-    , sepEndBy1
-    , chainl
-    , chainl1
-    , chainr
-    , chainr1
-    , eof
-    , notFollowedBy
-    , manyTill
-    , lookAhead
-    , anyToken
--- * Character parsing
-    , newline
-    , crlf
-    , eol
-    , tab
-    , space
-    , controlChar
-    , spaceChar
-    , upperChar
-    , lowerChar
-    , letterChar
-    , alphaNumChar
-    , printChar
-    , digitChar
-    , octDigitChar
-    , hexDigitChar
-    , markChar
-    , numberChar
-    , punctuationChar
-    , symbolChar
-    , separatorChar
-    , asciiChar
-    , latin1Char
-    , charCategory
-    , char
-    , anyChar
-    , oneOf
-    , noneOf
-    , satisfy
-    , string
--- * Error messages
-    , Message (..)
-    , messageString
-    , badMessage
-    , ParseError
-    , errorPos
-    , errorMessages
-    , errorIsUnknown
--- * Position
-    , SourcePos
-    , SourceName
-    , Line
-    , Column
-    , sourceName
-    , sourceLine
-    , sourceColumn
--- * Low-level operations
-    , Stream (..)
-    , Consumed (..)
-    , Reply (..)
-    , State (..)
-    , tokenPrim
-    , getParserState
-    , setParserState
-    , updateParserState
-    , setPosition
-    , setInput )
+  ( -- * Parsers
+    ParsecT
+  , Parsec
+  , token
+  , tokens
+  , runParserT
+  , runParser
+  , parse
+  , parseMaybe
+  , parseTest
+  , getPosition
+  , getInput
+  , getState
+  , putState
+  , modifyState
+    -- * Combinators
+  , (A.<|>)
+  -- $assocbo
+  , A.many
+  -- $many
+  , A.some
+  -- $some
+  , A.optional
+  -- $optional
+  , (<?>)
+  , label
+  , try
+  , unexpected
+  , choice
+  , skipMany
+  , skipSome
+  , count
+  , between
+  , option
+  , optionMaybe
+  , sepBy
+  , sepBy1
+  , endBy
+  , endBy1
+  , sepEndBy
+  , sepEndBy1
+  , chainl
+  , chainl1
+  , chainr
+  , chainr1
+  , eof
+  , notFollowedBy
+  , manyTill
+  , lookAhead
+  , anyToken
+    -- * Character parsing
+  , newline
+  , crlf
+  , eol
+  , tab
+  , space
+  , controlChar
+  , spaceChar
+  , upperChar
+  , lowerChar
+  , letterChar
+  , alphaNumChar
+  , printChar
+  , digitChar
+  , octDigitChar
+  , hexDigitChar
+  , markChar
+  , numberChar
+  , punctuationChar
+  , symbolChar
+  , separatorChar
+  , asciiChar
+  , latin1Char
+  , charCategory
+  , char
+  , anyChar
+  , oneOf
+  , noneOf
+  , satisfy
+  , string
+    -- * Error messages
+  , Message (..)
+  , messageString
+  , badMessage
+  , ParseError
+  , errorPos
+  , errorMessages
+  , errorIsUnknown
+    -- * Position
+  , SourcePos
+  , SourceName
+  , Line
+  , Column
+  , sourceName
+  , sourceLine
+  , sourceColumn
+    -- * Low-level operations
+  , Stream (..)
+  , Consumed (..)
+  , Reply (..)
+  , State (..)
+  , tokenPrim
+  , getParserState
+  , setParserState
+  , updateParserState
+  , setPosition
+  , setInput )
 where
 
 import qualified Control.Applicative as A

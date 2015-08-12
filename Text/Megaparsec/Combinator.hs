@@ -12,28 +12,28 @@
 -- Commonly used generic combinators.
 
 module Text.Megaparsec.Combinator
-    ( choice
-    , count
-    , between
-    , option
-    , optionMaybe
-    , skipMany
-    , skipSome
-    , sepBy
-    , sepBy1
-    , endBy
-    , endBy1
-    , sepEndBy
-    , sepEndBy1
-    , chainl
-    , chainl1
-    , chainr
-    , chainr1
-    , eof
-    , notFollowedBy
-    , manyTill
-    , lookAhead
-    , anyToken )
+  ( choice
+  , count
+  , between
+  , option
+  , optionMaybe
+  , skipMany
+  , skipSome
+  , sepBy
+  , sepBy1
+  , endBy
+  , endBy1
+  , sepEndBy
+  , sepEndBy1
+  , chainl
+  , chainl1
+  , chainr
+  , chainr1
+  , eof
+  , notFollowedBy
+  , manyTill
+  , lookAhead
+  , anyToken )
 where
 
 import Control.Applicative ((<|>), many, some)
@@ -63,13 +63,6 @@ option x p = p <|> return x
 
 optionMaybe :: Stream s m t => ParsecT s u m a -> ParsecT s u m (Maybe a)
 optionMaybe p = option Nothing (Just <$> p)
-
--- -- | @optional p@ tries to apply parser @p@. It will parse @p@ or nothing.
--- -- It only fails if @p@ fails after consuming input. It discards the result
--- -- of @p@.
-
--- optional :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
--- optional p = (p *> return ()) <|> return ()
 
 -- | @between open close p@ parses @open@, followed by @p@ and @close@.
 -- Returns the value returned by @p@.
@@ -190,7 +183,7 @@ chainl p op x = chainl1 p op <|> return x
 chainl1 :: Stream s m t =>
            ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
 chainl1 p op = p >>= rest
-    where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
+  where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
 
 -- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
 -- separated by @op@ Returns a value obtained by a /right/ associative
@@ -200,7 +193,7 @@ chainl1 p op = p >>= rest
 chainr1 :: Stream s m t =>
            ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
 chainr1 p op = p >>= rest
-    where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
+  where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
 
 -- | This parser only succeeds at the end of the input. This is not a
 -- primitive parser but it is defined using 'notFollowedBy'.

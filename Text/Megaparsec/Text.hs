@@ -11,9 +11,9 @@
 -- Convenience definitions for working with 'Text.Text'.
 
 module Text.Megaparsec.Text
-    ( Parser
-    , GenParser
-    , parseFromFile )
+  ( Parser
+  , GenParser
+  , parseFromFile )
 where
 
 import Text.Megaparsec.Error

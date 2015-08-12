@@ -28,17 +28,17 @@
 -- possibility of such damage.
 
 module Util
-    ( checkParser
-    , simpleParse
-    , checkChar
-    , checkString
-    , posErr
-    , uneStr
-    , uneCh
-    , exStr
-    , exCh
-    , exSpec
-    , showToken )
+  ( checkParser
+  , simpleParse
+  , checkChar
+  , checkString
+  , posErr
+  , uneStr
+  , uneCh
+  , exStr
+  , exCh
+  , exSpec
+  , showToken )
 where
 
 import Data.Maybe (maybeToList)
@@ -76,12 +76,12 @@ simpleParse p = parse (p <* eof) ""
 checkChar :: Parser Char -> (Char -> Bool) ->
               Maybe String -> String -> Property
 checkChar p f l' s = checkParser p r s
-    where h = head s
-          l = exSpec <$> maybeToList l'
-          r | null s = posErr 0 s (uneStr "" : l)
-            | length s == 1 && f h = Right h
-            | not (f h) = posErr 0 s (uneCh h : l)
-            | otherwise = posErr 1 s [uneCh (s !! 1), exStr ""]
+  where h = head s
+        l = exSpec <$> maybeToList l'
+        r | null s = posErr 0 s (uneStr "" : l)
+          | length s == 1 && f h = Right h
+          | not (f h) = posErr 0 s (uneCh h : l)
+          | otherwise = posErr 1 s [uneCh (s !! 1), exStr ""]
 
 -- | @checkString p a label s@ runs parser @p@ on input @s@ and checks if
 -- the result is equal to @a@ and also quality of error messages. @label@ is
@@ -89,14 +89,14 @@ checkChar p f l' s = checkParser p r s
 
 checkString :: Parser String -> String -> String -> String -> Property
 checkString p a' l s' = checkParser p (w a' 0 s') s'
-    where w [] _ []    = Right a'
-          w [] i (s:_) = posErr i s' [uneCh s, exStr ""]
-          w _  0 []    = posErr 0 s' [uneStr "", exSpec l]
-          w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
-          w (a:as) i (s:ss)
-            | a == s    = w as i' ss
-            | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
-              where i'  = succ i
+  where w [] _ []    = Right a'
+        w [] i (s:_) = posErr i s' [uneCh s, exStr ""]
+        w _  0 []    = posErr 0 s' [uneStr "", exSpec l]
+        w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
+        w (a:as) i (s:ss)
+          | a == s    = w as i' ss
+          | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
+            where i'  = succ i
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before
@@ -106,7 +106,7 @@ checkString p a' l s' = checkParser p (w a' 0 s') s'
 
 posErr :: Int -> String -> [Message] -> Either ParseError a
 posErr pos s = Left . foldr addErrorMessage (newErrorUnknown errPos)
-    where errPos = updatePosString (initialPos "") (take pos s)
+  where errPos = updatePosString (initialPos "") (take pos s)
 
 -- | @uneStr s@ returns message created with 'UnExpect' constructor that
 -- tells the system that string @s@ is unexpected. This can be used to

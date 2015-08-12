@@ -11,9 +11,9 @@
 -- Make Strings an instance of 'Stream' with 'Char' token type.
 
 module Text.Megaparsec.String
-    ( Parser
-    , GenParser
-    , parseFromFile )
+  ( Parser
+  , GenParser
+  , parseFromFile )
 where
 
 import Text.Megaparsec.Error

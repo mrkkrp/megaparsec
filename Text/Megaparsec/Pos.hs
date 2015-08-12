@@ -12,22 +12,22 @@
 -- Textual source positions.
 
 module Text.Megaparsec.Pos
-    ( SourceName
-    , Line
-    , Column
-    , SourcePos
-    , sourceLine
-    , sourceColumn
-    , sourceName
-    , incSourceLine
-    , incSourceColumn
-    , setSourceLine
-    , setSourceColumn
-    , setSourceName
-    , newPos
-    , initialPos
-    , updatePosChar
-    , updatePosString )
+  ( SourceName
+  , Line
+  , Column
+  , SourcePos
+  , sourceLine
+  , sourceColumn
+  , sourceName
+  , incSourceLine
+  , incSourceColumn
+  , setSourceLine
+  , setSourceColumn
+  , setSourceName
+  , newPos
+  , initialPos
+  , updatePosChar
+  , updatePosString )
 where
 
 import Data.Data (Data)
@@ -52,13 +52,13 @@ type Column = Int
 -- class.
 
 data SourcePos = SourcePos
-    { -- | Extract the name of the source from a source position.
-      sourceName   :: SourceName
-      -- | Extract the line number from a source position.
-    , sourceLine   :: !Line
-      -- | Extract the column number from a source position.
-    , sourceColumn :: !Column }
-    deriving (Eq, Ord, Data, Typeable)
+  { -- | Extract the name of the source from a source position.
+    sourceName   :: SourceName
+    -- | Extract the line number from a source position.
+  , sourceLine   :: !Line
+    -- | Extract the column number from a source position.
+  , sourceColumn :: !Column }
+  deriving (Eq, Ord, Data, Typeable)
 
 instance Show SourcePos where
   show (SourcePos n l c)
@@ -113,11 +113,11 @@ setSourceColumn (SourcePos n l _) = SourcePos n l
 
 updatePosChar :: SourcePos -> Char -> SourcePos
 updatePosChar (SourcePos n l c) ch =
-    case ch of
-      '\n' -> SourcePos n (l + 1) 1
-      '\r' -> SourcePos n l 1
-      '\t' -> SourcePos n l (c + 8 - ((c - 1) `rem` 8))
-      _    -> SourcePos n l (c + 1)
+  case ch of
+    '\n' -> SourcePos n (l + 1) 1
+    '\r' -> SourcePos n l 1
+    '\t' -> SourcePos n l (c + 8 - ((c - 1) `rem` 8))
+    _    -> SourcePos n l (c + 1)
 
 -- | The expression @updatePosString pos s@ updates the source position
 -- @pos@ by calling 'updatePosChar' on every character in @s@, i.e. @foldl
