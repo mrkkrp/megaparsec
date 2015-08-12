@@ -29,6 +29,19 @@
 
 * Renamed parser `endOfLine` to `eol` (module `Text.Megaparsec.Char`).
 
+* Greatly improved quality of error messages. Fixed entire
+  `Text.Megaparsec.Error` module, see #14 for more information. Made
+  possible normal analysis of error messages without “render and re-parse”
+  approach that previous maintainers need to practice to write even simplest
+  tests, see module `Utils.hs` in `old-tests` for example.
+
+* Reduced number of `Message` constructors (now there are only `Unexpected`,
+  `Expected`, and `Message`). Empty “magic” message strings are ignored now,
+  all the library now uses explicit error messages.
+
+* Renamed `semi` to `semicolon` and other associated parasers in
+  `Text.Megaparsec.Token`.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
