@@ -68,28 +68,29 @@ module Text.Megaparsec
   , label
   , try
   , unexpected
-  , choice
-  , skipMany
-  , skipSome
-  , count
+  , lookAhead
+  , anyToken
   , between
-  , option
-  , optionMaybe
-  , sepBy
-  , sepBy1
-  , endBy
-  , endBy1
-  , sepEndBy
-  , sepEndBy1
   , chainl
   , chainl1
   , chainr
   , chainr1
+  , choice
+  , count
+  , count'
+  , endBy
+  , endBy1
   , eof
-  , notFollowedBy
   , manyTill
-  , lookAhead
-  , anyToken
+  , notFollowedBy
+  , option
+  , optionMaybe
+  , sepBy
+  , sepBy1
+  , sepEndBy
+  , sepEndBy1
+  , skipMany
+  , skipSome
     -- * Character parsing
   , newline
   , crlf

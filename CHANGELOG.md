@@ -21,7 +21,7 @@
 * Renamed `many1` → `some` as well as other parsers that had `many1` part in
   their names.
 
-* The following functions are now re-exported from ‘Control.Applicative’:
+* The following functions are now re-exported from `Control.Applicative`:
   `(<|>)`, `many`, `some`, `optional`. See #9.
 
 * Introduced type class `ShowToken` and improved representation of
@@ -72,6 +72,10 @@
   that it parses letters from “a” to “z” and from “A” to “Z”. This is wrong,
   since it used `Data.Char.isAlpha` predicate internally and thus parsed
   many more characters.
+
+* Added more powerful `count` parser. This parser can be told to parse from
+  `m` to `n` occurrences of some thing. Old parser `count` is now named
+  `count'` and defined in terms of that more powerful one.
 
 * Added comprehensive QuickCheck test suite.
 
