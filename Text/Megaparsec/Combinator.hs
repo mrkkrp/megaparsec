@@ -12,8 +12,7 @@
 -- Commonly used generic combinators.
 
 module Text.Megaparsec.Combinator
-  ( anyToken
-  , between
+  ( between
   , chainl
   , chainl1
   , chainr
@@ -25,9 +24,7 @@ module Text.Megaparsec.Combinator
   , endBy1
   , eof
   , manyTill
-  , notFollowedBy
   , option
-  , optionMaybe
   , sepBy
   , sepBy1
   , sepEndBy
@@ -40,14 +37,6 @@ import Control.Applicative ((<|>), many, some, optional)
 import Control.Monad
 
 import Text.Megaparsec.Prim
-import Text.Megaparsec.ShowToken
-
--- | The parser @anyToken@ accepts any kind of token. It is for example
--- used to implement 'eof'. Returns the accepted token. N.B. this token
--- doesn't change position in input stream, use with care.
-
-anyToken :: Stream s m t => ParsecT s u m t
-anyToken = tokenPrim (\pos _ _ -> pos) Just
 
 -- | @between open close p@ parses @open@, followed by @p@ and @close@.
 -- Returns the value returned by @p@.
@@ -154,14 +143,6 @@ endBy1 :: Stream s m t =>
           ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
 endBy1 p sep = some (p <* sep)
 
--- | This parser only succeeds at the end of the input. This is not a
--- primitive parser but it is defined using 'notFollowedBy'.
---
--- > eof = notFollowedBy anyToken <?> "end of input"
-
-eof :: Stream s m t => ParsecT s u m ()
-eof = notFollowedBy anyToken <?> "end of input"
-
 -- | @manyTill p end@ applies parser @p@ /zero/ or more times until
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This
 -- parser can be used to scan comments:
@@ -175,14 +156,6 @@ manyTill :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
 manyTill p end = (try end *> return []) <|> ((:) <$> p <*> manyTill p end)
 
--- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
--- does not consume any input and can be used to implement the “longest
--- match” rule.
-
-notFollowedBy :: (Stream s m t, ShowToken a) =>
-                 ParsecT s u m a -> ParsecT s u m ()
-notFollowedBy p = try ((try p >>= (unexpected . showToken)) <|> return ())
-
 -- | @option x p@ tries to apply parser @p@. If @p@ fails without
 -- consuming input, it returns the value @x@, otherwise the value returned
 -- by @p@.
@@ -191,13 +164,6 @@ notFollowedBy p = try ((try p >>= (unexpected . showToken)) <|> return ())
 
 option :: Stream s m t => a -> ParsecT s u m a -> ParsecT s u m a
 option x p = p <|> return x
-
--- | @optionMaybe p@ tries to apply parser @p@. If @p@ fails without
--- consuming input, it return 'Nothing', otherwise it returns 'Just' the
--- value returned by @p@.
-
-optionMaybe :: Stream s m t => ParsecT s u m a -> ParsecT s u m (Maybe a)
-optionMaybe p = option Nothing (Just <$> p)
 
 -- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.

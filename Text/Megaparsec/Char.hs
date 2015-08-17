@@ -266,7 +266,7 @@ noneOf cs = satisfy (`notElem` cs)
 -- > oneOf cs = satisfy (`elem` cs)
 
 satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
-satisfy f = tokenPrim nextPos testChar
+satisfy f = token nextPos testChar
   where nextPos pos x _ = updatePosChar pos x
         testChar x      = if f x then Just x else Nothing
 

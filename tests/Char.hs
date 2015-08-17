@@ -35,8 +35,8 @@ import Data.Char
 import Data.List (findIndex)
 
 import Test.Framework
-import Test.QuickCheck
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck
 
 import Text.Megaparsec.Char
 
@@ -114,8 +114,16 @@ prop_crlf = checkString crlf "\r\n" "crlf newline"
 
 prop_eol :: String -> Property
 prop_eol s = checkParser eol r s
-  where r | not (null s) && head s == '\r' = simpleParse crlf s
-          | otherwise                      = simpleParse eol s
+  where h = head s
+        r | s == "\n"   = Right "\n"
+          | s == "\r\n" = Right "\r\n"
+          | null s      = posErr 0 s [uneStr "", exSpec "end of line"]
+          | h == '\n'   = posErr 1 s [uneCh (s !! 1), exStr ""]
+          | h /= '\r'   = posErr 0 s [uneCh h, exSpec "end of line"]
+          | otherwise   = posErr 0 s [ uneStr (take 2 s)
+                                     , uneCh '\r'
+                                     , exSpec "crlf newline"
+                                     , exSpec "newline" ]
 
 prop_tab :: String -> Property
 prop_tab = checkChar tab (== '\t') (Just "tab")

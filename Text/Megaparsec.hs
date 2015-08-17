@@ -43,10 +43,8 @@ module Text.Megaparsec
   ( -- * Parsers
     ParsecT
   , Parsec
-  , token
-  , tokens
-  , runParserT
   , runParser
+  , runParserT
   , parse
   , parseMaybe
   , parseTest
@@ -64,12 +62,15 @@ module Text.Megaparsec
   -- $some
   , A.optional
   -- $optional
+  , unexpected
   , (<?>)
   , label
   , try
-  , unexpected
   , lookAhead
-  , anyToken
+  , notFollowedBy
+  , eof
+  , token
+  , tokens
   , between
   , chainl
   , chainl1
@@ -80,11 +81,8 @@ module Text.Megaparsec
   , count'
   , endBy
   , endBy1
-  , eof
   , manyTill
-  , notFollowedBy
   , option
-  , optionMaybe
   , sepBy
   , sepBy1
   , sepEndBy
@@ -142,7 +140,6 @@ module Text.Megaparsec
   , Consumed (..)
   , Reply (..)
   , State (..)
-  , tokenPrim
   , getParserState
   , setParserState
   , updateParserState

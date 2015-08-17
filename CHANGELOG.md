@@ -77,6 +77,18 @@
   `m` to `n` occurrences of some thing. Old parser `count` is now named
   `count'` and defined in terms of that more powerful one.
 
+* Hint system introduced that greatly improved quality of error messages
+  and made code of `Text.Megaparsec.Prim` a lot clearer.
+
+* Removed `optionMaybe` parser, because `optional` from
+  `Control.Applicative` does the same thing.
+
+* Renamed `tokenPrim` → `token`, removed old `token`, because `tokenPrim` is
+  more general and `token` is little used.
+
+* Fixed bug with `notFollowedBy` always succeeded with parsers that don't
+  consume input, see #6.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
