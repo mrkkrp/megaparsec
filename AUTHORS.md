@@ -35,6 +35,7 @@ Names below are sorted alphabetically.
 * Derek Elkins
 * Emil Sköldberg
 * Joel Williamson
+* Mark Karpov
 * Paolo Martini
 * redneb
 * Reto Kramer
