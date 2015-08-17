@@ -44,8 +44,39 @@ synopsis:            Monadic parser combinators
 build-type:          Simple
 description:
 
-  This is industrial-strength monadic parser combinator library. Megaparsec
-  is a fork of original Parsec library written by Daan Leijen.
+    This is industrial-strength monadic parser combinator library. Megaparsec is
+    a fork of Parsec library originally written by Daan Leijen.
+    .
+    Megaparsec is different from Parsec in the following ways:
+    .
+    * Better error messages. We test our error messages using dense QuickCheck
+      tests. Good error messages are just as important for us as correct return
+      values of our parsers. Megaparsec will be especially useful if you write
+      compiler or interpreter for some language.
+    .
+    * Some quirks and “buggy features” (as well as plain bugs) of original
+      Parsec are fixed. There is no undocumented surprising stuff in Megaparsec.
+    .
+    * Better support for Unicode parsing in "Text.Megaparsec.Char".
+    .
+    * Megaparsec has more powerful combinators and can parse languages where
+      indentation matters.
+    .
+    * Comprehensive QuickCheck test suite covering nearly 100% of our code.
+    .
+    * We have benchmarks to detect performance regressions.
+    .
+    * Better documentation, with 100% of functions covered, without typos and
+      obsolete information, with working examples. Megaparsec's documentation is
+      well-structured and doesn't contain things useless to end user.
+    .
+    * Megaparsec's code is clearer and doesn't contain “magic” found in original
+      Parsec (just look at how Parsec generate error-messages, you can find more
+      in [issue #14](https://github.com/mrkkrp/megaparsec/issues/14) of
+      Megaparsec, this is just one example).
+    .
+    * Megaparsec looks into the future, it does not contain code that serves for
+      compatibility purposes, it also requires more recent version of `base`.
 
 extra-source-files:  AUTHORS.md, CHANGELOG.md
 
