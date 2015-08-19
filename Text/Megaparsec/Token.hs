@@ -23,7 +23,7 @@ where
 import Control.Applicative ((<|>), many, some)
 import Control.Monad (void)
 import Data.Char (isAlpha, toLower, toUpper)
-import Data.List (nub, sort)
+import Data.List (sort)
 
 import Text.Megaparsec.Prim
 import Text.Megaparsec.Char
@@ -433,10 +433,10 @@ makeTokenParser languageDef =
 
   -- numbers — integers
 
-  integer  = decimal <?> "integer"
+  integer  = decimal
   integer' = signed integer
 
-  decimal     = lexeme $ nump "" digitChar
+  decimal     = lexeme (nump "" digitChar <?> "integer")
   hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigitChar
   octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigitChar
 
@@ -545,41 +545,39 @@ makeTokenParser languageDef =
 
   lexeme p = p <* whiteSpace
 
-  whiteSpace
-      | noLine && noMulti = skipMany (simpleSpace      <?> "")
-      | noLine            = skipMany (simpleSpace      <|>
-                                      multiLineComment <?> "")
-      | noMulti           = skipMany (simpleSpace      <|>
-                                      oneLineComment   <?> "")
-      | otherwise         = skipMany (simpleSpace      <|>
-                                      oneLineComment   <|>
-                                      multiLineComment <?> "")
-      where
-        noLine  = null (commentLine languageDef)
-        noMulti = null (commentStart languageDef)
+  whiteSpace = hidden space -- FIXME: write it in a decent manner
+      -- \| noLine && noMulti = skipMany (space            <?> "")
+      -- \| noLine            = skipMany (space            <|>
+      --                                 multiLineComment <?> "")
+      -- \| noMulti           = skipMany (space            <|>
+      --                                 oneLineComment   <?> "")
+      -- \| otherwise         = skipMany (space            <|>
+      --                                 oneLineComment   <|>
+      --                                 multiLineComment <?> "")
+      -- where
+      --   noLine  = null (commentLine languageDef)
+      --   noMulti = null (commentStart languageDef)
 
-  simpleSpace = skipSome spaceChar
+  -- oneLineComment = void (try (string (commentLine languageDef))
+  --                       >> skipMany (satisfy (/= '\n')))
 
-  oneLineComment = void (try (string (commentLine languageDef))
-                        >> skipMany (satisfy (/= '\n')))
+  -- multiLineComment = try (string (commentStart languageDef)) >> inComment
 
-  multiLineComment = try (string (commentStart languageDef)) >> inComment
+  -- inComment = if nestedComments languageDef
+  --             then inCommentMulti
+  --             else inCommentSingle
 
-  inComment = if nestedComments languageDef
-              then inCommentMulti
-              else inCommentSingle
+  -- inCommentMulti
+  --     =  void (try . string $ commentEnd languageDef)
+  --    <|> (multiLineComment            >> inCommentMulti)
+  --    <|> (skipSome (noneOf startEnd) >> inCommentMulti)
+  --    <|> (oneOf startEnd              >> inCommentMulti)
+  --    <?> "end of comment"
 
-  inCommentMulti
-      =  void (try . string $ commentEnd languageDef)
-     <|> (multiLineComment            >> inCommentMulti)
-     <|> (skipSome (noneOf startEnd) >> inCommentMulti)
-     <|> (oneOf startEnd              >> inCommentMulti)
-     <?> "end of comment"
+  -- inCommentSingle
+  --     =  void (try . string $ commentEnd languageDef)
+  --    <|> (skipSome (noneOf startEnd) >> inCommentSingle)
+  --    <|> (oneOf startEnd              >> inCommentSingle)
+  --    <?> "end of comment"
 
-  inCommentSingle
-      =  void (try . string $ commentEnd languageDef)
-     <|> (skipSome (noneOf startEnd) >> inCommentSingle)
-     <|> (oneOf startEnd              >> inCommentSingle)
-     <?> "end of comment"
-
-  startEnd = nub $ (++) <$> commentEnd <*> commentStart $ languageDef
+  -- startEnd = nub $ (++) <$> commentEnd <*> commentStart $ languageDef
