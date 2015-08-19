@@ -65,6 +65,7 @@ module Text.Megaparsec
   , unexpected
   , (<?>)
   , label
+  , hidden
   , try
   , lookAhead
   , notFollowedBy

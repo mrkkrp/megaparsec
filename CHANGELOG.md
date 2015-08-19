@@ -89,6 +89,9 @@
 * Fixed bug with `notFollowedBy` always succeeded with parsers that don't
   consume input, see #6.
 
+* Added new primitive combinator `hidden p` which hides “expected” tokens in
+  error message when parser `p` fails.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
