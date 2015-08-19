@@ -8,7 +8,7 @@ can add you to this list.
 
 Names below are sorted alphabetically.
 
-## Author
+## Author of original Parsec library
 
 * Daan Leijen
 
