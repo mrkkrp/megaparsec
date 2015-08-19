@@ -507,9 +507,9 @@ try p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
 -- 'try' if this is undesirable.
 
 lookAhead :: Stream s m t => ParsecT s u m a -> ParsecT s u m a
-lookAhead p = ParsecT $ \s _ cerr eok eerr -> do
-  let eok' a _ = eok a s
-  unParser p s eok' cerr eok' eerr
+lookAhead p = ParsecT $ \s _ cerr eok eerr ->
+  let eok' a _ _ = eok a s mempty
+  in unParser p s eok' cerr eok' eerr
 
 -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
 -- does not consume any input and can be used to implement the “longest
