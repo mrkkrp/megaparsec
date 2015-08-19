@@ -91,6 +91,7 @@ library
                    , FlexibleContexts
                    , FlexibleInstances
                    , FunctionalDependencies
+                   , GeneralizedNewtypeDeriving
                    , MultiParamTypeClasses
                    , PolymorphicComponents
                    , UndecidableInstances

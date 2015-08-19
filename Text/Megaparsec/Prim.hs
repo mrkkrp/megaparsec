@@ -152,11 +152,7 @@ data Reply s u a = Ok a !(State s u) | Error ParseError
 -- unexpected 'a'
 -- expecting 'r' or end of input
 
-newtype Hints = Hints [[String]]
-
-instance Monoid Hints where
-  mempty = Hints []
-  mappend (Hints xs) (Hints ys) = Hints (xs ++ ys)
+newtype Hints = Hints [[String]] deriving Monoid
 
 -- | Convert 'ParseError' record into 'Hints'.
 
