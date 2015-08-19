@@ -275,7 +275,8 @@ parserReturn x = ParsecT $ \s _ _ eok _ -> eok x s mempty
 parserBind :: ParsecT s u m a -> (a -> ParsecT s u m b) -> ParsecT s u m b
 {-# INLINE parserBind #-}
 parserBind m k = ParsecT $ \s cok cerr eok eerr ->
-  let mcok x s' hs = unParser (k x) s' cok cerr cok (withHints hs cerr)
+  let mcok x s' hs = unParser (k x) s' cok cerr
+                     (accHints hs cok) (withHints hs cerr)
       meok x s' hs = unParser (k x) s' cok cerr
                      (accHints hs eok) (withHints hs eerr)
   in unParser m s mcok cerr meok eerr
