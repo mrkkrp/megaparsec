@@ -19,13 +19,13 @@ module Text.Megaparsec.Prim
   , Stream (..)
   , Consumed (..)
   , Reply (..)
-  , ParsecT
   , Parsec
+  , ParsecT
     -- * Running parser
   , runParser
   , runParserT
   , parse
-  , parseMaybe
+  , parse'
   , parseTest
     -- * Primitive combinators
   , unexpected
@@ -40,15 +40,15 @@ module Text.Megaparsec.Prim
   , tokens
     -- * Parser state combinators
   , getPosition
-  , getInput
   , setPosition
+  , getInput
   , setInput
   , getParserState
   , setParserState
   , updateParserState
     -- * User state combinators
   , getState
-  , putState
+  , setState
   , modifyState )
 where
 
@@ -81,6 +81,7 @@ data State s u = State
   { stateInput :: s
   , statePos   :: !SourcePos
   , stateUser  :: !u }
+  deriving (Show, Eq)
 
 -- | An instance of @Stream s m t@ has stream type @s@, underlying monad @m@
 -- and token type @t@ determined by the stream.
@@ -123,7 +124,9 @@ instance Monad m => Stream TL.Text m Char where
 --
 -- See also: 'Reply'.
 
-data Consumed a = Consumed a | Empty !a
+data Consumed a
+  = Consumed a
+  | Empty   !a
 
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
@@ -133,7 +136,9 @@ data Consumed a = Consumed a | Empty !a
 --
 -- See also 'Consumed'.
 
-data Reply s u a = Ok a !(State s u) | Error ParseError
+data Reply s u a
+  = Ok a !(State s u)
+  | Error ParseError
 
 -- | 'Hints' represent collection of strings to be included into 'ParserError'
 -- as “expected” messages when a parser fails without consuming input right
@@ -178,8 +183,9 @@ accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 -- 'label' combinator.
 
 refreshLastHint :: Hints -> String -> Hints
-refreshLastHint (Hints [])     _ = Hints []
-refreshLastHint (Hints (_:xs)) l = Hints ([l]:xs)
+refreshLastHint (Hints [])     _  = Hints []
+refreshLastHint (Hints (_:xs)) "" = Hints xs
+refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 
 -- If you're reading this, you may be interested in how Megaparsec works on
 -- lower level. That's quite simple. 'ParsecT' is a wrapper around function
@@ -247,10 +253,10 @@ instance A.Applicative (ParsecT s u m) where
 instance A.Alternative (ParsecT s u m) where
   empty  = mzero
   (<|>)  = mplus
-  many p = reverse <$> manyAccum p
+  many p = reverse <$> manyAcc p
 
-manyAccum :: ParsecT s u m a -> ParsecT s u m [a]
-manyAccum p = ParsecT $ \s cok cerr eok _ ->
+manyAcc :: ParsecT s u m a -> ParsecT s u m [a]
+manyAcc p = ParsecT $ \s cok cerr eok _ ->
   let errToHints c err = c (toHints err)
       walk xs x s' _ =
         unParser p s'
@@ -412,12 +418,17 @@ parse :: Stream s Identity t =>
          Parsec s () a -> SourceName -> s -> Either ParseError a
 parse p = runParser p ()
 
--- | @parseMaybe p input@ runs parser @p@ on @input@ and returns result
+-- | @parse' p input@ runs parser @p@ on @input@ and returns result
 -- inside 'Just' on success and 'Nothing' on failure. This function also
--- parses 'eof', so all input should be consumed by the parser.
+-- parses 'eof', so all input should be consumed by the parser @p@.
+--
+-- The function is supposed to be useful for lightweight parsing, where
+-- error messages (and thus file name) are not important and entire input
+-- should be parsed. For example it can be used when parsing of single
+-- number according to specification of its format is desired.
 
-parseMaybe :: Stream s Identity t => Parsec s () a -> s -> Maybe a
-parseMaybe p s =
+parse' :: Stream s Identity t => Parsec s () a -> s -> Maybe a
+parse' p s =
   case parse (p <* eof) "" s of
     Left  _ -> Nothing
     Right x -> Just x
@@ -638,37 +649,36 @@ eoi = "end of input"
 getPosition :: Monad m => ParsecT s u m SourcePos
 getPosition = statePos <$> getParserState
 
+-- | @setPosition pos@ sets the current source position to @pos@.
+
+setPosition :: Monad m => SourcePos -> ParsecT s u m ()
+setPosition pos = updateParserState (\(State s _ u) -> State s pos u)
+
 -- | Returns the current input.
 
 getInput :: Monad m => ParsecT s u m s
 getInput = stateInput <$> getParserState
 
--- | @setPosition pos@ sets the current source position to @pos@.
-
-setPosition :: Monad m => SourcePos -> ParsecT s u m ()
-setPosition pos = void $ updateParserState (\(State s _ u) -> State s pos u)
-
 -- | @setInput input@ continues parsing with @input@. The 'getInput' and
 -- @setInput@ functions can for example be used to deal with #include files.
 
 setInput :: Monad m => s -> ParsecT s u m ()
-setInput s = void $ updateParserState (\(State _ pos u) -> State s pos u)
+setInput s = updateParserState (\(State _ pos u) -> State s pos u)
 
 -- | Returns the full parser state as a 'State' record.
 
 getParserState :: Monad m => ParsecT s u m (State s u)
-getParserState = updateParserState id
+getParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 
 -- | @setParserState st@ set the full parser state to @st@.
 
-setParserState :: Monad m => State s u -> ParsecT s u m (State s u)
+setParserState :: Monad m => State s u -> ParsecT s u m ()
 setParserState st = updateParserState (const st)
 
 -- | @updateParserState f@ applies function @f@ to the parser state.
 
-updateParserState :: (State s u -> State s u) -> ParsecT s u m (State s u)
-updateParserState f = ParsecT $ \s _ _ eok _ ->
-  let s' = f s in eok s' s' mempty
+updateParserState :: (State s u -> State s u) -> ParsecT s u m ()
+updateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 
 -- User state combinators
 
@@ -677,10 +687,10 @@ updateParserState f = ParsecT $ \s _ _ eok _ ->
 getState :: Monad m => ParsecT s u m u
 getState = stateUser <$> getParserState
 
--- | @putState st@ set the user state to @st@.
+-- | @setState st@ set the user state to @st@.
 
-putState :: Monad m => u -> ParsecT s u m ()
-putState u = void $ updateParserState (\s -> s { stateUser = u })
+setState :: Monad m => u -> ParsecT s u m ()
+setState u = updateParserState (\s -> s { stateUser = u })
 
 -- | @modifyState f@ applies function @f@ to the user state. Suppose
 -- that we want to count identifiers in a source, we could use the user
@@ -689,4 +699,4 @@ putState u = void $ updateParserState (\s -> s { stateUser = u })
 -- > expr = Id <$> identifier <* modifyState (+1)
 
 modifyState :: Monad m => (u -> u) -> ParsecT s u m ()
-modifyState f = void $ updateParserState (\s -> s { stateUser = f (stateUser s)})
+modifyState f = updateParserState (\s -> s { stateUser = f (stateUser s)})

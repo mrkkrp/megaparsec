@@ -40,18 +40,17 @@
 -- imported explicitly along with two modules mentioned above.
 
 module Text.Megaparsec
-  ( -- * Parsers
-    ParsecT
-  , Parsec
+  ( -- * Running parser
+    Parsec
+  , ParsecT
   , runParser
   , runParserT
   , parse
-  , parseMaybe
+  , parse'
   , parseTest
-  , getPosition
-  , getInput
+    -- * Backtracking user state
   , getState
-  , putState
+  , setState
   , modifyState
     -- * Combinators
   , (A.<|>)
@@ -141,11 +140,13 @@ module Text.Megaparsec
   , Consumed (..)
   , Reply (..)
   , State (..)
+  , getPosition
+  , setPosition
+  , getInput
+  , setInput
   , getParserState
   , setParserState
-  , updateParserState
-  , setPosition
-  , setInput )
+  , updateParserState )
 where
 
 import qualified Control.Applicative as A

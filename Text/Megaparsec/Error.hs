@@ -146,10 +146,10 @@ setErrorPos pos (ParseError _ ms) = ParseError pos ms
 -- messages and preferring shortest match.
 
 mergeError :: ParseError -> ParseError -> ParseError
-mergeError e1@(ParseError pos1 ms1) e2@(ParseError pos2 ms2) =
+mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
   case pos1 `compare` pos2 of
     LT -> e1
-    EQ -> foldr addErrorMessage (ParseError pos1 ms1) ms2
+    EQ -> foldr addErrorMessage e1 ms2
     GT -> e2
 
 -- | @showMessages ms@ transforms list of error messages @ms@ into

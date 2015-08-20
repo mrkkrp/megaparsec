@@ -92,6 +92,13 @@
 * Added new primitive combinator `hidden p` which hides “expected” tokens in
   error message when parser `p` fails.
 
+* Added new function `parse'` for lightweight parsing where error messages
+  (and thus file name) are not important and entire input should be
+  parsed. For example it can be used when parsing of single number according
+  to specification of its format is desired.
+
+* Renamed `putState` → `setState` for consistency.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
