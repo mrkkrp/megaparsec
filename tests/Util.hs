@@ -33,11 +33,15 @@ module Util
   , checkChar
   , checkString
   , posErr
-  , uneStr
   , uneCh
-  , exStr
+  , uneStr
+  , uneSpec
+  , uneEof
   , exCh
+  , exStr
   , exSpec
+  , exEof
+  , msg
   , showToken )
 where
 
@@ -78,10 +82,10 @@ checkChar :: Parser Char -> (Char -> Bool) ->
 checkChar p f l' s = checkParser p r s
   where h = head s
         l = exSpec <$> maybeToList l'
-        r | null s = posErr 0 s (uneStr "" : l)
+        r | null s = posErr 0 s (uneEof : l)
           | length s == 1 && f h = Right h
           | not (f h) = posErr 0 s (uneCh h : l)
-          | otherwise = posErr 1 s [uneCh (s !! 1), exStr ""]
+          | otherwise = posErr 1 s [uneCh (s !! 1), exEof]
 
 -- | @checkString p a label s@ runs parser @p@ on input @s@ and checks if
 -- the result is equal to @a@ and also quality of error messages. @label@ is
@@ -90,8 +94,8 @@ checkChar p f l' s = checkParser p r s
 checkString :: Parser String -> String -> String -> String -> Property
 checkString p a' l s' = checkParser p (w a' 0 s') s'
   where w [] _ []    = Right a'
-        w [] i (s:_) = posErr i s' [uneCh s, exStr ""]
-        w _  0 []    = posErr 0 s' [uneStr "", exSpec l]
+        w [] i (s:_) = posErr i s' [uneCh s, exEof]
+        w _  0 []    = posErr 0 s' [uneEof, exSpec l]
         w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
         w (a:as) i (s:ss)
           | a == s    = w as i' ss
@@ -101,43 +105,64 @@ checkString p a' l s' = checkParser p (w a' 0 s') s'
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before
 -- failure. @s@ is input of the parser. @ms@ is a list, collection of
--- 'Message's. See 'uneStr', 'uneCh', 'exStr', and 'exCh' for easy ways to
--- create error messages.
+-- 'Message's. See 'uneStr', 'uneCh', 'uneSpec', 'exStr', 'exCh', and
+-- 'exSpec' for easy ways to create error messages.
 
 posErr :: Int -> String -> [Message] -> Either ParseError a
 posErr pos s = Left . foldr addErrorMessage (newErrorUnknown errPos)
   where errPos = updatePosString (initialPos "") (take pos s)
 
--- | @uneStr s@ returns message created with 'UnExpect' constructor that
--- tells the system that string @s@ is unexpected. This can be used to
--- expect end of input, if @s@ is empty.
-
-uneStr :: String -> Message
-uneStr s = Unexpected $ if null s then "end of input" else showToken s
-
--- | @uneCh s@ returns message created with 'UnExpect' constructor that
+-- | @uneCh s@ returns message created with 'Unexpected' constructor that
 -- tells the system that char @s@ is unexpected.
 
 uneCh :: Char -> Message
 uneCh s = Unexpected $ showToken s
 
--- | @exStr s@ returns message created with 'Expect' constructor that tells
--- the system that string @s@ is expected. This can be used to expect end of
--- input, if @s@ is empty.
+-- | @uneStr s@ returns message created with 'Unexpected' constructor that
+-- tells the system that string @s@ is unexpected.
 
-exStr :: String -> Message
-exStr s = Expected $ if null s then "end of input" else showToken s
+uneStr :: String -> Message
+uneStr s = Unexpected $ showToken s
 
--- | @exCh s@ returns message created with 'Expect' constructor that tells
+-- | @uneSpec s@ returns message created with 'Unexpected' constructor that
+-- tells the system that @s@ is unexpected. This is different from 'uneStr'
+-- in that it doesn't use 'showToken' but rather pass its argument unaltered
+-- allowing for “special” labels.
+
+uneSpec :: String -> Message
+uneSpec = Unexpected
+
+-- | @uneEof@ represents message “unexpected end of input”.
+
+uneEof :: Message
+uneEof = Unexpected "end of input"
+
+-- | @exCh s@ returns message created with 'Expected' constructor that tells
 -- the system that character @s@ is expected.
 
 exCh :: Char -> Message
 exCh s = Expected $ showToken s
 
--- | @exSpec s@ returns message created with 'Expect' constructor that tells
--- the system that string @s@ is expected. This is different from 'exStr' in
--- that it doesn't use 'showToken' but rather pass its argument unaltered
+-- | @exStr s@ returns message created with 'Expected' constructor that tells
+-- the system that string @s@ is expected.
+
+exStr :: String -> Message
+exStr s = Expected $ showToken s
+
+-- | @exSpec s@ returns message created with 'Expected' constructor that tells
+-- the system that @s@ is expected. This is different from 'exStr' in that
+-- it doesn't use 'showToken' but rather pass its argument unaltered
 -- allowing for “special” labels.
 
 exSpec :: String -> Message
 exSpec = Expected
+
+-- | @exEof@ represents message “expecting end of input”.
+
+exEof :: Message
+exEof = Expected "end of input"
+
+-- | @msg s@ return message created with 'Message' constructor.
+
+msg :: String -> Message
+msg = Message

@@ -117,8 +117,8 @@ prop_eol s = checkParser eol r s
   where h = head s
         r | s == "\n"   = Right "\n"
           | s == "\r\n" = Right "\r\n"
-          | null s      = posErr 0 s [uneStr "", exSpec "end of line"]
-          | h == '\n'   = posErr 1 s [uneCh (s !! 1), exStr ""]
+          | null s      = posErr 0 s [uneEof, exSpec "end of line"]
+          | h == '\n'   = posErr 1 s [uneCh (s !! 1), exEof]
           | h /= '\r'   = posErr 0 s [uneCh h, exSpec "end of line"]
           | otherwise   = posErr 0 s [ uneStr (take 2 s)
                                      , uneCh '\r'
@@ -134,10 +134,10 @@ prop_space s = checkParser space r s
               Just x  ->
                   let ch = s !! x
                   in posErr x s
-                         [ uneCh ch
-                         , uneCh ch
-                         , exSpec "white space"
-                         , exStr "" ]
+                     [ uneCh ch
+                     , uneCh ch
+                     , exSpec "white space"
+                     , exEof ]
               Nothing -> Right ()
 
 prop_controlChar :: String -> Property
