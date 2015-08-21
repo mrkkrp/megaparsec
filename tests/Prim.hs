@@ -34,6 +34,7 @@ module Prim (tests) where
 import Control.Applicative
 import Control.Monad (guard)
 import Data.Bool (bool)
+import Data.Char (isLetter)
 import Data.Maybe (maybeToList)
 
 import Test.Framework
@@ -56,7 +57,7 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT applicative (*>)" prop_applicative_1
         , testProperty "ParsecT applicative (<*)" prop_applicative_2
         , testProperty "ParsecT alternative empty and (<|>)" prop_alternative_0
-        , testProperty "ParsecT alternative (<|>) again" prop_alternative_1
+        , testProperty "ParsecT alternative (<|>)" prop_alternative_1
         , testProperty "ParsecT alternative many" prop_alternative_2
         , testProperty "ParsecT alternative some" prop_alternative_3
         , testProperty "ParsecT alternative optional" prop_alternative_4
@@ -65,6 +66,14 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT monad (>>=)" prop_monad_2
         , testProperty "ParsecT monad fail" prop_monad_3
         , testProperty "combinator unexpected" prop_unexpected
+        , testProperty "combinator label" prop_label
+        , testProperty "combinator hidden" prop_hidden
+        , testProperty "combinator try" prop_try
+        , testProperty "combinator lookAhead" prop_lookAhead_0
+        , testProperty "combinator lookAhead hints" prop_lookAhead_1
+        , testProperty "combinator notFollowedBy" prop_notFollowedBy_0
+        , testProperty "combinator notFollowedBy twice" prop_notFollowedBy_1
+        , testProperty "combinator notFollowedBy eof" prop_notFollowedBy_2
           -- NEXT
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
@@ -110,10 +119,10 @@ prop_alternative_2 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> many (char 'b')
         r | null s = Right s
-          | c > 0 = posErr (a + b) s $ [uneCh 'c', exCh 'b', exEof]
-                    ++ [exCh 'a' | b == 0]
+          | c > 0  = posErr (a + b) s $ [uneCh 'c', exCh 'b', exEof]
+                     ++ [exCh 'a' | b == 0]
           | otherwise = Right s
-        s = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
+        s = abcRow a b c
 
 prop_alternative_3 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
                       Property
@@ -126,7 +135,7 @@ prop_alternative_3 a' b' c' = checkParser p r s
                      if c > 0 then [uneCh 'c'] else [uneEof]
           | c > 0 = posErr (a + b) s [uneCh 'c', exCh 'b', exEof]
           | otherwise = Right s
-        s = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
+        s = abcRow a b c
 
 prop_alternative_4 :: Bool -> Bool -> Bool -> Property
 prop_alternative_4 a b c = checkParser p r s
@@ -135,9 +144,8 @@ prop_alternative_4 a b c = checkParser p r s
         r | c = posErr ab s $ [uneCh 'c', exEof] ++
                 [exCh 'a' | not a && not b] ++ [exCh 'b' | not b]
           | otherwise = Right s
-        s = g 'a' a ++ g 'b' b ++ g 'c' c
+        s = abcRow' a b c
         ab = fromEnum a + fromEnum b
-        g x = bool [] [x]
 
 -- Monad instance
 
@@ -172,29 +180,88 @@ prop_unexpected m = checkParser p r s
           | otherwise = posErr 0 s [uneSpec m]
         s = ""
 
--- TODO label (expected messages and also in conjunction with hints)
--- TODO hidden
+prop_label :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+              String -> Property
+prop_label a' b' c' l = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = (++) <$> many (char 'a') <*> (many (char 'b') <?> l)
+        r | null s = Right s
+          | c > 0 = posErr (a + b) s $ [uneCh 'c', exSpec l, exEof]
+                    ++ [exCh 'a' | b == 0]
+          | otherwise = Right s
+        s = abcRow a b c
 
--- parseTest ((space <?> "doda") <* eof) "r"
--- parse error at line 1, column 1:
--- unexpected 'r'
--- expecting doda or end of input
+prop_hidden :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+               Property
+prop_hidden a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = (++) <$> many (char 'a') <*> hidden (many (char 'b'))
+        r | null s = Right s
+          | c > 0  = posErr (a + b) s $ [uneCh 'c', exEof]
+                     ++ [exCh 'a' | b == 0]
+          | otherwise = Right s
+        s = abcRow a b c
 
--- TODO try
--- parseTest (string "let" <|> string "lexical") "le"
--- parse error at line 1, column 1:
--- unexpected "le"
--- expecting "let" or "lexical"
+prop_try :: String -> String -> String -> Property
+prop_try pre s1' s2' = checkParser p r s
+  where s1 = pre ++ s1'
+        s2 = pre ++ s2'
+        p = try (string s1) <|> string s2
+        r | s == s1 || s == s2 = Right s
+          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
+                        ++ [uneStr pre, exStr s1, exStr s2]
+        s = pre
 
--- TODO parseTest (try (string "let") <|> string "lexical") "le"
--- parse error at line 1, column 1:
--- unexpected "le"
--- expecting "let" or "lexical"
+prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
+prop_lookAhead_0 a b c = checkParser p r s
+  where p = do
+          l <- lookAhead (oneOf "ab" <?> "label")
+          guard (l == h)
+          char 'a'
+        h = head s
+        r | null s = posErr 0 s [uneEof, exSpec "label"]
+          | s == "a" = Right 'a'
+          | h == 'b' = posErr 0 s [uneCh 'b', exCh 'a']
+          | h == 'c' = posErr 0 s [uneCh 'c', exSpec "label"]
+          | otherwise  = posErr 1 s [uneCh (s !! 1), exEof]
+        s = abcRow' a b c
 
--- TODO lookAhead
--- TODO notFollowedBy
+prop_lookAhead_1 :: String -> Property
+prop_lookAhead_1 s = checkParser p r s
+  where p = lookAhead (some letterChar) >> fail "failed" :: Parser ()
+        h = head s
+        r | null s     = posErr 0 s [uneEof, exSpec "letter"]
+          | isLetter h = posErr 0 s [msg "failed"]
+          | otherwise  = posErr 0 s [uneCh h, exSpec "letter"]
 
--- parseTest (many (char 'r') *> notFollowedBy (lookAhead (string "a")) <* eof) "ra"
+prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+                        Property
+prop_notFollowedBy_0 a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = many (char 'a') <* notFollowedBy (char 'b') <* many (char 'c')
+        r | b > 0 = posErr a s [uneCh 'b', exCh 'a']
+          | otherwise = Right (replicate a 'a')
+        s = abcRow a b c
+
+prop_notFollowedBy_1 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+                        Property
+prop_notFollowedBy_1 a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = many (char 'a') <* f (char 'c') <* many (char 'c')
+        f = notFollowedBy . notFollowedBy -- = 'lookAhead' in this case
+        r | b == 0 && c > 0 = Right (replicate a 'a')
+          | b > 0           = posErr a s [uneCh 'b', exCh 'a']
+          | otherwise       = posErr a s [uneEof, exCh 'a']
+        s = abcRow a b c
+
+prop_notFollowedBy_2 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+                        Property
+prop_notFollowedBy_2 a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = many (char 'a') <* notFollowedBy eof <* many anyChar
+        r | b > 0 || c > 0 = Right (replicate a 'a')
+          | otherwise      = posErr a s [uneEof, exCh 'a']
+        s = abcRow a b c
 
 -- We omit tests for 'eof' here because it's used virtually everywhere, it's
 -- already thoroughly tested.
@@ -246,3 +313,9 @@ infix 4 /=\
 
 (/=\) :: (Eq a, Show a) => Parser a -> a -> Property
 p /=\ x = simpleParse p "" === Right x
+
+abcRow :: Int -> Int -> Int -> String
+abcRow a b c = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
+
+abcRow' :: Bool -> Bool -> Bool -> String
+abcRow' a b c = abcRow (fromEnum a) (fromEnum b) (fromEnum c)
