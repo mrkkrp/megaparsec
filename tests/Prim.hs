@@ -43,7 +43,7 @@ import Test.QuickCheck
 
 import Text.Megaparsec.Char
 import Text.Megaparsec.Combinator
-import Text.Megaparsec.Pos (SourcePos, initialPos)
+import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
 
@@ -71,10 +71,12 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "combinator try" prop_try
         , testProperty "combinator lookAhead" prop_lookAhead_0
         , testProperty "combinator lookAhead hints" prop_lookAhead_1
+        , testProperty "combinator lookAhead messages" prop_lookAhead_2
         , testProperty "combinator notFollowedBy" prop_notFollowedBy_0
         , testProperty "combinator notFollowedBy twice" prop_notFollowedBy_1
         , testProperty "combinator notFollowedBy eof" prop_notFollowedBy_2
-          -- NEXT
+        , testProperty "combinator token" prop_token
+        , testProperty "combinator tokens" prop_tokens
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
         , testProperty "parser state general" prop_state
@@ -171,6 +173,10 @@ prop_monad_3 m = checkParser p r s
           | otherwise = posErr 0 s [msg m]
         s = ""
 
+-- TODO MonadReader instance
+
+-- TODO MonadState instance
+
 -- Primitive combinators
 
 prop_unexpected :: String -> Property
@@ -234,6 +240,14 @@ prop_lookAhead_1 s = checkParser p r s
           | isLetter h = posErr 0 s [msg "failed"]
           | otherwise  = posErr 0 s [uneCh h, exSpec "letter"]
 
+prop_lookAhead_2 :: Bool -> Bool -> Bool -> Property
+prop_lookAhead_2 a b c = checkParser p r s
+  where p = lookAhead (some (char 'a')) >> char 'b'
+        r | null s    = posErr 0 s [uneEof, exCh 'a']
+          | a         = posErr 0 s [uneCh 'a', exCh 'b']
+          | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
+        s = abcRow' a b c
+
 prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
                         Property
 prop_notFollowedBy_0 a' b' c' = checkParser p r s
@@ -266,8 +280,20 @@ prop_notFollowedBy_2 a' b' c' = checkParser p r s
 -- We omit tests for 'eof' here because it's used virtually everywhere, it's
 -- already thoroughly tested.
 
--- TODO token
--- TODO tokens
+prop_token :: String -> Property
+prop_token s = checkParser p r s
+  where p = token nextPos testChar
+        nextPos pos x _ = updatePosChar pos x
+        testChar x      = if isLetter x then Just x else Nothing
+        h = head s
+        r | null s = posErr 0 s [uneEof]
+          | isLetter h && length s == 1 = Right (head s)
+          | isLetter h && length s > 1 = posErr 1 s [uneCh (s !! 1), exEof]
+          | otherwise = posErr 0 s [uneCh h]
+
+prop_tokens :: String -> String -> Property
+prop_tokens a = checkString p a (showToken a)
+  where p = tokens updatePosString a
 
 -- Parser state combinators
 
