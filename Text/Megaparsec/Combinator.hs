@@ -147,14 +147,14 @@ endBy1 p sep = some (p <* sep)
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This
 -- parser can be used to scan comments:
 --
--- > simpleComment = string "<!--" >> manyTill anyChar (string "-->")
+-- > simpleComment = string "<!--" >> manyTill anyChar (try $ string "-->")
 --
--- Note that although parsers @anyChar@ and @string \"-->\"@ overlap, the
--- combinator uses 'try' internally to parse @end@, so it's OK.
+-- Note that we need to use 'try' since parsers @anyChar@ and @string
+-- \"-->\"@ overlap and @string \"-->\"@ could consume input before failing.
 
 manyTill :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
-manyTill p end = (try end *> return []) <|> ((:) <$> p <*> manyTill p end)
+manyTill p end = (end *> return []) <|> ((:) <$> p <*> manyTill p end)
 
 -- | @option x p@ tries to apply parser @p@. If @p@ fails without
 -- consuming input, it returns the value @x@, otherwise the value returned
