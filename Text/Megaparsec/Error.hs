@@ -47,16 +47,13 @@ data Message
   = Unexpected !String
   | Expected   !String
   | Message    !String
-  deriving Show
+  deriving (Show, Eq)
 
 instance Enum Message where
   fromEnum (Unexpected _) = 0
   fromEnum (Expected   _) = 1
   fromEnum (Message    _) = 2
   toEnum _ = error "Text.Megaparsec.Error: toEnum is undefined for Message"
-
-instance Eq Message where
-  m1 == m2 = fromEnum m1 == fromEnum m2 && messageString m1 == messageString m2
 
 instance Ord Message where
   compare m1 m2 =
@@ -88,12 +85,10 @@ data ParseError = ParseError
     errorPos :: !SourcePos
     -- | Extract the list of error messages from @ParseError@.
   , errorMessages :: [Message] }
+  deriving Eq
 
 instance Show ParseError where
   show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
-
-instance Eq ParseError where
-  l == r = errorPos l == errorPos r && errorMessages l == errorMessages r
 
 -- | Test whether given @ParseError@ has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
