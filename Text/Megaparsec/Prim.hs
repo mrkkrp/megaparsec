@@ -364,9 +364,7 @@ parserPlus m n = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s cok cerr eok meerr
 
 instance MonadTrans (ParsecT s u) where
-  lift amb = ParsecT $ \s _ _ eok _ -> do
-    a <- amb
-    eok a s mempty
+  lift amb = ParsecT $ \s _ _ eok _ -> amb >>= \a -> eok a s mempty
 
 -- Running a parser
 
@@ -572,37 +570,16 @@ token :: Stream s m t =>
       -> (t -> Maybe a) -- ^ Matching function for the token to parse.
       -> ParsecT s u m a
 {-# INLINE token #-}
-token nextpos = token' nextpos Nothing
-
-token' :: Stream s m t =>
-          (SourcePos -> t -> s -> SourcePos)
-       -> Maybe (SourcePos -> t -> s -> u -> u)
-       -> (t -> Maybe a)
-       -> ParsecT s u m a
-{-# INLINE token' #-}
-token' nextpos Nothing test
-  = ParsecT $ \(State input pos user) cok _ _ eerr -> do
+token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
     r <- uncons input
     case r of
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
         Just x -> let newpos = nextpos pos c cs
-                      newstate = State cs newpos user
+                      newstate = State cs newpos u
                   in seq newpos $ seq newstate $ cok x newstate mempty
         Nothing -> eerr $ unexpectedErr (showToken c) pos
-token' nextpos (Just nextState) test
-  = ParsecT $ \(State input pos user) cok _ _ eerr -> do
-    r <- uncons input
-    case r of
-      Nothing     -> eerr $ unexpectedErr eoi pos
-      Just (c,cs) ->
-        case test c of
-            Just x -> let newpos = nextpos pos c cs
-                          newUser = nextState pos c cs user
-                          newstate = State cs newpos newUser
-                      in seq newpos $ seq newstate $ cok x newstate mempty
-            Nothing -> eerr $ unexpectedErr (showToken c) pos
 
 -- | The parser @tokens posFromTok@ parses list of tokens and returns
 -- it. The resulting parser will use 'showToken' to pretty-print the
