@@ -332,16 +332,3 @@ prop_user_state n m = runParser p 0 "" "" === Right (n + m)
 prop_user_backtrack :: Integer -> Integer -> Property
 prop_user_backtrack n m = runParser p 0 "" "" === Right n
   where p = setState n >> lookAhead (setState m >> eof) >> getState
-
--- Helpers
-
-infix 4 /=\
-
-(/=\) :: (Eq a, Show a) => Parser a -> a -> Property
-p /=\ x = simpleParse p "" === Right x
-
-abcRow :: Int -> Int -> Int -> String
-abcRow a b c = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
-
-abcRow' :: Bool -> Bool -> Bool -> String
-abcRow' a b c = abcRow (fromEnum a) (fromEnum b) (fromEnum c)

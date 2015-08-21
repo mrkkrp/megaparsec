@@ -32,6 +32,9 @@ module Util
   , simpleParse
   , checkChar
   , checkString
+  , (/=\)
+  , abcRow
+  , abcRow'
   , posErr
   , uneCh
   , uneStr
@@ -101,6 +104,29 @@ checkString p a' l s' = checkParser p (w a' 0 s') s'
           | a == s    = w as i' ss
           | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
             where i'  = succ i
+
+infix 4 /=\
+
+-- | @p /=\\ x@ runs parser @p@ on empty input and compares its result
+-- (which should be successful) with @x@. Succeeds when the result is equal
+-- to @x@, prints counterexample on failure.
+
+(/=\) :: (Eq a, Show a) => Parser a -> a -> Property
+p /=\ x = simpleParse p "" === Right x
+
+-- | @abcRow a b c@ generates string consisting of character “a” repeated
+-- @a@ times, character “b” repeated @b@ times, and finally character “c”
+-- repeated @c@ times.
+
+abcRow :: Int -> Int -> Int -> String
+abcRow a b c = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
+
+-- | @abcRow' a b c@ generates string that includes character “a” if @a@ is
+-- 'True', then optionally character “b” if @b@ is 'True', then character
+-- “c” if @c@ is 'True'.
+
+abcRow' :: Bool -> Bool -> Bool -> String
+abcRow' a b c = abcRow (fromEnum a) (fromEnum b) (fromEnum c)
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before
