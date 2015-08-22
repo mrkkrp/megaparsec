@@ -52,7 +52,6 @@ import Data.Maybe (maybeToList)
 
 import Test.QuickCheck
 
-import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim

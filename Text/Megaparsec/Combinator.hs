@@ -22,7 +22,6 @@ module Text.Megaparsec.Combinator
   , count'
   , endBy
   , endBy1
-  , eof
   , manyTill
   , option
   , sepBy

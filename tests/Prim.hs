@@ -42,7 +42,6 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Text.Megaparsec.Char
-import Text.Megaparsec.Combinator
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
