@@ -466,12 +466,12 @@ infix 0 <?>
 -- “…: expecting \"let\" or letter”, which is less friendly.
 
 (<?>) :: ParsecT s u m a -> String -> ParsecT s u m a
-(<?>) = label
+(<?>) = flip label
 
 -- | A synonym for @(\<?>)@, but as a function instead of an operator.
 
-label :: ParsecT s u m a -> String -> ParsecT s u m a
-label p l = ParsecT $ \s cok cerr eok eerr ->
+label :: String -> ParsecT s u m a -> ParsecT s u m a
+label l p = ParsecT $ \s cok cerr eok eerr ->
   let cok' x s' hs = cok x s' $ refreshLastHint hs l
       eok' x s' hs = eok x s' $ refreshLastHint hs l
       eerr'    err = eerr $ setErrorMessage (Expected l) err
@@ -481,7 +481,7 @@ label p l = ParsecT $ \s cok cerr eok eerr ->
 -- tokens in error message when @p@ fails.
 
 hidden :: ParsecT s u m a -> ParsecT s u m a
-hidden p = label p ""
+hidden = label ""
 
 -- | The parser @try p@ behaves like parser @p@, except that it
 -- pretends that it hasn't consumed any input when an error occurs.

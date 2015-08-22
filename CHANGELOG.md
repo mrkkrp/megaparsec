@@ -99,6 +99,8 @@
 
 * Renamed `putState` → `setState` for consistency.
 
+* Flipped order of arguments in the primitive combinator `label`, see #21.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
