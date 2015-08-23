@@ -23,6 +23,7 @@ module Text.Megaparsec.Combinator
   , endBy
   , endBy1
   , manyTill
+  , someTill
   , option
   , sepBy
   , sepBy1
@@ -153,7 +154,14 @@ endBy1 p sep = some (p <* sep)
 
 manyTill :: Stream s m t =>
             ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
-manyTill p end = (end *> return []) <|> ((:) <$> p <*> manyTill p end)
+manyTill p end = (end *> return []) <|> someTill p end
+
+-- | @someTill p end@ works similarly to @manyTill p end@, but @p@ should
+-- succeed at least once.
+
+someTill :: Stream s m t =>
+            ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
+someTill p end = (:) <$> p <*> manyTill p end
 
 -- | @option x p@ tries to apply parser @p@. If @p@ fails without
 -- consuming input, it returns the value @x@, otherwise the value returned

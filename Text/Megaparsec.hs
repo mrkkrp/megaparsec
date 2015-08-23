@@ -82,6 +82,7 @@ module Text.Megaparsec
   , endBy
   , endBy1
   , manyTill
+  , someTill
   , option
   , sepBy
   , sepBy1

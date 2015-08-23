@@ -109,6 +109,8 @@
     * `GenTokenParser` → `Lexer`
     * `makeTokenParser` → `makeLexer`
 
+* Added combinator `someTill`.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
