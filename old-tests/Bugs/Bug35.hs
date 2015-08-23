@@ -29,7 +29,7 @@ trickyFloats =
     , "38.47735512322269" ]
 
 float :: Parser Double
-float = Token.float (Token.makeTokenParser emptyDef)
+float = Token.float (Token.makeLexer emptyDef)
 
 testBatch :: Assertion
 testBatch = mapM_ testFloat trickyFloats

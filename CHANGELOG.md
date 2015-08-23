@@ -101,6 +101,14 @@
 
 * Flipped order of arguments in the primitive combinator `label`, see #21.
 
+* Renamed the following functions and data types:
+
+    * `permute` → `makePermParser`
+    * `buildExpressionParser` → `makeExprParser`
+    * `GenLanguageDef` → `LanguageDef`
+    * `GenTokenParser` → `Lexer`
+    * `makeTokenParser` → `makeLexer`
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.

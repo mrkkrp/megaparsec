@@ -18,4 +18,4 @@ main =
       case parse parser "Example" input of
         Left{} -> error "Parse failure"
         Right str -> str
-   parser = P.stringLiteral $ P.makeTokenParser haskellDef
+   parser = P.stringLiteral $ P.makeLexer haskellDef

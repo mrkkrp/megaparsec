@@ -19,7 +19,7 @@ shouldSucceed :: [String]
 shouldSucceed = ["1", "+1", "-1", "+ 1 ", "- 1 ", "1 "]
 
 integer :: Parser Integer
-integer = Token.integer' (Token.makeTokenParser emptyDef)
+integer = Token.integer' (Token.makeLexer emptyDef)
 
 testBatch :: Assertion
 testBatch = mapM_ (f testFail)    shouldFail >>

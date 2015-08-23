@@ -29,9 +29,9 @@ parseTopLevel :: Parser Expr
 parseTopLevel = parseExpr <* eof
 
 parseExpr :: Parser Expr
-parseExpr = buildExpressionParser table (Const <$> integer)
+parseExpr = makeExprParser table (Const <$> integer)
   where
         table = [[ Infix (Op <$ reserved ">>>") AssocLeft ]]
-        lexer = P.makeTokenParser haskellStyle { P.reservedOpNames = [">>>"] }
+        lexer = P.makeLexer haskellStyle { P.reservedOpNames = [">>>"] }
         integer    = P.integer    lexer
         reserved   = P.reserved   lexer

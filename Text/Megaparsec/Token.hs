@@ -9,15 +9,15 @@
 -- Stability   :  experimental
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 --
--- A helper module to parse lexical elements (tokens). See 'makeTokenParser'
--- for a description of how to use it.
+-- A helper module to parse lexical elements (tokens). See 'makeLexer' for a
+-- description of how to use it.
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Text.Megaparsec.Token
   ( LanguageDef (..)
-  , TokenParser (..)
-  , makeTokenParser )
+  , Lexer (..)
+  , makeLexer )
 where
 
 import Control.Applicative ((<|>), many, some)
@@ -96,13 +96,13 @@ data LanguageDef s u m =
 -- | The type of the record that holds lexical parsers that work on
 -- @s@ streams with state @u@ over a monad @m@.
 
-data TokenParser s u m =
-  TokenParser {
+data Lexer s u m =
+  Lexer {
 
   -- | The lexeme parser parses a legal identifier. Returns the identifier
   -- string. This parser will fail on identifiers that are reserved
   -- words. Legal identifier (start) characters and reserved words are
-  -- defined in the 'LanguageDef' that is passed to 'makeTokenParser'.
+  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
 
     identifier :: ParsecT s u m String
 
@@ -114,7 +114,7 @@ data TokenParser s u m =
   -- | The lexeme parser parses a legal operator. Returns the name of the
   -- operator. This parser will fail on any operators that are reserved
   -- operators. Legal operator (start) characters and reserved operators are
-  -- defined in the 'LanguageDef' that is passed to 'makeTokenParser'.
+  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
 
   , operator :: ParsecT s u m String
 
@@ -200,7 +200,7 @@ data TokenParser s u m =
 
   , symbol :: String -> ParsecT s u m String
 
-  -- | @lexeme p@ first applies parser @p@ and than the 'whiteSpace'
+  -- | @lexeme p@ first applies parser @p@ and then the 'whiteSpace'
   -- parser, returning the value of @p@. Every lexical token (lexeme) is
   -- defined using @lexeme@, this way every parse starts at a point without
   -- white space. Parsers that use @lexeme@ are called /lexeme/ parsers in
@@ -216,7 +216,7 @@ data TokenParser s u m =
   -- occurrences of a 'space', a line comment or a block (multi line)
   -- comment. Block comments may be nested. How comments are started and
   -- ended is defined in the 'LanguageDef' that is passed to
-  -- 'makeTokenParser'.
+  -- 'makeLexer'.
 
   , whiteSpace :: ParsecT s u m ()
 
@@ -280,15 +280,13 @@ data TokenParser s u m =
 
   , commaSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a] }
 
--- Given a LanguageDef, create a token parser
-
--- | The expression @makeTokenParser language@ creates a 'TokenParser'
--- record that contains lexical parsers that are defined using the
--- definitions in the @language@ record.
+-- | The expression @makeLexer language@ creates a 'Lexer' record that
+-- contains lexical parsers that are defined using the definitions in the
+-- @language@ record.
 --
 -- The use of this function is quite stylized — one imports the appropriate
 -- language definition and selects the lexical parsers that are needed from
--- the resulting 'TokenParser'.
+-- the resulting 'Lexer'.
 --
 -- > module Main (main) where
 -- >
@@ -304,7 +302,7 @@ data TokenParser s u m =
 -- >     <|> ...
 -- >
 -- > -- The lexer
--- > lexer      = Token.makeTokenParser haskellDef
+-- > lexer      = Token.makeLexer haskellDef
 -- >
 -- > parens     = Token.parens     lexer
 -- > braces     = Token.braces     lexer
@@ -312,9 +310,9 @@ data TokenParser s u m =
 -- > reserved   = Token.reserved   lexer
 -- > ...
 
-makeTokenParser :: Stream s m Char => LanguageDef s u m -> TokenParser s u m
-makeTokenParser languageDef =
-  TokenParser
+makeLexer :: Stream s m Char => LanguageDef s u m -> Lexer s u m
+makeLexer languageDef =
+  Lexer
   { identifier    = identifier
   , reserved      = reserved
   , operator      = operator

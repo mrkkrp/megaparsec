@@ -16,7 +16,7 @@ module Text.Megaparsec.Expr
   ( Assoc (..)
   , Operator (..)
   , OperatorTable
-  , buildExpressionParser )
+  , makeExprParser )
 where
 
 import Control.Applicative ((<|>))
@@ -42,25 +42,25 @@ data Operator s u m a
   | Prefix  (ParsecT s u m (a -> a))
   | Postfix (ParsecT s u m (a -> a))
 
--- | An @OperatorTable s u m a@ is a list of @Operator s u m a@
--- lists. The list is ordered in descending precedence. All operators in one
--- list have the same precedence (but may have a different associativity).
+-- | An @OperatorTable s u m a@ is a list of @Operator s u m a@ lists. The
+-- list is ordered in descending precedence. All operators in one list have
+-- the same precedence (but may have a different associativity).
 
 type OperatorTable s u m a = [[Operator s u m a]]
 
--- | @buildExpressionParser table term@ builds an expression parser for
--- terms @term@ with operators from @table@, taking the associativity and
+-- | @makeExprParser table term@ builds an expression parser for terms
+-- @term@ with operators from @table@, taking the associativity and
 -- precedence specified in @table@ into account. Prefix and postfix
 -- operators of the same precedence can only occur once (i.e. @--2@ is not
 -- allowed if @-@ is prefix negate). Prefix and postfix operators of the
 -- same precedence associate to the left (i.e. if @++@ is postfix increment,
 -- than @-2++@ equals @-1@, not @-3@).
 --
--- The @buildExpressionParser@ takes care of all the complexity involved in
+-- The @makeExprParser@ takes care of all the complexity involved in
 -- building expression parser. Here is an example of an expression parser
 -- that handles prefix signs, postfix increment and basic arithmetic.
 --
--- > expr = buildExpressionParser table term <?> "expression"
+-- > expr = makeExprParser table term <?> "expression"
 -- >
 -- > term = parens expr <|> natural <?> "simple expression"
 -- >
@@ -76,9 +76,9 @@ type OperatorTable s u m a = [[Operator s u m a]]
 -- > prefix  name fun       = Prefix  (reservedOp name >> return fun)
 -- > postfix name fun       = Postfix (reservedOp name >> return fun)
 
-buildExpressionParser :: Stream s m t => OperatorTable s u m a ->
+makeExprParser :: Stream s m t => OperatorTable s u m a ->
                          ParsecT s u m a -> ParsecT s u m a
-buildExpressionParser ops simpleExpr = foldl' makeParser simpleExpr ops
+makeExprParser ops simpleExpr = foldl' makeParser simpleExpr ops
 
 makeParser :: (Foldable t, Stream s m t1) =>
               ParsecT s u m b -> t (Operator s u m b) -> ParsecT s u m b
