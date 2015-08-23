@@ -107,7 +107,7 @@ prop_setErrorMessage msg err =
         unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
 
 prop_mergeErrorPos :: ParseError -> ParseError -> Bool
-prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == min pos1 pos2
+prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == max pos1 pos2
   where pos1 = errorPos e1
         pos2 = errorPos e2
 

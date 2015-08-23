@@ -138,14 +138,17 @@ setErrorPos :: SourcePos -> ParseError -> ParseError
 setErrorPos pos (ParseError _ ms) = ParseError pos ms
 
 -- | Merge two error data structures into one joining their collections of
--- messages and preferring shortest match.
+-- messages and preferring longest match. In other words earlier error
+-- message is discarded. This may seem counter-intuitive, but @mergeError@
+-- is only used to merge error messages of alternative branches of parsing
+-- and in this case longest match should be preferred.
 
 mergeError :: ParseError -> ParseError -> ParseError
 mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
   case pos1 `compare` pos2 of
-    LT -> e1
+    LT -> e2
     EQ -> foldr addErrorMessage e1 ms2
-    GT -> e2
+    GT -> e1
 
 -- | @showMessages ms@ transforms list of error messages @ms@ into
 -- their textual representation.
