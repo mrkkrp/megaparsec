@@ -576,10 +576,10 @@ token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
-        Just x -> let newpos = nextpos pos c cs
-                      newstate = State cs newpos u
-                  in seq newpos $ seq newstate $ cok x newstate mempty
-        Nothing -> eerr $ unexpectedErr (showToken c) pos
+          Just x -> let newpos = nextpos pos c cs
+                        newstate = State cs newpos u
+                    in seq newpos $ seq newstate $ cok x newstate mempty
+          Nothing -> eerr $ unexpectedErr (showToken c) pos
 
 -- | The parser @tokens posFromTok@ parses list of tokens and returns
 -- it. The resulting parser will use 'showToken' to pretty-print the
