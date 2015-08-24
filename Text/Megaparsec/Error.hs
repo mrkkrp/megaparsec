@@ -30,6 +30,7 @@ where
 
 import Data.Bool (bool)
 import Data.List (intercalate)
+import Data.Maybe (fromMaybe)
 
 import Text.Megaparsec.Pos
 
@@ -155,21 +156,26 @@ mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
 
 showMessages :: [Message] -> String
 showMessages [] = "unknown parse error"
-showMessages ms =
-  intercalate "\n" $ filter (not . null) [unexpected', expected', messages']
+showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
   where (unexpected,    ms') = span ((== 0) . fromEnum) ms
         (expected, messages) = span ((== 1) . fromEnum) ms'
+        f prefix m = (prefix ++) <$> m
+        ns = ["\nunexpected ","\nexpecting ","\n"]
+        rs = renderMsgs <$> [unexpected, expected, messages]
 
-        unexpected' = showMany "unexpected " unexpected
-        expected'   = showMany "expecting "  expected
-        messages'   = showMany ""            messages
+-- | Render collection of messages. If the collection is empty, return
+-- 'Nothing', else return textual representation of the messages inside
+-- 'Just'.
 
-        showMany pre msgs =
-          case messageString <$> msgs of
-            [] -> ""
-            xs | null pre  -> commasOr xs
-               | otherwise -> pre ++ commasOr xs
+renderMsgs :: [Message] -> Maybe String
+renderMsgs [] = Nothing
+renderMsgs ms = Just . orList $ messageString <$> ms
 
-        commasOr []  = ""
-        commasOr [x] = x
-        commasOr xs  = intercalate ", " (init xs) ++ " or " ++ last xs
+-- | Print a pretty list where items are separated with commas and the word
+-- “or” according to rules of English punctuation.
+
+orList :: [String] -> String
+orList []    = ""
+orList [x]   = x
+orList [x,y] = x ++ " or " ++ y
+orList xs    = intercalate ", " (init xs) ++ ", or " ++ last xs
