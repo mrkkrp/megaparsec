@@ -29,10 +29,68 @@
 
 module Perm (tests) where
 
-import Test.Framework
+import Control.Applicative
+import Data.Bool (bool)
+import Data.List (nub, elemIndices)
 
+import Test.Framework
+import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck
+
+import Text.Megaparsec.Char
 import Text.Megaparsec.Perm
+
+import Util
 
 tests :: Test
 tests = testGroup "Permutation phrases parsers"
-        []
+        [ testProperty "permutation parser pure" prop_pure
+        , testProperty "permutation test 0" prop_perm_0 ]
+
+data CharRows = CharRows
+  { getChars :: (Char, Char, Char)
+  , getInput :: String }
+  deriving (Eq, Show)
+
+instance Arbitrary CharRows where
+  arbitrary = do
+    chars@(a,b,c) <- arbitrary `suchThat` different
+    an            <- arbitrary
+    bn            <- arbitrary
+    cn            <- arbitrary
+    input <- concat <$> shuffle
+             [ replicate an a
+             , replicate bn b
+             , replicate cn c]
+    return $ CharRows chars input
+      where different (a,b,c) = let l = [a,b,c] in l == nub l
+
+prop_pure :: Integer -> Property
+prop_pure n = makePermParser p /=\ n
+  where p = id <$?> (succ n, pure n)
+
+prop_perm_0 :: String -> Char -> CharRows -> Property
+prop_perm_0 a' c' v = checkParser (makePermParser p) r s
+  where (a,b,c) = getChars v
+        p = (,,) <$?> (a', some (char a))
+                 <||> char b
+                 <|?> (c', char c)
+        r | length bis > 1 && (length cis <= 1 || head bis < head cis) =
+              posErr (bis !! 1) s $ [uneCh b, exEof] ++
+              [exCh a | a `notElem` preb] ++
+              [exCh c | c `notElem` preb]
+          | length cis > 1 =
+            posErr (cis !! 1) s $ [uneCh c] ++
+            [exCh a | a `notElem` prec] ++
+            [bool (exCh b) exEof (b `elem` prec)]
+          | b `notElem` s = posErr (length s) s $ [uneEof, exCh b] ++
+                            [exCh a | a `notElem` s || last s == a] ++
+                            [exCh c | c `notElem` s]
+          | otherwise = Right ( bool a' (filter (== a) s) (a `elem` s)
+                              , b
+                              , bool c' c (c `elem` s) )
+        bis  = elemIndices b s
+        preb = take (bis !! 1) s
+        cis  = elemIndices c s
+        prec = take (cis !! 1) s
+        s    = getInput v
