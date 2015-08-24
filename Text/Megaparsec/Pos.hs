@@ -115,7 +115,6 @@ updatePosChar :: SourcePos -> Char -> SourcePos
 updatePosChar (SourcePos n l c) ch =
   case ch of
     '\n' -> SourcePos n (l + 1) 1
-    '\r' -> SourcePos n l 1
     '\t' -> SourcePos n l (c + 8 - ((c - 1) `rem` 8))
     _    -> SourcePos n l (c + 1)
 
