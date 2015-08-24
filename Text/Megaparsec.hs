@@ -72,10 +72,6 @@ module Text.Megaparsec
   , token
   , tokens
   , between
-  , chainl
-  , chainl1
-  , chainr
-  , chainr1
   , choice
   , count
   , count'
@@ -86,10 +82,15 @@ module Text.Megaparsec
   , option
   , sepBy
   , sepBy1
-  , sepEndBy
-  , sepEndBy1
   , skipMany
   , skipSome
+    -- Deprecated combinators
+  , chainl
+  , chainl1
+  , chainr
+  , chainr1
+  , sepEndBy
+  , sepEndBy1
     -- * Character parsing
   , newline
   , crlf

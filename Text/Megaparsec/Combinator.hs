@@ -13,10 +13,6 @@
 
 module Text.Megaparsec.Combinator
   ( between
-  , chainl
-  , chainl1
-  , chainr
-  , chainr1
   , choice
   , count
   , count'
@@ -27,10 +23,15 @@ module Text.Megaparsec.Combinator
   , option
   , sepBy
   , sepBy1
-  , sepEndBy
-  , sepEndBy1
   , skipMany
-  , skipSome )
+  , skipSome
+    -- Deprecated combinators
+  , chainl
+  , chainl1
+  , chainr
+  , chainr1
+  , sepEndBy
+  , sepEndBy1 )
 where
 
 import Control.Applicative ((<|>), many, some, optional)
@@ -47,64 +48,18 @@ between :: Stream s m t => ParsecT s u m open ->
            ParsecT s u m close -> ParsecT s u m a -> ParsecT s u m a
 between open close p = open *> p <* close
 
--- | @chainl p op x@ parses /zero/ or more occurrences of @p@,
--- separated by @op@. Returns a value obtained by a /left/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. If there are zero occurrences of @p@, the value @x@ is returned.
-
-chainl :: Stream s m t => ParsecT s u m a ->
-          ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
-chainl p op x = chainl1 p op <|> return x
-
--- | @chainl1 p op@ parses /one/ or more occurrences of @p@,
--- separated by @op@ Returns a value obtained by a /left/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. This parser can for example be used to eliminate left recursion
--- which typically occurs in expression grammars.
---
--- > expr   = term   `chainl1` addop
--- > term   = factor `chainl1` mulop
--- > factor = parens expr <|> integer
--- >
--- > mulop  = (symbol "*" >> return (*))
--- >      <|> (symbol "/" >> return (div))
--- >
--- > addop  = (symbol "+" >> return (+))
--- >      <|> (symbol "-" >> return (-))
-
-chainl1 :: Stream s m t =>
-           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainl1 p op = p >>= rest
-  where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
-
--- | @chainr p op x@ parses /zero/ or more occurrences of @p@,
--- separated by @op@ Returns a value obtained by a /right/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. If there are no occurrences of @p@, the value @x@ is returned.
-
-chainr :: Stream s m t => ParsecT s u m a ->
-          ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
-chainr p op x = chainr1 p op <|> return x
-
--- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
--- separated by @op@ Returns a value obtained by a /right/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@.
-
-chainr1 :: Stream s m t =>
-           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainr1 p op = p >>= rest
-  where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
-
 -- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
 -- until one of them succeeds. Returns the value of the succeeding parser.
 
 choice :: Stream s m t => [ParsecT s u m a] -> ParsecT s u m a
 choice = foldr (<|>) mzero
 
--- | @ count m n p@ parses from @m@ to @n@ occurrences of @p@. If @m@ is
+-- | @ count m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
 -- not positive or @m > n@, the parser equals to @return []@. Returns a list
 -- of parsed values.
+--
+-- Please note that @m@ /may/ be negative, in this case effect is the same
+-- as if it were equal to zero.
 
 count :: Stream s m t => Int -> Int -> ParsecT s u m a -> ParsecT s u m [a]
 count m n p
@@ -130,7 +85,7 @@ count' n = count n n
 -- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.
 --
--- > cStatements = cStatement `endBy` semi
+-- > cStatements = cStatement `endBy` semicolon
 
 endBy :: Stream s m t =>
          ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
@@ -167,7 +122,7 @@ someTill p end = (:) <$> p <*> manyTill p end
 -- consuming input, it returns the value @x@, otherwise the value returned
 -- by @p@.
 --
--- > priority = option 0 (digitToInt <$> digit)
+-- > priority = option 0 (digitToInt <$> digitChar)
 
 option :: Stream s m t => a -> ParsecT s u m a -> ParsecT s u m a
 option x p = p <|> return x
@@ -175,7 +130,7 @@ option x p = p <|> return x
 -- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.
 --
--- > commaSep p = p `sepBy` (symbol ",")
+-- > commaSep p = p `sepBy` comma
 
 sepBy :: Stream s m t =>
          ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
@@ -188,28 +143,10 @@ sepBy1 :: Stream s m t =>
           ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 
--- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
--- separated and optionally ended by @sep@, i.e. C-style statements. Returns
--- a list of values returned by @p@.
---
--- > statements = statement `sepEndBy` semicolon
-
-sepEndBy :: Stream s m t =>
-            ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
-sepEndBy p sep = sepEndBy1 p sep <|> return []
-
--- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
--- separated and optionally ended by @sep@. Returns a list of values
--- returned by @p@.
-
-sepEndBy1 :: Stream s m t =>
-             ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
-sepEndBy1 p sep = p >>= \x -> ((x:) <$> (sep *> sepEndBy p sep)) <|> return [x]
-
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.
 --
--- > spaces = skipMany space
+-- > space = skipMany spaceChar
 
 skipMany :: ParsecT s u m a -> ParsecT s u m ()
 skipMany p = void $ many p
@@ -219,3 +156,78 @@ skipMany p = void $ many p
 
 skipSome :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
 skipSome p = void $ some p
+
+-- Deprecated combinators
+
+-- | @chainl p op x@ parses /zero/ or more occurrences of @p@,
+-- separated by @op@. Returns a value obtained by a /left/ associative
+-- application of all functions returned by @op@ to the values returned by
+-- @p@. If there are zero occurrences of @p@, the value @x@ is returned.
+
+{-# DEPRECATED chainl "Use \"Text.Megaparsec.Expr\" instead." #-}
+
+chainl :: Stream s m t =>
+          ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
+chainl p op x = chainl1 p op <|> return x
+
+-- | @chainl1 p op@ parses /one/ or more occurrences of @p@,
+-- separated by @op@ Returns a value obtained by a /left/ associative
+-- application of all functions returned by @op@ to the values returned by
+-- @p@. This parser can for example be used to eliminate left recursion
+-- which typically occurs in expression grammars.
+--
+-- Consider using "Text.Megaparsec.Expr" instead.
+
+{-# DEPRECATED chainl1 "Use \"Text.Megaparsec.Expr\" instead." #-}
+
+chainl1 :: Stream s m t =>
+           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
+chainl1 p op = p >>= rest
+  where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
+
+-- | @chainr p op x@ parses /zero/ or more occurrences of @p@,
+-- separated by @op@ Returns a value obtained by a /right/ associative
+-- application of all functions returned by @op@ to the values returned by
+-- @p@. If there are no occurrences of @p@, the value @x@ is returned.
+--
+-- Consider using "Text.Megaparsec.Expr" instead.
+
+{-# DEPRECATED chainr "Use \"Text.Megaparsec.Expr\" instead." #-}
+
+chainr :: Stream s m t =>
+          ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
+chainr p op x = chainr1 p op <|> return x
+
+-- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
+-- separated by @op@ Returns a value obtained by a /right/ associative
+-- application of all functions returned by @op@ to the values returned by
+-- @p@.
+--
+-- Consider using "Text.Megaparsec.Expr" instead.
+
+{-# DEPRECATED chainr1 "Use \"Text.Megaparsec.Expr\" instead." #-}
+
+chainr1 :: Stream s m t =>
+           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
+chainr1 p op = p >>= rest
+  where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
+
+-- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
+-- separated and optionally ended by @sep@. Returns a list of values
+-- returned by @p@.
+
+{-# DEPRECATED sepEndBy "Use @sepBy p sep <* optional sep@ instead." #-}
+
+sepEndBy :: Stream s m t =>
+            ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+sepEndBy p sep = sepBy p sep <* optional sep
+
+-- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
+-- separated and optionally ended by @sep@. Returns a list of values
+-- returned by @p@.
+
+{-# DEPRECATED sepEndBy1 "Use @sepBy1 p sep <* optional sep@ instead." #-}
+
+sepEndBy1 :: Stream s m t =>
+             ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+sepEndBy1 p sep = sepBy1 p sep <* optional sep

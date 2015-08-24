@@ -111,6 +111,15 @@
 
 * Added combinator `someTill`.
 
+* These combinators are considered deprecated and will be removed in future:
+
+    * `chainl`
+    * `chainl1`
+    * `chainr`
+    * `chainr1`
+    * `sepEndBy`
+    * `sepEndBy1`
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
