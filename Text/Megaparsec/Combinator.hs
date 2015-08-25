@@ -54,33 +54,33 @@ between open close p = open *> p <* close
 choice :: Stream s m t => [ParsecT s u m a] -> ParsecT s u m a
 choice = foldr (<|>) mzero
 
--- | @ count m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
+-- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
+-- equal to zero, the parser equals to @return []@. Returns a list of @n@
+-- values.
+--
+-- This parser is defined in terms of 'count'', like this:
+--
+-- > count n = count' n n
+
+count :: Stream s m t => Int -> ParsecT s u m a -> ParsecT s u m [a]
+count n = count' n n
+
+-- | @count\' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
 -- not positive or @m > n@, the parser equals to @return []@. Returns a list
 -- of parsed values.
 --
 -- Please note that @m@ /may/ be negative, in this case effect is the same
 -- as if it were equal to zero.
 
-count :: Stream s m t => Int -> Int -> ParsecT s u m a -> ParsecT s u m [a]
-count m n p
+count' :: Stream s m t => Int -> Int -> ParsecT s u m a -> ParsecT s u m [a]
+count' m n p
   | n <= 0 || m > n = return []
-  | m > 0           = (:) <$> p <*> count (pred m) (pred n) p
+  | m > 0           = (:) <$> p <*> count' (pred m) (pred n) p
   | otherwise       = do
       result <- optional p
       case result of
         Nothing -> return []
-        Just x  -> (x:) <$> count 0 (pred n) p
-
--- | @count\' n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
--- equal to zero, the parser equals to @return []@. Returns a list of @n@
--- values.
---
--- This parser is defined in terms of 'count', like this:
---
--- > count' n = count n n
-
-count' :: Stream s m t => Int -> ParsecT s u m a -> ParsecT s u m [a]
-count' n = count n n
+        Just x  -> (x:) <$> count' 0 (pred n) p
 
 -- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.

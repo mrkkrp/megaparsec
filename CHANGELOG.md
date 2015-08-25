@@ -73,9 +73,9 @@
   since it used `Data.Char.isAlpha` predicate internally and thus parsed
   many more characters.
 
-* Added more powerful `count` parser. This parser can be told to parse from
-  `m` to `n` occurrences of some thing. Old parser `count` is now named
-  `count'` and defined in terms of that more powerful one.
+* Added more powerful `count'` parser. This parser can be told to parse from
+  `m` to `n` occurrences of some thing. `count` is defined in terms of
+  `count'`.
 
 * Hint system introduced that greatly improved quality of error messages
   and made code of `Text.Megaparsec.Prim` a lot clearer.

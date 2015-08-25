@@ -79,10 +79,17 @@ prop_choice cs' s' = checkParser p r s
           | otherwise    = posErr 0 s $ uneCh s' : (exCh <$> cs)
         s = [s']
 
-prop_count :: Int -> Int -> NonNegative Int -> Property
-prop_count m n x' = checkParser p r s
+prop_count :: Int -> NonNegative Int -> Property
+prop_count n x' = checkParser p r s
   where x = getNonNegative x'
-        p = count m n (char 'x')
+        p = count n (char 'x')
+        r = simpleParse (count' n n (char 'x')) s
+        s = replicate x 'x'
+
+prop_count' :: Int -> Int -> NonNegative Int -> Property
+prop_count' m n x' = checkParser p r s
+  where x = getNonNegative x'
+        p = count' m n (char 'x')
         r | n <= 0 || m > n  =
               if x == 0
               then Right ""
@@ -90,13 +97,6 @@ prop_count m n x' = checkParser p r s
           | m <= x && x <= n = Right s
           | x < m            = posErr x s [uneEof, exCh 'x']
           | otherwise        = posErr n s [uneCh 'x', exEof]
-        s = replicate x 'x'
-
-prop_count' :: Int -> NonNegative Int -> Property
-prop_count' n x' = checkParser p r s
-  where x = getNonNegative x'
-        p = count' n (char 'x')
-        r = simpleParse (count n n (char 'x')) s
         s = replicate x 'x'
 
 prop_endBy :: NonNegative Int -> Char -> Property
