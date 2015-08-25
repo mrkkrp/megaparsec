@@ -30,7 +30,8 @@
 module Combinator (tests) where
 
 import Control.Applicative
-import Data.Maybe (fromMaybe)
+import Data.List (intersperse)
+import Data.Maybe (fromMaybe, maybeToList, isNothing, fromJust)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -44,10 +45,6 @@ import Util
 tests :: Test
 tests = testGroup "Generic parser combinators"
         [ testProperty "combinator between"   prop_between
-        , testProperty "combinator chainl"    prop_chainl
-        , testProperty "combinator chainl1"   prop_chainl1
-        , testProperty "combinator chainr"    prop_chainr
-        , testProperty "combinator chainr1"   prop_chainr1
         , testProperty "combinator choice"    prop_choice
         , testProperty "combinator count"     prop_count
         , testProperty "combinator count'"    prop_count'
@@ -58,8 +55,6 @@ tests = testGroup "Generic parser combinators"
         , testProperty "combinator option"    prop_option
         , testProperty "combinator sepBy"     prop_sepBy
         , testProperty "combinator sepBy1"    prop_sepBy1
-        , testProperty "combinator sepEndBy"  prop_sepEndBy
-        , testProperty "combinator sepEndBy1" prop_sepEndBy1
         , testProperty "combinator skipMany"  prop_skipMany
         , testProperty "combinator skipSome"  prop_skipSome ]
 
@@ -76,18 +71,6 @@ prop_between pre c n' post = checkParser p r s
         z = replicate n c
         s = pre ++ z ++ post
 
-prop_chainl :: Property
-prop_chainl = property True
-
-prop_chainl1 :: Property
-prop_chainl1 = property True
-
-prop_chainr :: Property
-prop_chainr = property True
-
-prop_chainr1 :: Property
-prop_chainr1 = property True
-
 prop_choice :: NonEmptyList Char -> Char -> Property
 prop_choice cs' s' = checkParser p r s
   where cs = getNonEmpty cs'
@@ -96,17 +79,52 @@ prop_choice cs' s' = checkParser p r s
           | otherwise    = posErr 0 s $ uneCh s' : (exCh <$> cs)
         s = [s']
 
-prop_count :: Property
-prop_count = property True
+prop_count :: Int -> Int -> NonNegative Int -> Property
+prop_count m n x' = checkParser p r s
+  where x = getNonNegative x'
+        p = count m n (char 'x')
+        r | n <= 0 || m > n  =
+              if x == 0
+              then Right ""
+              else posErr 0 s [uneCh 'x', exEof]
+          | m <= x && x <= n = Right s
+          | x < m            = posErr x s [uneEof, exCh 'x']
+          | otherwise        = posErr n s [uneCh 'x', exEof]
+        s = replicate x 'x'
 
-prop_count' :: Property
-prop_count' = property True
+prop_count' :: Int -> NonNegative Int -> Property
+prop_count' n x' = checkParser p r s
+  where x = getNonNegative x'
+        p = count' n (char 'x')
+        r = simpleParse (count n n (char 'x')) s
+        s = replicate x 'x'
 
-prop_endBy :: Property
-prop_endBy = property True
+prop_endBy :: NonNegative Int -> Char -> Property
+prop_endBy n' c = checkParser p r s
+  where n = getNonNegative n'
+        p = endBy (char 'a') (char '-')
+        r | c == 'a' && n == 0 = posErr 1 s [uneEof, exCh '-']
+          | c == 'a'           = posErr (g n) s [uneCh 'a', exCh '-']
+          | c == '-' && n == 0 = posErr 0 s [uneCh '-', exCh 'a', exEof]
+          | c /= '-'           = posErr (g n) s $ uneCh c :
+                                 (if n > 0 then exCh '-' else exEof) :
+                                 [exCh 'a' | n == 0]
+          | otherwise = Right (replicate n 'a')
+        s = intersperse '-' (replicate n 'a') ++ [c]
 
-prop_endBy1 :: Property
-prop_endBy1 = property True
+prop_endBy1 :: NonNegative Int -> Char -> Property
+prop_endBy1 n' c = checkParser p r s
+  where n = getNonNegative n'
+        p = endBy1 (char 'a') (char '-')
+        r | c == 'a' && n == 0 = posErr 1 s [uneEof, exCh '-']
+          | c == 'a'           = posErr (g n) s [uneCh 'a', exCh '-']
+          | c == '-' && n == 0 = posErr 0 s [uneCh '-', exCh 'a']
+          | c /= '-'           = posErr (g n) s $ uneCh c :
+                                 [exCh '-' | n > 0] ++
+                                 -- [exEof    | n > 1] ++
+                                 [exCh 'a' | n == 0]
+          | otherwise = Right (replicate n 'a')
+        s = intersperse '-' (replicate n 'a') ++ [c]
 
 prop_manyTill :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
                  Property
@@ -136,17 +154,30 @@ prop_option d a s = checkParser p r s
   where p = option d (string a)
         r = simpleParse (fromMaybe d <$> optional (string a)) s
 
-prop_sepBy :: Property
-prop_sepBy = property True
+prop_sepBy :: NonNegative Int -> Maybe Char -> Property
+prop_sepBy n' c' = checkParser p r s
+  where n = getNonNegative n'
+        c = fromJust c'
+        p = sepBy (char 'a') (char '-')
+        r | isNothing c' = Right (replicate n 'a')
+          | c == 'a' && n == 0 = Right "a"
+          | n == 0    = posErr 0 s [uneCh c, exCh 'a', exEof]
+          | c == '-'  = posErr (length s) s [uneEof, exCh 'a']
+          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+        s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
-prop_sepBy1 :: Property
-prop_sepBy1 = property True
-
-prop_sepEndBy :: Property
-prop_sepEndBy = property True
-
-prop_sepEndBy1 :: Property
-prop_sepEndBy1 = property True
+prop_sepBy1 :: NonNegative Int -> Maybe Char -> Property
+prop_sepBy1 n' c' = checkParser p r s
+  where n = getNonNegative n'
+        c = fromJust c'
+        p = sepBy1 (char 'a') (char '-')
+        r | isNothing c' && n >= 1 = Right (replicate n 'a')
+          | isNothing c' = posErr 0 s [uneEof, exCh 'a']
+          | c == 'a' && n == 0 = Right "a"
+          | n == 0    = posErr 0 s [uneCh c, exCh 'a']
+          | c == '-'  = posErr (length s) s [uneEof, exCh 'a']
+          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+        s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
 prop_skipMany :: Char -> NonNegative Int -> String -> Property
 prop_skipMany c n' a = checkParser p r s
@@ -161,3 +192,6 @@ prop_skipSome c n' a = checkParser p r s
         n = getNonNegative n'
         r = simpleParse (some (char c) >> string a) s
         s = replicate n c ++ a
+
+g :: Int -> Int
+g x = x + if x > 0 then x - 1 else 0
