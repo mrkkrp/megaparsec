@@ -163,8 +163,9 @@ newtype Hints = Hints [[String]] deriving Monoid
 -- | Convert 'ParseError' record into 'Hints'.
 
 toHints :: ParseError -> Hints
-toHints err = Hints [messageString <$> msgs]
-  where msgs = filter ((== 1) . fromEnum) $ errorMessages err
+toHints err = Hints hints
+  where hints = if null msgs then [] else [messageString <$> msgs]
+        msgs  = filter ((== 1) . fromEnum) $ errorMessages err
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
 
