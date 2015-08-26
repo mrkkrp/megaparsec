@@ -36,6 +36,7 @@ where
 
 import Control.Applicative ((<|>), many, some, optional)
 import Control.Monad
+import Data.Foldable (asum)
 
 import Text.Megaparsec.Prim
 
@@ -51,8 +52,8 @@ between open close p = open *> p <* close
 -- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
 -- until one of them succeeds. Returns the value of the succeeding parser.
 
-choice :: Stream s m t => [ParsecT s u m a] -> ParsecT s u m a
-choice = foldr (<|>) mzero
+choice :: (Foldable f, Stream s m t) => f (ParsecT s u m a) -> ParsecT s u m a
+choice = asum
 
 -- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
 -- equal to zero, the parser equals to @return []@. Returns a list of @n@
