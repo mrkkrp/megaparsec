@@ -33,9 +33,7 @@ Megaparsec is different from Parsec in the following ways:
   well-structured and doesn't contain things useless to end user.
 
 * Megaparsec's code is clearer and doesn't contain “magic” found in original
-  Parsec (just look at how Parsec generate error-messages, you can find more
-  in [issue #14](https://github.com/mrkkrp/megaparsec/issues/14) of
-  Megaparsec, this is just one example).
+  Parsec.
 
 * Megaparsec looks into the future, it does not contain code that serves for
   compatibility purposes, it also requires more recent version of `base`.
@@ -47,6 +45,12 @@ Issues (bugs, feature requests or otherwise feedback) may be reported in
 
 Pull-requests are also welcome (and yes, they will get attention and will be
 merged quickly if they are good, we are progressive folks).
+
+## Spread the Word
+
+Many people still don't know about Megaparsec, you can help the project by
+writing about it in a blog, creating a tutorial or something like that. This
+is highly appreciated.
 
 ## License
 

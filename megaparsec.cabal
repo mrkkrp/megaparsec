@@ -71,9 +71,7 @@ description:
       well-structured and doesn't contain things useless to end user.
     .
     * Megaparsec's code is clearer and doesn't contain “magic” found in original
-      Parsec (just look at how Parsec generate error-messages, you can find more
-      in [issue #14](https://github.com/mrkkrp/megaparsec/issues/14) of
-      Megaparsec, this is just one example).
+      Parsec.
     .
     * Megaparsec looks into the future, it does not contain code that serves for
       compatibility purposes, it also requires more recent version of `base`.
