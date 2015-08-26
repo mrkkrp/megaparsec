@@ -35,6 +35,7 @@ import Control.Applicative
 import Control.Monad (guard)
 import Data.Bool (bool)
 import Data.Char (isLetter)
+import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList)
 
@@ -59,9 +60,10 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT alternative empty and (<|>)" prop_alternative_0
         , testProperty "ParsecT alternative (<|>)" prop_alternative_1
         , testProperty "ParsecT alternative (<|>) pos" prop_alternative_2
-        , testProperty "ParsecT alternative many" prop_alternative_3
-        , testProperty "ParsecT alternative some" prop_alternative_4
-        , testProperty "ParsecT alternative optional" prop_alternative_5
+        , testProperty "ParsecT alternative (<|>) hints" prop_alternative_3
+        , testProperty "ParsecT alternative many" prop_alternative_4
+        , testProperty "ParsecT alternative some" prop_alternative_5
+        , testProperty "ParsecT alternative optional" prop_alternative_6
         , testProperty "ParsecT monad return" prop_monad_0
         , testProperty "ParsecT monad (>>)" prop_monad_1
         , testProperty "ParsecT monad (>>=)" prop_monad_2
@@ -128,9 +130,17 @@ prop_alternative_2 a b c l = checkParser p r s
           | otherwise = posErr 1 s [uneCh c, exCh a]
         s = if l then [a] else [b,c]
 
-prop_alternative_3 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+prop_alternative_3 :: Property
+prop_alternative_3 = checkParser p r s
+  where p  = asum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
+        p' = bsum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
+        bsum = foldl (<|>) empty
+        r = simpleParse p' s
+        s = ">>"
+
+prop_alternative_4 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
                       Property
-prop_alternative_3 a' b' c' = checkParser p r s
+prop_alternative_4 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> many (char 'b')
         r | null s = Right s
@@ -139,9 +149,9 @@ prop_alternative_3 a' b' c' = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_alternative_4 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+prop_alternative_5 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
                       Property
-prop_alternative_4 a' b' c' = checkParser p r s
+prop_alternative_5 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> some (char 'a') <*> some (char 'b')
         r | null s = posErr 0 s [uneEof, exCh 'a']
@@ -152,8 +162,8 @@ prop_alternative_4 a' b' c' = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_alternative_5 :: Bool -> Bool -> Bool -> Property
-prop_alternative_5 a b c = checkParser p r s
+prop_alternative_6 :: Bool -> Bool -> Bool -> Property
+prop_alternative_6 a b c = checkParser p r s
   where p = f <$> optional (char 'a') <*> optional (char 'b')
         f x y = maybe "" (:[]) x ++ maybe "" (:[]) y
         r | c = posErr ab s $ [uneCh 'c', exEof] ++
