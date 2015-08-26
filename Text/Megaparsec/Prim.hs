@@ -358,7 +358,7 @@ parserPlus :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
 parserPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err =
         let ncerr   err' = cerr (mergeError err' err)
-            neok x s' hs = eok x s' (hs <> toHints err)
+            neok x s' hs = eok x s' (toHints err <> hs)
             neerr   err' = eerr (mergeError err' err)
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
