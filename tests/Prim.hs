@@ -37,7 +37,7 @@ import Data.Bool (bool)
 import Data.Char (isLetter)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromMaybe)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -70,7 +70,8 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT monad fail" prop_monad_3
         , testProperty "combinator unexpected" prop_unexpected
         , testProperty "combinator label" prop_label
-        , testProperty "combinator hidden" prop_hidden
+        , testProperty "combinator hidden hints" prop_hidden_0
+        , testProperty "combinator hidden error" prop_hidden_1
         , testProperty "combinator try" prop_try
         , testProperty "combinator lookAhead" prop_lookAhead_0
         , testProperty "combinator lookAhead hints" prop_lookAhead_1
@@ -220,9 +221,9 @@ prop_label a' b' c' l = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_hidden :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-               Property
-prop_hidden a' b' c' = checkParser p r s
+prop_hidden_0 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
+                 Property
+prop_hidden_0 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> hidden (many (char 'b'))
         r | null s = Right s
@@ -230,6 +231,15 @@ prop_hidden a' b' c' = checkParser p r s
                      ++ [exCh 'a' | b == 0]
           | otherwise = Right s
         s = abcRow a b c
+
+prop_hidden_1 :: String -> NonEmptyList Char -> String -> Property
+prop_hidden_1 a c' s = checkParser p r s
+  where c = getNonEmpty c'
+        p = fromMaybe a <$> optional (hidden $ string c)
+        r | null s = Right a
+          | c == s = Right s
+          | head c /= head s = posErr 0 s [uneCh (head s), exEof]
+          | otherwise = simpleParse (string c) s
 
 prop_try :: String -> String -> String -> Property
 prop_try pre s1' s2' = checkParser p r s
