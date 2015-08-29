@@ -140,7 +140,8 @@ test-suite tests
                    , test-framework         >= 0.6 && < 1
                    , test-framework-quickcheck2 >= 0.3 && < 0.4
   default-extensions:
-                     FlexibleInstances
+                     FlexibleContexts
+                   , FlexibleInstances
   default-language:  Haskell2010
 
 benchmark benchmarks
