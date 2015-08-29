@@ -125,12 +125,14 @@ addErrorMessage m (ParseError pos ms) =
 -- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
 -- function also deletes all existing error messages that were created with
 -- the same constructor as @m@. If message @m@ has empty message string, the
--- function just returns the original @err@.
+-- function does not add the message to the result (it still deletes all
+-- messages of the same type, though).
 
 setErrorMessage :: Message -> ParseError -> ParseError
-setErrorMessage m e@(ParseError pos ms) =
-  bool (addErrorMessage m $ ParseError pos xs) e (badMessage m)
-  where xs = filter ((/= fromEnum m) . fromEnum) ms
+setErrorMessage m (ParseError pos ms) =
+  bool (addErrorMessage m pe) pe (badMessage m)
+  where pe = ParseError pos xs
+        xs = filter ((/= fromEnum m) . fromEnum) ms
 
 -- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
 -- position @pos@.
