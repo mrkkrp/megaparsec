@@ -13,44 +13,35 @@
 -- operators.
 
 module Text.Megaparsec.Expr
-  ( Assoc (..)
-  , Operator (..)
-  , OperatorTable
+  ( Operator (..)
   , makeExprParser )
 where
 
 import Control.Applicative ((<|>))
-import Data.List (foldl')
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Prim
-
--- | This data type specifies the associativity of operators: left, right
--- or none.
-
-data Assoc
-  = AssocNone
-  | AssocLeft
-  | AssocRight
 
 -- | This data type specifies operators that work on values of type @a@.
 -- An operator is either binary infix or unary prefix or postfix. A binary
 -- operator has also an associated associativity.
 
 data Operator s u m a
-  = Infix   (ParsecT s u m (a -> a -> a)) Assoc
-  | Prefix  (ParsecT s u m (a -> a))
-  | Postfix (ParsecT s u m (a -> a))
+  = InfixN  (ParsecT s u m (a -> a -> a)) -- ^ non-associative infix
+  | InfixL  (ParsecT s u m (a -> a -> a)) -- ^ left-associative infix
+  | InfixR  (ParsecT s u m (a -> a -> a)) -- ^ right-associative infix
+  | Prefix  (ParsecT s u m (a -> a))      -- ^ prefix
+  | Postfix (ParsecT s u m (a -> a))      -- ^ postfix
 
--- | An @OperatorTable s u m a@ is a list of @Operator s u m a@ lists. The
--- list is ordered in descending precedence. All operators in one list have
--- the same precedence (but may have a different associativity).
-
-type OperatorTable s u m a = [[Operator s u m a]]
-
--- | @makeExprParser table term@ builds an expression parser for terms
+-- | @makeExprParser term table@ builds an expression parser for terms
 -- @term@ with operators from @table@, taking the associativity and
--- precedence specified in @table@ into account. Prefix and postfix
+-- precedence specified in @table@ into account.
+--
+-- @table@ is a list of @[Operator s u m a]@ lists. The list is ordered in
+-- descending precedence. All operators in one list have the same precedence
+-- (but may have a different associativity).
+--
+-- Prefix and postfix
 -- operators of the same precedence can only occur once (i.e. @--2@ is not
 -- allowed if @-@ is prefix negate). Prefix and postfix operators of the
 -- same precedence associate to the left (i.e. if @++@ is postfix increment,
@@ -60,89 +51,98 @@ type OperatorTable s u m a = [[Operator s u m a]]
 -- building expression parser. Here is an example of an expression parser
 -- that handles prefix signs, postfix increment and basic arithmetic.
 --
--- > expr = makeExprParser table term <?> "expression"
+-- > expr = makeExprParser term table <?> "expression"
 -- >
--- > term = parens expr <|> natural <?> "simple expression"
+-- > term = parens expr <|> integer <?> "term"
 -- >
 -- > table = [ [ prefix  "-"  negate
 -- >           , prefix  "+"  id ]
 -- >         , [ postfix "++" (+1) ]
--- >         , [ binary  "*"  (*) AssocLeft
--- >           , binary  "/"  div AssocLeft ]
--- >         , [ binary  "+"  (+) AssocLeft
--- >           , binary  "-"  (-) AssocLeft ] ]
+-- >         , [ binary  "*"  (*)
+-- >           , binary  "/"  div  ]
+-- >         , [ binary  "+"  (+)
+-- >           , binary  "-"  (-)  ] ]
 -- >
--- > binary  name fun assoc = Infix   (reservedOp name >> return fun) assoc
--- > prefix  name fun       = Prefix  (reservedOp name >> return fun)
--- > postfix name fun       = Postfix (reservedOp name >> return fun)
+-- > binary  name f = InfixL  (reservedOp name >> return f)
+-- > prefix  name f = Prefix  (reservedOp name >> return f)
+-- > postfix name f = Postfix (reservedOp name >> return f)
 
-makeExprParser :: Stream s m t => OperatorTable s u m a ->
-                         ParsecT s u m a -> ParsecT s u m a
-makeExprParser ops simpleExpr = foldl' makeParser simpleExpr ops
+makeExprParser :: Stream s m t => ParsecT s u m a ->
+                  [[Operator s u m a]] -> ParsecT s u m a
+makeExprParser = foldl addPrecLevel
 
-makeParser :: (Foldable t, Stream s m t1) =>
-              ParsecT s u m b -> t (Operator s u m b) -> ParsecT s u m b
-makeParser term ops =
-  termP >>= \x -> rasP x <|> lasP x <|> nasP x <|> return x <?> "operator"
+-- | @addPrecLevel p ops@ adds ability to parse operators in table @ops@ to
+-- parser @p@.
+
+addPrecLevel :: Stream s m t =>
+                ParsecT s u m a -> [Operator s u m a] -> ParsecT s u m a
+addPrecLevel term ops =
+  term' >>= \x -> choice [ras' x, las' x, nas' x, return x] <?> "operator"
   where (ras, las, nas, prefix, postfix) = foldr splitOp ([],[],[],[],[]) ops
+        term' = pTerm (choice prefix) term (choice postfix)
+        ras'  = pInfixR (choice ras) term'
+        las'  = pInfixL (choice las) term'
+        nas'  = pInfixN (choice nas) term'
 
-        rasOp     = choice ras
-        lasOp     = choice las
-        nasOp     = choice nas
-        prefixOp  = choice prefix  <?> ""
-        postfixOp = choice postfix <?> ""
+-- | @pTerm prefix term postfix@ parses term with @term@ surrounded by
+-- optional prefix and postfix unary operators. Parsers @prefix@ and
+-- @postfix@ are allowed to fail, in this case 'id' is used.
 
-        ambigious assoc op =
-          try $ op >> fail ("ambiguous use of a " ++ assoc
-                            ++ " associative operator")
+pTerm :: Stream s m t => ParsecT s u m (a -> a) -> ParsecT s u m a ->
+         ParsecT s u m (a -> a) -> ParsecT s u m a
+pTerm prefix term postfix = do
+  pre  <- option id (hidden prefix)
+  x    <- term
+  post <- option id (hidden postfix)
+  return $ post (pre x)
 
-        ambigiousRight = ambigious "right" rasOp
-        ambigiousLeft  = ambigious "left"  lasOp
-        ambigiousNon   = ambigious "non"   nasOp
+-- | @pInfixN op p x@ parses non-associative infix operator @op@, then term
+-- with parser @p@, then returns result of the operator application on @x@
+-- and the term.
 
-        termP = do
-          pre  <- prefixP
-          x    <- term
-          post <- postfixP
-          return $ post (pre x)
+pInfixN :: Stream s m t => ParsecT s u m (a -> a -> a) ->
+           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixN op p x = do
+  f <- op
+  y <- p
+  return $ f x y
 
-        postfixP = postfixOp <|> return id
-        prefixP  = prefixOp  <|> return id
+-- | @pInfixL op p x@ parses left-associative infix operator @op@, then term
+-- with parser @p@, then returns result of the operator application on @x@
+-- and the term.
 
-        rasP x = do { f <- rasOp; y <- termP >>= rasP1; return (f x y)}
-                 <|> ambigiousLeft
-                 <|> ambigiousNon
+pInfixL :: Stream s m t => ParsecT s u m (a -> a -> a) ->
+           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixL op p x = do
+  f <- op
+  y <- p
+  let r = f x y
+  pInfixL op p r <|> return r
 
-        rasP1 x = rasP x <|> return x
+-- | @pInfixR op p x@ parses right-associative infix operator @op@, then
+-- term with parser @p@, then returns result of the operator application on
+-- @x@ and the term.
 
-        lasP x = do { f <- lasOp; y <- termP; lasP1 (f x y) }
-                 <|> ambigiousRight
-                 <|> ambigiousNon
+pInfixR :: Stream s m t => ParsecT s u m (a -> a -> a) ->
+           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixR op p x = do
+  f <- op
+  y <- p >>= \r -> pInfixR op p r <|> return r
+  return $ f x y
 
-        lasP1 x = lasP x <|> return x
+type Batch s u m a =
+  ( [ParsecT s u m (a -> a -> a)]
+  , [ParsecT s u m (a -> a -> a)]
+  , [ParsecT s u m (a -> a -> a)]
+  , [ParsecT s u m (a -> a)]
+  , [ParsecT s u m (a -> a)] )
 
-        nasP x = do
-          f <- nasOp
-          y <- termP
-          ambigiousRight <|> ambigiousLeft <|> ambigiousNon <|> return (f x y)
+-- | A helper to separate various operators (binary, unary, and according to
+-- associativity) and return them in a tuple.
 
-splitOp :: Operator s u m a ->
-           ( [ParsecT s u m (a -> a -> a)]
-           , [ParsecT s u m (a -> a -> a)]
-           , [ParsecT s u m (a -> a -> a)]
-           , [ParsecT s u m (a -> a)]
-           , [ParsecT s u m (a -> a)] ) ->
-          ( [ParsecT s u m (a -> a -> a)]
-          , [ParsecT s u m (a -> a -> a)]
-          , [ParsecT s u m (a -> a -> a)]
-          , [ParsecT s u m (a -> a)]
-          , [ParsecT s u m (a -> a)] )
-splitOp (Infix op assoc) (ras, las, nas, prefix, postfix) =
-  case assoc of
-    AssocNone  -> (ras,    las,    op:nas, prefix, postfix)
-    AssocLeft  -> (ras,    op:las, nas,    prefix, postfix)
-    AssocRight -> (op:ras, las,    nas,    prefix, postfix)
-splitOp (Prefix  op) (ras, las, nas, prefix, postfix) =
-  (ras, las, nas, op:prefix, postfix)
-splitOp (Postfix op) (ras, las, nas, prefix, postfix) =
-  (ras, las, nas, prefix, op:postfix)
+splitOp :: Operator s u m a -> Batch s u m a -> Batch s u m a
+splitOp (InfixR  op) (r, l, n, pre, post) = (op:r, l, n, pre, post)
+splitOp (InfixL  op) (r, l, n, pre, post) = (r, op:l, n, pre, post)
+splitOp (InfixN  op) (r, l, n, pre, post) = (r, l, op:n, pre, post)
+splitOp (Prefix  op) (r, l, n, pre, post) = (r, l, n, op:pre, post)
+splitOp (Postfix op) (r, l, n, pre, post) = (r, l, n, pre, op:post)
