@@ -32,7 +32,7 @@
 module Char (tests) where
 
 import Data.Char
-import Data.List (findIndex)
+import Data.List (findIndex, isPrefixOf)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -120,6 +120,7 @@ prop_eol s = checkParser eol r s
           | null s      = posErr 0 s [uneEof, exSpec "end of line"]
           | h == '\n'   = posErr 1 s [uneCh (s !! 1), exEof]
           | h /= '\r'   = posErr 0 s [uneCh h, exSpec "end of line"]
+          | "\r\n" `isPrefixOf` s = posErr 2 s [uneCh (s !! 2), exEof]
           | otherwise   = posErr 0 s [ uneStr (take 2 s)
                                      , uneCh '\r'
                                      , exSpec "crlf newline"
