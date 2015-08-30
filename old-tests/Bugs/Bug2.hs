@@ -7,7 +7,7 @@ import Test.Framework.Providers.HUnit
 
 import Text.Megaparsec
 import Text.Megaparsec.Language (haskellDef)
-import qualified Text.Megaparsec.Token as P
+import qualified Text.Megaparsec.Lexer as L
 
 main :: Test
 main =
@@ -18,4 +18,4 @@ main =
       case parse parser "Example" input of
         Left{} -> error "Parse failure"
         Right str -> str
-   parser = P.stringLiteral $ P.makeLexer haskellDef
+   parser = L.stringLiteral $ L.makeLexer haskellDef

@@ -36,8 +36,8 @@
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm" and even
--- entire languages with "Text.Megaparsec.Token". These modules should be
--- imported explicitly along with two modules mentioned above.
+-- entire languages with "Text.Megaparsec.Lexer". These modules should be
+-- imported explicitly along with the two modules mentioned above.
 
 module Text.Megaparsec
   ( -- * Running parser

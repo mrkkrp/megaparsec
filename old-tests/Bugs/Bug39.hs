@@ -6,7 +6,7 @@ import Data.Either (isLeft, isRight)
 import Text.Megaparsec
 import Text.Megaparsec.Language
 import Text.Megaparsec.String
-import qualified Text.Megaparsec.Token as Token
+import qualified Text.Megaparsec.Lexer as L
 
 import Test.HUnit hiding (Test)
 import Test.Framework
@@ -19,7 +19,7 @@ shouldSucceed :: [String]
 shouldSucceed = ["1", "+1", "-1", "+ 1 ", "- 1 ", "1 "]
 
 integer :: Parser Integer
-integer = Token.integer' (Token.makeLexer emptyDef)
+integer = L.integer' (L.makeLexer emptyDef)
 
 testBatch :: Assertion
 testBatch = mapM_ (f testFail)    shouldFail >>
@@ -31,4 +31,4 @@ testBatch = mapM_ (f testFail)    shouldFail >>
                             ("Should succeed on " ++ show a) (isRight x)
 
 main :: Test
-main = testCase "TokenParser should fail on leading whitespace (#39)" testBatch
+main = testCase "Lexer should fail on leading whitespace (#39)" testBatch

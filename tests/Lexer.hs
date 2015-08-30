@@ -1,6 +1,6 @@
 -- -*- Mode: Haskell; -*-
 --
--- QuickCheck tests for Megaparsec's token parsers.
+-- QuickCheck tests for Megaparsec's lexer.
 --
 -- Copyright © 2015 Megaparsec contributors
 --
@@ -27,12 +27,18 @@
 -- any way out of the use of this software, even if advised of the
 -- possibility of such damage.
 
-module Token (tests) where
+module Lexer (tests) where
+
+import Control.Applicative (some, (<|>))
 
 import Test.Framework
+import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck
 
-import Text.Megaparsec.Token
+import Text.Megaparsec.Char
+import Text.Megaparsec.Combinator
+import Text.Megaparsec.Lexer
 
 tests :: Test
-tests = testGroup "Token parsers"
+tests = testGroup "Lexer"
         []

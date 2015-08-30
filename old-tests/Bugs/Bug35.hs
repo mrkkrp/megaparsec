@@ -4,7 +4,7 @@ module Bugs.Bug35 (main) where
 import Text.Megaparsec
 import Text.Megaparsec.Language
 import Text.Megaparsec.String
-import qualified Text.Megaparsec.Token as Token
+import qualified Text.Megaparsec.Lexer as L
 
 import Test.HUnit hiding (Test)
 import Test.Framework
@@ -29,11 +29,11 @@ trickyFloats =
     , "38.47735512322269" ]
 
 float :: Parser Double
-float = Token.float (Token.makeLexer emptyDef)
+float = L.float (L.makeLexer emptyDef)
 
 testBatch :: Assertion
 testBatch = mapM_ testFloat trickyFloats
     where testFloat x = parse float "" x @?= Right (read x :: Double)
 
 main :: Test
-main = testCase "Quality of output of Text.Parsec.Token.float (#35)" testBatch
+main = testCase "Output of Text.Megaparsec.Lexer.float (#35)" testBatch

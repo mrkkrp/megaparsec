@@ -35,10 +35,10 @@ import qualified Pos
 import qualified Error
 import qualified Prim
 import qualified Combinator
-import qualified Expr
 import qualified Char
-import qualified Token
+import qualified Expr
 import qualified Perm
+import qualified Lexer
 
 main :: IO ()
 main = defaultMain
@@ -46,7 +46,7 @@ main = defaultMain
        , Error.tests
        , Prim.tests
        , Combinator.tests
-       , Expr.tests
        , Char.tests
-       , Token.tests
-       , Perm.tests ]
+       , Expr.tests
+       , Perm.tests
+       , Lexer.tests ]

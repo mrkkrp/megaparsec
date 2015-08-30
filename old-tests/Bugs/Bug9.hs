@@ -5,7 +5,7 @@ import Text.Megaparsec
 import Text.Megaparsec.Language (haskellStyle)
 import Text.Megaparsec.String (Parser)
 import Text.Megaparsec.Expr
-import qualified Text.Megaparsec.Token as P
+import qualified Text.Megaparsec.Lexer as L
 
 import Test.HUnit hiding (Test)
 import Test.Framework
@@ -31,6 +31,6 @@ parseTopLevel = parseExpr <* eof
 parseExpr :: Parser Expr
 parseExpr = makeExprParser (Const <$> integer) table
   where table    = [[ InfixL (Op <$ reserved ">>>") ]]
-        lexer    = P.makeLexer haskellStyle { P.reservedOpNames = [">>>"] }
-        integer  = P.integer  lexer
-        reserved = P.reserved lexer
+        lexer    = L.makeLexer haskellStyle { L.reservedOpNames = [">>>"] }
+        integer  = L.integer  lexer
+        reserved = L.reserved lexer

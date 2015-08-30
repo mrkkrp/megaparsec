@@ -119,7 +119,7 @@ arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
   where leaf = arbitraryN0 (n `div` 2)
 
 -- Some helpers put here since we don't want to depend on
--- "Text.Megaparsec.Token".
+-- "Text.Megaparsec.Lexer".
 
 lexeme :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
 lexeme p = p <* hidden space

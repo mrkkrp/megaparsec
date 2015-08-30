@@ -101,6 +101,7 @@ library
                    , Text.Megaparsec.Error
                    , Text.Megaparsec.Expr
                    , Text.Megaparsec.Language
+                   , Text.Megaparsec.Lexer
                    , Text.Megaparsec.Perm
                    , Text.Megaparsec.Pos
                    , Text.Megaparsec.Prim
@@ -108,7 +109,6 @@ library
                    , Text.Megaparsec.String
                    , Text.Megaparsec.Text
                    , Text.Megaparsec.Text.Lazy
-                   , Text.Megaparsec.Token
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
 

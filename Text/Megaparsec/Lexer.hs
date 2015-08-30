@@ -1,5 +1,5 @@
 -- |
--- Module      :  Text.Megaparsec.Token
+-- Module      :  Text.Megaparsec.Lexer
 -- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
@@ -9,12 +9,12 @@
 -- Stability   :  experimental
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 --
--- A helper module to parse lexical elements (tokens). See 'makeLexer' for a
+-- A helper module to parse lexical elements. See 'makeLexer' for a
 -- description of how to use it.
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
-module Text.Megaparsec.Token
+module Text.Megaparsec.Lexer
   ( LanguageDef (..)
   , Lexer (..)
   , makeLexer )
@@ -32,7 +32,7 @@ import Text.Megaparsec.Combinator
 -- Language definition
 
 -- | The @LanguageDef@ type is a record that contains all parameters used to
--- control features of the "Text.Megaparsec.Token" module. The module
+-- control features of the "Text.Megaparsec.Lexer" module. The module
 -- "Text.Megaparsec.Language" contains some default definitions.
 
 data LanguageDef s u m =
@@ -91,7 +91,7 @@ data LanguageDef s u m =
 
   , caseSensitive :: Bool }
 
--- Token parser
+-- Lexer
 
 -- | The type of the record that holds lexical parsers that work on
 -- @s@ streams with state @u@ over a monad @m@.
@@ -290,25 +290,25 @@ data Lexer s u m =
 --
 -- > module Main (main) where
 -- >
--- > import Text.Parsec
--- > import qualified Text.Parsec.Token as Token
--- > import Text.Parsec.Language (haskellDef)
+-- > import Text.Megaparsec
+-- > import Text.Megaparsec.Language (haskellDef)
+-- > import qualified Text.Megaparsec.Lexer as L
 -- >
 -- > -- The parser
--- > ...
+-- > …
 -- >
 -- > expr =  parens expr
 -- >     <|> identifier
--- >     <|> ...
+-- >     <|> …
 -- >
 -- > -- The lexer
--- > lexer      = Token.makeLexer haskellDef
+-- > lexer      = L.makeLexer haskellDef
 -- >
--- > parens     = Token.parens     lexer
--- > braces     = Token.braces     lexer
--- > identifier = Token.identifier lexer
--- > reserved   = Token.reserved   lexer
--- > ...
+-- > parens     = L.parens     lexer
+-- > braces     = L.braces     lexer
+-- > identifier = L.identifier lexer
+-- > reserved   = L.reserved   lexer
+-- > …
 
 makeLexer :: Stream s m Char => LanguageDef s u m -> Lexer s u m
 makeLexer languageDef =

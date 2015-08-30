@@ -7,10 +7,10 @@
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
--- Portability :  non-portable (uses non-portable module Text.Parsec.Token)
+-- Portability :  non-portable (uses non-portable module Text.Megaparsec.Lexer)
 --
 -- A helper module that defines some language definitions that can be used
--- to instantiate a token parser (see "Text.Megaparsec.Token").
+-- to instantiate a token parser (see "Text.Megaparsec.Lexer").
 
 module Text.Megaparsec.Language
   ( LanguageDef
@@ -25,7 +25,7 @@ import Control.Monad.Identity
 
 import Control.Applicative ((<|>))
 import Text.Megaparsec.Char
-import Text.Megaparsec.Token
+import Text.Megaparsec.Lexer
 
 -- | This is the most minimal token definition. It is recommended to use
 -- this definition as the basis for other definitions. @emptyDef@ has no
