@@ -100,7 +100,6 @@ library
                    , Text.Megaparsec.Combinator
                    , Text.Megaparsec.Error
                    , Text.Megaparsec.Expr
-                   , Text.Megaparsec.Language
                    , Text.Megaparsec.Lexer
                    , Text.Megaparsec.Perm
                    , Text.Megaparsec.Pos

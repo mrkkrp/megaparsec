@@ -2,7 +2,6 @@
 module Bugs.Bug35 (main) where
 
 import Text.Megaparsec
-import Text.Megaparsec.Language
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
@@ -29,7 +28,7 @@ trickyFloats =
     , "38.47735512322269" ]
 
 float :: Parser Double
-float = L.float (L.makeLexer emptyDef)
+float = L.float (L.makeLexer L.defaultLang)
 
 testBatch :: Assertion
 testBatch = mapM_ testFloat trickyFloats

@@ -2,7 +2,6 @@
 module Bugs.Bug9 (main) where
 
 import Text.Megaparsec
-import Text.Megaparsec.Language (haskellStyle)
 import Text.Megaparsec.String (Parser)
 import Text.Megaparsec.Expr
 import qualified Text.Megaparsec.Lexer as L
@@ -31,6 +30,6 @@ parseTopLevel = parseExpr <* eof
 parseExpr :: Parser Expr
 parseExpr = makeExprParser (Const <$> integer) table
   where table    = [[ InfixL (Op <$ reserved ">>>") ]]
-        lexer    = L.makeLexer haskellStyle { L.reservedOpNames = [">>>"] }
+        lexer    = L.makeLexer L.defaultLang { L.reservedOpNames = [">>>"] }
         integer  = L.integer  lexer
         reserved = L.reserved lexer

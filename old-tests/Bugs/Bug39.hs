@@ -4,7 +4,6 @@ module Bugs.Bug39 (main) where
 import Data.Either (isLeft, isRight)
 
 import Text.Megaparsec
-import Text.Megaparsec.Language
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
@@ -19,7 +18,7 @@ shouldSucceed :: [String]
 shouldSucceed = ["1", "+1", "-1", "+ 1 ", "- 1 ", "1 "]
 
 integer :: Parser Integer
-integer = L.integer' (L.makeLexer emptyDef)
+integer = L.integer' (L.makeLexer L.defaultLang)
 
 testBatch :: Assertion
 testBatch = mapM_ (f testFail)    shouldFail >>
