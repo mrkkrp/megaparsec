@@ -10,14 +10,17 @@
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 --
 -- A helper module to parse lexical elements. See 'makeLexer' for a
--- description of how to use it.
+-- description of how to use it. This module is supposed to be imported
+-- qualified.
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 
 module Text.Megaparsec.Lexer
   ( LanguageDef (..)
-  , Lexer (..)
   , defaultLang
+  , skipLineComment
+  , skipBlockComment
+  , Lexer (..)
   , makeLexer )
 where
 
@@ -42,18 +45,22 @@ data LanguageDef s u m =
 
   -- | The parser is used to parse single white space character. If
   -- indentation is important in your language you should probably not treat
-  -- newline as white space character.
+  -- newline as white space character. Also note that if newline is not
+  -- white space character, you will need to pick it up manually.
 
     spaceChar :: ParsecT s u m Char
 
   -- | The parser parses line comments. It's responsibility of the parser to
   -- stop at the end of line. If your language doesn't support this type of
-  -- comments, set this value to 'empty'.
+  -- comments, set this value to 'empty'. In simple cases you can use
+  -- 'skipLineComment' to quickly construct line comment parser.
 
   , lineComment :: ParsecT s u m ()
 
   -- | The parser parses block (multi-line) comments. If your language
-  -- doesn't support this type of comments, set this value to 'empty'.
+  -- doesn't support this type of comments, set this value to 'empty'. In
+  -- simple cases you can use 'skipBlockComment' to quickly construct block
+  -- comment parser.
 
   , blockComment :: ParsecT s u m ()
 
@@ -115,6 +122,24 @@ defaultLang =
   , reservedNames   = []
   , caseSensitive   = True }
 
+-- Utility functions
+
+-- | Given comment prefix this function returns parser that skips line
+-- comments. Note that it stops just before newline character but doesn't
+-- consume the newline. Newline is either supposed to be consumed by 'space'
+-- parser or picked manually.
+
+skipLineComment :: Stream s m Char => String -> ParsecT s u m ()
+skipLineComment prefix = C.string prefix >> void (manyTill C.anyChar n)
+  where n = lookAhead C.newline
+
+-- | @skipBlockComment start end@ skips non-nested block comment starting
+-- with @start@ and ending with @end@.
+
+skipBlockComment :: Stream s m Char => String -> String -> ParsecT s u m ()
+skipBlockComment start end = C.string start >> void (manyTill C.anyChar n)
+  where n = lookAhead (C.string end)
+
 -- Lexer
 
 -- | The type of the record that holds lexical parsers that work on
@@ -152,31 +177,45 @@ data Lexer s u m =
 
   , indentGuard :: (Int -> Bool) -> ParsecT s u m Int
 
-  -- NEXT
+  -- | Lexeme parser @parens p@ parses @p@ enclosed in parenthesis,
+  -- returning the value of @p@.
 
-  -- | The lexeme parser parses a legal identifier. Returns the identifier
-  -- string. This parser will fail on identifiers that are reserved
-  -- words. Legal identifier (start) characters and reserved words are
-  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
+  , parens :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-  , identifier :: ParsecT s u m String
+  -- | Lexeme parser @braces p@ parses @p@ enclosed in braces (“{” and
+  -- “}”), returning the value of @p@.
 
-  -- | The lexeme parser @reserved name@ parses @symbol name@, but it also
-  -- checks that the @name@ is not a prefix of a valid identifier.
+  , braces :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-  , reserved :: String -> ParsecT s u m ()
+  -- | Lexeme parser @angles p@ parses @p@ enclosed in angle brackets (“\<”
+  -- and “>”), returning the value of @p@.
 
-  -- | The lexeme parser parses a legal operator. Returns the name of the
-  -- operator. This parser will fail on any operators that are reserved
-  -- operators. Legal operator (start) characters and reserved operators are
-  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
+  , angles :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-  , operator :: ParsecT s u m String
+  -- | Lexeme parser @brackets p@ parses @p@ enclosed in brackets (“[”
+  -- and “]”), returning the value of @p@.
 
-  -- | The lexeme parser @reservedOp name@ parses @symbol name@, but it
-  -- also checks that the @name@ is not a prefix of a valid operator.
+  , brackets :: forall a. ParsecT s u m a -> ParsecT s u m a
 
-  , reservedOp :: String -> ParsecT s u m ()
+  -- | Lexeme parser @semicolon@ parses the character “;” and skips any
+  -- trailing white space. Returns the string “;”.
+
+  , semicolon :: ParsecT s u m String
+
+  -- | Lexeme parser @comma@ parses the character “,” and skips any
+  -- trailing white space. Returns the string “,”.
+
+  , comma :: ParsecT s u m String
+
+  -- | Lexeme parser @colon@ parses the character “:” and skips any
+  -- trailing white space. Returns the string “:”.
+
+  , colon :: ParsecT s u m String
+
+  -- | Lexeme parser @dot@ parses the character “.” and skips any
+  -- trailing white space. Returns the string “.”.
+
+  , dot :: ParsecT s u m String
 
   -- | The lexeme parser parses a single literal character. Returns the
   -- literal character value. This parsers deals correctly with escape
@@ -226,7 +265,7 @@ data Lexer s u m =
   -- then runs parser @p@, changing sign of its result accordingly. Note
   -- that there may be white space after the sign but not before it.
 
-  , signed :: forall a . Num a => ParsecT s u m a -> ParsecT s u m a
+  , signed :: forall a. Num a => ParsecT s u m a -> ParsecT s u m a
 
   -- | The lexeme parser parses a floating point value. Returns the value
   -- of the number. The number is parsed according to the grammar rules
@@ -250,65 +289,29 @@ data Lexer s u m =
 
   , number' :: ParsecT s u m (Either Integer Double)
 
-  -- | Lexeme parser @parens p@ parses @p@ enclosed in parenthesis,
-  -- returning the value of @p@.
+  -- | The lexeme parser parses a legal identifier. Returns the identifier
+  -- string. This parser will fail on identifiers that are reserved
+  -- words. Legal identifier (start) characters and reserved words are
+  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
 
-  , parens :: forall a. ParsecT s u m a -> ParsecT s u m a
+  , identifier :: ParsecT s u m String
 
-  -- | Lexeme parser @braces p@ parses @p@ enclosed in braces (“{” and
-  -- “}”), returning the value of @p@.
+  -- | The lexeme parser @reserved name@ parses @symbol name@, but it also
+  -- checks that the @name@ is not a prefix of a valid identifier.
 
-  , braces :: forall a. ParsecT s u m a -> ParsecT s u m a
+  , reserved :: String -> ParsecT s u m ()
 
-  -- | Lexeme parser @angles p@ parses @p@ enclosed in angle brackets (“\<”
-  -- and “>”), returning the value of @p@.
+  -- | The lexeme parser parses a legal operator. Returns the name of the
+  -- operator. This parser will fail on any operators that are reserved
+  -- operators. Legal operator (start) characters and reserved operators are
+  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
 
-  , angles :: forall a. ParsecT s u m a -> ParsecT s u m a
+  , operator :: ParsecT s u m String
 
-  -- | Lexeme parser @brackets p@ parses @p@ enclosed in brackets (“[”
-  -- and “]”), returning the value of @p@.
+  -- | The lexeme parser @reservedOp name@ parses @symbol name@, but it
+  -- also checks that the @name@ is not a prefix of a valid operator.
 
-  , brackets :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Lexeme parser @semicolon@ parses the character “;” and skips any
-  -- trailing white space. Returns the string “;”.
-
-  , semicolon :: ParsecT s u m String
-
-  -- | Lexeme parser @comma@ parses the character “,” and skips any
-  -- trailing white space. Returns the string “,”.
-
-  , comma :: ParsecT s u m String
-
-  -- | Lexeme parser @colon@ parses the character “:” and skips any
-  -- trailing white space. Returns the string “:”.
-
-  , colon :: ParsecT s u m String
-
-  -- | Lexeme parser @dot@ parses the character “.” and skips any
-  -- trailing white space. Returns the string “.”.
-
-  , dot :: ParsecT s u m String
-
-  -- | Lexeme parser @semiSep p@ parses /zero/ or more occurrences of @p@
-  -- separated by 'semicolon'. Returns a list of values returned by @p@.
-
-  , semicolonSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @semiSep1 p@ parses /one/ or more occurrences of @p@
-  -- separated by 'semi'. Returns a list of values returned by @p@.
-
-  , semicolonSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @commaSep p@ parses /zero/ or more occurrences of
-  -- @p@ separated by 'comma'. Returns a list of values returned by @p@.
-
-  , commaSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @commaSep1 p@ parses /one/ or more occurrences of
-  -- @p@ separated by 'comma'. Returns a list of values returned by @p@.
-
-  , commaSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a] }
+  , reservedOp :: String -> ParsecT s u m () }
 
 -- | The expression @makeLexer language@ creates a 'Lexer' record that
 -- contains lexical parsers that are defined using the definitions in the
@@ -348,10 +351,14 @@ makeLexer lang =
   , symbol        = symbol
   , indentGuard   = indentGuard
 
-  , identifier    = identifier
-  , reserved      = reserved
-  , operator      = operator
-  , reservedOp    = reservedOp
+  , parens        = parens
+  , braces        = braces
+  , angles        = angles
+  , brackets      = brackets
+  , semicolon     = semicolon
+  , comma         = comma
+  , colon         = colon
+  , dot           = dot
 
   , charLiteral   = charLiteral
   , stringLiteral = stringLiteral
@@ -367,24 +374,16 @@ makeLexer lang =
   , number        = number
   , number'       = number'
 
-  , parens        = parens
-  , braces        = braces
-  , angles        = angles
-  , brackets      = brackets
-  , semicolon     = semicolon
-  , comma         = comma
-  , colon         = colon
-  , dot           = dot
-  , semicolonSep  = semicolonSep
-  , semicolonSep1 = semicolonSep1
-  , commaSep      = commaSep
-  , commaSep1     = commaSep1 }
+  , identifier    = identifier
+  , reserved      = reserved
+  , operator      = operator
+  , reservedOp    = reservedOp }
   where
 
   -- white space & indentation
 
   space    = hidden . skipMany . choice $
-             ($ lang) <$> [blockComment, lineComment, void . spaceChar]
+             ($ lang) <$> [void . spaceChar, blockComment, lineComment]
   lexeme p = p <* space
   symbol   = lexeme . C.string
   indentGuard p = do
@@ -394,25 +393,18 @@ makeLexer lang =
     then return pos
     else fail "incorrect indentation"
 
-  -- bracketing NEXT
+  -- auxiliary parsers
 
   parens    = between (symbol "(") (symbol ")")
   braces    = between (symbol "{") (symbol "}")
   angles    = between (symbol "<") (symbol ">")
   brackets  = between (symbol "[") (symbol "]")
-
   semicolon = symbol ";"
   comma     = symbol ","
-  dot       = symbol "."
   colon     = symbol ":"
+  dot       = symbol "."
 
-  commaSep  = (`sepBy` comma)
-  semicolonSep = (`sepBy` semicolon)
-
-  commaSep1 = (`sepBy1` comma)
-  semicolonSep1 = (`sepBy1` semicolon)
-
-  -- chars & strings
+  -- char & string literals
 
   charLiteral = lexeme ( between (C.char '\'')
                                  (C.char '\'' <?> "end of character")
