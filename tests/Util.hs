@@ -89,18 +89,20 @@ checkChar p f l' s = checkParser p r s
           | not (f h) = posErr 0 s (uneCh h : l)
           | otherwise = posErr 1 s [uneCh (s !! 1), exEof]
 
--- | @checkString p a label s@ runs parser @p@ on input @s@ and checks if
--- the result is equal to @a@ and also quality of error messages. @label@ is
--- used as expected representation of parser's result in error messages.
+-- | @checkString p a test label s@ runs parser @p@ on input @s@ and checks if
+-- the result is equal to @a@ and also quality of error messages. @test@ is
+-- used to compare tokens. @label@ is used as expected representation of
+-- parser's result in error messages.
 
-checkString :: Parser String -> String -> String -> String -> Property
-checkString p a' l s' = checkParser p (w a' 0 s') s'
+checkString :: Parser String -> String -> (Char -> Char -> Bool) ->
+               String -> String -> Property
+checkString p a' test l s' = checkParser p (w a' 0 s') s'
   where w [] _ []    = Right a'
         w [] i (s:_) = posErr i s' [uneCh s, exEof]
         w _  0 []    = posErr 0 s' [uneEof, exSpec l]
         w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
         w (a:as) i (s:ss)
-          | a == s    = w as i' ss
+          | test a s  = w as i' ss
           | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
             where i'  = succ i
 

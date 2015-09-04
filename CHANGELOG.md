@@ -120,6 +120,9 @@
     * `sepEndBy`
     * `sepEndBy1`
 
+* Added combinator `string'` which is the same as `string`, but
+  case-insensitive.
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.

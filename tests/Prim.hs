@@ -325,8 +325,8 @@ prop_token s = checkParser p r s
           | otherwise = posErr 0 s [uneCh h]
 
 prop_tokens :: String -> String -> Property
-prop_tokens a = checkString p a (showToken a)
-  where p = tokens updatePosString a
+prop_tokens a = checkString p a (==) (showToken a)
+  where p = tokens updatePosString (==) a
 
 -- Parser state combinators
 

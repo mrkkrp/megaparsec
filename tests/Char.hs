@@ -71,7 +71,8 @@ tests = testGroup "Character parsers"
         , testProperty "anyChar"         prop_anyChar
         , testProperty "oneOf"           prop_oneOf
         , testProperty "noneOf"          prop_noneOf
-        , testProperty "string"          prop_string ]
+        , testProperty "string"          prop_string
+        , testProperty "string'"         prop_string' ]
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements
@@ -110,7 +111,7 @@ prop_newline :: String -> Property
 prop_newline = checkChar newline (== '\n') (Just "newline")
 
 prop_crlf :: String -> Property
-prop_crlf = checkString crlf "\r\n" "crlf newline"
+prop_crlf = checkString crlf "\r\n" (==) "crlf newline"
 
 prop_eol :: String -> Property
 prop_eol s = checkParser eol r s
@@ -211,4 +212,8 @@ prop_noneOf :: String -> String -> Property
 prop_noneOf a = checkChar (noneOf a) (`notElem` a) Nothing
 
 prop_string :: String -> String -> Property
-prop_string a = checkString (string a) a (showToken a)
+prop_string a = checkString (string a) a (==) (showToken a)
+
+prop_string' :: String -> String -> Property
+prop_string' a = checkString (string' a) a test (showToken a)
+  where test x y = toLower x == toLower y

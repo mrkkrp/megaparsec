@@ -41,7 +41,8 @@ module Text.Megaparsec.Char
   , oneOf
   , noneOf
   , satisfy
-  , string )
+  , string
+  , string' )
 where
 
 import Control.Applicative ((<|>))
@@ -276,4 +277,14 @@ satisfy f = token nextPos testChar
 -- > divOrMod = string "div" <|> string "mod"
 
 string :: Stream s m Char => String -> ParsecT s u m String
-string = tokens updatePosString
+string = tokens updatePosString (==)
+
+-- | The same as 'string', but case-insensitive. On success returns string
+-- cased as argument of the function.
+--
+-- >>> parseTest (string' "foobar") "foObAr"
+-- "foobar"
+
+string' :: Stream s m Char => String -> ParsecT s u m String
+string' = tokens updatePosString test
+  where test x y = toLower x == toLower y

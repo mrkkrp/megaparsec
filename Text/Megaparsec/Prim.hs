@@ -582,37 +582,38 @@ token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
                     in seq newpos $ seq newstate $ cok x newstate mempty
           Nothing -> eerr $ unexpectedErr (showToken c) pos
 
--- | The parser @tokens posFromTok@ parses list of tokens and returns
+-- | The parser @tokens posFromTok test@ parses list of tokens and returns
 -- it. The resulting parser will use 'showToken' to pretty-print the
--- collection of tokens.
+-- collection of tokens. Supplied predicate @test@ is used to check equality
+-- of given and parsed tokens.
 --
 -- This can be used to example to write 'Text.Megaparsec.Char.string':
 --
--- > string = tokens updatePosString
+-- > string = tokens updatePosString (==)
 
 tokens :: (Stream s m t, Eq t, ShowToken [t]) =>
           (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
-       -> [t]                             -- ^ List of tokens to parse
+       -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens.
+       -> [t]                   -- ^ List of tokens to parse
        -> ParsecT s u m [t]
 {-# INLINE tokens #-}
-tokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-tokens nextposs tts = ParsecT $ \(State input pos u) cok cerr _ eerr ->
+tokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
+tokens nextpos test tts = ParsecT $ \(State input pos u) cok cerr _ eerr ->
   let errExpect x = setErrorMessage (Expected $ showToken tts)
                     (newErrorMessage (Unexpected x) pos)
-      walk [] _ rs = let pos' = nextposs pos tts
+      walk [] _ rs = let pos' = nextpos pos tts
                          s'   = State rs pos' u
                      in cok tts s' mempty
-      walk (t:ts) i rs = do
+      walk (t:ts) is rs = do
         sr <- uncons rs
-        let errorCont = if i == 0 then eerr else cerr
-            what = bool (showToken $ take i tts) "end of input" (i == 0)
+        let errorCont = if null is then eerr else cerr
+            what = bool (showToken $ reverse is) "end of input" (null is)
         case sr of
           Nothing -> errorCont . errExpect $ what
           Just (x,xs)
-              | t == x    -> walk ts (succ i) xs
-              | otherwise -> errorCont . errExpect . showToken $
-                             take i tts ++ [x]
-  in walk tts 0 input
+            | test t x  -> walk ts (x:is) xs
+            | otherwise -> errorCont . errExpect . showToken $ reverse (x:is)
+  in walk tts [] input
 
 unexpectedErr :: String -> SourcePos -> ParseError
 unexpectedErr msg = newErrorMessage (Unexpected msg)

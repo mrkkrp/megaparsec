@@ -121,6 +121,7 @@ module Text.Megaparsec
   , noneOf
   , satisfy
   , string
+  , string'
     -- * Error messages
   , Message (..)
   , messageString
