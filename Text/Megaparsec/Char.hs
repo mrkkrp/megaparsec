@@ -12,11 +12,13 @@
 -- Commonly used character parsers.
 
 module Text.Megaparsec.Char
-  ( newline
+  ( -- * Simple parsers
+    newline
   , crlf
   , eol
   , tab
   , space
+    -- * Categories of characters
   , controlChar
   , spaceChar
   , upperChar
@@ -36,6 +38,7 @@ module Text.Megaparsec.Char
   , latin1Char
   , charCategory
   , categoryName
+    -- * More general parsers
   , char
   , char'
   , anyChar
@@ -44,6 +47,7 @@ module Text.Megaparsec.Char
   , noneOf
   , noneOf'
   , satisfy
+    -- * Sequence of characters
   , string
   , string' )
 where
