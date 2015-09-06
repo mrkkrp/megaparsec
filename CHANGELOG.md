@@ -120,8 +120,9 @@
     * `sepEndBy`
     * `sepEndBy1`
 
-* Added combinator `string'` which is the same as `string`, but
-  case-insensitive.
+* Added combinators `char'`, `oneOf'`, `noneOf'`, and `string'` which are
+  case-insensitive variants of `char`, `oneOf`, `noneOf`, and `string`
+  respectively.
 
 * Added comprehensive QuickCheck test suite.
 

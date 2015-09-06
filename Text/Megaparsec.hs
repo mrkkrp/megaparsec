@@ -116,9 +116,12 @@ module Text.Megaparsec
   , latin1Char
   , charCategory
   , char
+  , char'
   , anyChar
   , oneOf
+  , oneOf'
   , noneOf
+  , noneOf'
   , satisfy
   , string
   , string'

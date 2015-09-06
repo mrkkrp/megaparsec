@@ -68,9 +68,12 @@ tests = testGroup "Character parsers"
         , testProperty "latin1Char"      prop_latin1Char
         , testProperty "charCategory"    prop_charCategory
         , testProperty "char"            prop_char
+        , testProperty "char'"           prop_char'
         , testProperty "anyChar"         prop_anyChar
         , testProperty "oneOf"           prop_oneOf
+        , testProperty "oneOf'"          prop_oneOf'
         , testProperty "noneOf"          prop_noneOf
+        , testProperty "noneOf'"         prop_noneOf'
         , testProperty "string"          prop_string
         , testProperty "string'"         prop_string' ]
 
@@ -202,18 +205,49 @@ prop_charCategory cat = checkChar (charCategory cat) p (Just $ categoryName cat)
 prop_char :: Char -> String -> Property
 prop_char c = checkChar (char c) (== c) (Just $ showToken c)
 
+prop_char' :: Char -> String -> Property
+prop_char' c s = checkParser (char' c) r s
+  where h = head s
+        l | isLower c = [c, toUpper c]
+          | isUpper c = [c, toLower c]
+          | otherwise = [c]
+        r | null s         = posErr 0 s $ uneEof : (exCh <$> l)
+          | length s == 1 && (h `elemi` l) = Right h
+          | h `notElemi` l = posErr 0 s $ uneCh h : (exCh <$> l)
+          | otherwise      = posErr 1 s [uneCh (s !! 1), exEof]
+
 prop_anyChar :: String -> Property
 prop_anyChar = checkChar anyChar (const True) (Just "character")
 
 prop_oneOf :: String -> String -> Property
 prop_oneOf a = checkChar (oneOf a) (`elem` a) Nothing
 
+prop_oneOf' :: String -> String -> Property
+prop_oneOf' a = checkChar (oneOf' a) (`elemi` a) Nothing
+
 prop_noneOf :: String -> String -> Property
 prop_noneOf a = checkChar (noneOf a) (`notElem` a) Nothing
+
+prop_noneOf' :: String -> String -> Property
+prop_noneOf' a = checkChar (noneOf' a) (`notElemi` a) Nothing
 
 prop_string :: String -> String -> Property
 prop_string a = checkString (string a) a (==) (showToken a)
 
 prop_string' :: String -> String -> Property
-prop_string' a = checkString (string' a) a test (showToken a)
-  where test x y = toLower x == toLower y
+prop_string' a = checkString (string' a) a casei (showToken a)
+
+-- | Case-insensitive equality test for characters.
+
+casei :: Char -> Char -> Bool
+casei x y = toLower x == toLower y
+
+-- | Case-insensitive 'elem'.
+
+elemi :: Char -> String -> Bool
+elemi c = any (casei c)
+
+-- | Case-insensitive 'notElem'.
+
+notElemi :: Char -> String -> Bool
+notElemi c = not . elemi c

@@ -37,9 +37,12 @@ module Text.Megaparsec.Char
   , charCategory
   , categoryName
   , char
+  , char'
   , anyChar
   , oneOf
+  , oneOf'
   , noneOf
+  , noneOf'
   , satisfy
   , string
   , string' )
@@ -47,6 +50,7 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Char
+import Data.List (nub)
 import Data.Maybe (fromJust)
 
 import Text.Megaparsec.Combinator
@@ -236,35 +240,75 @@ categoryName cat =
 char :: Stream s m Char => Char -> ParsecT s u m Char
 char c = satisfy (== c) <?> showToken c
 
+-- | The same as 'char' but case-insensitive. This parser returns actually
+-- parsed character preserving its case.
+--
+-- >>> parseTest (char' 'e') "E"
+-- 'E'
+-- >>> parseTest (char' 'e') "G"
+-- parse error at line 1, column 1:
+-- unexpected 'G'
+-- expecting 'E' or 'e'
+
+char' :: Stream s m Char => Char -> ParsecT s u m Char
+char' = choice . fmap char . extendi . pure
+
+-- | Extends given list of characters adding uppercase version of every
+-- lowercase characters and vice versa. Resulting list is guaranteed to have
+-- no duplicates.
+
+extendi :: String -> String
+extendi cs = nub (cs >>= f)
+  where f c | isLower c = [c, toUpper c]
+            | isUpper c = [c, toLower c]
+            | otherwise = [c]
+
 -- | This parser succeeds for any character. Returns the parsed character.
 
 anyChar :: Stream s m Char => ParsecT s u m Char
 anyChar = satisfy (const True) <?> "character"
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
--- list of characters @cs@. Returns the parsed character. See also
--- 'satisfy'.
+-- list of characters @cs@. Returns the parsed character. Note that this
+-- parser doesn't automatically generate “expected” component of error
+-- message, so usually you should label it manually with 'label' or
+-- ('<?>').
 --
--- > vowel = oneOf "aeiou" <?> "vowel"
+-- See also 'satisfy'.
+--
+-- > digit = oneOf ['0'..'9'] <?> "digit"
 
 oneOf :: Stream s m Char => String -> ParsecT s u m Char
 oneOf cs = satisfy (`elem` cs)
 
+-- | The same as 'oneOf', but case-insensitive. Returns the parsed character
+-- preserving its case.
+--
+-- > vowel = oneOf' "aeiou" <?> "vowel"
+
+oneOf' :: Stream s m Char => String -> ParsecT s u m Char
+oneOf' = oneOf . extendi
+
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
 -- character /not/ in the supplied list of characters @cs@. Returns the
 -- parsed character.
---
--- > consonant = noneOf "aeiou" <?> "consonant"
 
 noneOf :: Stream s m Char => String -> ParsecT s u m Char
 noneOf cs = satisfy (`notElem` cs)
+
+-- | The same as 'noneOf', but case-insensitive.
+--
+-- > consonant = noneOf' "aeiou" <?> "consonant"
+
+noneOf' :: Stream s m Char => String -> ParsecT s u m Char
+noneOf' = noneOf . extendi
 
 -- | The parser @satisfy f@ succeeds for any character for which the
 -- supplied function @f@ returns 'True'. Returns the character that is
 -- actually parsed.
 --
--- > digit    = satisfy isDigit
--- > oneOf cs = satisfy (`elem` cs)
+-- > digitChar = satisfy isDigit <?> "digit"
+-- > oneOf cs  = satisfy (`elem` cs)
 
 satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
 satisfy f = token nextPos testChar
