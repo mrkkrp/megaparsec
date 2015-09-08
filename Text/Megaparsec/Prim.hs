@@ -508,7 +508,7 @@ hidden = label ""
 -- "lexical"
 --
 -- @try@ also improves error messages in case of overlapping alternatives,
--- because Megparsec's hint system can be used:
+-- because Megaparsec's hint system can be used:
 --
 -- >>> parseTest (try (string "let") <|> string "lexical") "le"
 -- parse error at line 1, column 1:
