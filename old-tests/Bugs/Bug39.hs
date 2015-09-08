@@ -1,15 +1,17 @@
 
 module Bugs.Bug39 (main) where
 
+import Control.Applicative (empty)
+import Control.Monad (void)
 import Data.Either (isLeft, isRight)
 
 import Text.Megaparsec
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
-import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
+import Test.HUnit hiding (Test)
 
 shouldFail :: [String]
 shouldFail = [" 1", " +1", " -1"]
@@ -17,8 +19,14 @@ shouldFail = [" 1", " +1", " -1"]
 shouldSucceed :: [String]
 shouldSucceed = ["1", "+1", "-1", "+ 1 ", "- 1 ", "1 "]
 
+sc :: Parser ()
+sc = L.space (void spaceChar) empty empty
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme sc
+
 integer :: Parser Integer
-integer = L.integer' (L.makeLexer L.defaultLang)
+integer = lexeme $ L.signed sc L.integer
 
 testBatch :: Assertion
 testBatch = mapM_ (f testFail)    shouldFail >>
