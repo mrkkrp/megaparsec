@@ -190,18 +190,26 @@ decimal :: Stream s m Char => ParsecT s u m Integer
 decimal = nump "" C.digitChar
 
 -- | Parse an integer in hexadecimal representation. Representation of
--- hexadecimal number is expected to be according to Haskell report, that
--- is, it should be prefixed with “0x” or “0X” prefix.
+-- hexadecimal number is expected to be according to Haskell report except
+-- for the fact that this parser doesn't parse “0x” or “0X” prefix. It is
+-- reponsibility of the programmer to parse correct prefix before parsing
+-- the number itself.
+--
+-- For example you can make it conform to Haskell report like this:
+--
+-- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
 hexadecimal :: Stream s m Char => ParsecT s u m Integer
-hexadecimal = C.char '0' >> C.char' 'x' >> nump "0x" C.hexDigitChar
+hexadecimal = nump "0x" C.hexDigitChar
 
 -- | Parse an integer in octal representation. Representation of octal
--- number is expected to be according to Haskell report, that is, it should
--- be prefixed with “0o” or “0O” prefix.
+-- number is expected to be according to Haskell report except for the fact
+-- that this parser doesn't parse “0o” or “0O” prefix. It is responsibility
+-- of the programmer to parse correct prefix before parsing the number
+-- itself.
 
 octal :: Stream s m Char => ParsecT s u m Integer
-octal = C.char '0' >> C.char' 'o' >> nump "0o" C.octDigitChar
+octal = nump "0o" C.octDigitChar
 
 -- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
 -- prepends @prefix@ to returned value and tries to interpret the result as
