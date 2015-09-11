@@ -41,11 +41,10 @@ data Operator s u m a
 -- descending precedence. All operators in one list have the same precedence
 -- (but may have a different associativity).
 --
--- Prefix and postfix
--- operators of the same precedence can only occur once (i.e. @--2@ is not
--- allowed if @-@ is prefix negate). Prefix and postfix operators of the
--- same precedence associate to the left (i.e. if @++@ is postfix increment,
--- than @-2++@ equals @-1@, not @-3@).
+-- Prefix and postfix operators of the same precedence can only occur once
+-- (i.e. @--2@ is not allowed if @-@ is prefix negate). Prefix and postfix
+-- operators of the same precedence associate to the left (i.e. if @++@ is
+-- postfix increment, than @-2++@ equals @-1@, not @-3@).
 --
 -- The @makeExprParser@ takes care of all the complexity involved in
 -- building expression parser. Here is an example of an expression parser
@@ -66,6 +65,9 @@ data Operator s u m a
 -- > binary  name f = InfixL  (reservedOp name >> return f)
 -- > prefix  name f = Prefix  (reservedOp name >> return f)
 -- > postfix name f = Postfix (reservedOp name >> return f)
+--
+-- Please note that multi-character operators should use 'try' in order to
+-- be reported correctly in error messages.
 
 makeExprParser :: Stream s m t => ParsecT s u m a ->
                   [[Operator s u m a]] -> ParsecT s u m a

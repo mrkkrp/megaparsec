@@ -37,7 +37,7 @@ integer :: Stream s m Char => ParsecT s u m Integer
 integer = lexeme L.integer
 
 operator :: Stream s m Char => String -> ParsecT s u m String
-operator op = L.symbol sc op <?> "operator"
+operator = try . L.symbol sc
 
 parseTopLevel :: Parser Expr
 parseTopLevel = parseExpr <* eof
