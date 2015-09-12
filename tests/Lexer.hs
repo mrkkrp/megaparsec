@@ -29,8 +29,8 @@
 
 module Lexer (tests) where
 
-import Control.Applicative (some, (<|>))
-import Data.Char (readLitChar, showLitChar)
+import Data.Char (readLitChar, showLitChar, isDigit)
+import Data.List (findIndices)
 import Data.Maybe (listToMaybe, isNothing, fromJust)
 import Numeric (showInt, showHex, showOct, showSigned)
 
@@ -38,30 +38,31 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
--- import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
 import Text.Megaparsec.Lexer
 import Text.Megaparsec.Prim
+import qualified Text.Megaparsec.Char as C
 
 import Util
 
 tests :: Test
 tests = testGroup "Lexer"
-        [ testProperty "space combinator"       prop_space
-        , testProperty "space lexeme"           prop_lexeme
-        , testProperty "space symbol"           prop_symbol
-        , testProperty "space symbol'"          prop_symbol'
-        , testProperty "space indentGuard"      prop_indentGuard
-        , testProperty "space skipLineComment"  prop_skipLineComment
-        , testProperty "space skipBlockComment" prop_skipBlockComment
-        , testProperty "space charLiteral"      prop_charLiteral
-        , testProperty "space integer"          prop_integer
-        , testProperty "space decimal"          prop_decimal
-        , testProperty "space hexadecimal"      prop_hexadecimal
-        , testProperty "space octal"            prop_octal
-        , testProperty "space float"            prop_float
-        , testProperty "space number"           prop_number
-        , testProperty "space signed"           prop_signed ]
+        [ testProperty "space combinator"            prop_space
+        , testProperty "lexeme combinator"           prop_lexeme
+        , testProperty "symbol combinator"           prop_symbol
+        , testProperty "symbol' combinator"          prop_symbol'
+        , testProperty "indentGuard combinator"      prop_indentGuard
+        , testProperty "skipLineComment combinator"  prop_skipLineComment
+        , testProperty "skipBlockComment combinator" prop_skipBlockComment
+        , testProperty "charLiteral"                 prop_charLiteral
+        , testProperty "integer"                     prop_integer
+        , testProperty "decimal"                     prop_decimal
+        , testProperty "hexadecimal"                 prop_hexadecimal
+        , testProperty "octal"                       prop_octal
+        , testProperty "float 0"                     prop_float_0
+        , testProperty "float 1"                     prop_float_1
+        , testProperty "number"                      prop_number
+        , testProperty "signed"                      prop_signed ]
 
 prop_space :: Property
 prop_space = property True
@@ -111,14 +112,41 @@ prop_octal :: NonNegative Integer -> Int -> Property
 prop_octal n' i = checkParser octal r s
   where (r, s) = quasiCorrupted n' i showOct "octal digit"
 
-prop_float :: Property
-prop_float = property True
+prop_float_0 :: NonNegative Double -> Property
+prop_float_0 n' = checkParser float r s
+  where n = getNonNegative n'
+        r = Right n
+        s = show n
 
-prop_number :: Property
-prop_number = property True
+prop_float_1 :: Maybe (NonNegative Integer) -> Property
+prop_float_1 n' = checkParser float r s
+  where r | isNothing n' = posErr 0 s [uneEof, exSpec "float"]
+          | otherwise    = posErr (length s) s [ uneEof, exCh '.', exCh 'E'
+                                  , exCh 'e', exSpec "digit" ]
+        s = maybe "" (show . getNonNegative) n'
 
-prop_signed :: Property
-prop_signed = property True
+prop_number :: Either (NonNegative Integer) (NonNegative Double)
+            -> Integer -> Property
+prop_number n' i = checkParser number r s
+  where r | null s    = posErr 0 s [uneEof, exSpec "number"]
+          | otherwise =
+            Right $ case n' of
+                      Left  x -> Left  $ getNonNegative x
+                      Right x -> Right $ getNonNegative x
+        s = if i < 5
+            then ""
+            else either (show . getNonNegative) (show . getNonNegative) n'
+
+prop_signed :: Integer -> Int -> Bool -> Property
+prop_signed n i plus = checkParser p r s
+  where p = signed (hidden C.space) integer
+        r | i > length z = Right n
+          | otherwise    = posErr i s $ [uneCh '?', exSpec "integer"] ++
+                           (if i <= 0 then [exCh '+', exCh '-'] else []) ++
+                           [exEof | i > head (findIndices isDigit s)]
+        z = let bar = showSigned showInt 0 n ""
+            in if n < 0 || plus then bar else '+' : bar
+        s = if i <= length z then take i z ++ "?" ++ drop i z else z
 
 quasiCorrupted :: NonNegative Integer -> Int
                -> (Integer -> String -> String) -> String
