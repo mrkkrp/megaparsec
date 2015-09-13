@@ -2,13 +2,11 @@
 module Bugs.Bug35 (main) where
 
 import Text.Megaparsec
-import Text.Megaparsec.Language
-import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
-import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
+import Test.HUnit hiding (Test)
 
 trickyFloats :: [String]
 trickyFloats =
@@ -28,12 +26,9 @@ trickyFloats =
     , "32.96176575630599"
     , "38.47735512322269" ]
 
-float :: Parser Double
-float = L.float (L.makeLexer emptyDef)
-
 testBatch :: Assertion
 testBatch = mapM_ testFloat trickyFloats
-    where testFloat x = parse float "" x @?= Right (read x :: Double)
+    where testFloat x = parse L.float "" x @?= Right (read x :: Double)
 
 main :: Test
 main = testCase "Output of Text.Megaparsec.Lexer.float (#35)" testBatch

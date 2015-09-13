@@ -9,573 +9,271 @@
 -- Stability   :  experimental
 -- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
 --
--- A helper module to parse lexical elements. See 'makeLexer' for a
--- description of how to use it.
-
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+-- High-level parsers to help you write your lexer. The module doesn't
+-- impose how you should write your parser, but certain approaches may be
+-- more elegant than others. Especially important theme is parsing of write
+-- space, comments and indentation.
+--
+-- This module is supposed to be imported qualified:
+--
+-- > import qualified Text.Megaparsec.Lexer as L
 
 module Text.Megaparsec.Lexer
-  ( LanguageDef (..)
-  , Lexer (..)
-  , makeLexer )
+  ( -- * White space and indentation
+    space
+  , lexeme
+  , symbol
+  , symbol'
+  , indentGuard
+  , skipLineComment
+  , skipBlockComment
+    -- * Character and string literals
+  , charLiteral
+    -- * Numbers
+  , integer
+  , decimal
+  , hexadecimal
+  , octal
+  , float
+  , number
+  , signed )
 where
 
-import Control.Applicative ((<|>), many, some)
+import Control.Applicative ((<|>), some)
 import Control.Monad (void)
-import Data.Char (isAlpha, toLower, toUpper)
-import Data.List (sort)
+import Data.Char (readLitChar)
+import Data.Maybe (listToMaybe)
 
-import Text.Megaparsec.Prim
-import Text.Megaparsec.Char
 import Text.Megaparsec.Combinator
-
--- Language definition
-
--- | The @LanguageDef@ type is a record that contains all parameters used to
--- control features of the "Text.Megaparsec.Lexer" module. The module
--- "Text.Megaparsec.Language" contains some default definitions.
-
-data LanguageDef s u m =
-  LanguageDef {
-
-  -- | Describes the start of a block comment. Use the empty string if the
-  -- language doesn't support block comments.
-
-    commentStart :: String
-
-  -- | Describes the end of a block comment. Use the empty string if the
-  -- language doesn't support block comments.
-
-  , commentEnd :: String
-
-  -- | Describes the start of a line comment. Use the empty string if the
-  -- language doesn't support line comments.
-
-  , commentLine :: String
-
-  -- | Set to 'True' if the language supports nested block comments.
-
-  , nestedComments :: Bool
-
-  -- | This parser should accept any start characters of identifiers, for
-  -- example @letter \<|> char \'_\'@.
-
-  , identStart :: ParsecT s u m Char
-
-  -- | This parser should accept any legal tail characters of identifiers,
-  -- for example @alphaNum \<|> char \'_\'@.
-
-  , identLetter :: ParsecT s u m Char
-
-  -- | This parser should accept any start characters of operators, for
-  -- example @oneOf \":!#$%&*+.\/\<=>?\@\\\\^|-~\"@
-
-  , opStart :: ParsecT s u m Char
-
-  -- | This parser should accept any legal tail characters of operators.
-  -- Note that this parser should even be defined if the language doesn't
-  -- support user-defined operators, or otherwise the 'reservedOp' parser
-  -- won't work correctly.
-
-  , opLetter :: ParsecT s u m Char
-
-  -- | The list of reserved identifiers.
-
-  , reservedNames :: [String]
-
-  -- | The list of reserved operators.
-
-  , reservedOpNames :: [String]
-
-  -- | Set to 'True' if the language is case sensitive.
-
-  , caseSensitive :: Bool }
-
--- Lexer
-
--- | The type of the record that holds lexical parsers that work on
--- @s@ streams with state @u@ over a monad @m@.
-
-data Lexer s u m =
-  Lexer {
-
-  -- | The lexeme parser parses a legal identifier. Returns the identifier
-  -- string. This parser will fail on identifiers that are reserved
-  -- words. Legal identifier (start) characters and reserved words are
-  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
-
-    identifier :: ParsecT s u m String
-
-  -- | The lexeme parser @reserved name@ parses @symbol name@, but it also
-  -- checks that the @name@ is not a prefix of a valid identifier.
-
-  , reserved :: String -> ParsecT s u m ()
-
-  -- | The lexeme parser parses a legal operator. Returns the name of the
-  -- operator. This parser will fail on any operators that are reserved
-  -- operators. Legal operator (start) characters and reserved operators are
-  -- defined in the 'LanguageDef' that is passed to 'makeLexer'.
-
-  , operator :: ParsecT s u m String
-
-  -- | The lexeme parser @reservedOp name@ parses @symbol name@, but it
-  -- also checks that the @name@ is not a prefix of a valid operator.
-
-  , reservedOp :: String -> ParsecT s u m ()
-
-  -- | The lexeme parser parses a single literal character. Returns the
-  -- literal character value. This parsers deals correctly with escape
-  -- sequences. The literal character is parsed according to the grammar
-  -- rules defined in the Haskell report (which matches most programming
-  -- languages quite closely).
-
-  , charLiteral :: ParsecT s u m Char
-
-  -- | The lexeme parser parses a literal string. Returns the literal
-  -- string value. This parsers deals correctly with escape sequences and
-  -- gaps. The literal string is parsed according to the grammar rules
-  -- defined in the Haskell report (which matches most programming languages
-  -- quite closely).
-
-  , stringLiteral :: ParsecT s u m String
-
-  -- | The lexeme parser parses an integer (a whole number). This parser
-  -- /does not/ parse sign. Returns the value of the number. The number can
-  -- be specified in 'decimal', 'hexadecimal' or 'octal'. The number is
-  -- parsed according to the grammar rules in the Haskell report.
-
-  , integer :: ParsecT s u m Integer
-
-  -- | This is just like 'integer', except it can parse sign.
-
-  , integer' :: ParsecT s u m Integer
-
-  -- | The lexeme parses a positive whole number in the decimal system.
-  -- Returns the value of the number.
-
-  , decimal :: ParsecT s u m Integer
-
-  -- | The lexeme parses a positive whole number in the hexadecimal
-  -- system. The number should be prefixed with “0x” or “0X”. Returns the
-  -- value of the number.
-
-  , hexadecimal :: ParsecT s u m Integer
-
-  -- | The lexeme parses a positive whole number in the octal system.
-  -- The number should be prefixed with “0o” or “0O”. Returns the value of
-  -- the number.
-
-  , octal :: ParsecT s u m Integer
-
-  -- | @signed p@ tries to parse sign (i.e. “+”, “-”, or nothing) and
-  -- then runs parser @p@, changing sign of its result accordingly. Note
-  -- that there may be white space after the sign but not before it.
-
-  , signed :: forall a . Num a => ParsecT s u m a -> ParsecT s u m a
-
-  -- | The lexeme parser parses a floating point value. Returns the value
-  -- of the number. The number is parsed according to the grammar rules
-  -- defined in the Haskell report, sign is /not/ parsed, use 'float'' to
-  -- achieve parsing of signed floating point values.
-
-  , float :: ParsecT s u m Double
-
-  -- | This is just like 'float', except it can parse sign.
-
-  , float' :: ParsecT s u m Double
-
-  -- | The lexeme parser parses either 'integer' or a 'float'.
-  -- Returns the value of the number. This parser deals with any overlap in
-  -- the grammar rules for integers and floats. The number is parsed
-  -- according to the grammar rules defined in the Haskell report.
-
-  , number :: ParsecT s u m (Either Integer Double)
-
-  -- | This is just like 'number', except it can parse sign.
-
-  , number' :: ParsecT s u m (Either Integer Double)
-
-  -- | Lexeme parser @symbol s@ parses 'string' @s@ and skips
-  -- trailing white space.
-
-  , symbol :: String -> ParsecT s u m String
-
-  -- | @lexeme p@ first applies parser @p@ and then the 'whiteSpace'
-  -- parser, returning the value of @p@. Every lexical token (lexeme) is
-  -- defined using @lexeme@, this way every parse starts at a point without
-  -- white space. Parsers that use @lexeme@ are called /lexeme/ parsers in
-  -- this document.
-  --
-  -- The only point where the 'whiteSpace' parser should be called
-  -- explicitly is the start of the main parser in order to skip any leading
-  -- white space.
-
-  , lexeme :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Parses any white space. White space consists of /zero/ or more
-  -- occurrences of a 'space', a line comment or a block (multi line)
-  -- comment. Block comments may be nested. How comments are started and
-  -- ended is defined in the 'LanguageDef' that is passed to
-  -- 'makeLexer'.
-
-  , whiteSpace :: ParsecT s u m ()
-
-  -- | Lexeme parser @parens p@ parses @p@ enclosed in parenthesis,
-  -- returning the value of @p@.
-
-  , parens :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Lexeme parser @braces p@ parses @p@ enclosed in braces (“{” and
-  -- “}”), returning the value of @p@.
-
-  , braces :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Lexeme parser @angles p@ parses @p@ enclosed in angle brackets (“\<”
-  -- and “>”), returning the value of @p@.
-
-  , angles :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Lexeme parser @brackets p@ parses @p@ enclosed in brackets (“[”
-  -- and “]”), returning the value of @p@.
-
-  , brackets :: forall a. ParsecT s u m a -> ParsecT s u m a
-
-  -- | Lexeme parser @semicolon@ parses the character “;” and skips any
-  -- trailing white space. Returns the string “;”.
-
-  , semicolon :: ParsecT s u m String
-
-  -- | Lexeme parser @comma@ parses the character “,” and skips any
-  -- trailing white space. Returns the string “,”.
-
-  , comma :: ParsecT s u m String
-
-  -- | Lexeme parser @colon@ parses the character “:” and skips any
-  -- trailing white space. Returns the string “:”.
-
-  , colon :: ParsecT s u m String
-
-  -- | Lexeme parser @dot@ parses the character “.” and skips any
-  -- trailing white space. Returns the string “.”.
-
-  , dot :: ParsecT s u m String
-
-  -- | Lexeme parser @semiSep p@ parses /zero/ or more occurrences of @p@
-  -- separated by 'semicolon'. Returns a list of values returned by @p@.
-
-  , semicolonSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @semiSep1 p@ parses /one/ or more occurrences of @p@
-  -- separated by 'semi'. Returns a list of values returned by @p@.
-
-  , semicolonSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @commaSep p@ parses /zero/ or more occurrences of
-  -- @p@ separated by 'comma'. Returns a list of values returned by @p@.
-
-  , commaSep :: forall a . ParsecT s u m a -> ParsecT s u m [a]
-
-  -- | Lexeme parser @commaSep1 p@ parses /one/ or more occurrences of
-  -- @p@ separated by 'comma'. Returns a list of values returned by @p@.
-
-  , commaSep1 :: forall a . ParsecT s u m a -> ParsecT s u m [a] }
-
--- | The expression @makeLexer language@ creates a 'Lexer' record that
--- contains lexical parsers that are defined using the definitions in the
--- @language@ record.
+import Text.Megaparsec.Pos
+import Text.Megaparsec.Prim
+import Text.Megaparsec.ShowToken
+import qualified Text.Megaparsec.Char as C
+
+-- White space and indentation
+
+-- | @space spaceChar lineComment blockComment@ produces parser that can
+-- parse white space in general. It's expected that you create such a parser
+-- once and pass it to many other function in this module as needed (it's
+-- usually called @spaceConsumer@ in doc-strings here).
 --
--- The use of this function is quite stylized — one imports the appropriate
--- language definition and selects the lexical parsers that are needed from
--- the resulting 'Lexer'.
+-- @spaceChar@ is used to parse trivial space characters. You can use
+-- 'C.spaceChar' from "Text.Megaparsec.Char" for this purpose as well as
+-- your own parser (if you don't want automatically consume newlines, for
+-- example).
 --
--- > module Main (main) where
+-- @lineComment@ is used to parse line comments. You can use
+-- 'skipLineComment' if you don't need anything special.
+--
+-- @blockComment@ is used to parse block (multi-line) comments. You can use
+-- 'skipBlockComment' if you don't need anything special.
+--
+-- Parsing of white space is important part of any parser. We propose scheme
+-- where every lexeme should consume all trailing white space, but not
+-- leading one. You should wrap every lexeme parser with 'lexeme' to achieve
+-- this. You only need to call 'space' “manually” to consume any white space
+-- before the first lexeme (at the beginning of file).
+
+space :: Stream s m t => ParsecT s u m () ->
+         ParsecT s u m () -> ParsecT s u m () -> ParsecT s u m ()
+space ch line block = hidden . skipMany $ choice [ch, line, block]
+
+-- | This is wrapper for lexemes. Typical usage is to supply first argument
+-- (parser that consumes white space, probably defined via 'space') and use
+-- resulting function to wrap parsers for every lexeme.
+--
+-- > lexeme  = L.lexeme spaceConsumer
+-- > integer = lexeme L.integer
+
+lexeme :: ParsecT s u m () -> ParsecT s u m a -> ParsecT s u m a
+lexeme spc p = p <* spc
+
+-- | This is a helper to parse symbols, i.e. verbatim strings. You pass the
+-- first argument (parser that consumes white space, probably defined via
+-- 'space') and then you can use the resulting function to parse strings:
+--
+-- > symbol    = L.symbol spaceConsumer
 -- >
--- > import Text.Megaparsec
--- > import Text.Megaparsec.Language (haskellDef)
--- > import qualified Text.Megaparsec.Lexer as L
--- >
--- > -- The parser
--- > …
--- >
--- > expr =  parens expr
--- >     <|> identifier
--- >     <|> …
--- >
--- > -- The lexer
--- > lexer      = L.makeLexer haskellDef
--- >
--- > parens     = L.parens     lexer
--- > braces     = L.braces     lexer
--- > identifier = L.identifier lexer
--- > reserved   = L.reserved   lexer
--- > …
-
-makeLexer :: Stream s m Char => LanguageDef s u m -> Lexer s u m
-makeLexer languageDef =
-  Lexer
-  { identifier    = identifier
-  , reserved      = reserved
-  , operator      = operator
-  , reservedOp    = reservedOp
-
-  , charLiteral   = charLiteral
-  , stringLiteral = stringLiteral
-
-  , integer       = integer
-  , integer'      = integer'
-  , decimal       = decimal
-  , hexadecimal   = hexadecimal
-  , octal         = octal
-  , signed        = signed
-  , float         = float
-  , float'        = float'
-  , number        = number
-  , number'       = number'
-
-  , symbol        = symbol
-  , lexeme        = lexeme
-  , whiteSpace    = whiteSpace
-
-  , parens        = parens
-  , braces        = braces
-  , angles        = angles
-  , brackets      = brackets
-  , semicolon     = semicolon
-  , comma         = comma
-  , colon         = colon
-  , dot           = dot
-  , semicolonSep  = semicolonSep
-  , semicolonSep1 = semicolonSep1
-  , commaSep      = commaSep
-  , commaSep1     = commaSep1 }
-  where
-
-  -- bracketing
-
-  parens    = between (symbol "(") (symbol ")")
-  braces    = between (symbol "{") (symbol "}")
-  angles    = between (symbol "<") (symbol ">")
-  brackets  = between (symbol "[") (symbol "]")
-
-  semicolon = symbol ";"
-  comma     = symbol ","
-  dot       = symbol "."
-  colon     = symbol ":"
-
-  commaSep  = (`sepBy` comma)
-  semicolonSep = (`sepBy` semicolon)
-
-  commaSep1 = (`sepBy1` comma)
-  semicolonSep1 = (`sepBy1` semicolon)
-
-  -- chars & strings
-
-  charLiteral = lexeme ( between (char '\'')
-                                 (char '\'' <?> "end of character")
-                                 characterChar )
-                <?> "character"
-
-  characterChar = charLetter <|> charEscape <?> "literal character"
-
-  charEscape = char '\\' >> escapeCode
-  charLetter = satisfy (\c -> (c /= '\'') && (c /= '\\') && (c > '\026'))
-
-  stringLiteral =
-      lexeme ((foldr (maybe id (:)) "" <$>
-               between (char '"') (char '"' <?> "end of string")
-                           (many stringChar)) <?> "literal string")
-
-  stringChar = (Just <$> stringLetter) <|> stringEscape <?> "string character"
-
-  stringLetter = satisfy (\c -> (c /= '"') && (c /= '\\') && (c > '\026'))
-
-  stringEscape = char '\\' >>
-                 ( (escapeGap >> return Nothing)   <|>
-                   (escapeEmpty >> return Nothing) <|>
-                   (Just <$> escapeCode) )
-
-  escapeEmpty = char '&'
-  escapeGap   = some spaceChar >> char '\\' <?> "end of string gap"
-
-  -- escape codes
-
-  escapeCode = charEsc <|> charNum <|> charAscii <|> charControl
-               <?> "escape code"
-
-  charEsc = choice (parseEsc <$> escMap)
-      where parseEsc (c, code) = char c >> return code
-
-  charNum = toEnum . fromInteger <$>
-            ( decimal <|>
-             (char 'o' >> nump "0o" octDigitChar) <|>
-             (char 'x' >> nump "0x" hexDigitChar) )
-
-  charAscii = choice (parseAscii <$> asciiMap)
-      where parseAscii (asc, code) = try (string asc >> return code)
-
-  charControl = toEnum . subtract 64 . fromEnum <$> (char '^' >> upperChar)
-
-  -- escape code tables
-
-  escMap      = zip "abfnrtv\\\"\'" "\a\b\f\n\r\t\v\\\"\'"
-  asciiMap    = zip (ascii3codes ++ ascii2codes) (ascii3 ++ ascii2)
-
-  ascii2codes = ["BS","HT","LF","VT","FF","CR","SO","SI","EM",
-                 "FS","GS","RS","US","SP"]
-  ascii3codes = ["NUL","SOH","STX","ETX","EOT","ENQ","ACK","BEL",
-                 "DLE","DC1","DC2","DC3","DC4","NAK","SYN","ETB",
-                 "CAN","SUB","ESC","DEL"]
-
-  ascii2 = "\b\t\n\v\f\r\SO\SI\EM\FS\GS\RS\US "
-  ascii3 = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\SUB\ESC\DEL"
-
-  -- numbers — integers
-
-  integer  = decimal
-  integer' = signed integer
-
-  decimal     = lexeme (nump "" digitChar <?> "integer")
-  hexadecimal = lexeme $ char '0' >> oneOf "xX" >> nump "0x" hexDigitChar
-  octal       = lexeme $ char '0' >> oneOf "oO" >> nump "0o" octDigitChar
-
-  nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
-
-  signed p = ($) <$> option id (lexeme sign) <*> p
-
-  sign :: (Stream s m Char, Num a) => ParsecT s u m (a -> a)
-  sign = (char '+' *> return id) <|> (char '-' *> return negate)
-
-  -- numbers — floats
-
-  float  = lexeme ffloat <?> "float"
-  float' = signed float
-
-  ffloat = read <$> ffloat'
-    where
-      ffloat' = do
-        decimal <- fDec
-        rest <- fraction <|> fExp
-        return $ decimal ++ rest
-
-  fraction = do
-    void $ char '.'
-    decimal <- fDec
-    exp <- option "" fExp
-    return $ '.' : decimal ++  exp
-
-  fDec = some digitChar
-
-  fExp = do
-    expChar <- oneOf "eE"
-    signStr <- option "" (pure <$> oneOf "+-")
-    decimal <- fDec
-    return $ expChar : signStr ++ decimal
-
-  -- numbers — a more general case
-
-  number  = (Right <$> try float)  <|> (Left <$> integer)  <?> "number"
-  number' = (Right <$> try float') <|> (Left <$> integer') <?> "number"
-
-  -- operators & reserved ops
-
-  reservedOp name =
-      lexeme $ try $ do
-        void $ string name
-        notFollowedBy (opLetter languageDef) <?> ("end of " ++ show name)
-
-  operator =
-      lexeme $ try $ do
-        name <- oper
-        if isReservedOp name
-        then unexpected ("reserved operator " ++ show name)
-        else return name
-
-  oper = ((:) <$> opStart languageDef <*> many (opLetter languageDef))
-         <?> "operator"
-
-  isReservedOp = isReserved . sort $ reservedOpNames languageDef
-
-  -- identifiers & reserved words
-
-  reserved name =
-      lexeme $ try $ do
-        void $ caseString name
-        notFollowedBy (identLetter languageDef) <?> ("end of " ++ show name)
-
-  caseString name
-      | caseSensitive languageDef = string name
-      | otherwise                 = walk name >> return name
-      where walk = foldr (\c -> ((caseChar c <?> show name) >>)) (return ())
-            caseChar c
-                | isAlpha c = char (toLower c) <|> char (toUpper c)
-                | otherwise = char c
-
-  identifier =
-      lexeme $ try $ do
-        name <- ident
-        if isReservedName name
-        then unexpected ("reserved word " ++ show name)
-        else return name
-
-  ident = ((:) <$> identStart languageDef <*> many (identLetter languageDef))
-          <?> "identifier"
-
-  isReservedName name = isReserved theReservedNames caseName
-      where caseName
-                | caseSensitive languageDef = name
-                | otherwise                 = toLower <$> name
-
-  isReserved names name = scan names
-      where scan []     = False
-            scan (r:rs) = case compare r name of
-                            LT  -> scan rs
-                            EQ  -> True
-                            GT  -> False
-
-  theReservedNames
-      | caseSensitive languageDef = sort reserved
-      | otherwise                 = sort . fmap (fmap toLower) $ reserved
-      where reserved = reservedNames languageDef
-
-  -- white space & symbols
-
-  symbol = lexeme . string
-
-  lexeme p = p <* whiteSpace
-
-  whiteSpace = hidden space -- FIXME: write it in a decent manner
-      -- \| noLine && noMulti = skipMany (space            <?> "")
-      -- \| noLine            = skipMany (space            <|>
-      --                                 multiLineComment <?> "")
-      -- \| noMulti           = skipMany (space            <|>
-      --                                 oneLineComment   <?> "")
-      -- \| otherwise         = skipMany (space            <|>
-      --                                 oneLineComment   <|>
-      --                                 multiLineComment <?> "")
-      -- where
-      --   noLine  = null (commentLine languageDef)
-      --   noMulti = null (commentStart languageDef)
-
-  -- oneLineComment = void (try (string (commentLine languageDef))
-  --                       >> skipMany (satisfy (/= '\n')))
-
-  -- multiLineComment = try (string (commentStart languageDef)) >> inComment
-
-  -- inComment = if nestedComments languageDef
-  --             then inCommentMulti
-  --             else inCommentSingle
-
-  -- inCommentMulti
-  --     =  void (try . string $ commentEnd languageDef)
-  --    <|> (multiLineComment            >> inCommentMulti)
-  --    <|> (skipSome (noneOf startEnd) >> inCommentMulti)
-  --    <|> (oneOf startEnd              >> inCommentMulti)
-  --    <?> "end of comment"
-
-  -- inCommentSingle
-  --     =  void (try . string $ commentEnd languageDef)
-  --    <|> (skipSome (noneOf startEnd) >> inCommentSingle)
-  --    <|> (oneOf startEnd              >> inCommentSingle)
-  --    <?> "end of comment"
-
-  -- startEnd = nub $ (++) <$> commentEnd <*> commentStart $ languageDef
+-- > parens    = between (symbol "(") (symbol ")")
+-- > braces    = between (symbol "{") (symbol "}")
+-- > angles    = between (symbol "<") (symbol ">")
+-- > brackets  = between (symbol "[") (symbol "]")
+-- > semicolon = symbol ";"
+-- > comma     = symbol ","
+-- > colon     = symbol ":"
+-- > dot       = symbol "."
+
+symbol :: Stream s m Char =>
+          ParsecT s u m () -> String -> ParsecT s u m String
+symbol spc = lexeme spc . C.string
+
+-- | Case-insensitive version of 'symbol'. This may be helpful if you're
+-- working with case-insensitive languages.
+
+symbol' :: Stream s m Char =>
+           ParsecT s u m () -> String -> ParsecT s u m String
+symbol' spc = lexeme spc . C.string'
+
+-- | @indentGuard spaceConsumer test@ first consumes all white space
+-- (indentation) with @spaceConsumer@ parser, then it checks column
+-- position. It should satisfy supplied predicate @test@, otherwise the
+-- parser fails with error message “incorrect indentation”. On success
+-- current column position is returned.
+--
+-- When you want to parse block of indentation first run this parser with
+-- predicate like @(> 1)@ — this will make sure you have some
+-- indentation. Use returned value to check indentation on every subsequent
+-- line according to syntax of your language.
+
+indentGuard :: Stream s m t =>
+               ParsecT s u m () -> (Int -> Bool) -> ParsecT s u m Int
+indentGuard spc p = do
+  spc
+  pos <- sourceColumn <$> getPosition
+  if p pos
+  then return pos
+  else fail "incorrect indentation"
+
+-- | Given comment prefix this function returns parser that skips line
+-- comments. Note that it stops just before newline character but doesn't
+-- consume the newline. Newline is either supposed to be consumed by 'space'
+-- parser or picked up manually.
+
+skipLineComment :: Stream s m Char => String -> ParsecT s u m ()
+skipLineComment prefix = p >> void (manyTill C.anyChar n)
+  where p = try $ C.string prefix
+        n = lookAhead C.newline
+
+-- | @skipBlockComment start end@ skips non-nested block comment starting
+-- with @start@ and ending with @end@.
+
+skipBlockComment :: Stream s m Char => String -> String -> ParsecT s u m ()
+skipBlockComment start end = p >> void (manyTill C.anyChar n)
+  where p = try $ C.string start
+        n = try $ C.string end
+
+-- Character and string literals
+
+-- | The lexeme parser parses a single literal character without
+-- quotes. Purpose of this parser is to help with parsing of commonly used
+-- escape sequences. It's your responsibility to take care of character
+-- literal syntax in your language (surround it with single quotes or
+-- similar).
+--
+-- The literal character is parsed according to the grammar rules defined in
+-- the Haskell report.
+--
+-- Note that you can use this parser as a building block to parse various
+-- string literals:
+--
+-- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
+
+charLiteral :: Stream s m Char => ParsecT s u m Char
+charLiteral = label "literal character" $ do
+  r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
+  case listToMaybe (readLitChar r) of
+    Just (c, r') -> count (length r - length r') C.anyChar >> return c
+    Nothing      -> unexpected (showToken x)
+
+-- Numbers
+
+-- | Parse an integer without sign in decimal representation (according to
+-- format of integer literals described in Haskell report).
+--
+-- If you need to parse signed integers, see 'signed' combinator.
+
+integer :: Stream s m Char => ParsecT s u m Integer
+integer = decimal <?> "integer"
+
+-- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
+-- while this parser is not labeled.
+
+decimal :: Stream s m Char => ParsecT s u m Integer
+decimal = nump "" C.digitChar
+
+-- | Parse an integer in hexadecimal representation. Representation of
+-- hexadecimal number is expected to be according to Haskell report except
+-- for the fact that this parser doesn't parse “0x” or “0X” prefix. It is
+-- reponsibility of the programmer to parse correct prefix before parsing
+-- the number itself.
+--
+-- For example you can make it conform to Haskell report like this:
+--
+-- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
+
+hexadecimal :: Stream s m Char => ParsecT s u m Integer
+hexadecimal = nump "0x" C.hexDigitChar
+
+-- | Parse an integer in octal representation. Representation of octal
+-- number is expected to be according to Haskell report except for the fact
+-- that this parser doesn't parse “0o” or “0O” prefix. It is responsibility
+-- of the programmer to parse correct prefix before parsing the number
+-- itself.
+
+octal :: Stream s m Char => ParsecT s u m Integer
+octal = nump "0o" C.octDigitChar
+
+-- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
+-- prepends @prefix@ to returned value and tries to interpret the result as
+-- an integer according to Haskell syntax.
+
+nump :: String -> ParsecT s u m Char -> ParsecT s u m Integer
+nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
+
+-- | Parse a floating point value without sign. Representation of floating
+-- point value is expected to be according to Haskell report.
+--
+-- If you need to parse signed floats, see 'signed' combinator.
+
+float :: Stream s m Char => ParsecT s u m Double
+float = label "float" $ read <$> f
+  where f = do
+          d    <- some C.digitChar
+          rest <- fraction <|> fExp
+          return $ d ++ rest
+
+-- | This is a helper for 'float' parser. It parses fractional part of
+-- floating point number, that is, dot and everything after it.
+
+fraction :: Stream s m Char => ParsecT s u m String
+fraction = do
+  void $ C.char '.'
+  d <- some C.digitChar
+  e <- option "" fExp
+  return $ '.' : d ++ e
+
+-- | This helper parses exponent of floating point numbers.
+
+fExp :: Stream s m Char => ParsecT s u m String
+fExp = do
+  expChar <- C.char' 'e'
+  signStr <- option "" (pure <$> choice (C.char <$> "+-"))
+  d       <- some C.digitChar
+  return $ expChar : signStr ++ d
+
+-- | Parse a number: either integer or floating point. The parser can handle
+-- overlapping grammars graciously.
+
+number :: Stream s m Char => ParsecT s u m (Either Integer Double)
+number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
+
+-- | @signed space p@ parser parses optional sign, then if there is a sign
+-- it will consume optional white space (using @space@ parser), then it runs
+-- parser @p@ which should return a number. Sign of the number is changed
+-- according to previously parsed sign.
+--
+-- For example, to parse signed integer you can write:
+--
+-- > lexeme        = L.lexeme spaceConsumer
+-- > integer       = lexeme L.integer
+-- > signedInteger = signed spaceConsumer integer
+
+signed :: (Stream s m Char, Num a) =>
+          ParsecT s u m () -> ParsecT s u m a -> ParsecT s u m a
+signed spc p = ($) <$> option id (lexeme spc sign) <*> p
+
+-- | Parse a sign and return either 'id' or 'negate' according to parsed
+-- sign.
+
+sign :: (Stream s m Char, Num a) => ParsecT s u m (a -> a)
+sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)

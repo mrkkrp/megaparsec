@@ -100,7 +100,6 @@ library
                    , Text.Megaparsec.Combinator
                    , Text.Megaparsec.Error
                    , Text.Megaparsec.Expr
-                   , Text.Megaparsec.Language
                    , Text.Megaparsec.Lexer
                    , Text.Megaparsec.Perm
                    , Text.Megaparsec.Pos
@@ -116,6 +115,7 @@ test-suite old-tests
   main-is:           Main.hs
   hs-source-dirs:    old-tests
   type:              exitcode-stdio-1.0
+  ghc-options:       -O2 -Wall
   other-modules:     Bugs
                    , Bugs.Bug2
                    , Bugs.Bug6
@@ -126,7 +126,8 @@ test-suite old-tests
                    , HUnit                  == 1.2.*
                    , test-framework         >= 0.6 && < 1
                    , test-framework-hunit   >= 0.2 && < 0.4
-  ghc-options:       -O2 -Wall
+  default-extensions:
+                     FlexibleContexts
   default-language:  Haskell2010
 
 test-suite tests
