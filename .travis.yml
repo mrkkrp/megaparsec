@@ -25,7 +25,7 @@ script:
  - cabal build
  - cabal test --show-details=always
               --test-option=--threads=2
-              --test-option=--maximum-generated-tests=500
+              --test-option=--maximum-generated-tests=1000
  - cabal sdist
  - cabal haddock
 
