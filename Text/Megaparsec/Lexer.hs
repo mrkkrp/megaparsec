@@ -140,15 +140,17 @@ indentGuard spc p = do
 -- parser or picked up manually.
 
 skipLineComment :: Stream s m Char => String -> ParsecT s u m ()
-skipLineComment prefix = C.string prefix >> void (manyTill C.anyChar n)
-  where n = lookAhead C.newline
+skipLineComment prefix = p >> void (manyTill C.anyChar n)
+  where p = try $ C.string prefix
+        n = lookAhead C.newline
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
 skipBlockComment :: Stream s m Char => String -> String -> ParsecT s u m ()
-skipBlockComment start end = C.string start >> void (manyTill C.anyChar n)
-  where n = lookAhead . try $ C.string end
+skipBlockComment start end = p >> void (manyTill C.anyChar n)
+  where p = try $ C.string start
+        n = try $ C.string end
 
 -- Character and string literals
 
