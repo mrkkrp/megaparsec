@@ -29,9 +29,17 @@
 
 module Lexer (tests) where
 
-import Data.Char (readLitChar, showLitChar, isDigit)
-import Data.List (findIndices)
-import Data.Maybe (listToMaybe, isNothing, fromJust)
+import Control.Applicative (empty)
+import Control.Monad (void)
+import Data.Char
+  ( readLitChar
+  , showLitChar
+  , isDigit
+  , isAlphaNum
+  , isSpace
+  , toLower )
+import Data.List (findIndices, isInfixOf)
+import Data.Maybe (listToMaybe, maybeToList, isNothing, fromJust)
 import Numeric (showInt, showHex, showOct, showSigned)
 
 import Test.Framework
@@ -40,7 +48,9 @@ import Test.QuickCheck
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Lexer
+import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
+import Text.Megaparsec.String
 import qualified Text.Megaparsec.Char as C
 
 import Util
@@ -48,12 +58,9 @@ import Util
 tests :: Test
 tests = testGroup "Lexer"
         [ testProperty "space combinator"            prop_space
-        , testProperty "lexeme combinator"           prop_lexeme
         , testProperty "symbol combinator"           prop_symbol
         , testProperty "symbol' combinator"          prop_symbol'
         , testProperty "indentGuard combinator"      prop_indentGuard
-        , testProperty "skipLineComment combinator"  prop_skipLineComment
-        , testProperty "skipBlockComment combinator" prop_skipBlockComment
         , testProperty "charLiteral"                 prop_charLiteral
         , testProperty "integer"                     prop_integer
         , testProperty "decimal"                     prop_decimal
@@ -64,26 +71,93 @@ tests = testGroup "Lexer"
         , testProperty "number"                      prop_number
         , testProperty "signed"                      prop_signed ]
 
-prop_space :: Property
-prop_space = property True
+newtype WhiteSpace = WhiteSpace
+  { getWhiteSpace :: String }
+  deriving (Show, Eq)
 
-prop_lexeme :: Property
-prop_lexeme = property True
+instance Arbitrary WhiteSpace where
+  arbitrary = WhiteSpace . concat <$> listOf whiteUnit
 
-prop_symbol :: Property
-prop_symbol = property True
+newtype Symbol = Symbol
+  { getSymbol :: String }
+  deriving (Show, Eq)
 
-prop_symbol' :: Property
-prop_symbol' = property True
+instance Arbitrary Symbol where
+  arbitrary = Symbol <$> ((++) <$> symbolName <*> whiteChars)
 
-prop_indentGuard :: Property
-prop_indentGuard = property True
+whiteUnit :: Gen String
+whiteUnit = oneof [whiteChars, whiteLine, whiteBlock]
 
-prop_skipLineComment :: Property
-prop_skipLineComment = property True
+whiteChars :: Gen String
+whiteChars = listOf $ elements "\t\n "
 
-prop_skipBlockComment :: Property
-prop_skipBlockComment = property True
+whiteLine :: Gen String
+whiteLine = commentOut <$> arbitrary `suchThat` goodEnough
+  where commentOut x = "//" ++ x ++ "\n"
+        goodEnough x = '\n' `notElem` x
+
+whiteBlock :: Gen String
+whiteBlock = commentOut <$> arbitrary `suchThat` goodEnough
+  where commentOut x = "/*" ++ x ++ "*/"
+        goodEnough x = not $ "*/" `isInfixOf` x
+
+symbolName :: Gen String
+symbolName = listOf $ arbitrary `suchThat` isAlphaNum
+
+sc :: Parser ()
+sc = space (void C.spaceChar) l b
+  where l = skipLineComment "//"
+        b = skipBlockComment "/*" "*/"
+
+sc' :: Parser ()
+sc' = space (void $ C.oneOf " \t") empty empty
+
+prop_space :: WhiteSpace -> Property
+prop_space w = checkParser p r s
+  where p = sc
+        r = Right ()
+        s = getWhiteSpace w
+
+prop_symbol :: Symbol -> Maybe Char -> Property
+prop_symbol = parseSymbol (symbol sc) id
+
+prop_symbol' :: Symbol -> Maybe Char -> Property
+prop_symbol' = parseSymbol (symbol' sc) (fmap toLower)
+
+parseSymbol :: (String -> Parser String) -> (String -> String)
+            -> Symbol -> Maybe Char -> Property
+parseSymbol p' f s' t = checkParser p r s
+  where p = p' (f g)
+        r | g == s || isSpace (last s) = Right (f g)
+          | otherwise = posErr (length s - 1) s [uneCh (last s), exEof]
+        g = takeWhile (not . isSpace) s
+        s = getSymbol s' ++ maybeToList t
+
+newtype IndLine = IndLine
+  { getIndLine :: String }
+  deriving (Show, Eq)
+
+instance Arbitrary IndLine where
+  arbitrary = IndLine . concat <$> sequence [spc, sym, spc, eol]
+    where spc = listOf (elements " \t")
+          sym = return "xxx"
+          eol = return "\n"
+
+prop_indentGuard :: IndLine -> IndLine -> IndLine -> Property
+prop_indentGuard l0 l1 l2 = checkParser p r s
+  where p  = ip (> 1) >>= \x -> sp >> ip (== x) >> sp >> ip (> x) >> sp
+        ip = indentGuard sc'
+        sp = void $ symbol sc' "xxx" <* C.eol
+        r | f' l0 <= 1     = posErr 0 s msg'
+          | f' l1 /= f' l0 = posErr (f l1 + g [l0]) s msg'
+          | f' l2 <= f' l0 = posErr (f l2 + g [l0, l1]) s msg'
+          | otherwise = Right ()
+        msg' = [msg "incorrect indentation"]
+        f    = length . takeWhile isSpace . getIndLine
+        f' x = sourceColumn $
+               updatePosString (initialPos "") $ take (f x) (getIndLine x)
+        g xs = sum $ length . getIndLine <$> xs
+        s    = concat $ getIndLine <$> [l0, l1, l2]
 
 prop_charLiteral :: String -> Bool -> Property
 prop_charLiteral t i = checkParser charLiteral r s
