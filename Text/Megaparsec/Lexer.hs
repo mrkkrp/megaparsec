@@ -121,7 +121,7 @@ symbol' spc = lexeme spc . C.string'
 -- current column position is returned.
 --
 -- When you want to parse block of indentation first run this parser with
--- predicate like @(> 0)@ — this will make sure you have some
+-- predicate like @(> 1)@ — this will make sure you have some
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
