@@ -25,6 +25,7 @@ Names below are sorted alphabetically.
 
 * Albert Netymk
 * Antoine Latter
+* Artyom (@neongreen)
 * Auke Booij
 * Ben Pence
 * Björn Buckwalter
