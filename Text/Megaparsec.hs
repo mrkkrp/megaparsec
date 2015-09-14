@@ -19,7 +19,7 @@
 -- > import Text.Megaparsec.Combinator
 --
 -- Then you can implement your own version of 'satisfy' on top of the
--- 'tokenPrim' primitive.
+-- 'token' primitive.
 --
 -- Typical import section looks like this:
 --
