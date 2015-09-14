@@ -568,7 +568,7 @@ eof' = ParsecT $ \s@(State input pos _) _ _ eok eerr -> do
 
 token :: Stream s m t =>
          (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
-      -> (t -> Maybe a) -- ^ Matching function for the token to parse.
+      -> (t -> Either [Message] a) -- ^ Matching function for the token to parse.
       -> ParsecT s u m a
 {-# INLINE token #-}
 token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
@@ -577,10 +577,10 @@ token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
-          Just x -> let newpos = nextpos pos c cs
-                        newstate = State cs newpos u
-                    in seq newpos $ seq newstate $ cok x newstate mempty
-          Nothing -> eerr $ unexpectedErr (showToken c) pos
+          Left ms -> eerr $ foldr addErrorMessage (newErrorUnknown pos) ms
+          Right x -> let newpos = nextpos pos c cs
+                         newstate = State cs newpos u
+                     in seq newpos $ seq newstate $ cok x newstate mempty
 
 -- | The parser @tokens posFromTok test@ parses list of tokens and returns
 -- it. The resulting parser will use 'showToken' to pretty-print the

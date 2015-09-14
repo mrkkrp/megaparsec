@@ -58,6 +58,7 @@ import Data.List (nub)
 import Data.Maybe (fromJust)
 
 import Text.Megaparsec.Combinator
+import Text.Megaparsec.Error (Message (..))
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
@@ -317,7 +318,9 @@ noneOf' = noneOf . extendi
 satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
 satisfy f = token nextPos testChar
   where nextPos pos x _ = updatePosChar pos x
-        testChar x      = if f x then Just x else Nothing
+        testChar x      = if f x
+                          then Right x
+                          else Left . pure . Unexpected . showToken $ x
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns
 -- the parsed string (i.e. @s@).

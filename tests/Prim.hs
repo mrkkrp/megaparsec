@@ -44,6 +44,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Text.Megaparsec.Char
+import Text.Megaparsec.Error (Message (..))
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
@@ -317,7 +318,9 @@ prop_token :: String -> Property
 prop_token s = checkParser p r s
   where p = token nextPos testChar
         nextPos pos x _ = updatePosChar pos x
-        testChar x      = if isLetter x then Just x else Nothing
+        testChar x      = if isLetter x
+                          then Right x
+                          else Left . pure . Unexpected . showToken $ x
         h = head s
         r | null s = posErr 0 s [uneEof]
           | isLetter h && length s == 1 = Right (head s)
