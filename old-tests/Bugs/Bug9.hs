@@ -27,16 +27,16 @@ main =
 
 -- Syntax analysis
 
-sc :: Stream s m Char => ParsecT s u m ()
+sc :: Parser ()
 sc = L.space (void spaceChar) empty empty
 
-lexeme :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
+lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
-integer :: Stream s m Char => ParsecT s u m Integer
+integer :: Parser Integer
 integer = lexeme L.integer
 
-operator :: Stream s m Char => String -> ParsecT s u m String
+operator :: String -> Parser String
 operator = try . L.symbol sc
 
 parseTopLevel :: Parser Expr
