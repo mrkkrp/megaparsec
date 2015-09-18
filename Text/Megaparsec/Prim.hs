@@ -21,35 +21,20 @@ module Text.Megaparsec.Prim
   , Reply (..)
   , Parsec
   , ParsecT
-    -- * Running parser
-  , runParser
-  , runParserT
-  , parse
-  , parse'
-  , parseTest
     -- * Primitive combinators
-  , unexpected
-  , (<?>)
-  , label
-  , hidden
-  , try
-  , lookAhead
-  , notFollowedBy
-  , eof
-  , token
-  , tokens
+  , MonadParsec (..)
     -- * Parser state combinators
   , getPosition
   , setPosition
   , getInput
   , setInput
-  , getParserState
   , setParserState
-  , updateParserState
-    -- * User state combinators
-  , getState
-  , setState
-  , modifyState )
+    -- * Running parser
+  , runParser
+  , runParserT
+  , parse
+  , parse'
+  , parseTest )
 where
 
 import Data.Bool (bool)
@@ -74,17 +59,15 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.ShowToken
 
--- | This is Megaparsec state, this is parametrized over stream type @s@, and
--- user state @u@.
+-- | This is Megaparsec state, it's parametrized over stream type @s@.
 
-data State s u = State
+data State s = State
   { stateInput :: s
-  , statePos   :: !SourcePos
-  , stateUser  :: !u }
+  , statePos   :: !SourcePos }
   deriving (Show, Eq)
 
--- | An instance of @Stream s m t@ has stream type @s@, underlying monad @m@
--- and token type @t@ determined by the stream.
+-- | An instance of @Stream s t@ has stream type @s@, and token type @t@
+-- determined by the stream.
 --
 -- Some rough guidelines for a “correct” instance of Stream:
 --
@@ -93,26 +76,28 @@ data State s u = State
 --       within the stream” in the stream state @s@. This is trivial unless
 --       you are using the monad in a non-trivial way.
 
-class (Monad m, ShowToken t) => Stream s m t | s -> t where
-  uncons :: s -> m (Maybe (t, s))
+class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
+  uncons :: s -> Maybe (t, s)
 
-instance (Monad m, ShowToken t) => Stream [t] m t where
-  uncons []     = return Nothing
-  uncons (t:ts) = return $ Just (t, ts)
+instance (ShowToken t, ShowToken [t]) => Stream [t] t where
+  uncons []     = Nothing
+  uncons (t:ts) = Just (t, ts)
   {-# INLINE uncons #-}
 
-instance Monad m => Stream B.ByteString m Char where
-  uncons = return . B.uncons
-
-instance Monad m => Stream BL.ByteString m Char where
-  uncons = return . BL.uncons
-
-instance Monad m => Stream T.Text m Char where
-  uncons = return . T.uncons
+instance Stream B.ByteString Char where
+  uncons = B.uncons
   {-# INLINE uncons #-}
 
-instance Monad m => Stream TL.Text m Char where
-  uncons = return . TL.uncons
+instance Stream BL.ByteString Char where
+  uncons = BL.uncons
+  {-# INLINE uncons #-}
+
+instance Stream T.Text Char where
+  uncons = T.uncons
+  {-# INLINE uncons #-}
+
+instance Stream TL.Text Char where
+  uncons = TL.uncons
   {-# INLINE uncons #-}
 
 -- | This data structure represents an aspect of result of parser's
@@ -120,13 +105,11 @@ instance Monad m => Stream TL.Text m Char where
 --
 --     * @Cosumed@ is a wrapper for result when some part of input stream
 --       was consumed.
---     * @Empty@ is a wrapper for result when input stream is empty.
+--     * @Empty@ is a wrapper for result when no input was consumed.
 --
 -- See also: 'Reply'.
 
-data Consumed a
-  = Consumed a
-  | Empty   !a
+data Consumed a = Consumed a | Empty !a
 
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
@@ -136,9 +119,7 @@ data Consumed a
 --
 -- See also 'Consumed'.
 
-data Reply s u a
-  = Ok a !(State s u)
-  | Error ParseError
+data Reply s a = Ok a !(State s) | Error ParseError
 
 -- | 'Hints' represent collection of strings to be included into 'ParserError'
 -- as “expected” messages when a parser fails without consuming input right
@@ -176,8 +157,8 @@ withHints (Hints xs) c = c . addHints
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
 
-accHints :: Hints -> (a -> State s u -> Hints -> m b) ->
-            a -> State s u -> Hints -> m b
+accHints :: Hints -> (a -> State s -> Hints -> m b) ->
+            a -> State s -> Hints -> m b
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 
 -- | Replace most recent group of hints (if any) with given string. Used in
@@ -222,41 +203,39 @@ refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 -- | @Parsec@ is non-transformer variant of more general @ParsecT@
 -- monad-transformer.
 
-type Parsec s u = ParsecT s u Identity
+type Parsec s = ParsecT s Identity
 
--- | @ParsecT s u m a@ is a parser with stream type @s@, user state type @u@,
--- underlying monad @m@ and return type @a@. Parsec is strict in the user
--- state. If this is undesirable, simply use a data type like @data Box a =
--- Box a@ and the state type @Box YourStateType@ to add a level of
--- indirection.
+-- | @ParsecT s m a@ is a parser with stream type @s@, underlying monad @m@
+-- and return type @a@.
 
-newtype ParsecT s u m a = ParsecT
-  { unParser :: forall b . State s u
-             -> (a -> State s u -> Hints -> m b) -- consumed-OK
-             -> (ParseError -> m b)              -- consumed-error
-             -> (a -> State s u -> Hints -> m b) -- empty-OK
-             -> (ParseError -> m b)              -- empty-error
+newtype ParsecT s m a = ParsecT
+  { unParser :: forall b. State s
+             -> (a -> State s -> Hints -> m b) -- consumed-OK
+             -> (ParseError -> m b)            -- consumed-error
+             -> (a -> State s -> Hints -> m b) -- empty-OK
+             -> (ParseError -> m b)            -- empty-error
              -> m b }
 
-instance Functor (ParsecT s u m) where
-  fmap = parsecMap
+instance Functor (ParsecT s m) where
+  fmap = pMap
 
-parsecMap :: (a -> b) -> ParsecT s u m a -> ParsecT s u m b
-parsecMap f p = ParsecT $ \s cok cerr eok eerr ->
+pMap :: (a -> b) -> ParsecT s m a -> ParsecT s m b
+pMap f p = ParsecT $ \s cok cerr eok eerr ->
   unParser p s (cok . f) cerr (eok . f) eerr
+{-# INLINE pMap #-}
 
-instance A.Applicative (ParsecT s u m) where
+instance A.Applicative (ParsecT s m) where
   pure     = return
   (<*>)    = ap
   (*>)     = (>>)
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
-instance A.Alternative (ParsecT s u m) where
+instance A.Alternative (ParsecT s m) where
   empty  = mzero
   (<|>)  = mplus
   many p = reverse <$> manyAcc p
 
-manyAcc :: ParsecT s u m a -> ParsecT s u m [a]
+manyAcc :: ParsecT s m a -> ParsecT s m [a]
 manyAcc p = ParsecT $ \s cok cerr eok _ ->
   let errToHints c err = c (toHints err)
       walk xs x s' _ =
@@ -272,43 +251,32 @@ manyErr = error
     "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
     \that accepts an empty string."
 
-instance Monad (ParsecT s u m) where
-  return = parserReturn
-  (>>=)  = parserBind
-  fail   = parserFail
+instance Monad (ParsecT s m) where
+  return = pReturn
+  (>>=)  = pBind
+  fail   = pFail
 
-parserReturn :: a -> ParsecT s u m a
-parserReturn x = ParsecT $ \s _ _ eok _ -> eok x s mempty
+pReturn :: a -> ParsecT s m a
+pReturn x = ParsecT $ \s _ _ eok _ -> eok x s mempty
+{-# INLINE pReturn #-}
 
-parserBind :: ParsecT s u m a -> (a -> ParsecT s u m b) -> ParsecT s u m b
-{-# INLINE parserBind #-}
-parserBind m k = ParsecT $ \s cok cerr eok eerr ->
+pBind :: ParsecT s m a -> (a -> ParsecT s m b) -> ParsecT s m b
+pBind m k = ParsecT $ \s cok cerr eok eerr ->
   let mcok x s' hs = unParser (k x) s' cok cerr
                      (accHints hs cok) (withHints hs cerr)
       meok x s' hs = unParser (k x) s' cok cerr
                      (accHints hs eok) (withHints hs eerr)
   in unParser m s mcok cerr meok eerr
+{-# INLINE pBind #-}
 
-parserFail :: String -> ParsecT s u m a
-parserFail msg = ParsecT $ \s _ _ _ eerr ->
+pFail :: String -> ParsecT s m a
+pFail msg = ParsecT $ \s _ _ _ eerr ->
   eerr $ newErrorMessage (Message msg) (statePos s)
+{-# INLINE pFail #-}
 
--- | Low-level unpacking of the ParsecT type. To actually run parser see
--- 'runParserT' and 'runParser'.
+-- | Low-level creation of the ParsecT type.
 
-runParsecT :: Monad m =>
-              ParsecT s u m a -> State s u -> m (Consumed (m (Reply s u a)))
-runParsecT p s = unParser p s cok cerr eok eerr
-  where cok a s' _ = return . Consumed . return $ Ok a s'
-        cerr err   = return . Consumed . return $ Error err
-        eok a s' _ = return . Empty    . return $ Ok a s'
-        eerr err   = return . Empty    . return $ Error err
-
--- | Low-level creation of the ParsecT type. You really shouldn't have to do
--- this.
-
-mkPT :: Monad m =>
-        (State s u -> m (Consumed (m (Reply s u a)))) -> ParsecT s u m a
+mkPT :: Monad m => (State s -> m (Consumed (m (Reply s a)))) -> ParsecT s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   cons <- k s
   case cons of
@@ -323,297 +291,276 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
         Ok x s'   -> eok x s' mempty
         Error err -> eerr err
 
-instance MonadIO m => MonadIO (ParsecT s u m) where
+instance MonadIO m => MonadIO (ParsecT s m) where
   liftIO = lift . liftIO
 
-instance MonadReader r m => MonadReader r (ParsecT s u m) where
+instance MonadReader r m => MonadReader r (ParsecT s m) where
   ask       = lift ask
   local f p = mkPT $ \s -> local f (runParsecT p s)
 
-instance MonadState s m => MonadState s (ParsecT s' u m) where
+instance MonadState s m => MonadState s (ParsecT s' m) where
   get = lift get
   put = lift . put
 
-instance MonadCont m => MonadCont (ParsecT s u m) where
+instance MonadCont m => MonadCont (ParsecT s m) where
   callCC f = mkPT $ \s ->
-        callCC $ \c ->
-        runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
+     callCC $ \c ->
+       runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
     where pack s a = Empty $ return (Ok a s)
 
-instance MonadError e m => MonadError e (ParsecT s u m) where
+instance MonadError e m => MonadError e (ParsecT s m) where
   throwError = lift . throwError
   p `catchError` h = mkPT $ \s ->
       runParsecT p s `catchError` \e ->
           runParsecT (h e) s
 
-instance MonadPlus (ParsecT s u m) where
-  mzero = parserZero
-  mplus = parserPlus
+instance MonadPlus (ParsecT s m) where
+  mzero = pZero
+  mplus = pPlus
 
-parserZero :: ParsecT s u m a
-parserZero = ParsecT $ \(State _ pos _) _ _ _ eerr ->
-  eerr $ newErrorUnknown pos
+pZero :: ParsecT s m a
+pZero = ParsecT $ \(State _ pos) _ _ _ eerr -> eerr $ newErrorUnknown pos
 
-parserPlus :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
-{-# INLINE parserPlus #-}
-parserPlus m n = ParsecT $ \s cok cerr eok eerr ->
+pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
+pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err =
         let ncerr   err' = cerr (mergeError err' err)
             neok x s' hs = eok x s' (toHints err <> hs)
             neerr   err' = eerr (mergeError err' err)
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
+{-# INLINE pPlus #-}
 
-instance MonadTrans (ParsecT s u) where
+instance MonadTrans (ParsecT s) where
   lift amb = ParsecT $ \s _ _ eok _ -> amb >>= \a -> eok a s mempty
-
--- Running a parser
-
--- | The most general way to run a parser over the identity monad.
--- @runParser p state filePath input@ runs parser @p@ on the input list of
--- tokens @input@, obtained from source @filePath@ with the initial user
--- state @st@.  The @filePath@ is only used in error messages and may be the
--- empty string. Returns either a 'ParseError' ('Left') or a value of type
--- @a@ ('Right').
---
--- > parseFromFile p fname = runParser p () fname <$> readFile fname
-
-runParser :: Stream s Identity t =>
-             Parsec s u a -> u -> SourceName -> s -> Either ParseError a
-runParser p u name s = runIdentity $ runParserT p u name s
-
--- | The most general way to run a parser. @runParserT p state filePath
--- input@ runs parser @p@ on the input list of tokens @input@, obtained from
--- source @filePath@ with the initial user state @st@. The @filePath@ is
--- only used in error messages and may be the empty string. Returns a
--- computation in the underlying monad @m@ that return either a 'ParseError'
--- ('Left') or a value of type @a@ ('Right').
-
-runParserT :: Stream s m t =>
-              ParsecT s u m a -> u -> SourceName -> s -> m (Either ParseError a)
-runParserT p u name s = do
-  res <- runParsecT p (State s (initialPos name) u)
-  r <- parserReply res
-  case r of
-    Ok x _    -> return $ Right x
-    Error err -> return $ Left err
-  where parserReply res =
-          case res of
-            Consumed r -> r
-            Empty    r -> r
-
--- | @parse p filePath input@ runs a parser @p@ over identity without user
--- state. The @filePath@ is only used in error messages and may be the empty
--- string. Returns either a 'ParseError' ('Left') or a value of type @a@
--- ('Right').
---
--- > main = case (parse numbers "" "11, 2, 43") of
--- >          Left err -> print err
--- >          Right xs -> print (sum xs)
--- >
--- > numbers = commaSep integer
-
-parse :: Stream s Identity t =>
-         Parsec s () a -> SourceName -> s -> Either ParseError a
-parse p = runParser p ()
-
--- | @parse' p input@ runs parser @p@ on @input@ and returns result
--- inside 'Just' on success and 'Nothing' on failure. This function also
--- parses 'eof', so all input should be consumed by the parser @p@.
---
--- The function is supposed to be useful for lightweight parsing, where
--- error messages (and thus file name) are not important and entire input
--- should be parsed. For example it can be used when parsing of single
--- number according to specification of its format is desired.
-
-parse' :: Stream s Identity t => Parsec s () a -> s -> Maybe a
-parse' p s =
-  case parse (p <* eof) "" s of
-    Left  _ -> Nothing
-    Right x -> Just x
-
--- | The expression @parseTest p input@ applies a parser @p@ against
--- input @input@ and prints the result to stdout. Used for testing.
-
-parseTest :: (Stream s Identity t, Show a) => Parsec s () a -> s -> IO ()
-parseTest p input =
-  case parse p "" input of
-    Left err -> putStr "parse error at " >> print err
-    Right x  -> print x
 
 -- Primitive combinators
 
--- | The parser @unexpected msg@ always fails with an unexpected error
--- message @msg@ without consuming any input.
---
--- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
--- to generate error messages. Of these, only ('<?>') is commonly used.
-
-unexpected :: Stream s m t => String -> ParsecT s u m a
-unexpected msg = ParsecT $ \(State _ pos _) _ _ _ eerr ->
-  eerr $ newErrorMessage (Unexpected msg) pos
-
 infix 0 <?>
 
--- | The parser @p \<?> msg@ behaves as parser @p@, but whenever the
--- parser @p@ fails /without consuming any input/, it replaces expect error
--- messages with the expect error message @msg@.
---
--- This is normally used at the end of a set alternatives where we want to
--- return an error message in terms of a higher level construct rather than
--- returning all possible characters. For example, if the @expr@ parser from
--- the “try” example would fail, the error message is: “…: expecting
--- expression”. Without the @(\<?>)@ combinator, the message would be like
--- “…: expecting \"let\" or letter”, which is less friendly.
+-- | Type class describing parsers independent of input type.
 
-(<?>) :: ParsecT s u m a -> String -> ParsecT s u m a
-(<?>) = flip label
+class (A.Alternative m, Monad m, Stream s t) =>
+      MonadParsec s m t | m -> s t where
 
--- | A synonym for @(\<?>)@, but as a function instead of an operator.
+  -- | The parser @unexpected msg@ always fails with an unexpected error
+  -- message @msg@ without consuming any input.
+  --
+  -- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
+  -- to generate error messages. Of these, only ('<?>') is commonly used.
 
-label :: String -> ParsecT s u m a -> ParsecT s u m a
-label l p = ParsecT $ \s cok cerr eok eerr ->
+  unexpected :: String -> m a
+
+  -- | The parser @p \<?> msg@ behaves as parser @p@, but whenever the
+  -- parser @p@ fails /without consuming any input/, it replaces expect
+  -- error messages with the expect error message @msg@.
+  --
+  -- This is normally used at the end of a set alternatives where we want to
+  -- return an error message in terms of a higher level construct rather
+  -- than returning all possible characters. For example, if the @expr@
+  -- parser from the “try” example would fail, the error message is: “…:
+  -- expecting expression”. Without the @(\<?>)@ combinator, the message
+  -- would be like “…: expecting \"let\" or letter”, which is less friendly.
+
+  (<?>) :: m a -> String -> m a
+  (<?>) = flip label
+
+  -- | A synonym for @(\<?>)@, but as a function instead of an operator.
+
+  label :: String -> m a -> m a
+  label = flip (<?>)
+
+  -- | @hidden p@ behaves just like parser @p@, but it doesn't show any
+  -- “expected” tokens in error message when @p@ fails.
+
+  hidden :: m a -> m a
+  hidden = label ""
+
+  -- | The parser @try p@ behaves like parser @p@, except that it
+  -- pretends that it hasn't consumed any input when an error occurs.
+  --
+  -- This combinator is used whenever arbitrary look ahead is needed. Since
+  -- it pretends that it hasn't consumed any input when @p@ fails, the
+  -- ('A.<|>') combinator will try its second alternative even when the
+  -- first parser failed while consuming input.
+  --
+  -- For example, here is a parser that will /try/ (sorry for the pun) to
+  -- parse word “let” or “lexical”:
+  --
+  -- >>> parseTest (string "let" <|> string "lexical") "lexical"
+  -- parse error at line 1, column 1:
+  -- unexpected "lex"
+  -- expecting "let"
+  --
+  -- First parser consumed “le” and failed, @string "lexical"@ couldn't
+  -- succeed with “xical” as its input! Things get much better with help of
+  -- @try@:
+  --
+  -- >>> parseTest (try (string "let") <|> string "lexical") "lexical"
+  -- "lexical"
+  --
+  -- @try@ also improves error messages in case of overlapping alternatives,
+  -- because Megaparsec's hint system can be used:
+  --
+  -- >>> parseTest (try (string "let") <|> string "lexical") "le"
+  -- parse error at line 1, column 1:
+  -- unexpected "le"
+  -- expecting "let" or "lexical"
+
+  try :: m a -> m a
+
+  -- | @lookAhead p@ parses @p@ without consuming any input.
+  --
+  -- If @p@ fails and consumes some input, so does @lookAhead@. Combine with
+  -- 'try' if this is undesirable.
+
+  lookAhead :: m a -> m a
+
+  -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
+  -- does not consume any input and can be used to implement the “longest
+  -- match” rule.
+
+  notFollowedBy :: m a -> m ()
+
+  -- | This parser only succeeds at the end of the input.
+
+  eof :: m ()
+
+  -- | The parser @token nextPos testTok@ accepts a token @t@ with result
+  -- @x@ when the function @testTok t@ returns @'Just' x@. The position of
+  -- the /next/ token should be returned when @nextPos@ is called with the
+  -- current source position @pos@, the current token @t@ and the rest of
+  -- the tokens @toks@, @nextPos pos t toks@.
+  --
+  -- This is the most primitive combinator for accepting tokens. For
+  -- example, the 'Text.Megaparsec.Char.char' parser could be implemented
+  -- as:
+  --
+  -- > char c = token nextPos testChar
+  -- >   where testChar x       = if x == c then Just x else Nothing
+  -- >         nextPos pos x xs = updatePosChar pos x
+
+  token :: (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
+        -> (t -> Either [Message] a) -- ^ Matching function for the token to parse.
+        -> m a
+
+  -- | The parser @tokens posFromTok test@ parses list of tokens and returns
+  -- it. The resulting parser will use 'showToken' to pretty-print the
+  -- collection of tokens. Supplied predicate @test@ is used to check
+  -- equality of given and parsed tokens.
+  --
+  -- This can be used to example to write 'Text.Megaparsec.Char.string':
+  --
+  -- > string = tokens updatePosString (==)
+
+  tokens :: Eq t =>
+            (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
+         -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens.
+         -> [t]                   -- ^ List of tokens to parse
+         -> m [t]
+
+  -- | Returns the full parser state as a 'State' record.
+
+  getParserState :: m (State s)
+
+  -- | @updateParserState f@ applies function @f@ to the parser state.
+
+  updateParserState :: (State s -> State s) -> m ()
+
+instance Stream s t => MonadParsec s (ParsecT s m) t where
+  unexpected        = pUnexpected
+  label             = pLabel
+  try               = pTry
+  lookAhead         = pLookAhead
+  notFollowedBy     = pNotFollowedBy
+  eof               = pEof
+  token             = pToken
+  tokens            = pTokens
+  getParserState    = pGetParserState
+  updateParserState = pUpdateParserState
+
+pUnexpected :: String -> ParsecT s m a
+pUnexpected msg = ParsecT $ \(State _ pos) _ _ _ eerr ->
+  eerr $ newErrorMessage (Unexpected msg) pos
+
+pLabel :: String -> ParsecT s m a -> ParsecT s m a
+pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   let cok' x s' hs = cok x s' $ refreshLastHint hs l
       eok' x s' hs = eok x s' $ refreshLastHint hs l
       eerr'    err = eerr $ setErrorMessage (Expected l) err
   in unParser p s cok' cerr eok' eerr'
 
--- | @hidden p@ behaves just like parser @p@, but it doesn't show any “expected”
--- tokens in error message when @p@ fails.
+pTry :: ParsecT s m a -> ParsecT s m a
+pTry p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
+{-# INLINE pTry #-}
 
-hidden :: ParsecT s u m a -> ParsecT s u m a
-hidden = label ""
-
--- | The parser @try p@ behaves like parser @p@, except that it
--- pretends that it hasn't consumed any input when an error occurs.
---
--- This combinator is used whenever arbitrary look ahead is needed. Since it
--- pretends that it hasn't consumed any input when @p@ fails, the ('A.<|>')
--- combinator will try its second alternative even when the first parser
--- failed while consuming input.
---
--- For example, here is a parser that will /try/ (sorry for the pun) to
--- parse word “let” or “lexical”:
---
--- >>> parseTest (string "let" <|> string "lexical") "lexical"
--- parse error at line 1, column 1:
--- unexpected "lex"
--- expecting "let"
---
--- First parser consumed “le” and failed, @string "lexical"@ couldn't
--- succeed with “xical” as its input! Things get much better with help of
--- @try@:
---
--- >>> parseTest (try (string "let") <|> string "lexical") "lexical"
--- "lexical"
---
--- @try@ also improves error messages in case of overlapping alternatives,
--- because Megaparsec's hint system can be used:
---
--- >>> parseTest (try (string "let") <|> string "lexical") "le"
--- parse error at line 1, column 1:
--- unexpected "le"
--- expecting "let" or "lexical"
-
-try :: ParsecT s u m a -> ParsecT s u m a
-try p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
-
--- | @lookAhead p@ parses @p@ without consuming any input.
---
--- If @p@ fails and consumes some input, so does @lookAhead@. Combine with
--- 'try' if this is undesirable.
-
-lookAhead :: Stream s m t => ParsecT s u m a -> ParsecT s u m a
-lookAhead p = ParsecT $ \s _ cerr eok eerr ->
+pLookAhead :: ParsecT s m a -> ParsecT s m a
+pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
   let eok' a _ _ = eok a s mempty
   in unParser p s eok' cerr eok' eerr
+{-# INLINE pLookAhead #-}
 
--- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
--- does not consume any input and can be used to implement the “longest
--- match” rule.
-
-notFollowedBy :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
-notFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr -> do
-  l <- maybe eoi (showToken . fst) <$> uncons input
-  let cok' _ _ _ = eerr $ unexpectedErr l pos
+pNotFollowedBy :: Stream s t => ParsecT s m a -> ParsecT s m ()
+pNotFollowedBy p = ParsecT $ \s@(State input pos) _ _ eok eerr ->
+  let l = maybe eoi (showToken . fst) (uncons input)
+      cok' _ _ _ = eerr $ unexpectedErr l pos
       cerr'    _ = eok () s mempty
       eok' _ _ _ = eerr $ unexpectedErr l pos
       eerr'    _ = eok () s mempty
-  unParser p s cok' cerr' eok' eerr'
+  in unParser p s cok' cerr' eok' eerr'
 
--- | This parser only succeeds at the end of the input.
-
-eof :: Stream s m t => ParsecT s u m ()
-eof = eof' <?> eoi
-
-eof' :: Stream s m t => ParsecT s u m ()
-eof' = ParsecT $ \s@(State input pos _) _ _ eok eerr -> do
-  r <- uncons input
-  case r of
+pEof :: Stream s t => ParsecT s m ()
+pEof = label eoi $ ParsecT $ \s@(State input pos) _ _ eok eerr ->
+  case uncons input of
     Nothing    -> eok () s mempty
     Just (x,_) -> eerr $ unexpectedErr (showToken x) pos
+{-# INLINE pEof #-}
 
--- | The parser @token nextPos testTok@ accepts a token @t@ with result
--- @x@ when the function @testTok t@ returns @'Just' x@. The position of the
--- /next/ token should be returned when @nextPos@ is called with the current
--- source position @pos@, the current token @t@ and the rest of the tokens
--- @toks@, @nextPos pos t toks@.
---
--- This is the most primitive combinator for accepting tokens. For example,
--- the 'Text.Megaparsec.Char.char' parser could be implemented as:
---
--- > char c = token nextPos testChar
--- >   where testChar x       = if x == c then Just x else Nothing
--- >         nextPos pos x xs = updatePosChar pos x
-
-token :: Stream s m t =>
-         (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
-      -> (t -> Either [Message] a) -- ^ Matching function for the token to parse.
-      -> ParsecT s u m a
-{-# INLINE token #-}
-token nextpos test = ParsecT $ \(State input pos u) cok _ _ eerr -> do
-    r <- uncons input
-    case r of
+pToken :: Stream s t =>
+          (SourcePos -> t -> s -> SourcePos)
+       -> (t -> Either [Message] a)
+       -> ParsecT s m a
+pToken nextpos test = ParsecT $ \(State input pos) cok _ _ eerr ->
+    case uncons input of
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
           Left ms -> eerr $ foldr addErrorMessage (newErrorUnknown pos) ms
           Right x -> let newpos = nextpos pos c cs
-                         newstate = State cs newpos u
+                         newstate = State cs newpos
                      in seq newpos $ seq newstate $ cok x newstate mempty
+{-# INLINE pToken #-}
 
--- | The parser @tokens posFromTok test@ parses list of tokens and returns
--- it. The resulting parser will use 'showToken' to pretty-print the
--- collection of tokens. Supplied predicate @test@ is used to check equality
--- of given and parsed tokens.
---
--- This can be used to example to write 'Text.Megaparsec.Char.string':
---
--- > string = tokens updatePosString (==)
-
-tokens :: (Stream s m t, Eq t, ShowToken [t]) =>
-          (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
-       -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens.
-       -> [t]                   -- ^ List of tokens to parse
-       -> ParsecT s u m [t]
-{-# INLINE tokens #-}
-tokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-tokens nextpos test tts = ParsecT $ \(State input pos u) cok cerr _ eerr ->
+pTokens :: Stream s t =>
+           (SourcePos -> [t] -> SourcePos)
+        -> (t -> t -> Bool)
+        -> [t]
+        -> ParsecT s m [t]
+pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
+pTokens nextpos test tts = ParsecT $ \(State input pos) cok cerr _ eerr ->
   let errExpect x = setErrorMessage (Expected $ showToken tts)
                     (newErrorMessage (Unexpected x) pos)
       walk [] _ rs = let pos' = nextpos pos tts
-                         s'   = State rs pos' u
+                         s'   = State rs pos'
                      in cok tts s' mempty
-      walk (t:ts) is rs = do
-        sr <- uncons rs
+      walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
             what = bool (showToken $ reverse is) "end of input" (null is)
-        case sr of
-          Nothing -> errorCont . errExpect $ what
-          Just (x,xs)
-            | test t x  -> walk ts (x:is) xs
-            | otherwise -> errorCont . errExpect . showToken $ reverse (x:is)
+        in case uncons rs of
+             Nothing -> errorCont . errExpect $ what
+             Just (x,xs)
+               | test t x  -> walk ts (x:is) xs
+               | otherwise -> errorCont . errExpect . showToken $ reverse (x:is)
   in walk tts [] input
+{-# INLINE pTokens #-}
+
+pGetParserState :: ParsecT s m (State s)
+pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
+{-# INLINE pGetParserState #-}
+
+pUpdateParserState :: (State s -> State s) -> ParsecT s m ()
+pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
+{-# INLINE pUpdateParserState #-}
 
 unexpectedErr :: String -> SourcePos -> ParseError
 unexpectedErr msg = newErrorMessage (Unexpected msg)
@@ -625,57 +572,106 @@ eoi = "end of input"
 
 -- | Returns the current source position. See also 'SourcePos'.
 
-getPosition :: Monad m => ParsecT s u m SourcePos
+getPosition :: MonadParsec s m t => m SourcePos
 getPosition = statePos <$> getParserState
 
 -- | @setPosition pos@ sets the current source position to @pos@.
 
-setPosition :: Monad m => SourcePos -> ParsecT s u m ()
-setPosition pos = updateParserState (\(State s _ u) -> State s pos u)
+setPosition :: MonadParsec s m t => SourcePos -> m ()
+setPosition pos = updateParserState (\(State s _) -> State s pos)
 
 -- | Returns the current input.
 
-getInput :: Monad m => ParsecT s u m s
+getInput :: MonadParsec s m t => m s
 getInput = stateInput <$> getParserState
 
 -- | @setInput input@ continues parsing with @input@. The 'getInput' and
 -- @setInput@ functions can for example be used to deal with #include files.
 
-setInput :: Monad m => s -> ParsecT s u m ()
-setInput s = updateParserState (\(State _ pos u) -> State s pos u)
-
--- | Returns the full parser state as a 'State' record.
-
-getParserState :: Monad m => ParsecT s u m (State s u)
-getParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
+setInput :: MonadParsec s m t => s -> m ()
+setInput s = updateParserState (\(State _ pos) -> State s pos)
 
 -- | @setParserState st@ set the full parser state to @st@.
 
-setParserState :: Monad m => State s u -> ParsecT s u m ()
+setParserState :: MonadParsec s m t => State s -> m ()
 setParserState st = updateParserState (const st)
 
--- | @updateParserState f@ applies function @f@ to the parser state.
+-- Running a parser
 
-updateParserState :: (State s u -> State s u) -> ParsecT s u m ()
-updateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
-
--- User state combinators
-
--- | Returns the current user state.
-
-getState :: Monad m => ParsecT s u m u
-getState = stateUser <$> getParserState
-
--- | @setState st@ set the user state to @st@.
-
-setState :: Monad m => u -> ParsecT s u m ()
-setState u = updateParserState (\s -> s { stateUser = u })
-
--- | @modifyState f@ applies function @f@ to the user state. Suppose
--- that we want to count identifiers in a source, we could use the user
--- state as:
+-- | @parse p file input@ runs a parser @p@ over 'Identity'. The
+-- @file@ is only used in error messages and may be the empty
+-- string. Returns either a 'ParseError' ('Left') or a value of type @a@
+-- ('Right'). This is a synonym for 'runParser'.
 --
--- > expr = Id <$> identifier <* modifyState (+1)
+-- > main = case (parse numbers "" "11, 2, 43") of
+-- >          Left err -> print err
+-- >          Right xs -> print (sum xs)
+-- >
+-- > numbers = commaSep integer
 
-modifyState :: Monad m => (u -> u) -> ParsecT s u m ()
-modifyState f = updateParserState (\s -> s { stateUser = f (stateUser s)})
+parse :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
+parse = runParser
+
+-- | @parse' p input@ runs parser @p@ on @input@ and returns result
+-- inside 'Just' on success and 'Nothing' on failure. This function also
+-- parses 'eof', so all input should be consumed by the parser @p@.
+--
+-- The function is supposed to be useful for lightweight parsing, where
+-- error messages (and thus file name) are not important and entire input
+-- should be parsed. For example it can be used when parsing of single
+-- number according to specification of its format is desired.
+
+parse' :: Stream s t => Parsec s a -> s -> Maybe a
+parse' p s =
+  case parse (p <* eof) "" s of
+    Left  _ -> Nothing
+    Right x -> Just x
+
+-- | The expression @parseTest p input@ applies a parser @p@ against
+-- input @input@ and prints the result to stdout. Used for testing.
+
+parseTest :: (Stream s t, Show a) => Parsec s a -> s -> IO ()
+parseTest p input =
+  case parse p "" input of
+    Left err -> putStr "parse error at " >> print err
+    Right x  -> print x
+
+-- | The most general way to run a parser over the 'Identity' monad.
+-- @runParser p file input@ runs parser @p@ on the input list of tokens
+-- @input@, obtained from source @file@. The @file@ is only used in error
+-- messages and may be the empty string. Returns either a 'ParseError'
+-- ('Left') or a value of type @a@ ('Right').
+--
+-- > parseFromFile p file = runParser p file <$> readFile file
+
+runParser :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
+runParser p name s = runIdentity $ runParserT p name s
+
+-- | The most general way to run a parser. @runParserT p file input@ runs
+-- parser @p@ on the input list of tokens @input@, obtained from source
+-- @file@. The @file@ is only used in error messages and may be the empty
+-- string. Returns a computation in the underlying monad @m@ that return
+-- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
+
+runParserT :: (Monad m, Stream s t) =>
+              ParsecT s m a -> SourceName -> s -> m (Either ParseError a)
+runParserT p name s = do
+  res <- runParsecT p $ State s (initialPos name)
+  r <- parserReply res
+  case r of
+    Ok x _    -> return $ Right x
+    Error err -> return $ Left err
+  where parserReply res =
+          case res of
+            Consumed r -> r
+            Empty    r -> r
+
+-- | Low-level unpacking of the ParsecT type. 'runParserT' and 'runParser'
+-- are built upon this.
+
+runParsecT :: Monad m => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))
+runParsecT p s = unParser p s cok cerr eok eerr
+  where cok a s' _ = return . Consumed . return $ Ok a s'
+        cerr err   = return . Consumed . return $ Error err
+        eok a s' _ = return . Empty    . return $ Ok a s'
+        eerr err   = return . Empty    . return $ Error err

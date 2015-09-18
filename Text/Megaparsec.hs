@@ -48,10 +48,6 @@ module Text.Megaparsec
   , parse
   , parse'
   , parseTest
-    -- * Backtracking user state
-  , getState
-  , setState
-  , modifyState
     -- * Combinators
   , (A.<|>)
   -- $assocbo

@@ -26,7 +26,7 @@ import qualified Data.Text.IO as T
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for strict text.
 
-type Parser = Parsec T.Text ()
+type Parser = Parsec T.Text
 
 -- | @GenParser@ is similar to @Parser@ but it's parametrized over user
 -- state type.
@@ -44,4 +44,4 @@ type GenParser st = Parsec T.Text st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> T.readFile fname
+parseFromFile p fname = runParser p fname <$> T.readFile fname

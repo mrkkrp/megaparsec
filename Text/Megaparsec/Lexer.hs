@@ -74,8 +74,7 @@ import qualified Text.Megaparsec.Char as C
 -- this. You only need to call 'space' “manually” to consume any white space
 -- before the first lexeme (at the beginning of file).
 
-space :: Stream s m t => ParsecT s u m () ->
-         ParsecT s u m () -> ParsecT s u m () -> ParsecT s u m ()
+space :: MonadParsec s m Char => m () -> m () -> m () -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
 
 -- | This is wrapper for lexemes. Typical usage is to supply first argument
@@ -85,7 +84,7 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
 
-lexeme :: ParsecT s u m () -> ParsecT s u m a -> ParsecT s u m a
+lexeme :: MonadParsec s m Char => m () -> m a -> m a
 lexeme spc p = p <* spc
 
 -- | This is a helper to parse symbols, i.e. verbatim strings. You pass the
@@ -103,15 +102,13 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: Stream s m Char =>
-          ParsecT s u m () -> String -> ParsecT s u m String
+symbol :: MonadParsec s m Char => m () -> String -> m String
 symbol spc = lexeme spc . C.string
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: Stream s m Char =>
-           ParsecT s u m () -> String -> ParsecT s u m String
+symbol' :: MonadParsec s m Char => m () -> String -> m String
 symbol' spc = lexeme spc . C.string'
 
 -- | @indentGuard spaceConsumer test@ first consumes all white space
@@ -125,8 +122,7 @@ symbol' spc = lexeme spc . C.string'
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
-indentGuard :: Stream s m t =>
-               ParsecT s u m () -> (Int -> Bool) -> ParsecT s u m Int
+indentGuard :: MonadParsec s m Char => m () -> (Int -> Bool) -> m Int
 indentGuard spc p = do
   spc
   pos <- sourceColumn <$> getPosition
@@ -139,7 +135,7 @@ indentGuard spc p = do
 -- consume the newline. Newline is either supposed to be consumed by 'space'
 -- parser or picked up manually.
 
-skipLineComment :: Stream s m Char => String -> ParsecT s u m ()
+skipLineComment :: MonadParsec s m Char => String -> m ()
 skipLineComment prefix = p >> void (manyTill C.anyChar n)
   where p = try $ C.string prefix
         n = lookAhead C.newline
@@ -147,7 +143,7 @@ skipLineComment prefix = p >> void (manyTill C.anyChar n)
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: Stream s m Char => String -> String -> ParsecT s u m ()
+skipBlockComment :: MonadParsec s m Char => String -> String -> m ()
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
   where p = try $ C.string start
         n = try $ C.string end
@@ -168,7 +164,7 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 --
 -- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
 
-charLiteral :: Stream s m Char => ParsecT s u m Char
+charLiteral :: MonadParsec s m Char => m Char
 charLiteral = label "literal character" $ do
   r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
   case listToMaybe (readLitChar r) of
@@ -182,13 +178,13 @@ charLiteral = label "literal character" $ do
 --
 -- If you need to parse signed integers, see 'signed' combinator.
 
-integer :: Stream s m Char => ParsecT s u m Integer
+integer :: MonadParsec s m Char => m Integer
 integer = decimal <?> "integer"
 
 -- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
 -- while this parser is not labeled.
 
-decimal :: Stream s m Char => ParsecT s u m Integer
+decimal :: MonadParsec s m Char => m Integer
 decimal = nump "" C.digitChar
 
 -- | Parse an integer in hexadecimal representation. Representation of
@@ -201,7 +197,7 @@ decimal = nump "" C.digitChar
 --
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
-hexadecimal :: Stream s m Char => ParsecT s u m Integer
+hexadecimal :: MonadParsec s m Char => m Integer
 hexadecimal = nump "0x" C.hexDigitChar
 
 -- | Parse an integer in octal representation. Representation of octal
@@ -210,14 +206,14 @@ hexadecimal = nump "0x" C.hexDigitChar
 -- of the programmer to parse correct prefix before parsing the number
 -- itself.
 
-octal :: Stream s m Char => ParsecT s u m Integer
+octal :: MonadParsec s m Char => m Integer
 octal = nump "0o" C.octDigitChar
 
 -- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
 -- prepends @prefix@ to returned value and tries to interpret the result as
 -- an integer according to Haskell syntax.
 
-nump :: String -> ParsecT s u m Char -> ParsecT s u m Integer
+nump :: MonadParsec s m Char => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 -- | Parse a floating point value without sign. Representation of floating
@@ -225,7 +221,7 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 --
 -- If you need to parse signed floats, see 'signed' combinator.
 
-float :: Stream s m Char => ParsecT s u m Double
+float :: MonadParsec s m Char => m Double
 float = label "float" $ read <$> f
   where f = do
           d    <- some C.digitChar
@@ -235,7 +231,7 @@ float = label "float" $ read <$> f
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
 
-fraction :: Stream s m Char => ParsecT s u m String
+fraction :: MonadParsec s m Char => m String
 fraction = do
   void $ C.char '.'
   d <- some C.digitChar
@@ -244,7 +240,7 @@ fraction = do
 
 -- | This helper parses exponent of floating point numbers.
 
-fExp :: Stream s m Char => ParsecT s u m String
+fExp :: MonadParsec s m Char => m String
 fExp = do
   expChar <- C.char' 'e'
   signStr <- option "" (pure <$> choice (C.char <$> "+-"))
@@ -254,7 +250,7 @@ fExp = do
 -- | Parse a number: either integer or floating point. The parser can handle
 -- overlapping grammars graciously.
 
-number :: Stream s m Char => ParsecT s u m (Either Integer Double)
+number :: MonadParsec s m Char => m (Either Integer Double)
 number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
 
 -- | @signed space p@ parser parses optional sign, then if there is a sign
@@ -268,12 +264,11 @@ number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
 -- > integer       = lexeme L.integer
 -- > signedInteger = signed spaceConsumer integer
 
-signed :: (Stream s m Char, Num a) =>
-          ParsecT s u m () -> ParsecT s u m a -> ParsecT s u m a
+signed :: (MonadParsec s m Char, Num a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
 
 -- | Parse a sign and return either 'id' or 'negate' according to parsed
 -- sign.
 
-sign :: (Stream s m Char, Num a) => ParsecT s u m (a -> a)
+sign :: (MonadParsec s m Char, Num a) => m (a -> a)
 sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)
