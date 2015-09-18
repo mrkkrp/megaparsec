@@ -68,13 +68,6 @@ data State s = State
 
 -- | An instance of @Stream s t@ has stream type @s@, and token type @t@
 -- determined by the stream.
---
--- Some rough guidelines for a “correct” instance of Stream:
---
---     * @unfoldM uncons@ gives the @[t]@ corresponding to the stream.
---     * A @Stream@ instance is responsible for maintaining the “position
---       within the stream” in the stream state @s@. This is trivial unless
---       you are using the monad in a non-trivial way.
 
 class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
   uncons :: s -> Maybe (t, s)
