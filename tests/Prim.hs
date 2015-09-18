@@ -41,7 +41,7 @@ import Data.Maybe (maybeToList, fromMaybe)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.QuickCheck
+import Test.QuickCheck hiding (label)
 
 import Text.Megaparsec.Char
 import Text.Megaparsec.Error (Message (..))
@@ -85,11 +85,12 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
         , testProperty "parser state general" prop_state
-        , testProperty "user state set and get" prop_user_state
-        , testProperty "user state backtracking" prop_user_backtrack ]
+        -- , testProperty "user state" prop_user_state
+        -- , testProperty "user state backtracking" prop_user_backtrack
+        ]
 
-instance Arbitrary u => Arbitrary (State String u) where
-  arbitrary = State <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary (State String) where
+  arbitrary = State <$> arbitrary <*> arbitrary
 
 -- Functor instance
 
@@ -348,23 +349,22 @@ prop_state_input s = p /=\ s
           guard (null st1)
           return result
 
-prop_state :: State String Integer -> State String Integer -> Property
-prop_state s1 s2 = runParser p 0 "" "" === Right (f s2 s1)
-  where f (State s1' pos u1) (State s2' _ u2) =
-          State (max s1' s2' ) pos (u1 + u2)
+prop_state :: State String -> State String -> Property
+prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
+  where f (State s1' pos) (State s2' _) = State (max s1' s2' ) pos
         p = do
           st <- getParserState
-          guard (st == State "" (initialPos "") 0)
+          guard (st == State "" (initialPos ""))
           setParserState s1
           updateParserState (f s2)
           getParserState
 
 -- User state combinators
 
-prop_user_state :: Integer -> Integer -> Property
-prop_user_state n m = runParser p 0 "" "" === Right (n + m)
-  where p = setState n >> modifyState (+ m) >> getState
+-- prop_user_state :: Integer -> Integer -> Property
+-- prop_user_state n m = runParser p 0 "" "" === Right (n + m)
+--   where p = setState n >> modifyState (+ m) >> getState
 
-prop_user_backtrack :: Integer -> Integer -> Property
-prop_user_backtrack n m = runParser p 0 "" "" === Right n
-  where p = setState n >> lookAhead (setState m >> eof) >> getState
+-- prop_user_backtrack :: Integer -> Integer -> Property
+-- prop_user_backtrack n m = runParser p 0 "" "" === Right n
+--   where p = setState n >> lookAhead (setState m >> eof) >> getState

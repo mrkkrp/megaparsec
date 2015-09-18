@@ -121,16 +121,16 @@ arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
 -- Some helpers put here since we don't want to depend on
 -- "Text.Megaparsec.Lexer".
 
-lexeme :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
+lexeme :: MonadParsec s m Char => m a -> m a
 lexeme p = p <* hidden space
 
-symbol :: Stream s m Char => String -> ParsecT s u m String
+symbol :: MonadParsec s m Char => String -> m String
 symbol = lexeme . string
 
-parens :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
+parens :: MonadParsec s m Char => m a -> m a
 parens = between (symbol "(") (symbol ")")
 
-integer :: Stream s m Char => ParsecT s u m Integer
+integer :: MonadParsec s m Char => m Integer
 integer = lexeme (read <$> some digitChar <?> "integer")
 
 -- Here we use table of operators that makes use of all features of
@@ -138,13 +138,13 @@ integer = lexeme (read <$> some digitChar <?> "integer")
 -- but valid expressions and render them to get their textual
 -- representation.
 
-expr :: Stream s m Char => ParsecT s u m Node
+expr :: MonadParsec s m Char => m Node
 expr = makeExprParser term table <?> "expression"
 
-term :: Stream s m Char => ParsecT s u m Node
+term :: MonadParsec s m Char => m Node
 term = parens expr <|> (Val <$> integer) <?> "term"
 
-table :: Stream s m Char => [[Operator s u m Node]]
+table :: MonadParsec s m Char => [[Operator m Node]]
 table = [ [ Prefix  (symbol "-" *> pure Neg)
           , Postfix (symbol "!" *> pure Fac)
           , InfixN  (symbol "%" *> pure Mod) ]
