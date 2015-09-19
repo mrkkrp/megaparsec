@@ -23,6 +23,7 @@ module Text.Megaparsec.Prim
   , ParsecT
     -- * Primitive combinators
   , MonadParsec (..)
+  , (<?>)
     -- * Parser state combinators
   , getPosition
   , setPosition
@@ -344,24 +345,11 @@ class (A.Alternative m, Monad m, Stream s t) =>
 
   unexpected :: String -> m a
 
-  -- | The parser @p \<?> msg@ behaves as parser @p@, but whenever the
-  -- parser @p@ fails /without consuming any input/, it replaces expect
-  -- error messages with the expect error message @msg@.
-  --
-  -- This is normally used at the end of a set alternatives where we want to
-  -- return an error message in terms of a higher level construct rather
-  -- than returning all possible characters. For example, if the @expr@
-  -- parser from the “try” example would fail, the error message is: “…:
-  -- expecting expression”. Without the @(\<?>)@ combinator, the message
-  -- would be like “…: expecting \"let\" or letter”, which is less friendly.
-
-  (<?>) :: m a -> String -> m a
-  (<?>) = flip label
-
-  -- | A synonym for @(\<?>)@, but as a function instead of an operator.
+  -- | The parser @label name p@ behaves as parser @p@, but whenever the
+  -- parser @p@ fails /without consuming any input/, it replaces names of
+  -- “expected” tokens with the name @name@.
 
   label :: String -> m a -> m a
-  label = flip (<?>)
 
   -- | @hidden p@ behaves just like parser @p@, but it doesn't show any
   -- “expected” tokens in error message when @p@ fails.
@@ -554,6 +542,11 @@ pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 pUpdateParserState :: (State s -> State s) -> ParsecT s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
+
+-- | A synonym for 'label' in form of an operator.
+
+(<?>) :: MonadParsec s m t => m a -> String -> m a
+(<?>) = flip label
 
 unexpectedErr :: String -> SourcePos -> ParseError
 unexpectedErr msg = newErrorMessage (Unexpected msg)
