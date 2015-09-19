@@ -12,7 +12,6 @@
 
 module Text.Megaparsec.String
   ( Parser
-  , GenParser
   , parseFromFile )
 where
 
@@ -25,11 +24,6 @@ import Text.Megaparsec.Prim
 -- modules”. This one is for strings.
 
 type Parser = Parsec String
-
--- | @GenParser@ is similar to @Parser@ but it's parametrized over user
--- state type.
-
-type GenParser tok st = Parsec [tok] st
 
 -- | @parseFromFile p filePath@ runs a string parser @p@ on the
 -- input read from @filePath@ using 'Prelude.readFile'. Returns either a

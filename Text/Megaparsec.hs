@@ -31,8 +31,8 @@
 -- > -- import Text.Megaparsec.Text.Lazy
 --
 -- As you can see the second import depends on data type you want to use as
--- input stream. It just defines useful type-synonyms @Parser@ and
--- @GenParser@ and @parseFromFile@ function.
+-- input stream. It just defines useful type-synonym @Parser@ and
+-- @parseFromFile@ function.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm" and even
