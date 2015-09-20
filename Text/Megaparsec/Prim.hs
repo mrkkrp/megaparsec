@@ -48,11 +48,16 @@ import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
+import Control.Monad.Trans.Identity
 import qualified Control.Applicative as A
+import qualified Control.Monad.Trans.Reader as L
+import qualified Control.Monad.Trans.State.Lazy as L
+import qualified Control.Monad.Trans.State.Strict as S
+import qualified Control.Monad.Trans.Writer.Lazy as L
+import qualified Control.Monad.Trans.Writer.Strict as S
 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 
@@ -661,3 +666,87 @@ runParsecT p s = unParser p s cok cerr eok eerr
         cerr err   = return . Consumed . return $ Error err
         eok a s' _ = return . Empty    . return $ Ok a s'
         eerr err   = return . Empty    . return $ Error err
+
+-- Instances of 'MonadParsec'
+
+instance (MonadPlus m, MonadParsec s m t) =>
+         MonadParsec s (L.StateT e m) t where
+  label n       (L.StateT m) = L.StateT $ \s -> label n (m s)
+  try           (L.StateT m) = L.StateT $ try . m
+  lookAhead     (L.StateT m) = L.StateT $ \s -> lookAhead (m s)
+  notFollowedBy (L.StateT m) = L.StateT $ \s ->
+    notFollowedBy (fst <$> m s) >> return ((),s)
+  unexpected                 = lift . unexpected
+  eof                        = lift eof
+  token  f e                 = lift $ token  f e
+  tokens f e ts              = lift $ tokens f e ts
+  getParserState             = lift getParserState
+  updateParserState f        = lift $ updateParserState f
+
+instance (MonadPlus m, MonadParsec s m t) =>
+         MonadParsec s (S.StateT e m) t where
+  label n       (S.StateT m) = S.StateT $ \s -> label n (m s)
+  try           (S.StateT m) = S.StateT $ try . m
+  lookAhead     (S.StateT m) = S.StateT $ \s -> lookAhead (m s)
+  notFollowedBy (S.StateT m) = S.StateT $ \s ->
+    notFollowedBy (fst <$> m s) >> return ((),s)
+  unexpected                 = lift . unexpected
+  eof                        = lift eof
+  token  f e                 = lift $ token  f e
+  tokens f e ts              = lift $ tokens f e ts
+  getParserState             = lift getParserState
+  updateParserState f        = lift $ updateParserState f
+
+instance (MonadPlus m, MonadParsec s m t) =>
+         MonadParsec s (L.ReaderT e m) t where
+  label n       (L.ReaderT m) = L.ReaderT $ \s -> label n (m s)
+  try           (L.ReaderT m) = L.ReaderT $ try . m
+  lookAhead     (L.ReaderT m) = L.ReaderT $ \s -> lookAhead (m s)
+  notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
+  unexpected                  = lift . unexpected
+  eof                         = lift eof
+  token  f e                  = lift $ token  f e
+  tokens f e ts               = lift $ tokens f e ts
+  getParserState              = lift getParserState
+  updateParserState f         = lift $ updateParserState f
+
+instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
+         MonadParsec s (L.WriterT w m) t where
+  label n       (L.WriterT m) = L.WriterT $ label n m
+  try           (L.WriterT m) = L.WriterT $ try m
+  lookAhead     (L.WriterT m) = L.WriterT $ lookAhead m
+  notFollowedBy (L.WriterT m) = L.WriterT $
+    notFollowedBy (fst <$> m) >>= \x -> return (x,mempty)
+  unexpected                  = lift . unexpected
+  eof                         = lift eof
+  token  f e                  = lift $ token  f e
+  tokens f e ts               = lift $ tokens f e ts
+  getParserState              = lift getParserState
+  updateParserState f         = lift $ updateParserState f
+
+instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
+         MonadParsec s (S.WriterT w m) t where
+  label n       (S.WriterT m) = S.WriterT $ label n m
+  try           (S.WriterT m) = S.WriterT $ try m
+  lookAhead     (S.WriterT m) = S.WriterT $ lookAhead m
+  notFollowedBy (S.WriterT m) = S.WriterT $
+    notFollowedBy (fst <$> m) >>= \x -> return (x,mempty)
+  unexpected                  = lift . unexpected
+  eof                         = lift eof
+  token  f e                  = lift $ token  f e
+  tokens f e ts               = lift $ tokens f e ts
+  getParserState              = lift getParserState
+  updateParserState f         = lift $ updateParserState f
+
+instance (Monad m, MonadParsec s m t) =>
+         MonadParsec s (IdentityT m) t where
+  label n       (IdentityT m) = IdentityT $ label n m
+  try                         = IdentityT . try . runIdentityT
+  lookAhead     (IdentityT m) = IdentityT $ lookAhead m
+  notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
+  unexpected                  = lift . unexpected
+  eof                         = lift eof
+  token  f e                  = lift $ token  f e
+  tokens f e ts               = lift $ tokens f e ts
+  getParserState              = lift getParserState
+  updateParserState f         = lift $ updateParserState f
