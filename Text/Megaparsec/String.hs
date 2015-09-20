@@ -12,7 +12,6 @@
 
 module Text.Megaparsec.String
   ( Parser
-  , GenParser
   , parseFromFile )
 where
 
@@ -24,12 +23,7 @@ import Text.Megaparsec.Prim
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for strings.
 
-type Parser = Parsec String ()
-
--- | @GenParser@ is similar to @Parser@ but it's parametrized over user
--- state type.
-
-type GenParser tok st = Parsec [tok] st
+type Parser = Parsec String
 
 -- | @parseFromFile p filePath@ runs a string parser @p@ on the
 -- input read from @filePath@ using 'Prelude.readFile'. Returns either a
@@ -42,4 +36,4 @@ type GenParser tok st = Parsec [tok] st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> readFile fname
+parseFromFile p fname = runParser p fname <$> readFile fname

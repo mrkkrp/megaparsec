@@ -12,7 +12,6 @@
 
 module Text.Megaparsec.Text.Lazy
   ( Parser
-  , GenParser
   , parseFromFile )
 where
 
@@ -26,12 +25,7 @@ import qualified Data.Text.Lazy.IO as T
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for lazy text.
 
-type Parser = Parsec T.Text ()
-
--- | @GenParser@ is similar to @Parser@ but it's parametrized over user
--- state type.
-
-type GenParser st = Parsec T.Text st
+type Parser = Parsec T.Text
 
 -- | @parseFromFile p filePath@ runs a lazy text parser @p@ on the
 -- input read from @filePath@ using 'Data.Text.Lazy.IO.readFile'. Returns
@@ -44,4 +38,4 @@ type GenParser st = Parsec T.Text st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> T.readFile fname
+parseFromFile p fname = runParser p fname <$> T.readFile fname

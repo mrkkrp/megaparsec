@@ -12,7 +12,6 @@
 
 module Text.Megaparsec.ByteString.Lazy
   ( Parser
-  , GenParser
   , parseFromFile )
 where
 
@@ -26,12 +25,7 @@ import qualified Data.ByteString.Lazy.Char8 as C
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for lazy bytestrings.
 
-type Parser = Parsec C.ByteString ()
-
--- | @GenParser@ is similar to @Parser@ but it's parametrized over user
--- state type.
-
-type GenParser t st = Parsec C.ByteString st
+type Parser = Parsec C.ByteString
 
 -- | @parseFromFile p filePath@ runs a lazy bytestring parser @p@ on the
 -- input read from @filePath@ using 'ByteString.Lazy.Char8.readFile'.
@@ -44,4 +38,4 @@ type GenParser t st = Parsec C.ByteString st
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p () fname <$> C.readFile fname
+parseFromFile p fname = runParser p fname <$> C.readFile fname

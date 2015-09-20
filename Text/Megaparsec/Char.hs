@@ -65,13 +65,13 @@ import Text.Megaparsec.ShowToken
 
 -- | Parses a newline character.
 
-newline :: Stream s m Char => ParsecT s u m Char
+newline :: MonadParsec s m Char => m Char
 newline = char '\n' <?> "newline"
 
 -- | Parses a carriage return character followed by a newline
 -- character. Returns sequence of characters parsed.
 
-crlf :: Stream s m Char => ParsecT s u m String
+crlf :: MonadParsec s m Char => m String
 crlf = string "\r\n"
 
 -- | Parses a CRLF (see 'crlf') or LF (see 'newline') end of line.
@@ -79,49 +79,49 @@ crlf = string "\r\n"
 --
 -- > eol = (pure <$> newline) <|> crlf
 
-eol :: Stream s m Char => ParsecT s u m String
+eol :: MonadParsec s m Char => m String
 eol = (pure <$> newline) <|> crlf <?> "end of line"
 
 -- | Parses a tab character.
 
-tab :: Stream s m Char => ParsecT s u m Char
+tab :: MonadParsec s m Char => m Char
 tab = char '\t' <?> "tab"
 
 -- | Skips /zero/ or more white space characters. See also 'skipMany' and
 -- 'spaceChar'.
 
-space :: Stream s m Char => ParsecT s u m ()
+space :: MonadParsec s m Char => m ()
 space = skipMany spaceChar
 
 -- | Parses control characters, which are the non-printing characters of the
 -- Latin-1 subset of Unicode.
 
-controlChar :: Stream s m Char => ParsecT s u m Char
+controlChar :: MonadParsec s m Char => m Char
 controlChar = satisfy isControl <?> "control character"
 
 -- | Parses a Unicode space character, and the control characters: tab,
 -- newline, carriage return, form feed, and vertical tab.
 
-spaceChar :: Stream s m Char => ParsecT s u m Char
+spaceChar :: MonadParsec s m Char => m Char
 spaceChar = satisfy isSpace <?> "white space"
 
 -- | Parses an upper-case or title-case alphabetic Unicode character. Title
 -- case is used by a small number of letter ligatures like the
 -- single-character form of Lj.
 
-upperChar :: Stream s m Char => ParsecT s u m Char
+upperChar :: MonadParsec s m Char => m Char
 upperChar = satisfy isUpper <?> "uppercase letter"
 
 -- | Parses a lower-case alphabetic Unicode character.
 
-lowerChar :: Stream s m Char => ParsecT s u m Char
+lowerChar :: MonadParsec s m Char => m Char
 lowerChar = satisfy isLower <?> "lowercase letter"
 
 -- | Parses alphabetic Unicode characters: lower-case, upper-case and
 -- title-case letters, plus letters of case-less scripts and modifiers
 -- letters.
 
-letterChar :: Stream s m Char => ParsecT s u m Char
+letterChar :: MonadParsec s m Char => m Char
 letterChar = satisfy isLetter <?> "letter"
 
 -- | Parses alphabetic or numeric digit Unicode characters.
@@ -130,76 +130,76 @@ letterChar = satisfy isLetter <?> "letter"
 -- parser but not by 'digitChar'. Such digits may be part of identifiers but
 -- are not used by the printer and reader to represent numbers.
 
-alphaNumChar :: Stream s m Char => ParsecT s u m Char
+alphaNumChar :: MonadParsec s m Char => m Char
 alphaNumChar = satisfy isAlphaNum <?> "alphanumeric character"
 
 -- | Parses printable Unicode characters: letters, numbers, marks,
 -- punctuation, symbols and spaces.
 
-printChar :: Stream s m Char => ParsecT s u m Char
+printChar :: MonadParsec s m Char => m Char
 printChar = satisfy isPrint <?> "printable character"
 
 -- | Parses an ASCII digit, i.e between “0” and “9”.
 
-digitChar :: Stream s m Char => ParsecT s u m Char
+digitChar :: MonadParsec s m Char => m Char
 digitChar = satisfy isDigit <?> "digit"
 
 -- | Parses an octal digit, i.e. between “0” and “7”.
 
-octDigitChar :: Stream s m Char => ParsecT s u m Char
+octDigitChar :: MonadParsec s m Char => m Char
 octDigitChar = satisfy isOctDigit <?> "octal digit"
 
 -- | Parses a hexadecimal digit, i.e. between “0” and “9”, or “a” and “f”,
 -- or “A” and “F”.
 
-hexDigitChar :: Stream s m Char => ParsecT s u m Char
+hexDigitChar :: MonadParsec s m Char => m Char
 hexDigitChar = satisfy isHexDigit <?> "hexadecimal digit"
 
 -- | Parses Unicode mark characters, for example accents and the like, which
 -- combine with preceding characters.
 
-markChar :: Stream s m Char => ParsecT s u m Char
+markChar :: MonadParsec s m Char => m Char
 markChar = satisfy isMark <?> "mark character"
 
 -- | Parses Unicode numeric characters, including digits from various
 -- scripts, Roman numerals, et cetera.
 
-numberChar :: Stream s m Char => ParsecT s u m Char
+numberChar :: MonadParsec s m Char => m Char
 numberChar = satisfy isNumber <?> "numeric character"
 
 -- | Parses Unicode punctuation characters, including various kinds of
 -- connectors, brackets and quotes.
 
-punctuationChar :: Stream s m Char => ParsecT s u m Char
+punctuationChar :: MonadParsec s m Char => m Char
 punctuationChar = satisfy isPunctuation <?> "punctuation"
 
 -- | Parses Unicode symbol characters, including mathematical and currency
 -- symbols.
 
-symbolChar :: Stream s m Char => ParsecT s u m Char
+symbolChar :: MonadParsec s m Char => m Char
 symbolChar = satisfy isSymbol <?> "symbol"
 
 -- | Parses Unicode space and separator characters.
 
-separatorChar :: Stream s m Char => ParsecT s u m Char
+separatorChar :: MonadParsec s m Char => m Char
 separatorChar = satisfy isSeparator <?> "separator"
 
 -- | Parses a character from the first 128 characters of the Unicode character set,
 -- corresponding to the ASCII character set.
 
-asciiChar :: Stream s m Char => ParsecT s u m Char
+asciiChar :: MonadParsec s m Char => m Char
 asciiChar = satisfy isAscii <?> "ASCII character"
 
 -- | Parses a character from the first 256 characters of the Unicode
 -- character set, corresponding to the ISO 8859-1 (Latin-1) character set.
 
-latin1Char :: Stream s m Char => ParsecT s u m Char
+latin1Char :: MonadParsec s m Char => m Char
 latin1Char = satisfy isLatin1 <?> "Latin-1 character"
 
 -- | @charCategory cat@ Parses character in Unicode General Category @cat@,
 -- see 'Data.Char.GeneralCategory'.
 
-charCategory :: Stream s m Char => GeneralCategory -> ParsecT s u m Char
+charCategory :: MonadParsec s m Char => GeneralCategory -> m Char
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 
 -- | Returns human-readable name of Unicode General Category.
@@ -242,7 +242,7 @@ categoryName cat =
 --
 -- > semicolon = char ';'
 
-char :: Stream s m Char => Char -> ParsecT s u m Char
+char :: MonadParsec s m Char => Char -> m Char
 char c = satisfy (== c) <?> showToken c
 
 -- | The same as 'char' but case-insensitive. This parser returns actually
@@ -255,7 +255,7 @@ char c = satisfy (== c) <?> showToken c
 -- unexpected 'G'
 -- expecting 'E' or 'e'
 
-char' :: Stream s m Char => Char -> ParsecT s u m Char
+char' :: MonadParsec s m Char => Char -> m Char
 char' = choice . fmap char . extendi . pure
 
 -- | Extends given list of characters adding uppercase version of every
@@ -270,7 +270,7 @@ extendi cs = nub (cs >>= f)
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
-anyChar :: Stream s m Char => ParsecT s u m Char
+anyChar :: MonadParsec s m Char => m Char
 anyChar = satisfy (const True) <?> "character"
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
@@ -283,7 +283,7 @@ anyChar = satisfy (const True) <?> "character"
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
 
-oneOf :: Stream s m Char => String -> ParsecT s u m Char
+oneOf :: MonadParsec s m Char => String -> m Char
 oneOf cs = satisfy (`elem` cs)
 
 -- | The same as 'oneOf', but case-insensitive. Returns the parsed character
@@ -291,21 +291,21 @@ oneOf cs = satisfy (`elem` cs)
 --
 -- > vowel = oneOf' "aeiou" <?> "vowel"
 
-oneOf' :: Stream s m Char => String -> ParsecT s u m Char
+oneOf' :: MonadParsec s m Char => String -> m Char
 oneOf' = oneOf . extendi
 
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
 -- character /not/ in the supplied list of characters @cs@. Returns the
 -- parsed character.
 
-noneOf :: Stream s m Char => String -> ParsecT s u m Char
+noneOf :: MonadParsec s m Char => String -> m Char
 noneOf cs = satisfy (`notElem` cs)
 
 -- | The same as 'noneOf', but case-insensitive.
 --
 -- > consonant = noneOf' "aeiou" <?> "consonant"
 
-noneOf' :: Stream s m Char => String -> ParsecT s u m Char
+noneOf' :: MonadParsec s m Char => String -> m Char
 noneOf' = noneOf . extendi
 
 -- | The parser @satisfy f@ succeeds for any character for which the
@@ -315,7 +315,7 @@ noneOf' = noneOf . extendi
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
 
-satisfy :: Stream s m Char => (Char -> Bool) -> ParsecT s u m Char
+satisfy :: MonadParsec s m Char => (Char -> Bool) -> m Char
 satisfy f = token nextPos testChar
   where nextPos pos x _ = updatePosChar pos x
         testChar x      = if f x
@@ -327,7 +327,7 @@ satisfy f = token nextPos testChar
 --
 -- > divOrMod = string "div" <|> string "mod"
 
-string :: Stream s m Char => String -> ParsecT s u m String
+string :: MonadParsec s m Char => String -> m String
 string = tokens updatePosString (==)
 
 -- | The same as 'string', but case-insensitive. On success returns string
@@ -336,6 +336,6 @@ string = tokens updatePosString (==)
 -- >>> parseTest (string' "foobar") "foObAr"
 -- "foobar"
 
-string' :: Stream s m Char => String -> ParsecT s u m String
+string' :: MonadParsec s m Char => String -> m String
 string' = tokens updatePosString test
   where test x y = toLower x == toLower y

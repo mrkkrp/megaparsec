@@ -9,7 +9,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Commonly used generic combinators.
+-- Commonly used generic combinators. Note that all combinators works with
+-- any 'Alternative' instances.
 
 module Text.Megaparsec.Combinator
   ( between
@@ -34,26 +35,25 @@ module Text.Megaparsec.Combinator
   , sepEndBy1 )
 where
 
-import Control.Applicative ((<|>), many, some, optional)
-import Control.Monad
+import Control.Applicative
+import Control.Monad (void)
 import Data.Foldable (asum)
-
-import Text.Megaparsec.Prim
 
 -- | @between open close p@ parses @open@, followed by @p@ and @close@.
 -- Returns the value returned by @p@.
 --
 -- > braces = between (symbol "{") (symbol "}")
 
-between :: Stream s m t => ParsecT s u m open ->
-           ParsecT s u m close -> ParsecT s u m a -> ParsecT s u m a
+between :: Applicative m => m open -> m close -> m a -> m a
 between open close p = open *> p <* close
+{-# INLINE between #-}
 
 -- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
 -- until one of them succeeds. Returns the value of the succeeding parser.
 
-choice :: (Foldable f, Stream s m t) => f (ParsecT s u m a) -> ParsecT s u m a
+choice :: (Foldable f, Alternative m) => f (m a) -> m a
 choice = asum
+{-# INLINE choice #-}
 
 -- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
 -- equal to zero, the parser equals to @return []@. Returns a list of @n@
@@ -63,8 +63,9 @@ choice = asum
 --
 -- > count n = count' n n
 
-count :: Stream s m t => Int -> ParsecT s u m a -> ParsecT s u m [a]
+count :: Alternative m => Int -> m a -> m [a]
 count n = count' n n
+{-# INLINE count #-}
 
 -- | @count\' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
 -- not positive or @m > n@, the parser equals to @return []@. Returns a list
@@ -73,31 +74,29 @@ count n = count' n n
 -- Please note that @m@ /may/ be negative, in this case effect is the same
 -- as if it were equal to zero.
 
-count' :: Stream s m t => Int -> Int -> ParsecT s u m a -> ParsecT s u m [a]
+count' :: Alternative m => Int -> Int -> m a -> m [a]
 count' m n p
-  | n <= 0 || m > n = return []
+  | n <= 0 || m > n = pure []
   | m > 0           = (:) <$> p <*> count' (pred m) (pred n) p
-  | otherwise       = do
-      result <- optional p
-      case result of
-        Nothing -> return []
-        Just x  -> (x:) <$> count' 0 (pred n) p
+  | otherwise       =
+      let f t ts = maybe [] (:ts) t
+      in f <$> optional p <*> count' 0 (pred n) p
 
 -- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.
 --
 -- > cStatements = cStatement `endBy` semicolon
 
-endBy :: Stream s m t =>
-         ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+endBy :: Alternative m => m a -> m sep -> m [a]
 endBy p sep = many (p <* sep)
+{-# INLINE endBy #-}
 
 -- | @endBy1 p sep@ parses /one/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.
 
-endBy1 :: Stream s m t =>
-          ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+endBy1 :: Alternative m => m a -> m sep -> m [a]
 endBy1 p sep = some (p <* sep)
+{-# INLINE endBy1 #-}
 
 -- | @manyTill p end@ applies parser @p@ /zero/ or more times until
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This
@@ -108,16 +107,16 @@ endBy1 p sep = some (p <* sep)
 -- Note that we need to use 'try' since parsers @anyChar@ and @string
 -- \"-->\"@ overlap and @string \"-->\"@ could consume input before failing.
 
-manyTill :: Stream s m t =>
-            ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
-manyTill p end = (end *> return []) <|> someTill p end
+manyTill :: Alternative m => m a -> m end -> m [a]
+manyTill p end = (end *> pure []) <|> someTill p end
+{-# INLINE manyTill #-}
 
 -- | @someTill p end@ works similarly to @manyTill p end@, but @p@ should
 -- succeed at least once.
 
-someTill :: Stream s m t =>
-            ParsecT s u m a -> ParsecT s u m end -> ParsecT s u m [a]
+someTill :: Alternative m => m a -> m end -> m [a]
 someTill p end = (:) <$> p <*> manyTill p end
+{-# INLINE someTill #-}
 
 -- | @option x p@ tries to apply parser @p@. If @p@ fails without
 -- consuming input, it returns the value @x@, otherwise the value returned
@@ -125,38 +124,41 @@ someTill p end = (:) <$> p <*> manyTill p end
 --
 -- > priority = option 0 (digitToInt <$> digitChar)
 
-option :: Stream s m t => a -> ParsecT s u m a -> ParsecT s u m a
-option x p = p <|> return x
+option :: Alternative m => a -> m a -> m a
+option x p = p <|> pure x
+{-# INLINE option #-}
 
 -- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.
 --
 -- > commaSep p = p `sepBy` comma
 
-sepBy :: Stream s m t =>
-         ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
-sepBy p sep = sepBy1 p sep <|> return []
+sepBy :: Alternative m => m a -> m sep -> m [a]
+sepBy p sep = sepBy1 p sep <|> pure []
+{-# INLINE sepBy #-}
 
 -- | @sepBy1 p sep@ parses /one/ or more occurrences of @p@, separated
 -- by @sep@. Returns a list of values returned by @p@.
 
-sepBy1 :: Stream s m t =>
-          ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+sepBy1 :: Alternative m => m a -> m sep -> m [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> p)
+{-# INLINE sepBy1 #-}
 
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.
 --
 -- > space = skipMany spaceChar
 
-skipMany :: ParsecT s u m a -> ParsecT s u m ()
+skipMany :: Alternative m => m a -> m ()
 skipMany p = void $ many p
+{-# INLINE skipMany #-}
 
 -- | @skipSome p@ applies the parser @p@ /one/ or more times, skipping
 -- its result.
 
-skipSome :: Stream s m t => ParsecT s u m a -> ParsecT s u m ()
+skipSome :: Alternative m => m a -> m ()
 skipSome p = void $ some p
+{-# INLINE skipSome #-}
 
 -- Deprecated combinators
 
@@ -167,9 +169,9 @@ skipSome p = void $ some p
 
 {-# DEPRECATED chainl "Use \"Text.Megaparsec.Expr\" instead." #-}
 
-chainl :: Stream s m t =>
-          ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
-chainl p op x = chainl1 p op <|> return x
+chainl :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
+chainl p op x = chainl1 p op <|> pure x
+{-# INLINE chainl #-}
 
 -- | @chainl1 p op@ parses /one/ or more occurrences of @p@,
 -- separated by @op@ Returns a value obtained by a /left/ associative
@@ -181,10 +183,11 @@ chainl p op x = chainl1 p op <|> return x
 
 {-# DEPRECATED chainl1 "Use \"Text.Megaparsec.Expr\" instead." #-}
 
-chainl1 :: Stream s m t =>
-           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainl1 p op = p >>= rest
-  where rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
+chainl1 :: Alternative m => m a -> m (a -> a -> a) -> m a
+chainl1 p op = scan
+  where scan = flip id <$> p <*> rst
+        rst  = (\f y g x -> g (f x y)) <$> op <*> p <*> rst <|> pure id
+{-# INLINE chainl1 #-}
 
 -- | @chainr p op x@ parses /zero/ or more occurrences of @p@,
 -- separated by @op@ Returns a value obtained by a /right/ associative
@@ -195,9 +198,9 @@ chainl1 p op = p >>= rest
 
 {-# DEPRECATED chainr "Use \"Text.Megaparsec.Expr\" instead." #-}
 
-chainr :: Stream s m t =>
-          ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> a -> ParsecT s u m a
-chainr p op x = chainr1 p op <|> return x
+chainr :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
+chainr p op x = chainr1 p op <|> pure x
+{-# INLINE chainr #-}
 
 -- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
 -- separated by @op@ Returns a value obtained by a /right/ associative
@@ -208,10 +211,11 @@ chainr p op x = chainr1 p op <|> return x
 
 {-# DEPRECATED chainr1 "Use \"Text.Megaparsec.Expr\" instead." #-}
 
-chainr1 :: Stream s m t =>
-           ParsecT s u m a -> ParsecT s u m (a -> a -> a) -> ParsecT s u m a
-chainr1 p op = p >>= rest
-  where rest x = (($ x) <$> op <*> chainr1 p op) <|> return x
+chainr1 :: Alternative m => m a -> m (a -> a -> a) -> m a
+chainr1 p op = scan where
+  scan = flip id <$> p <*> rst
+  rst  = (flip <$> op <*> scan) <|> pure id
+{-# INLINE chainr1 #-}
 
 -- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
 -- separated and optionally ended by @sep@. Returns a list of values
@@ -219,9 +223,9 @@ chainr1 p op = p >>= rest
 
 {-# DEPRECATED sepEndBy "Use @sepBy p sep <* optional sep@ instead." #-}
 
-sepEndBy :: Stream s m t =>
-            ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+sepEndBy :: Alternative m => m a -> m sep -> m [a]
 sepEndBy p sep = sepBy p sep <* optional sep
+{-# INLINE sepEndBy #-}
 
 -- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
 -- separated and optionally ended by @sep@. Returns a list of values
@@ -229,6 +233,6 @@ sepEndBy p sep = sepBy p sep <* optional sep
 
 {-# DEPRECATED sepEndBy1 "Use @sepBy1 p sep <* optional sep@ instead." #-}
 
-sepEndBy1 :: Stream s m t =>
-             ParsecT s u m a -> ParsecT s u m sep -> ParsecT s u m [a]
+sepEndBy1 :: Alternative m => m a -> m sep -> m [a]
 sepEndBy1 p sep = sepBy1 p sep <* optional sep
+{-# INLINE sepEndBy1 #-}

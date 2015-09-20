@@ -26,12 +26,12 @@ import Text.Megaparsec.Prim
 -- An operator is either binary infix or unary prefix or postfix. A binary
 -- operator has also an associated associativity.
 
-data Operator s u m a
-  = InfixN  (ParsecT s u m (a -> a -> a)) -- ^ non-associative infix
-  | InfixL  (ParsecT s u m (a -> a -> a)) -- ^ left-associative infix
-  | InfixR  (ParsecT s u m (a -> a -> a)) -- ^ right-associative infix
-  | Prefix  (ParsecT s u m (a -> a))      -- ^ prefix
-  | Postfix (ParsecT s u m (a -> a))      -- ^ postfix
+data Operator m a
+  = InfixN  (m (a -> a -> a)) -- ^ non-associative infix
+  | InfixL  (m (a -> a -> a)) -- ^ left-associative infix
+  | InfixR  (m (a -> a -> a)) -- ^ right-associative infix
+  | Prefix  (m (a -> a))      -- ^ prefix
+  | Postfix (m (a -> a))      -- ^ postfix
 
 -- | @makeExprParser term table@ builds an expression parser for terms
 -- @term@ with operators from @table@, taking the associativity and
@@ -69,15 +69,13 @@ data Operator s u m a
 -- Please note that multi-character operators should use 'try' in order to
 -- be reported correctly in error messages.
 
-makeExprParser :: Stream s m t => ParsecT s u m a ->
-                  [[Operator s u m a]] -> ParsecT s u m a
+makeExprParser :: MonadParsec s m t => m a -> [[Operator m a]] -> m a
 makeExprParser = foldl addPrecLevel
 
 -- | @addPrecLevel p ops@ adds ability to parse operators in table @ops@ to
 -- parser @p@.
 
-addPrecLevel :: Stream s m t =>
-                ParsecT s u m a -> [Operator s u m a] -> ParsecT s u m a
+addPrecLevel :: MonadParsec s m t => m a -> [Operator m a] -> m a
 addPrecLevel term ops =
   term' >>= \x -> choice [ras' x, las' x, nas' x, return x] <?> "operator"
   where (ras, las, nas, prefix, postfix) = foldr splitOp ([],[],[],[],[]) ops
@@ -90,8 +88,7 @@ addPrecLevel term ops =
 -- optional prefix and postfix unary operators. Parsers @prefix@ and
 -- @postfix@ are allowed to fail, in this case 'id' is used.
 
-pTerm :: Stream s m t => ParsecT s u m (a -> a) -> ParsecT s u m a ->
-         ParsecT s u m (a -> a) -> ParsecT s u m a
+pTerm :: MonadParsec s m t => m (a -> a) -> m a -> m (a -> a) -> m a
 pTerm prefix term postfix = do
   pre  <- option id (hidden prefix)
   x    <- term
@@ -102,8 +99,7 @@ pTerm prefix term postfix = do
 -- with parser @p@, then returns result of the operator application on @x@
 -- and the term.
 
-pInfixN :: Stream s m t => ParsecT s u m (a -> a -> a) ->
-           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixN :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
 pInfixN op p x = do
   f <- op
   y <- p
@@ -113,8 +109,7 @@ pInfixN op p x = do
 -- with parser @p@, then returns result of the operator application on @x@
 -- and the term.
 
-pInfixL :: Stream s m t => ParsecT s u m (a -> a -> a) ->
-           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixL :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
 pInfixL op p x = do
   f <- op
   y <- p
@@ -125,24 +120,23 @@ pInfixL op p x = do
 -- term with parser @p@, then returns result of the operator application on
 -- @x@ and the term.
 
-pInfixR :: Stream s m t => ParsecT s u m (a -> a -> a) ->
-           ParsecT s u m a -> a -> ParsecT s u m a
+pInfixR :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
 pInfixR op p x = do
   f <- op
   y <- p >>= \r -> pInfixR op p r <|> return r
   return $ f x y
 
-type Batch s u m a =
-  ( [ParsecT s u m (a -> a -> a)]
-  , [ParsecT s u m (a -> a -> a)]
-  , [ParsecT s u m (a -> a -> a)]
-  , [ParsecT s u m (a -> a)]
-  , [ParsecT s u m (a -> a)] )
+type Batch m a =
+  ( [m (a -> a -> a)]
+  , [m (a -> a -> a)]
+  , [m (a -> a -> a)]
+  , [m (a -> a)]
+  , [m (a -> a)] )
 
 -- | A helper to separate various operators (binary, unary, and according to
 -- associativity) and return them in a tuple.
 
-splitOp :: Operator s u m a -> Batch s u m a -> Batch s u m a
+splitOp :: MonadParsec s m t => Operator m a -> Batch m a -> Batch m a
 splitOp (InfixR  op) (r, l, n, pre, post) = (op:r, l, n, pre, post)
 splitOp (InfixL  op) (r, l, n, pre, post) = (r, op:l, n, pre, post)
 splitOp (InfixN  op) (r, l, n, pre, post) = (r, l, op:n, pre, post)
