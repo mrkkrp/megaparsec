@@ -1,8 +1,7 @@
 # Megaparsec
 
-*Note that this is work in progress.*
-
 [![License BSD3](https://img.shields.io/badge/license-BSD3-brightgreen.svg)](http://opensource.org/licenses/BSD-3-Clause)
+[![Hackage](https://img.shields.io/hackage/v/megaparsec.svg?style=flat)](https://hackage.haskell.org/package/megaparsec)
 [![Build Status](https://travis-ci.org/mrkkrp/megaparsec.svg?branch=master)](https://travis-ci.org/mrkkrp/megaparsec)
 [![Coverage Status](https://coveralls.io/repos/mrkkrp/megaparsec/badge.svg?branch=master&service=github)](https://coveralls.io/github/mrkkrp/megaparsec?branch=master)
 
@@ -37,6 +36,37 @@ Megaparsec is different from Parsec in the following ways:
 
 * Megaparsec looks into the future, it does not contain code that serves for
   compatibility purposes, it also requires more recent version of `base`.
+
+## Megaparsec vs Parsec
+
+There are good reasons to use Parsec:
+
+* You need to work with legacy code or with older versions of GHC (≤ 7.10).
+
+And that's it. In other cases you should prefer Megaparsec for your own
+sake. If you think you have a reason to use Parsec other than listed here,
+open an issue. We are glad to hear from you.
+
+## Megaparsec vs Parsers
+
+There is [parsers](https://hackage.haskell.org/package/parsers) package,
+which is great. You can use it, but consider the following:
+
+* It depends on *both* Attoparsec and Parsec, which means you always grab
+  useless code installing it. This is ridiculous, by the way, because this
+  package is supposed to be useful for parser builders, so they can write
+  basic core functionality and get the rest “for free”. But with these
+  useful functions you get two more parsers as dependencies.
+
+* It currently has a bug in definition of `lookAhead` for various monad
+  transformers like `StateT`, etc. which is visible when you create
+  backtracking state via monad stack, not via built-in features. See #27.
+
+We intended to use Parsers library in Megaparsec at some point, but aside
+from already mentioned flaws the library has different conventions for
+naming of things, different set of “core” functions, etc., different
+approach to lexer. So it didn't happen, Megaparsec has minimal dependencies,
+it is feature-rich and self-contained.
 
 ## Contributing
 
