@@ -673,7 +673,8 @@ instance (MonadPlus m, MonadParsec s m t) =>
          MonadParsec s (L.StateT e m) t where
   label n       (L.StateT m) = L.StateT $ \s -> label n (m s)
   try           (L.StateT m) = L.StateT $ try . m
-  lookAhead     (L.StateT m) = L.StateT $ \s -> lookAhead (m s)
+  lookAhead     (L.StateT m) = L.StateT $ \s ->
+    (,s) . fst <$> lookAhead (m s)
   notFollowedBy (L.StateT m) = L.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
   unexpected                 = lift . unexpected
@@ -687,7 +688,8 @@ instance (MonadPlus m, MonadParsec s m t) =>
          MonadParsec s (S.StateT e m) t where
   label n       (S.StateT m) = S.StateT $ \s -> label n (m s)
   try           (S.StateT m) = S.StateT $ try . m
-  lookAhead     (S.StateT m) = S.StateT $ \s -> lookAhead (m s)
+  lookAhead     (S.StateT m) = S.StateT $ \s ->
+    (,s) . fst <$> lookAhead (m s)
   notFollowedBy (S.StateT m) = S.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
   unexpected                 = lift . unexpected
@@ -714,9 +716,10 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
          MonadParsec s (L.WriterT w m) t where
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
-  lookAhead     (L.WriterT m) = L.WriterT $ lookAhead m
+  lookAhead     (L.WriterT m) = L.WriterT $
+    (,mempty) . fst <$> lookAhead m
   notFollowedBy (L.WriterT m) = L.WriterT $
-    notFollowedBy (fst <$> m) >>= \x -> return (x,mempty)
+    (,mempty) <$> notFollowedBy (fst <$> m)
   unexpected                  = lift . unexpected
   eof                         = lift eof
   token  f e                  = lift $ token  f e
@@ -728,9 +731,10 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
          MonadParsec s (S.WriterT w m) t where
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
-  lookAhead     (S.WriterT m) = S.WriterT $ lookAhead m
+  lookAhead     (S.WriterT m) = S.WriterT $
+    (,mempty) . fst <$> lookAhead m
   notFollowedBy (S.WriterT m) = S.WriterT $
-    notFollowedBy (fst <$> m) >>= \x -> return (x,mempty)
+    (,mempty) <$> notFollowedBy (fst <$> m)
   unexpected                  = lift . unexpected
   eof                         = lift eof
   token  f e                  = lift $ token  f e

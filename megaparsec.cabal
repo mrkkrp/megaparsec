@@ -93,6 +93,7 @@ library
                    , GeneralizedNewtypeDeriving
                    , MultiParamTypeClasses
                    , PolymorphicComponents
+                   , TupleSections
                    , UndecidableInstances
   exposed-modules:   Text.Megaparsec
                    , Text.Megaparsec.ByteString
