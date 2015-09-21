@@ -139,6 +139,8 @@ test-suite tests
   ghc-options:       -O2 -Wall -rtsopts
   build-depends:     base                   >= 4.8 && < 5
                    , megaparsec             >= 4.0.0
+                   , mtl                    == 2.*
+                   , transformers           == 0.4.*
                    , QuickCheck             >= 2.4 && < 3
                    , test-framework         >= 0.6 && < 1
                    , test-framework-quickcheck2 >= 0.3 && < 0.4
