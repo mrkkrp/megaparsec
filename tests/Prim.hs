@@ -91,24 +91,14 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
         , testProperty "parser state general" prop_state
-        , testProperty "IndentityT unexpected" prop_IdentityT_unexpected
         , testProperty "IdentityT try" prop_IdentityT_try
         , testProperty "IdentityT notFollowedBy" prop_IdentityT_notFollowedBy
-        , testProperty "ReaderT unexpected" prop_ReaderT_unexpected
         , testProperty "ReaderT try" prop_ReaderT_try
         , testProperty "ReaderT notFollowedBy" prop_ReaderT_notFollowedBy
-        , testProperty "lazy StateT unexpected" prop_lazy_StateT_unexpected
-        , testProperty "strict StateT unexpected" prop_strict_StateT_unexpected
-        , testProperty "lazy StateT alternative (<|>)" prop_lazy_StateT_alternative
-        , testProperty "strict StateT alternative (<|>)" prop_strict_StateT_alternative
-        , testProperty "lazy StateT lookAhead" prop_lazy_StateT_lookAhead
-        , testProperty "strict StateT lookAhead" prop_strict_StateT_lookAhead
-        , testProperty "lazy StateT notFollowedBy" prop_lazy_StateT_notFollowedBy
-        , testProperty "strict StateT notFollowedBy" prop_strict_StateT_notFollowedBy
-        , testProperty "lazy WriterT unexpected" prop_lazy_WriterT_unexpected
-        , testProperty "strict WriterT unexpected" prop_strict_WriterT_unexpected
-        , testProperty "lazy WriterT" prop_lazy_WriterT
-        , testProperty "strict WriterT" prop_strict_WriterT ]
+        , testProperty "StateT alternative (<|>)" prop_StateT_alternative
+        , testProperty "StateT lookAhead" prop_StateT_lookAhead
+        , testProperty "StateT notFollowedBy" prop_StateT_notFollowedBy
+        , testProperty "WriterT" prop_WriterT ]
 
 instance Arbitrary (State String) where
   arbitrary = State <$> arbitrary <*> arbitrary
@@ -231,8 +221,20 @@ prop_monad_3 m = checkParser p r s
 -- Primitive combinators
 
 prop_unexpected :: String -> Property
-prop_unexpected m = checkParser p r s
-  where p = unexpected m :: Parser ()
+prop_unexpected m = conjoin [ checkParser p r s
+                            , checkParser (runIdentityT p_IdentityT) r s
+                            , checkParser (runReaderT p_ReaderT ()) r s
+                            , checkParser (L.evalStateT p_lStateT ()) r s
+                            , checkParser (S.evalStateT p_sStateT ()) r s
+                            , checkParser (L.runWriterT p_lWriterT) r s
+                            , checkParser (S.runWriterT p_sWriterT) r s ]
+  where p           = unexpected m :: Parser ()
+        p_IdentityT = unexpected m :: IdentityT Parser ()
+        p_ReaderT   = unexpected m :: ReaderT () Parser ()
+        p_lStateT   = unexpected m :: L.StateT () Parser ()
+        p_sStateT   = unexpected m :: S.StateT () Parser ()
+        p_lWriterT  = unexpected m :: L.WriterT [Integer] Parser ()
+        p_sWriterT  = unexpected m :: S.WriterT [Integer] Parser ()
         r | null m    = posErr 0 s []
           | otherwise = posErr 0 s [uneSpec m]
         s = ""
@@ -386,13 +388,6 @@ prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
 
 -- IdentityT instance of MonadParsec
 
-prop_IdentityT_unexpected :: String -> Property
-prop_IdentityT_unexpected m = checkParser (runIdentityT p) r s
-  where p = unexpected m :: IdentityT Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
-
 prop_IdentityT_try :: String -> String -> String -> Property
 prop_IdentityT_try pre s1' s2' = checkParser (runIdentityT p) r s
   where s1 = pre ++ s1'
@@ -413,13 +408,6 @@ prop_IdentityT_notFollowedBy a' b' c' = checkParser (runIdentityT p) r s
         s = abcRow a b c
 
 -- ReaderT instance of MonadParsec
-
-prop_ReaderT_unexpected :: String -> Property
-prop_ReaderT_unexpected m = checkParser (runReaderT p ()) r s
-  where p = unexpected m :: ReaderT () Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
 
 prop_ReaderT_try :: String -> String -> String -> Property
 prop_ReaderT_try pre s1' s2' = checkParser (runReaderT p (s1', s2')) r s
@@ -444,60 +432,26 @@ prop_ReaderT_notFollowedBy a' b' c' = checkParser (runReaderT p 'a') r s
 
 -- StateT instance of MonadParsec
 
-prop_lazy_StateT_unexpected :: String -> Property
-prop_lazy_StateT_unexpected m = checkParser (L.evalStateT p ()) r s
-  where p = unexpected m :: L.StateT () Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
+prop_StateT_alternative :: Integer -> Property
+prop_StateT_alternative n = checkParser (L.evalStateT p 0) (Right n) "" .&&.
+                            checkParser (S.evalStateT p' 0) (Right n) ""
+  where p  = L.put n >> ((L.modify (* 2) >> void (string "xxx")) <|> return ()) >> L.get
+        p' = S.put n >> ((S.modify (* 2) >> void (string "xxx")) <|> return ()) >> S.get
 
-prop_strict_StateT_unexpected :: String -> Property
-prop_strict_StateT_unexpected m = checkParser (S.evalStateT p ()) r s
-  where p = unexpected m :: S.StateT () Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
+prop_StateT_lookAhead :: Integer -> Property
+prop_StateT_lookAhead n = checkParser (L.evalStateT p 0) (Right n) "" .&&.
+                          checkParser (S.evalStateT p' 0) (Right n) ""
+  where p  = L.put n >> lookAhead (L.modify (* 2) >> eof) >> L.get
+        p' = S.put n >> lookAhead (S.modify (* 2) >> eof) >> S.get
 
-prop_lazy_StateT_alternative :: Integer -> Property
-prop_lazy_StateT_alternative n = checkParser (L.evalStateT p 0) (Right n) ""
-  where p = do
-          L.put n
-          (L.modify (* 2) >> void (string "xxx")) <|> return ()
-          L.get
-
-prop_strict_StateT_alternative :: Integer -> Property
-prop_strict_StateT_alternative n = checkParser (S.evalStateT p 0) (Right n) ""
-  where p = do
-          S.put n
-          (S.modify (* 2) >> void (string "xxx")) <|> return ()
-          S.get
-
-prop_lazy_StateT_lookAhead :: Integer -> Property
-prop_lazy_StateT_lookAhead n =
-  checkParser (L.evalStateT p 0) (Right n) ""
-  where p = do
-          L.put n
-          lookAhead (L.modify (* 2) >> eof)
-          L.get
-
-prop_strict_StateT_lookAhead :: Integer -> Property
-prop_strict_StateT_lookAhead n = checkParser (S.evalStateT p 0) (Right n) ""
-  where p = do
-          S.put n
-          lookAhead (S.modify (* 2) >> eof)
-          S.get
-
-prop_lazy_StateT_notFollowedBy :: Integer -> Property
-prop_lazy_StateT_notFollowedBy n = checkParser (L.runStateT p 0) r "abx"
+prop_StateT_notFollowedBy :: Integer -> Property
+prop_StateT_notFollowedBy n = checkParser (L.runStateT p 0) r "abx" .&&.
+                              checkParser (S.runStateT p' 0) r "abx"
   where p = do
           L.put n
           let notEof = notFollowedBy (L.modify (* 2) >> eof)
           some (try (anyChar <* notEof)) <* char 'x'
-        r = Right ("ab", n)
-
-prop_strict_StateT_notFollowedBy :: Integer -> Property
-prop_strict_StateT_notFollowedBy n = checkParser (S.runStateT p 0) r "abx"
-  where p = do
+        p' = do
           S.put n
           let notEof = notFollowedBy (S.modify (* 2) >> eof)
           some (try (anyChar <* notEof)) <* char 'x'
@@ -505,29 +459,13 @@ prop_strict_StateT_notFollowedBy n = checkParser (S.runStateT p 0) r "abx"
 
 -- WriterT instance of MonadParsec
 
-prop_lazy_WriterT_unexpected :: String -> Property
-prop_lazy_WriterT_unexpected m = checkParser (L.runWriterT p) r s
-  where p = unexpected m :: L.WriterT [Integer] Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
-
-prop_strict_WriterT_unexpected :: String -> Property
-prop_strict_WriterT_unexpected m = checkParser (S.runWriterT p) r s
-  where p = unexpected m :: S.WriterT [Integer] Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
-        s = ""
-
-prop_lazy_WriterT :: String -> String -> Property
-prop_lazy_WriterT pre post = checkParser (L.runWriterT p) r "abx"
-  where logged_letter = do
-          x <- letterChar
-          L.tell [x]
-          return x
-        logged_eof = do
-          eof
-          S.tell "EOF"
+prop_WriterT :: String -> String -> Property
+prop_WriterT pre post = checkParser (L.runWriterT p) r "abx" .&&.
+                        checkParser (S.runWriterT p') r "abx"
+  where logged_letter  = letterChar >>= \x -> L.tell [x] >> return x
+        logged_letter' = letterChar >>= \x -> L.tell [x] >> return x
+        logged_eof     = eof >> L.tell "EOF"
+        logged_eof'    = eof >> L.tell "EOF"
         p = do
           L.tell pre
           cs <- L.censor (fmap toUpper) $
@@ -535,22 +473,11 @@ prop_lazy_WriterT pre post = checkParser (L.runWriterT p) r "abx"
           L.tell post
           void logged_letter
           return cs
-        r = Right ("ab", pre ++ "AB" ++ post ++ "x")
-
-prop_strict_WriterT :: String -> String -> Property
-prop_strict_WriterT pre post = checkParser (S.runWriterT p) r "abx"
-  where logged_letter = do
-          x <- letterChar
-          S.tell [x]
-          return x
-        logged_eof = do
-          eof
-          S.tell "EOF"
-        p = do
-          S.tell pre
-          cs <- S.censor (fmap toUpper) $
-                  some (try (logged_letter <* notFollowedBy logged_eof))
-          S.tell post
-          void logged_letter
+        p' = do
+          L.tell pre
+          cs <- L.censor (fmap toUpper) $
+                  some (try (logged_letter' <* notFollowedBy logged_eof'))
+          L.tell post
+          void logged_letter'
           return cs
         r = Right ("ab", pre ++ "AB" ++ post ++ "x")
