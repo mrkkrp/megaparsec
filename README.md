@@ -6,7 +6,8 @@
 [![Coverage Status](https://coveralls.io/repos/mrkkrp/megaparsec/badge.svg?branch=master&service=github)](https://coveralls.io/github/mrkkrp/megaparsec?branch=master)
 
 This is industrial-strength monadic parser combinator library. Megaparsec is
-a fork of Parsec library originally written by Daan Leijen.
+a fork of [Parsec](https://github.com/aslatter/parsec) library originally
+written by Daan Leijen.
 
 Megaparsec is different from Parsec in the following ways:
 
