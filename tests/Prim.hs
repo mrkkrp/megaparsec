@@ -32,12 +32,19 @@
 module Prim (tests) where
 
 import Control.Applicative
-import Control.Monad (guard)
+import Control.Monad (guard, void)
 import Data.Bool (bool)
-import Data.Char (isLetter)
+import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, fromMaybe)
+
+import qualified Control.Monad.Trans.Identity as Identity
+import qualified Control.Monad.Reader         as Reader
+import qualified Control.Monad.State.Lazy     as L.State
+import qualified Control.Monad.State.Strict   as S.State
+import qualified Control.Monad.Writer.Lazy    as L.Writer
+import qualified Control.Monad.Writer.Strict  as S.Writer
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -85,8 +92,18 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
         , testProperty "parser state general" prop_state
-        -- , testProperty "user state" prop_user_state
-        -- , testProperty "user state backtracking" prop_user_backtrack
+        , testProperty "IdentityT try" prop_IdentityT_try
+        , testProperty "IdentityT notFollowedBy" prop_IdentityT_notFollowedBy
+        , testProperty "ReaderT try" prop_ReaderT_try
+        , testProperty "ReaderT notFollowedBy" prop_ReaderT_notFollowedBy
+        , testProperty "lazy StateT alternative (<|>)" prop_lazy_StateT_alternative
+        , testProperty "strict StateT alternative (<|>)" prop_strict_StateT_alternative
+        , testProperty "lazy StateT lookAhead" prop_lazy_StateT_lookAhead
+        , testProperty "strict StateT lookAhead" prop_strict_StateT_lookAhead
+        , testProperty "lazy StateT notFollowedBy" prop_lazy_StateT_notFollowedBy
+        , testProperty "strict StateT notFollowedBy" prop_strict_StateT_notFollowedBy
+        , testProperty "lazy WriterT" prop_lazy_WriterT
+        , testProperty "strict WriterT" prop_strict_WriterT
         ]
 
 instance Arbitrary (State String) where
@@ -359,12 +376,131 @@ prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
           updateParserState (f s2)
           getParserState
 
--- User state combinators
+-- IdentityT/ReaderT + Parser
 
--- prop_user_state :: Integer -> Integer -> Property
--- prop_user_state n m = runParser p 0 "" "" === Right (n + m)
---   where p = setState n >> modifyState (+ m) >> getState
+-- | A copy of 'prop_try'.
+prop_IdentityT_try :: String -> String -> String -> Property
+prop_IdentityT_try pre s1' s2' = checkParser (Identity.runIdentityT p) r s
+  where s1 = pre ++ s1'
+        s2 = pre ++ s2'
+        p = try (string s1) <|> string s2
+        r | s == s1 || s == s2 = Right s
+          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
+                        ++ [uneStr pre, exStr s1, exStr s2]
+        s = pre
 
--- prop_user_backtrack :: Integer -> Integer -> Property
--- prop_user_backtrack n m = runParser p 0 "" "" === Right n
---   where p = setState n >> lookAhead (setState m >> eof) >> getState
+prop_ReaderT_try :: String -> String -> String -> Property
+prop_ReaderT_try pre s1' s2' = checkParser (Reader.runReaderT p (s1', s2')) r s
+  where s1 = pre ++ s1'
+        s2 = pre ++ s2'
+        getS1 = Reader.asks ((pre ++) . fst)
+        getS2 = Reader.asks ((pre ++) . snd)
+        p = try (string =<< getS1) <|> (string =<< getS2)
+        r | s == s1 || s == s2 = Right s
+          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
+                        ++ [uneStr pre, exStr s1, exStr s2]
+        s = pre
+
+-- | A copy of 'prop_notFollowedBy_2'.
+prop_IdentityT_notFollowedBy
+  :: NonNegative Int -> NonNegative Int -> NonNegative Int -> Property
+prop_IdentityT_notFollowedBy a' b' c' = checkParser (Identity.runIdentityT p) r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = many (char 'a') <* notFollowedBy eof <* many anyChar
+        r | b > 0 || c > 0 = Right (replicate a 'a')
+          | otherwise      = posErr a s [uneEof, exCh 'a']
+        s = abcRow a b c
+
+prop_ReaderT_notFollowedBy
+  :: NonNegative Int -> NonNegative Int -> NonNegative Int -> Property
+prop_ReaderT_notFollowedBy a' b' c' = checkParser (Reader.runReaderT p 'a') r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = many (char =<< Reader.ask) <* notFollowedBy eof <* many anyChar
+        r | b > 0 || c > 0 = Right (replicate a 'a')
+          | otherwise      = posErr a s [uneEof, exCh 'a']
+        s = abcRow a b c
+
+-- StateT + Parsec
+
+prop_lazy_StateT_alternative :: Integer -> Property
+prop_lazy_StateT_alternative n = checkParser (L.State.evalStateT p 0) (Right n) ""
+  where p = do
+          L.State.put n
+          (L.State.modify (*2) >> void (string "xxx")) <|> return ()
+          L.State.get
+
+prop_strict_StateT_alternative :: Integer -> Property
+prop_strict_StateT_alternative n = checkParser (S.State.evalStateT p 0) (Right n) ""
+  where p = do
+          S.State.put n
+          (S.State.modify (*2) >> void (string "xxx")) <|> return ()
+          S.State.get
+
+-- | See <https://github.com/mrkkrp/megaparsec/issues/27#issuecomment-141785141>.
+prop_lazy_StateT_lookAhead :: Integer -> Property
+prop_lazy_StateT_lookAhead n = checkParser (L.State.evalStateT p 0) (Right n) ""
+  where p = do
+          L.State.put n
+          lookAhead (L.State.modify (*2) >> eof)
+          L.State.get
+
+prop_strict_StateT_lookAhead :: Integer -> Property
+prop_strict_StateT_lookAhead n = checkParser (S.State.evalStateT p 0) (Right n) ""
+  where p = do
+          S.State.put n
+          lookAhead (S.State.modify (*2) >> eof)
+          S.State.get
+
+prop_lazy_StateT_notFollowedBy :: Integer -> Property
+prop_lazy_StateT_notFollowedBy n = checkParser (L.State.runStateT p 0) result "abx"
+  where p = do
+          L.State.put n
+          let notEof = notFollowedBy (L.State.modify (*2) >> eof)
+          some (try (anyChar <* notEof)) <* char 'x'
+        result = Right ("ab", n)
+
+prop_strict_StateT_notFollowedBy :: Integer -> Property
+prop_strict_StateT_notFollowedBy n = checkParser (S.State.runStateT p 0) result "abx"
+  where p = do
+          S.State.put n
+          let notEof = notFollowedBy (S.State.modify (*2) >> eof)
+          some (try (anyChar <* notEof)) <* char 'x'
+        result = Right ("ab", n)
+
+-- WriterT + Parsec
+
+prop_lazy_WriterT :: String -> String -> Property
+prop_lazy_WriterT pre post = checkParser (L.Writer.runWriterT p) result "abx"
+  where logged_letter = do
+          x <- letterChar
+          L.Writer.tell [x]
+          return x
+        logged_eof = do
+          eof
+          S.Writer.tell "EOF"
+        p = do
+          L.Writer.tell pre
+          cs <- L.Writer.censor (map toUpper) $
+                  some (try (logged_letter <* notFollowedBy logged_eof))
+          L.Writer.tell post
+          _ <- logged_letter
+          return cs
+        result = Right ("ab", pre ++ "AB" ++ post ++ "x")
+
+prop_strict_WriterT :: String -> String -> Property
+prop_strict_WriterT pre post = checkParser (S.Writer.runWriterT p) result "abx"
+  where logged_letter = do
+          x <- letterChar
+          S.Writer.tell [x]
+          return x
+        logged_eof = do
+          eof
+          S.Writer.tell "EOF"
+        p = do
+          S.Writer.tell pre
+          cs <- S.Writer.censor (map toUpper) $
+                  some (try (logged_letter <* notFollowedBy logged_eof))
+          S.Writer.tell post
+          _ <- logged_letter
+          return cs
+        result = Right ("ab", pre ++ "AB" ++ post ++ "x")
