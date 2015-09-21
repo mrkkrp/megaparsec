@@ -1,22 +1,6 @@
 ## Megaparsec 4.0.0
 
-* Cosmetic changes in entire source code, numerous improvements and
-  elimination of warnings.
-
-* Rewritten parsing of numbers, fixed #2 and #3 (in old Parsec project these
-  are number 35 and 39 respectively), added per bug tests.
-
-    * Since Haskell report doesn't say anything about sign, I've made
-      `integer` and `float` parse numbers without sign.
-
-    * Removed `natural` parser, it's equal to new `integer` now.
-
-    * Renamed `naturalOrFloat` → `number` — this doesn't parse sign too.
-
-    * Added new combinator `signed` to parse all sorts of signed numbers.
-
-    * For the sake of convenience I've added `integer'`, `float'`, and
-     `number'` combinators that also can parse signed numbers out of box.
+### General changes
 
 * Renamed `many1` → `some` as well as other parsers that had `many1` part in
   their names.
@@ -24,90 +8,61 @@
 * The following functions are now re-exported from `Control.Applicative`:
   `(<|>)`, `many`, `some`, `optional`. See #9.
 
-* Introduced type class `ShowToken` and improved representation of
-  characters and stings in error messages, see #12.
-
-* Renamed parser `endOfLine` to `eol` (module `Text.Megaparsec.Char`).
-
-* Greatly improved quality of error messages. Fixed entire
-  `Text.Megaparsec.Error` module, see #14 for more information. Made
-  possible normal analysis of error messages without “render and re-parse”
-  approach that previous maintainers need to practice to write even simplest
-  tests, see module `Utils.hs` in `old-tests` for example.
-
-* Reduced number of `Message` constructors (now there are only `Unexpected`,
-  `Expected`, and `Message`). Empty “magic” message strings are ignored now,
-  all the library now uses explicit error messages.
-
-* Renamed `semi` to `semicolon` and other associated parasers in
-  `Text.Megaparsec.Token`.
-
-* Added new character parsers in `Text.Megaparsec.Char`:
-
-    * `controlChar`
-    * `printChar`
-    * `markChar`
-    * `numberChar`
-    * `punctuationChar`
-    * `symbolChar`
-    * `separatorChar`
-    * `asciiChar`
-    * `latin1Char`
-    * `charCategory`
-
-* Renamed some parsers:
-
-    * `spaces` → `space`
-    * `space` → `spaceChar`
-    * `lower` → `lowerChar`
-    * `upper` → `upperChar`
-    * `letter` → `letterChar`
-    * `alphaNum` → `alphaNumChar`
-    * `digit` → `digitChar`
-    * `octDigit` → `octDigitChar`
-    * `hexDigit` → `hexDigitChar`
-
-* Descriptions of old parsers have been updated to accent some
-  Unicode-specific moments. For example, old description of `letter` stated
-  that it parses letters from “a” to “z” and from “A” to “Z”. This is wrong,
-  since it used `Data.Char.isAlpha` predicate internally and thus parsed
-  many more characters.
-
-* Added more powerful `count'` parser. This parser can be told to parse from
-  `m` to `n` occurrences of some thing. `count` is defined in terms of
-  `count'`.
-
-* Hint system introduced that greatly improved quality of error messages
-  and made code of `Text.Megaparsec.Prim` a lot clearer.
-
-* Removed `optionMaybe` parser, because `optional` from
-  `Control.Applicative` does the same thing.
-
-* Renamed `tokenPrim` → `token`, removed old `token`, because `tokenPrim` is
-  more general and `token` is little used.
-
-* Fixed bug with `notFollowedBy` always succeeded with parsers that don't
-  consume input, see #6.
-
-* Added new primitive combinator `hidden p` which hides “expected” tokens in
-  error message when parser `p` fails.
+* Introduced type class `MonadParsec` in the style of MTL monad
+  transformers. Eliminated built-in user state since it was not flexible
+  enough and can be emulated via stack of monads. Now all tools in
+  Megaparsec work with any instance of `MonadParsec`, not only with
+  `ParsecT`.
 
 * Added new function `parse'` for lightweight parsing where error messages
   (and thus file name) are not important and entire input should be
   parsed. For example it can be used when parsing of single number according
   to specification of its format is desired.
 
-* Renamed `putState` → `setState` for consistency.
+* Fixed bug with `notFollowedBy` always succeeded with parsers that don't
+  consume input, see #6.
 
 * Flipped order of arguments in the primitive combinator `label`, see #21.
 
-* Renamed the following functions and data types:
+* Renamed `tokenPrim` → `token`, removed old `token`, because `tokenPrim` is
+  more general and original `token` is little used.
 
-    * `permute` → `makePermParser`
-    * `buildExpressionParser` → `makeExprParser`
-    * `GenLanguageDef` → `LanguageDef`
-    * `GenTokenParser` → `Lexer`
-    * `makeTokenParser` → `makeLexer`
+* Made `token` parser more powerful, now its second argument can return
+  `Either [Message] a` instead of `Maybe a`, so it can influence error
+  message when parsing of token fails. See #29.
+
+* Added new primitive combinator `hidden p` which hides “expected” tokens in
+  error message when parser `p` fails.
+
+### Error messages
+
+* Introduced type class `ShowToken` and improved representation of
+  characters and stings in error messages, see #12.
+
+* Greatly improved quality of error messages. Fixed entire
+  `Text.Megaparsec.Error` module, see #14 for more information. Made
+  possible normal analysis of error messages without “render and re-parse”
+  approach that previous maintainers had to practice to write even simplest
+  tests, see module `Utils.hs` in `old-tests` for example.
+
+* Reduced number of `Message` constructors (now there are only `Unexpected`,
+  `Expected`, and `Message`). Empty “magic” message strings are ignored now,
+  all the library now uses explicit error messages.
+
+* Introduced hint system that greatly improves quality of error messages and
+  made code of `Text.Megaparsec.Prim` a lot clearer.
+
+### Built-in combinators
+
+* All built-in combinators in `Text.Megaparsec.Combinator` now work with any
+  instance of `Alternative` (some of them even with `Applicaitve`).
+
+* Added more powerful `count'` parser. This parser can be told to parse from
+  `m` to `n` occurrences of some thing. `count` is defined in terms of
+  `count'`.
+
+* Removed `optionMaybe` parser, because `optional` from
+  `Control.Applicative` does the same thing.
 
 * Added combinator `someTill`.
 
@@ -120,15 +75,75 @@
     * `sepEndBy`
     * `sepEndBy1`
 
+### Character parsing
+
+* Renamed some parsers:
+
+    * `alphaNum` → `alphaNumChar`
+    * `digit` → `digitChar`
+    * `endOfLine` → `eol`
+    * `hexDigit` → `hexDigitChar`
+    * `letter` → `letterChar`
+    * `lower` → `lowerChar`
+    * `octDigit` → `octDigitChar`
+    * `space` → `spaceChar`
+    * `spaces` → `space`
+    * `upper` → `upperChar`
+
+* Added new character parsers in `Text.Megaparsec.Char`:
+
+    * `asciiChar`
+    * `charCategory`
+    * `controlChar`
+    * `latin1Char`
+    * `markChar`
+    * `numberChar`
+    * `printChar`
+    * `punctuationChar`
+    * `separatorChar`
+    * `symbolChar`
+
+* Descriptions of old parsers have been updated to accent some
+  Unicode-specific moments. For example, old description of `letter` stated
+  that it parses letters from “a” to “z” and from “A” to “Z”. This is wrong,
+  since it used `Data.Char.isAlpha` predicate internally and thus parsed
+  many more characters (letters of non-Latin languages, for example).
+
 * Added combinators `char'`, `oneOf'`, `noneOf'`, and `string'` which are
   case-insensitive variants of `char`, `oneOf`, `noneOf`, and `string`
   respectively.
 
+### Lexer
+
+* Rewritten parsing of numbers, fixed #2 and #3 (in old Parsec project these
+  are number 35 and 39 respectively), added per bug tests.
+
+    * Since Haskell report doesn't say anything about sign, `integer` and
+      `float` now parse numbers without sign.
+
+    * Removed `natural` parser, it's equal to new `integer` now.
+
+    * Renamed `naturalOrFloat` → `number` — this doesn't parse sign too.
+
+    * Added new combinator `signed` to parse all sorts of signed numbers.
+
+* Transformed `Text.Parsec.Token` into `Text.Megaparsec.Lexer`. Little of
+  Parsec's code remains in the new lexer module. New module doesn't impose
+  any assumptions on user and should be vastly more useful and
+  general. Hairy stuff from original Parsec didn't get here, for example
+  built-in Haskell functions are used to parse escape sequences and the like
+  instead of trying to re-implement the whole thing.
+
+### Other
+
+* Renamed the following functions:
+
+    * `permute` → `makePermParser`
+    * `buildExpressionParser` → `makeExprParser`
+
 * Added comprehensive QuickCheck test suite.
 
 * Added benchmarks.
-
-* Fixed typos in source code and other files.
 
 ## Parsec 3.1.9
 
