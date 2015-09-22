@@ -15,17 +15,17 @@
 module Text.Megaparsec.Combinator
   ( between
   , choice
-  , count
-  , count'
-  , endBy
-  , endBy1
+  , option
   , manyTill
   , someTill
-  , option
-  , sepBy
-  , sepBy1
   , skipMany
   , skipSome
+  , count
+  , count'
+  , sepBy
+  , sepBy1
+  , endBy
+  , endBy1
     -- Deprecated combinators
   , chainl
   , chainl1
