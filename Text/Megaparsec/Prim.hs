@@ -590,10 +590,12 @@ setParserState st = updateParserState (const st)
 
 -- Running a parser
 
--- | @parse p file input@ runs a parser @p@ over 'Identity'. The
--- @file@ is only used in error messages and may be the empty
--- string. Returns either a 'ParseError' ('Left') or a value of type @a@
--- ('Right'). This is a synonym for 'runParser'.
+-- | @parse p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
+-- if you're using the 'ParserT' monad transformer; 'parse' itself is just a
+-- synonym for 'runParser'). Returns either a 'ParseError' ('Left') or a
+-- value of type @a@ ('Right'). 'show' or 'print' can be used to turn
+-- 'ParseError' into the string representation of the error message, but see
+-- "Text.Megaparsec.Error" if you need to do more advanced error analysis.
 --
 -- > main = case (parse numbers "" "11, 2, 43") of
 -- >          Left err -> print err
@@ -601,7 +603,13 @@ setParserState st = updateParserState (const st)
 -- >
 -- > numbers = commaSep integer
 
-parse :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
+parse :: Stream s t
+      => Parsec s a   -- ^ Parser to run
+      -> SourceName   -- ^ Name of the source (e.g. filename) where the
+                      -- parsed string comes from; only used in error
+                      -- messages and can be safely set to @""@
+      -> s            -- ^ String to be parsed
+      -> Either ParseError a
 parse = runParser
 
 -- | @parse' p input@ runs parser @p@ on @input@ and returns result
