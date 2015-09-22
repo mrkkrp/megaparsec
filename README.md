@@ -42,7 +42,7 @@ Megaparsec is different from Parsec in the following ways:
 
 There are good reasons to use Parsec:
 
-* You need to work with legacy code or with older versions of GHC (≤ 7.10).
+* You need to work with legacy code or with older versions of GHC (< 7.10).
 
 And that's it. In other cases you should prefer Megaparsec for your own
 sake. If you think you have a reason to use Parsec other than listed here,
@@ -72,9 +72,9 @@ it is feature-rich and self-contained.
 ## Contributing
 
 Issues (bugs, feature requests or otherwise feedback) may be reported in
-[the Github issue tracker for this project](https://github.com/mrkkrp/megaparsec/issues).
+[the GitHub issue tracker for this project](https://github.com/mrkkrp/megaparsec/issues).
 
-Pull-requests are also welcome (and yes, they will get attention and will be
+Pull requests are also welcome (and yes, they will get attention and will be
 merged quickly if they are good, we are progressive folks).
 
 ## Spread the Word
