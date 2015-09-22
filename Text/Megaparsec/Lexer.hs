@@ -164,8 +164,7 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 -- your language (e.g. by surrounding your string literal parser with double
 -- quotes).
 --
--- The literal character is parsed according to the grammar rules defined in
--- the Haskell report.
+-- The literal character is parsed according to the grammar rules <https://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-200002.6 defined in the Haskell report>.
 --
 -- You can use this parser as a building block for string literal parsers:
 --
@@ -181,7 +180,7 @@ charLiteral = label "literal character" $ do
 -- Numbers
 
 -- | Parse an integer without sign in decimal representation (according to
--- format of integer literals described in Haskell report).
+-- format of integer literals <https://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-190002.5 described in the Haskell report>).
 --
 -- If you need to parse signed integers, see 'signed'.
 
@@ -222,7 +221,7 @@ nump :: MonadParsec s m Char => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 -- | Parse a floating point value without sign. Representation of floating
--- point value is expected to be according to Haskell report.
+-- point value is expected to be <https://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-190002.5 according to the Haskell report>.
 --
 -- If you need to parse signed floats, see 'signed'.
 
