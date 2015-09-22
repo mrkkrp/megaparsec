@@ -202,8 +202,8 @@ chainr :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
 chainr p op x = chainr1 p op <|> pure x
 {-# INLINE chainr #-}
 
--- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
--- separated by @op@ Returns a value obtained by a /right/ associative
+-- | @chainr1 p op@ parses /one/ or more occurrences of @p@,
+-- separated by @op@. Returns a value obtained by a /right/ associative
 -- application of all functions returned by @op@ to the values returned by
 -- @p@.
 --
