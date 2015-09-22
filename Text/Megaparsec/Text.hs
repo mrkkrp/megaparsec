@@ -8,7 +8,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Convenience definitions for working with 'Text.Text'.
+-- Convenience definitions for working with 'T.Text'.
 
 module Text.Megaparsec.Text
   ( Parser

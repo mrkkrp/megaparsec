@@ -9,21 +9,21 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Textual source positions.
+-- Textual source position.
 
 module Text.Megaparsec.Pos
   ( SourceName
   , Line
   , Column
   , SourcePos
+  , sourceName
   , sourceLine
   , sourceColumn
-  , sourceName
   , incSourceLine
   , incSourceColumn
+  , setSourceName
   , setSourceLine
   , setSourceColumn
-  , setSourceName
   , newPos
   , initialPos
   , updatePosChar

@@ -129,7 +129,7 @@ module Text.Megaparsec
   , errorPos
   , errorMessages
   , errorIsUnknown
-    -- * Position
+    -- * Textual source position
   , SourcePos
   , SourceName
   , Line
