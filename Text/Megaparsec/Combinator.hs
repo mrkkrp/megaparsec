@@ -26,7 +26,7 @@ module Text.Megaparsec.Combinator
   , sepBy1
   , endBy
   , endBy1
-    -- Deprecated combinators
+    -- * Deprecated combinators
   , chainl
   , chainl1
   , chainr
