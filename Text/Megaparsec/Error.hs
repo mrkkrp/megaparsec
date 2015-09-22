@@ -112,7 +112,7 @@ newErrorUnknown pos = ParseError pos []
 newErrorMessage :: Message -> SourcePos -> ParseError
 newErrorMessage m pos = ParseError pos $ bool [m] [] (badMessage m)
 
--- | @addErrorMessage m err@ returns @ParseError@ @err@ with message @m@
+-- | @addErrorMessage m err@ returns @err@ with message @m@
 -- added. This function makes sure that list of messages is always sorted
 -- and doesn't contain duplicates or messages with empty message strings.
 
@@ -141,7 +141,7 @@ setErrorPos :: SourcePos -> ParseError -> ParseError
 setErrorPos pos (ParseError _ ms) = ParseError pos ms
 
 -- | Merge two error data structures into one joining their collections of
--- messages and preferring longest match. In other words earlier error
+-- messages and preferring longest match. In other words, earlier error
 -- message is discarded. This may seem counter-intuitive, but @mergeError@
 -- is only used to merge error messages of alternative branches of parsing
 -- and in this case longest match should be preferred.

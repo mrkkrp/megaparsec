@@ -30,7 +30,7 @@ module Text.Megaparsec.Prim
   , getInput
   , setInput
   , setParserState
-    -- * Running parser
+    -- * Running parsers
   , runParser
   , runParserT
   , parse
@@ -102,7 +102,7 @@ instance Stream TL.Text Char where
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
 --
---     * @Cosumed@ is a wrapper for result when some part of input stream
+--     * @Consumed@ is a wrapper for result when some part of input stream
 --       was consumed.
 --     * @Empty@ is a wrapper for result when no input was consumed.
 --
@@ -116,7 +116,7 @@ data Consumed a = Consumed a | Empty !a
 --     * @Ok@ for successfully run parser.
 --     * @Error@ for failed parser.
 --
--- See also 'Consumed'.
+-- See also: 'Consumed'.
 
 data Reply s a = Ok a !(State s) | Error ParseError
 
@@ -131,7 +131,7 @@ data Reply s a = Ok a !(State s) | Error ParseError
 -- unexpected 'a'
 -- expecting end of input
 --
--- we're getting better error messages with help of hints:
+-- We're getting better error messages with help of hints:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
 -- parse error at line 1, column 2:
@@ -437,7 +437,7 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- collection of tokens. Supplied predicate @test@ is used to check
   -- equality of given and parsed tokens.
   --
-  -- This can be used to example to write 'Text.Megaparsec.Char.string':
+  -- This can be used e.g. to write 'Text.Megaparsec.Char.string':
   --
   -- @
   -- string = tokens 'updatePosString' (==)
@@ -618,7 +618,8 @@ parse = runParser
 
 -- | @parse' p input@ runs parser @p@ on @input@ and returns result
 -- inside 'Just' on success and 'Nothing' on failure. This function also
--- parses 'eof', so all input should be consumed by the parser @p@.
+-- parses 'eof', so if the parser doesn't consume all of its input, it
+-- will fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file name) are not important and entire input

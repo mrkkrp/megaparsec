@@ -46,9 +46,9 @@ data Operator m a
 -- operators of the same precedence associate to the left (i.e. if @++@ is
 -- postfix increment, than @-2++@ equals @-1@, not @-3@).
 --
--- The @makeExprParser@ takes care of all the complexity involved in
--- building expression parser. Here is an example of an expression parser
--- that handles prefix signs, postfix increment and basic arithmetic.
+-- @makeExprParser@ takes care of all the complexity involved in building
+-- an expression parser. Here is an example of an expression parser that
+-- handles prefix signs, postfix increment and basic arithmetic:
 --
 -- > expr = makeExprParser term table <?> "expression"
 -- >
