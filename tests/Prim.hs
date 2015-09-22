@@ -245,8 +245,11 @@ prop_label a' b' c' l = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> (many (char 'b') <?> l)
         r | null s = Right s
-          | c > 0 = posErr (a + b) s $ [uneCh 'c', exSpec l, exEof]
+          | c > 0 = posErr (a + b) s $ [uneCh 'c', exEof]
                     ++ [exCh 'a' | b == 0]
+                    ++ [if b == 0 || null l
+                        then exSpec l
+                        else exSpec $ "rest of " ++ l]
           | otherwise = Right s
         s = abcRow a b c
 

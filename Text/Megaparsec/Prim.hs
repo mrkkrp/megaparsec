@@ -471,7 +471,8 @@ pUnexpected msg = ParsecT $ \(State _ pos) _ _ _ eerr ->
 
 pLabel :: String -> ParsecT s m a -> ParsecT s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
-  let cok' x s' hs = cok x s' $ refreshLastHint hs l
+  let l' = if null l then l else "rest of " ++ l
+      cok' x s' hs = cok x s' $ refreshLastHint hs l'
       eok' x s' hs = eok x s' $ refreshLastHint hs l
       eerr'    err = eerr $ setErrorMessage (Expected l) err
   in unParser p s cok' cerr eok' eerr'

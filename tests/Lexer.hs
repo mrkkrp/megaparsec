@@ -31,6 +31,7 @@ module Lexer (tests) where
 
 import Control.Applicative (empty)
 import Control.Monad (void)
+import Data.Bool (bool)
 import Data.Char
   ( readLitChar
   , showLitChar
@@ -38,7 +39,7 @@ import Data.Char
   , isAlphaNum
   , isSpace
   , toLower )
-import Data.List (findIndices, isInfixOf)
+import Data.List (findIndices, isInfixOf, find)
 import Data.Maybe (listToMaybe, maybeToList, isNothing, fromJust)
 import Numeric (showInt, showHex, showOct, showSigned)
 
@@ -176,15 +177,15 @@ prop_integer n' i = checkParser integer r s
 
 prop_decimal :: NonNegative Integer -> Int -> Property
 prop_decimal n' i = checkParser decimal r s
-  where (r, s) = quasiCorrupted n' i showInt "digit"
+  where (r, s) = quasiCorrupted n' i showInt "decimal integer"
 
 prop_hexadecimal :: NonNegative Integer -> Int -> Property
 prop_hexadecimal n' i = checkParser hexadecimal r s
-  where (r, s) = quasiCorrupted n' i showHex "hexadecimal digit"
+  where (r, s) = quasiCorrupted n' i showHex "hexadecimal integer"
 
 prop_octal :: NonNegative Integer -> Int -> Property
 prop_octal n' i = checkParser octal r s
-  where (r, s) = quasiCorrupted n' i showOct "octal digit"
+  where (r, s) = quasiCorrupted n' i showOct "octal integer"
 
 prop_float_0 :: NonNegative Double -> Property
 prop_float_0 n' = checkParser float r s
@@ -215,9 +216,11 @@ prop_signed :: Integer -> Int -> Bool -> Property
 prop_signed n i plus = checkParser p r s
   where p = signed (hidden C.space) integer
         r | i > length z = Right n
-          | otherwise    = posErr i s $ [uneCh '?', exSpec "integer"] ++
-                           (if i <= 0 then [exCh '+', exCh '-'] else []) ++
-                           [exEof | i > head (findIndices isDigit s)]
+          | otherwise = posErr i s $ uneCh '?' :
+                        (if i <= 0 then [exCh '+', exCh '-'] else []) ++
+                        [exSpec $ bool "rest of integer" "integer" $
+                         isNothing . find isDigit $ take i s]
+                        ++ [exEof | i > head (findIndices isDigit s)]
         z = let bar = showSigned showInt 0 n ""
             in if n < 0 || plus then bar else '+' : bar
         s = if i <= length z then take i z ++ "?" ++ drop i z else z
@@ -228,7 +231,10 @@ quasiCorrupted :: NonNegative Integer -> Int
 quasiCorrupted n' i shower l = (r, s)
   where n = getNonNegative n'
         r | i > length z = Right n
-          | otherwise    = posErr i s $ [uneCh '?', exSpec l] ++
-                           [ exEof | i > 0 ]
+          | otherwise    = posErr i s $ uneCh '?' :
+                           [ exEof | i > 0 ] ++
+                           [if i <= 0 || null l
+                            then exSpec l
+                            else exSpec $ "rest of " ++ l]
         z = shower n ""
         s = if i <= length z then take i z ++ "?" ++ drop i z else z

@@ -182,10 +182,10 @@ integer :: MonadParsec s m Char => m Integer
 integer = decimal <?> "integer"
 
 -- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
--- while this parser is not labeled.
+-- while this parser is labeled with “decimal integer”.
 
 decimal :: MonadParsec s m Char => m Integer
-decimal = nump "" C.digitChar
+decimal = nump "" C.digitChar <?> "decimal integer"
 
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to Haskell report except
@@ -198,7 +198,7 @@ decimal = nump "" C.digitChar
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
 hexadecimal :: MonadParsec s m Char => m Integer
-hexadecimal = nump "0x" C.hexDigitChar
+hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to Haskell report except for the fact
@@ -207,7 +207,7 @@ hexadecimal = nump "0x" C.hexDigitChar
 -- itself.
 
 octal :: MonadParsec s m Char => m Integer
-octal = nump "0o" C.octDigitChar
+octal = nump "0o" C.octDigitChar <?> "octal integer"
 
 -- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
 -- prepends @prefix@ to returned value and tries to interpret the result as
