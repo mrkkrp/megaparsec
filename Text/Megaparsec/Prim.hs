@@ -199,8 +199,8 @@ refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 -- You call specific continuation when you want to proceed in that specific
 -- branch of control flow.
 
--- | @Parsec@ is non-transformer variant of more general @ParsecT@
--- monad-transformer.
+-- | @Parsec@ is non-transformer variant of more general 'ParsecT'
+-- monad transformer.
 
 type Parsec s = ParsecT s Identity
 
@@ -345,7 +345,7 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- | The parser @unexpected msg@ always fails with an unexpected error
   -- message @msg@ without consuming any input.
   --
-  -- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
+  -- The parsers 'fail', ('<?>') and 'unexpected' are the three parsers used
   -- to generate error messages. Of these, only ('<?>') is commonly used.
 
   unexpected :: String -> m a
@@ -422,9 +422,11 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- example, the 'Text.Megaparsec.Char.char' parser could be implemented
   -- as:
   --
-  -- > char c = token nextPos testChar
-  -- >   where testChar x       = if x == c then Just x else Nothing
-  -- >         nextPos pos x xs = updatePosChar pos x
+  -- @
+  -- char c = token nextPos testChar
+  --   where testChar x       = if x == c then Just x else Nothing
+  --         nextPos pos x xs = 'updatePosChar' pos x
+  -- @
 
   token :: (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
         -> (t -> Either [Message] a) -- ^ Matching function for the token to parse.
@@ -437,7 +439,9 @@ class (A.Alternative m, Monad m, Stream s t) =>
   --
   -- This can be used to example to write 'Text.Megaparsec.Char.string':
   --
-  -- > string = tokens updatePosString (==)
+  -- @
+  -- string = tokens 'updatePosString' (==)
+  -- @
 
   tokens :: Eq t =>
             (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
@@ -642,7 +646,9 @@ parseTest p input =
 -- messages and may be the empty string. Returns either a 'ParseError'
 -- ('Left') or a value of type @a@ ('Right').
 --
--- > parseFromFile p file = runParser p file <$> readFile file
+-- @
+-- 'Text.Megaparsec.String.parseFromFile' p file = runParser p file \<$\> readFile file
+-- @
 
 runParser :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
 runParser p name s = runIdentity $ runParserT p name s
@@ -666,7 +672,7 @@ runParserT p name s = do
             Consumed r -> r
             Empty    r -> r
 
--- | Low-level unpacking of the ParsecT type. 'runParserT' and 'runParser'
+-- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'
 -- are built upon this.
 
 runParsecT :: Monad m => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))

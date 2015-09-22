@@ -82,16 +82,16 @@ badMessage = null . messageString
 -- 'Eq' type classes.
 
 data ParseError = ParseError
-  { -- | Extract the source position from @ParseError@.
+  { -- | Extract the source position from 'ParseError'.
     errorPos :: !SourcePos
-    -- | Extract the list of error messages from @ParseError@.
+    -- | Extract the list of error messages from 'ParseError'.
   , errorMessages :: [Message] }
   deriving Eq
 
 instance Show ParseError where
   show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
 
--- | Test whether given @ParseError@ has associated collection of error
+-- | Test whether given 'ParseError' has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
 
 errorIsUnknown :: ParseError -> Bool
@@ -105,7 +105,7 @@ errorIsUnknown (ParseError _ ms) = null ms
 newErrorUnknown :: SourcePos -> ParseError
 newErrorUnknown pos = ParseError pos []
 
--- | @newErrorMessage m pos@ creates @ParseError@ with message @m@ and
+-- | @newErrorMessage m pos@ creates 'ParseError' with message @m@ and
 -- associated position @pos@. If message @m@ has empty message string, it
 -- won't be included.
 
@@ -134,7 +134,7 @@ setErrorMessage m (ParseError pos ms) =
   where pe = ParseError pos xs
         xs = filter ((/= fromEnum m) . fromEnum) ms
 
--- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
+-- | @setErrorPos pos err@ returns 'ParseError' identical to @err@, but with
 -- position @pos@.
 
 setErrorPos :: SourcePos -> ParseError -> ParseError

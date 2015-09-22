@@ -281,7 +281,9 @@ anyChar = satisfy (const True) <?> "character"
 --
 -- See also 'satisfy'.
 --
--- > digit = oneOf ['0'..'9'] <?> "digit"
+-- @
+-- digit = oneOf ['0'..'9'] '<?>' "digit"
+-- @
 
 oneOf :: MonadParsec s m Char => String -> m Char
 oneOf cs = satisfy (`elem` cs)
@@ -289,7 +291,9 @@ oneOf cs = satisfy (`elem` cs)
 -- | The same as 'oneOf', but case-insensitive. Returns the parsed character
 -- preserving its case.
 --
--- > vowel = oneOf' "aeiou" <?> "vowel"
+-- @
+-- vowel = oneOf' "aeiou" '<?>' "vowel"
+-- @
 
 oneOf' :: MonadParsec s m Char => String -> m Char
 oneOf' = oneOf . extendi
@@ -303,7 +307,9 @@ noneOf cs = satisfy (`notElem` cs)
 
 -- | The same as 'noneOf', but case-insensitive.
 --
--- > consonant = noneOf' "aeiou" <?> "consonant"
+-- @
+-- consonant = noneOf' "aeiou" '<?>' "consonant"
+-- @
 
 noneOf' :: MonadParsec s m Char => String -> m Char
 noneOf' = noneOf . extendi
@@ -312,8 +318,10 @@ noneOf' = noneOf . extendi
 -- supplied function @f@ returns 'True'. Returns the character that is
 -- actually parsed.
 --
--- > digitChar = satisfy isDigit <?> "digit"
--- > oneOf cs  = satisfy (`elem` cs)
+-- @
+-- 'digitChar' = satisfy 'isDigit' '<?>' "digit"
+-- 'oneOf' cs  = satisfy (\`elem\` cs)
+-- @
 
 satisfy :: MonadParsec s m Char => (Char -> Bool) -> m Char
 satisfy f = token nextPos testChar
