@@ -378,9 +378,10 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- unexpected "lex"
   -- expecting "let"
   --
-  -- First parser consumed “le” and failed, @string "lexical"@ couldn't
-  -- succeed with “xical” as its input! Things get much better with help of
-  -- @try@:
+  -- What happens here? First parser consumes “le” and fails (because it
+  -- doesn't see a “t”). The second parser, however, isn't tried, since the
+  -- first parser has already consumed some input! @try@ fixes this
+  -- behavior and allows backtracking to work:
   --
   -- >>> parseTest (try (string "let") <|> string "lexical") "lexical"
   -- "lexical"
