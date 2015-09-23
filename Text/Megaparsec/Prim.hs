@@ -338,8 +338,6 @@ instance MonadTrans (ParsecT s) where
 
 -- Primitive combinators
 
-infix 0 <?>
-
 -- | Type class describing parsers independent of input type.
 
 class (A.Alternative m, Monad m, Stream s t)
@@ -556,6 +554,8 @@ pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
 -- | A synonym for 'label' in form of an operator.
+
+infix 0 <?>
 
 (<?>) :: MonadParsec s m t => m a -> String -> m a
 (<?>) = flip label
