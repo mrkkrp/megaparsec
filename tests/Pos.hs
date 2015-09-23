@@ -57,7 +57,7 @@ tests = testGroup "Textual source positions"
 instance Arbitrary SourcePos where
   arbitrary = newPos <$> fileName <*> choose (1, 1000) <*> choose (0, 100)
 
-fileName :: Gen SourceName
+fileName :: Gen String
 fileName = do
   delimiter <- pure <$> elements "/\\"
   dirs      <- listOf1 simpleName
@@ -86,7 +86,7 @@ prop_showColumn :: SourcePos -> Bool
 prop_showColumn pos = ("column " ++ column) `isInfixOf` show pos
   where column = show $ sourceColumn pos
 
-prop_initialPos :: SourceName -> Bool
+prop_initialPos :: String -> Bool
 prop_initialPos n =
   sourceName   ipos == n &&
   sourceLine   ipos == 1 &&
@@ -109,7 +109,7 @@ prop_incSourceColumn pos c =
   where c'   = getNonNegative c
         incp = incSourceColumn pos c'
 
-prop_setSourceName :: SourcePos -> SourceName -> Bool
+prop_setSourceName :: SourcePos -> String -> Bool
 prop_setSourceName pos n =
   d sourceName   (const n) pos setp &&
   d sourceLine   id        pos setp &&

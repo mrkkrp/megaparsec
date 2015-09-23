@@ -131,9 +131,6 @@ module Text.Megaparsec
   , errorIsUnknown
     -- * Textual source position
   , SourcePos
-  , SourceName
-  , Line
-  , Column
   , sourceName
   , sourceLine
   , sourceColumn

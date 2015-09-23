@@ -602,7 +602,7 @@ setParserState st = updateParserState (const st)
 -- >
 -- > numbers = commaSep integer
 
-parse :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
+parse :: Stream s t => Parsec s a -> String -> s -> Either ParseError a
 parse = runParser
 
 -- | @parse' p input@ runs parser @p@ on @input@ and returns result
@@ -637,7 +637,7 @@ parseTest p input =
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
 
-runParser :: Stream s t => Parsec s a -> SourceName -> s -> Either ParseError a
+runParser :: Stream s t => Parsec s a -> String -> s -> Either ParseError a
 runParser p name s = runIdentity $ runParserT p name s
 
 -- | The most general way to run a parser. @runParserT p file input@ runs
@@ -647,7 +647,7 @@ runParser p name s = runIdentity $ runParserT p name s
 -- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
 
 runParserT :: (Monad m, Stream s t) =>
-              ParsecT s m a -> SourceName -> s -> m (Either ParseError a)
+              ParsecT s m a -> String -> s -> m (Either ParseError a)
 runParserT p name s = do
   res <- runParsecT p $ State s (initialPos name)
   r <- parserReply res
