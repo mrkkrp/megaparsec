@@ -129,7 +129,7 @@ parseSymbol :: (String -> Parser String) -> (String -> String)
             -> Symbol -> Maybe Char -> Property
 parseSymbol p' f s' t = checkParser p r s
   where p = p' (f g)
-        r | g == s || isSpace (last s) = Right (f g)
+        r | g == s || isSpace (last s) = Right g
           | otherwise = posErr (length s - 1) s [uneCh (last s), exEof]
         g = takeWhile (not . isSpace) s
         s = getSymbol s' ++ maybeToList t

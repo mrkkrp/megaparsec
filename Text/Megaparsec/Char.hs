@@ -331,10 +331,10 @@ string :: MonadParsec s m Char => String -> m String
 string = tokens updatePosString (==)
 
 -- | The same as 'string', but case-insensitive. On success returns string
--- cased as argument of the function.
+-- cased as actually parsed input.
 --
 -- >>> parseTest (string' "foobar") "foObAr"
--- "foobar"
+-- "foObAr"
 
 string' :: MonadParsec s m Char => String -> m String
 string' = tokens updatePosString test

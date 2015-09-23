@@ -528,9 +528,9 @@ pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
 pTokens nextpos test tts = ParsecT $ \(State input pos) cok cerr _ eerr ->
   let errExpect x = setErrorMessage (Expected $ showToken tts)
                     (newErrorMessage (Unexpected x) pos)
-      walk [] _ rs = let pos' = nextpos pos tts
-                         s'   = State rs pos'
-                     in cok tts s' mempty
+      walk [] is rs = let pos' = nextpos pos tts
+                          s'   = State rs pos'
+                      in cok (reverse is) s' mempty
       walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
             what = bool (showToken $ reverse is) eoi (null is)
