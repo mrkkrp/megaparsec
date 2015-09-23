@@ -34,6 +34,10 @@
 * Added new primitive combinator `hidden p` which hides “expected” tokens in
   error message when parser `p` fails.
 
+* Tab width is not hard-coded anymore. It can be manipulated via
+  `getTabWidth` and `setTabWidth`. Default tab-width is `defaultTabWidth`,
+  which is 8.
+
 ### Error messages
 
 * Introduced type class `ShowToken` and improved representation of

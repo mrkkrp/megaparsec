@@ -25,10 +25,12 @@ module Text.Megaparsec.Prim
   , MonadParsec (..)
   , (<?>)
     -- * Parser state combinators
-  , getPosition
-  , setPosition
   , getInput
   , setInput
+  , getPosition
+  , setPosition
+  , getTabWidth
+  , setTabWidth
   , setParserState
     -- * Running parser
   , runParser
@@ -68,8 +70,9 @@ import Text.Megaparsec.ShowToken
 -- | This is Megaparsec state, it's parametrized over stream type @s@.
 
 data State s = State
-  { stateInput :: s
-  , statePos   :: !SourcePos }
+  { stateInput    :: s
+  , statePos      :: !SourcePos
+  , stateTabWidth :: !Int }
   deriving (Show, Eq)
 
 -- | An instance of @Stream s t@ has stream type @s@, and token type @t@
@@ -318,7 +321,7 @@ instance MonadPlus (ParsecT s m) where
   mplus = pPlus
 
 pZero :: ParsecT s m a
-pZero = ParsecT $ \(State _ pos) _ _ _ eerr -> eerr $ newErrorUnknown pos
+pZero = ParsecT $ \(State _ pos _) _ _ _ eerr -> eerr $ newErrorUnknown pos
 
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
@@ -414,35 +417,37 @@ class (A.Alternative m, Monad m, Stream s t) =>
   eof :: m ()
 
   -- | The parser @token nextPos testTok@ accepts a token @t@ with result
-  -- @x@ when the function @testTok t@ returns @'Just' x@. The position of
+  -- @x@ when the function @testTok t@ returns @'Right' x@. The position of
   -- the /next/ token should be returned when @nextPos@ is called with the
-  -- current source position @pos@, the current token @t@ and the rest of
-  -- the tokens @toks@, @nextPos pos t toks@.
+  -- tab width, current source position, and the current token.
   --
   -- This is the most primitive combinator for accepting tokens. For
   -- example, the 'Text.Megaparsec.Char.char' parser could be implemented
   -- as:
   --
-  -- > char c = token nextPos testChar
-  -- >   where testChar x       = if x == c then Just x else Nothing
-  -- >         nextPos pos x xs = updatePosChar pos x
+  -- > char c = token updatePosChar testChar
+  -- >   where testChar x = if x == c
+  -- >                      then Right x
+  -- >                      else Left . pure . Unexpected . showToken $ x
 
-  token :: (SourcePos -> t -> s -> SourcePos) -- ^ Next position calculating function.
-        -> (t -> Either [Message] a) -- ^ Matching function for the token to parse.
+  token :: (Int -> SourcePos -> t -> SourcePos) -- ^ Next position calculating function
+        -> (t -> Either [Message] a) -- ^ Matching function for the token to parse
         -> m a
 
   -- | The parser @tokens posFromTok test@ parses list of tokens and returns
-  -- it. The resulting parser will use 'showToken' to pretty-print the
-  -- collection of tokens. Supplied predicate @test@ is used to check
-  -- equality of given and parsed tokens.
+  -- it. @posFromTok@ is called with three arguments: tab width, initial
+  -- position, and collection of tokens to parse. The resulting parser will
+  -- use 'showToken' to pretty-print the collection of tokens in error
+  -- messages. Supplied predicate @test@ is used to check equality of given
+  -- and parsed tokens.
   --
   -- This can be used to example to write 'Text.Megaparsec.Char.string':
   --
   -- > string = tokens updatePosString (==)
 
   tokens :: Eq t =>
-            (SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens.
-         -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens.
+            (Int -> SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens
+         -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens
          -> [t]                   -- ^ List of tokens to parse
          -> m [t]
 
@@ -467,7 +472,7 @@ instance Stream s t => MonadParsec s (ParsecT s m) t where
   updateParserState = pUpdateParserState
 
 pUnexpected :: String -> ParsecT s m a
-pUnexpected msg = ParsecT $ \(State _ pos) _ _ _ eerr ->
+pUnexpected msg = ParsecT $ \(State _ pos _) _ _ _ eerr ->
   eerr $ newErrorMessage (Unexpected msg) pos
 
 pLabel :: String -> ParsecT s m a -> ParsecT s m a
@@ -489,7 +494,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 {-# INLINE pLookAhead #-}
 
 pNotFollowedBy :: Stream s t => ParsecT s m a -> ParsecT s m ()
-pNotFollowedBy p = ParsecT $ \s@(State input pos) _ _ eok eerr ->
+pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
   let l = maybe eoi (showToken . fst) (uncons input)
       cok' _ _ _ = eerr $ unexpectedErr l pos
       cerr'    _ = eok () s mempty
@@ -498,38 +503,38 @@ pNotFollowedBy p = ParsecT $ \s@(State input pos) _ _ eok eerr ->
   in unParser p s cok' cerr' eok' eerr'
 
 pEof :: Stream s t => ParsecT s m ()
-pEof = label eoi $ ParsecT $ \s@(State input pos) _ _ eok eerr ->
+pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
   case uncons input of
     Nothing    -> eok () s mempty
     Just (x,_) -> eerr $ unexpectedErr (showToken x) pos
 {-# INLINE pEof #-}
 
 pToken :: Stream s t =>
-          (SourcePos -> t -> s -> SourcePos)
+          (Int -> SourcePos -> t -> SourcePos)
        -> (t -> Either [Message] a)
        -> ParsecT s m a
-pToken nextpos test = ParsecT $ \(State input pos) cok _ _ eerr ->
+pToken nextpos test = ParsecT $ \(State input pos w) cok _ _ eerr ->
     case uncons input of
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
           Left ms -> eerr $ foldr addErrorMessage (newErrorUnknown pos) ms
-          Right x -> let newpos = nextpos pos c cs
-                         newstate = State cs newpos
+          Right x -> let newpos   = nextpos w pos c
+                         newstate = State cs newpos w
                      in seq newpos $ seq newstate $ cok x newstate mempty
 {-# INLINE pToken #-}
 
 pTokens :: Stream s t =>
-           (SourcePos -> [t] -> SourcePos)
+           (Int -> SourcePos -> [t] -> SourcePos)
         -> (t -> t -> Bool)
         -> [t]
         -> ParsecT s m [t]
 pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens nextpos test tts = ParsecT $ \(State input pos) cok cerr _ eerr ->
+pTokens nextpos test tts = ParsecT $ \(State input pos w) cok cerr _ eerr ->
   let errExpect x = setErrorMessage (Expected $ showToken tts)
                     (newErrorMessage (Unexpected x) pos)
-      walk [] is rs = let pos' = nextpos pos tts
-                          s'   = State rs pos'
+      walk [] is rs = let pos' = nextpos w pos tts
+                          s'   = State rs pos' w
                       in cok (reverse is) s' mempty
       walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
@@ -563,16 +568,6 @@ eoi = "end of input"
 
 -- Parser state combinators
 
--- | Returns the current source position. See also 'SourcePos'.
-
-getPosition :: MonadParsec s m t => m SourcePos
-getPosition = statePos <$> getParserState
-
--- | @setPosition pos@ sets the current source position to @pos@.
-
-setPosition :: MonadParsec s m t => SourcePos -> m ()
-setPosition pos = updateParserState (\(State s _) -> State s pos)
-
 -- | Returns the current input.
 
 getInput :: MonadParsec s m t => m s
@@ -582,7 +577,29 @@ getInput = stateInput <$> getParserState
 -- @setInput@ functions can for example be used to deal with #include files.
 
 setInput :: MonadParsec s m t => s -> m ()
-setInput s = updateParserState (\(State _ pos) -> State s pos)
+setInput s = updateParserState (\(State _ pos w) -> State s pos w)
+
+-- | Returns the current source position. See also 'SourcePos'.
+
+getPosition :: MonadParsec s m t => m SourcePos
+getPosition = statePos <$> getParserState
+
+-- | @setPosition pos@ sets the current source position to @pos@.
+
+setPosition :: MonadParsec s m t => SourcePos -> m ()
+setPosition pos = updateParserState (\(State s _ w) -> State s pos w)
+
+-- | Returns tab width. Default tab width is equal to 'defaultTabWidth'. You
+-- can set different tab width with help of 'setTabWidth'.
+
+getTabWidth :: MonadParsec s m t => m Int
+getTabWidth = stateTabWidth <$> getParserState
+
+-- | Set tab width. If argument of the function is not positive number,
+-- 'defaultTabWidth' will be used.
+
+setTabWidth :: MonadParsec s m t => Int -> m ()
+setTabWidth w = updateParserState (\(State s pos _) -> State s pos w)
 
 -- | @setParserState st@ set the full parser state to @st@.
 
@@ -649,7 +666,7 @@ runParser p name s = runIdentity $ runParserT p name s
 runParserT :: (Monad m, Stream s t) =>
               ParsecT s m a -> String -> s -> m (Either ParseError a)
 runParserT p name s = do
-  res <- runParsecT p $ State s (initialPos name)
+  res <- runParsecT p $ State s (initialPos name) defaultTabWidth
   r <- parserReply res
   case r of
     Ok x _    -> return $ Right x

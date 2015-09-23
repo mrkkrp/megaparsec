@@ -24,7 +24,8 @@ module Text.Megaparsec.Pos
   , newPos
   , initialPos
   , updatePosChar
-  , updatePosString )
+  , updatePosString
+  , defaultTabWidth )
 where
 
 import Data.Data (Data)
@@ -88,24 +89,34 @@ setSourceLine (SourcePos n _ c) l = SourcePos n l c
 setSourceColumn :: SourcePos -> Int -> SourcePos
 setSourceColumn (SourcePos n l _) = SourcePos n l
 
--- | Update a source position given a character. If the character is a
--- newline (\'\\n\') the line number is incremented by 1. If the character
--- is carriage return (\'\\r\') the line number is unaltered, but column
--- number is reset to 1. If the character is a tab (\'\\t\') the column
--- number is incremented to the nearest 8'th column, i.e. @column + 8 -
--- ((column - 1) \`rem\` 8)@. In all other cases, the column is incremented
--- by 1.
+-- | Update a source position given a character. The first argument
+-- specifies tab width. If the character is a newline (\'\\n\') the line
+-- number is incremented by 1. If the character is a tab (\'\\t\') the
+-- column number is incremented to the nearest tab position, i.e. @column +
+-- width - ((column - 1) \`rem\` width)@. In all other cases, the column is
+-- incremented by 1.
+--
+-- If given tab width is not positive, 'defaultTabWidth' will be used.
 
-updatePosChar :: SourcePos -> Char -> SourcePos
-updatePosChar (SourcePos n l c) ch =
+updatePosChar :: Int -> SourcePos -> Char -> SourcePos
+updatePosChar width (SourcePos n l c) ch =
   case ch of
     '\n' -> SourcePos n (l + 1) 1
-    '\t' -> SourcePos n l (c + 8 - ((c - 1) `rem` 8))
+    '\t' -> let w = if width < 1 then defaultTabWidth else width
+            in SourcePos n l (c + w - ((c - 1) `rem` w))
     _    -> SourcePos n l (c + 1)
 
 -- | The expression @updatePosString pos s@ updates the source position
 -- @pos@ by calling 'updatePosChar' on every character in @s@, i.e. @foldl
 -- updatePosChar pos string@.
 
-updatePosString :: SourcePos -> String -> SourcePos
-updatePosString = foldl' updatePosChar
+updatePosString :: Int -> SourcePos -> String -> SourcePos
+updatePosString w = foldl' (updatePosChar w)
+
+-- | Value of tab width used by default. This is used as fall-back by
+-- 'updatePosChar' and possibly in other cases. Always prefer this constant
+-- when you want to refer to default tab width because actual value /may/
+-- change in future. Current value is @8@.
+
+defaultTabWidth :: Int
+defaultTabWidth = 8

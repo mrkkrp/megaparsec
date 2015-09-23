@@ -90,6 +90,7 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "combinator tokens" prop_tokens
         , testProperty "parser state position" prop_state_pos
         , testProperty "parser state input" prop_state_input
+        , testProperty "parser state tab width" prop_state_tab
         , testProperty "parser state general" prop_state
         , testProperty "IdentityT try" prop_IdentityT_try
         , testProperty "IdentityT notFollowedBy" prop_IdentityT_notFollowedBy
@@ -101,7 +102,7 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "WriterT" prop_WriterT ]
 
 instance Arbitrary (State String) where
-  arbitrary = State <$> arbitrary <*> arbitrary
+  arbitrary = State <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- Functor instance
 
@@ -347,11 +348,10 @@ prop_notFollowedBy_2 a' b' c' = checkParser p r s
 
 prop_token :: String -> Property
 prop_token s = checkParser p r s
-  where p = token nextPos testChar
-        nextPos pos x _ = updatePosChar pos x
-        testChar x      = if isLetter x
-                          then Right x
-                          else Left . pure . Unexpected . showToken $ x
+  where p = token updatePosChar testChar
+        testChar x = if isLetter x
+                     then Right x
+                     else Left . pure . Unexpected . showToken $ x
         h = head s
         r | null s = posErr 0 s [uneEof]
           | isLetter h && length s == 1 = Right (head s)
@@ -379,12 +379,16 @@ prop_state_input s = p /=\ s
           guard (null st1)
           return result
 
+prop_state_tab :: Int -> Property
+prop_state_tab w = p /=\ w
+  where p = setTabWidth w >> getTabWidth
+
 prop_state :: State String -> State String -> Property
 prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
-  where f (State s1' pos) (State s2' _) = State (max s1' s2' ) pos
+  where f (State s1' pos w) (State s2' _ _) = State (max s1' s2' ) pos w
         p = do
           st <- getParserState
-          guard (st == State "" (initialPos ""))
+          guard (st == State "" (initialPos "") defaultTabWidth)
           setParserState s1
           updateParserState (f s2)
           getParserState

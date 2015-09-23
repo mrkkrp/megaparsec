@@ -137,7 +137,7 @@ abcRow' a b c = abcRow (fromEnum a) (fromEnum b) (fromEnum c)
 
 posErr :: Int -> String -> [Message] -> Either ParseError a
 posErr pos s = Left . foldr addErrorMessage (newErrorUnknown errPos)
-  where errPos = updatePosString (initialPos "") (take pos s)
+  where errPos = updatePosString defaultTabWidth (initialPos "") (take pos s)
 
 -- | @uneCh s@ returns message created with 'Unexpected' constructor that
 -- tells the system that char @s@ is unexpected.

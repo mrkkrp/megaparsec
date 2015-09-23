@@ -316,11 +316,10 @@ noneOf' = noneOf . extendi
 -- > oneOf cs  = satisfy (`elem` cs)
 
 satisfy :: MonadParsec s m Char => (Char -> Bool) -> m Char
-satisfy f = token nextPos testChar
-  where nextPos pos x _ = updatePosChar pos x
-        testChar x      = if f x
-                          then Right x
-                          else Left . pure . Unexpected . showToken $ x
+satisfy f = token updatePosChar testChar
+  where testChar x = if f x
+                     then Right x
+                     else Left . pure . Unexpected . showToken $ x
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns
 -- the parsed string (i.e. @s@).

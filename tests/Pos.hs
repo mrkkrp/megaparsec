@@ -132,13 +132,14 @@ prop_setSourceColumn pos c =
   where c'   = getNonNegative c
         setp = setSourceColumn pos c'
 
-prop_updating :: SourcePos -> String -> Bool
-prop_updating pos "" = updatePosString pos "" == pos
-prop_updating pos s  =
+prop_updating :: Int -> SourcePos -> String -> Bool
+prop_updating w pos "" = updatePosString w pos "" == pos
+prop_updating w' pos s =
   d sourceName id           pos updated &&
   d sourceLine (+ inclines) pos updated &&
-  cols >= mincols && ((last s /= '\t') || ((cols - 1) `rem` 8 == 0))
-  where updated  = updatePosString pos s
+  cols >= mincols && ((last s /= '\t') || ((cols - 1) `rem` w == 0))
+  where w        = if w' < 1 then defaultTabWidth else w
+        updated  = updatePosString w' pos s
         cols     = sourceColumn updated
         newlines = elemIndices '\n' s
         creturns = elemIndices '\r' s

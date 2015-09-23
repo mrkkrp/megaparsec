@@ -139,10 +139,12 @@ module Text.Megaparsec
   , Consumed (..)
   , Reply (..)
   , State (..)
-  , getPosition
-  , setPosition
   , getInput
   , setInput
+  , getPosition
+  , setPosition
+  , getTabWidth
+  , setTabWidth
   , getParserState
   , setParserState
   , updateParserState )

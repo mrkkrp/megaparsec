@@ -155,8 +155,8 @@ prop_indentGuard l0 l1 l2 = checkParser p r s
           | otherwise = Right ()
         msg' = [msg "incorrect indentation"]
         f    = length . takeWhile isSpace . getIndLine
-        f' x = sourceColumn $
-               updatePosString (initialPos "") $ take (f x) (getIndLine x)
+        f' x = sourceColumn $ updatePosString defaultTabWidth (initialPos "") $
+               take (f x) (getIndLine x)
         g xs = sum $ length . getIndLine <$> xs
         s    = concat $ getIndLine <$> [l0, l1, l2]
 
