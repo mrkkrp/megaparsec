@@ -126,8 +126,8 @@ prop_endBy1 n' c = checkParser p r s
           | otherwise = Right (replicate n 'a')
         s = intersperse '-' (replicate n 'a') ++ [c]
 
-prop_manyTill :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                 Property
+prop_manyTill :: NonNegative Int -> NonNegative Int
+              -> NonNegative Int -> Property
 prop_manyTill a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (,) <$> manyTill letterChar (char 'c') <*> many letterChar
@@ -136,8 +136,8 @@ prop_manyTill a' b' c' = checkParser p r s
                         in Right (pre, drop 1 post)
         s = abcRow a b c
 
-prop_someTill :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                 Property
+prop_someTill :: NonNegative Int -> NonNegative Int
+              -> NonNegative Int -> Property
 prop_someTill a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (,) <$> someTill letterChar (char 'c') <*> many letterChar

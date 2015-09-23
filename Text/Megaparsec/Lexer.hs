@@ -77,8 +77,8 @@ import qualified Text.Megaparsec.Char as C
 -- to consume any white space before the first lexeme (i.e. at the beginning
 -- of the file).
 
-space :: MonadParsec s m Char =>
-         m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
+space :: MonadParsec s m Char
+      => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
       -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
       -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
       -> m ()

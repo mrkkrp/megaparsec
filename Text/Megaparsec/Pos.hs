@@ -98,7 +98,10 @@ setSourceColumn (SourcePos n l _) = SourcePos n l
 --
 -- If given tab width is not positive, 'defaultTabWidth' will be used.
 
-updatePosChar :: Int -> SourcePos -> Char -> SourcePos
+updatePosChar :: Int       -- ^ Tab width
+              -> SourcePos -- ^ Initial position
+              -> Char      -- ^ Character at the position
+              -> SourcePos
 updatePosChar width (SourcePos n l c) ch =
   case ch of
     '\n' -> SourcePos n (l + 1) 1
@@ -107,10 +110,14 @@ updatePosChar width (SourcePos n l c) ch =
     _    -> SourcePos n l (c + 1)
 
 -- | The expression @updatePosString pos s@ updates the source position
--- @pos@ by calling 'updatePosChar' on every character in @s@, i.e. @foldl
--- updatePosChar pos string@.
+-- @pos@ by calling 'updatePosChar' on every character in @s@, i.e.
+--
+-- > updatePosString width = foldl (updatePosChar width)
 
-updatePosString :: Int -> SourcePos -> String -> SourcePos
+updatePosString :: Int       -- ^ Tab width
+                -> SourcePos -- ^ Initial position
+                -> String    -- ^ String to process
+                -> SourcePos
 updatePosString w = foldl' (updatePosChar w)
 
 -- | Value of tab width used by default. This is used as fall-back by

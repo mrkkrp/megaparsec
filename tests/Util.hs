@@ -62,8 +62,8 @@ import Text.Megaparsec.String
 -- entire @s@. Result of the parsing is compared with expected result @r@,
 -- it should match, otherwise the property doesn't hold and the test fails.
 
-checkParser :: (Eq a, Show a) =>
-               Parser a -> Either ParseError a -> String -> Property
+checkParser :: (Eq a, Show a)
+            => Parser a -> Either ParseError a -> String -> Property
 checkParser p r s = simpleParse p s === r
 
 -- | @simpleParse p s@ runs parser @p@ on input @s@ and returns corresponding
@@ -79,8 +79,8 @@ simpleParse p = parse (p <* eof) ""
 -- character may be labelled, in this case @label@ is used to check quality
 -- of error messages.
 
-checkChar :: Parser Char -> (Char -> Bool) ->
-              Maybe String -> String -> Property
+checkChar :: Parser Char -> (Char -> Bool)
+          -> Maybe String -> String -> Property
 checkChar p f l' s = checkParser p r s
   where h = head s
         l = exSpec <$> maybeToList l'
@@ -94,8 +94,8 @@ checkChar p f l' s = checkParser p r s
 -- used to compare tokens. @label@ is used as expected representation of
 -- parser's result in error messages.
 
-checkString :: Parser String -> String -> (Char -> Char -> Bool) ->
-               String -> String -> Property
+checkString :: Parser String -> String -> (Char -> Char -> Bool)
+            -> String -> String -> Property
 checkString p a' test l s' = checkParser p (w a' 0 s') s'
   where w [] _ []    = Right a'
         w [] i (s:_) = posErr i s' [uneCh s, exEof]

@@ -87,8 +87,9 @@ eol = (pure <$> newline) <|> crlf <?> "end of line"
 tab :: MonadParsec s m Char => m Char
 tab = char '\t' <?> "tab"
 
--- | Skips /zero/ or more white space characters. See also 'skipMany' and
--- 'spaceChar'.
+-- | Skips /zero/ or more white space characters.
+--
+-- See also: 'skipMany' and 'spaceChar'.
 
 space :: MonadParsec s m Char => m ()
 space = skipMany spaceChar
@@ -279,7 +280,7 @@ anyChar = satisfy (const True) <?> "character"
 -- message, so usually you should label it manually with 'label' or
 -- ('<?>').
 --
--- See also 'satisfy'.
+-- See also: 'satisfy'.
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
 

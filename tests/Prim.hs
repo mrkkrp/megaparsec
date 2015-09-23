@@ -153,8 +153,8 @@ prop_alternative_3 = checkParser p r s
         r = simpleParse p' s
         s = ">>"
 
-prop_alternative_4 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                      Property
+prop_alternative_4 :: NonNegative Int -> NonNegative Int
+                   -> NonNegative Int -> Property
 prop_alternative_4 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> many (char 'b')
@@ -164,8 +164,8 @@ prop_alternative_4 a' b' c' = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_alternative_5 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                      Property
+prop_alternative_5 :: NonNegative Int -> NonNegative Int
+                   -> NonNegative Int -> Property
 prop_alternative_5 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> some (char 'a') <*> some (char 'b')
@@ -240,8 +240,8 @@ prop_unexpected m = conjoin [ checkParser p r s
           | otherwise = posErr 0 s [uneSpec m]
         s = ""
 
-prop_label :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-              String -> Property
+prop_label :: NonNegative Int -> NonNegative Int
+           -> NonNegative Int -> String -> Property
 prop_label a' b' c' l = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> (many (char 'b') <?> l)
@@ -254,8 +254,8 @@ prop_label a' b' c' l = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_hidden_0 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                 Property
+prop_hidden_0 :: NonNegative Int -> NonNegative Int
+              -> NonNegative Int -> Property
 prop_hidden_0 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> hidden (many (char 'b'))
@@ -314,8 +314,8 @@ prop_lookAhead_2 a b c = checkParser p r s
           | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
         s = abcRow' a b c
 
-prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                        Property
+prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int
+                     -> NonNegative Int -> Property
 prop_notFollowedBy_0 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = many (char 'a') <* notFollowedBy (char 'b') <* many (char 'c')
@@ -323,8 +323,8 @@ prop_notFollowedBy_0 a' b' c' = checkParser p r s
           | otherwise = Right (replicate a 'a')
         s = abcRow a b c
 
-prop_notFollowedBy_1 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                        Property
+prop_notFollowedBy_1 :: NonNegative Int -> NonNegative Int
+                     -> NonNegative Int -> Property
 prop_notFollowedBy_1 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = many (char 'a') <* f (char 'c') <* many (char 'c')
@@ -334,8 +334,8 @@ prop_notFollowedBy_1 a' b' c' = checkParser p r s
           | otherwise       = posErr a s [uneEof, exCh 'a']
         s = abcRow a b c
 
-prop_notFollowedBy_2 :: NonNegative Int -> NonNegative Int -> NonNegative Int ->
-                        Property
+prop_notFollowedBy_2 :: NonNegative Int -> NonNegative Int
+                     -> NonNegative Int -> Property
 prop_notFollowedBy_2 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = many (char 'a') <* notFollowedBy eof <* many anyChar
@@ -442,8 +442,10 @@ prop_ReaderT_notFollowedBy a' b' c' = checkParser (runReaderT p 'a') r s
 prop_StateT_alternative :: Integer -> Property
 prop_StateT_alternative n = checkParser (L.evalStateT p 0) (Right n) "" .&&.
                             checkParser (S.evalStateT p' 0) (Right n) ""
-  where p  = L.put n >> ((L.modify (* 2) >> void (string "xxx")) <|> return ()) >> L.get
-        p' = S.put n >> ((S.modify (* 2) >> void (string "xxx")) <|> return ()) >> S.get
+  where p  = L.put n >> ((L.modify (* 2) >>
+                          void (string "xxx")) <|> return ()) >> L.get
+        p' = S.put n >> ((S.modify (* 2) >>
+                          void (string "xxx")) <|> return ()) >> S.get
 
 prop_StateT_lookAhead :: Integer -> Property
 prop_StateT_lookAhead n = checkParser (L.evalStateT p 0) (Right n) "" .&&.

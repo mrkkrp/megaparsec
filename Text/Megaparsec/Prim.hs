@@ -342,8 +342,8 @@ infix 0 <?>
 
 -- | Type class describing parsers independent of input type.
 
-class (A.Alternative m, Monad m, Stream s t) =>
-      MonadParsec s m t | m -> s t where
+class (A.Alternative m, Monad m, Stream s t)
+      => MonadParsec s m t | m -> s t where
 
   -- | The parser @unexpected msg@ always fails with an unexpected error
   -- message @msg@ without consuming any input.
@@ -445,8 +445,8 @@ class (A.Alternative m, Monad m, Stream s t) =>
   --
   -- > string = tokens updatePosString (==)
 
-  tokens :: Eq t =>
-            (Int -> SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens
+  tokens :: Eq t
+         => (Int -> SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens
          -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens
          -> [t]                   -- ^ List of tokens to parse
          -> m [t]
@@ -509,8 +509,8 @@ pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
     Just (x,_) -> eerr $ unexpectedErr (showToken x) pos
 {-# INLINE pEof #-}
 
-pToken :: Stream s t =>
-          (Int -> SourcePos -> t -> SourcePos)
+pToken :: Stream s t
+       => (Int -> SourcePos -> t -> SourcePos)
        -> (t -> Either [Message] a)
        -> ParsecT s m a
 pToken nextpos test = ParsecT $ \(State input pos w) cok _ _ eerr ->
@@ -524,8 +524,8 @@ pToken nextpos test = ParsecT $ \(State input pos w) cok _ _ eerr ->
                      in seq newpos $ seq newstate $ cok x newstate mempty
 {-# INLINE pToken #-}
 
-pTokens :: Stream s t =>
-           (Int -> SourcePos -> [t] -> SourcePos)
+pTokens :: Stream s t
+        => (Int -> SourcePos -> [t] -> SourcePos)
         -> (t -> t -> Bool)
         -> [t]
         -> ParsecT s m [t]
@@ -579,7 +579,9 @@ getInput = stateInput <$> getParserState
 setInput :: MonadParsec s m t => s -> m ()
 setInput s = updateParserState (\(State _ pos w) -> State s pos w)
 
--- | Returns the current source position. See also 'SourcePos'.
+-- | Returns the current source position.
+--
+-- See also: 'SourcePos'.
 
 getPosition :: MonadParsec s m t => m SourcePos
 getPosition = statePos <$> getParserState
@@ -621,8 +623,8 @@ setParserState st = updateParserState (const st)
 -- >
 -- > numbers = commaSep integer
 
-parse :: Stream s t =>
-         Parsec s a -- ^ Parser to run
+parse :: Stream s t
+      => Parsec s a -- ^ Parser to run
       -> String     -- ^ Name of source file, included in error messages
       -> s          -- ^ Input for parser
       -> Either ParseError a
@@ -670,8 +672,8 @@ runParser p name s = runIdentity $ runParserT p name s
 -- string. Returns a computation in the underlying monad @m@ that return
 -- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
 
-runParserT :: (Monad m, Stream s t) =>
-              ParsecT s m a -> String -> s -> m (Either ParseError a)
+runParserT :: (Monad m, Stream s t)
+           => ParsecT s m a -> String -> s -> m (Either ParseError a)
 runParserT p name s = do
   res <- runParsecT p $ State s (initialPos name) defaultTabWidth
   r <- parserReply res
@@ -686,7 +688,8 @@ runParserT p name s = do
 -- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'
 -- are built upon this.
 
-runParsecT :: Monad m => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))
+runParsecT :: Monad m
+           => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))
 runParsecT p s = unParser p s cok cerr eok eerr
   where cok a s' _ = return . Consumed . return $ Ok a s'
         cerr err   = return . Consumed . return $ Error err
@@ -710,8 +713,8 @@ instance (MonadPlus m, MonadParsec s m t) =>
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
-instance (MonadPlus m, MonadParsec s m t) =>
-         MonadParsec s (S.StateT e m) t where
+instance (MonadPlus m, MonadParsec s m t)
+         => MonadParsec s (S.StateT e m) t where
   label n       (S.StateT m) = S.StateT $ \s -> label n (m s)
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
@@ -725,8 +728,8 @@ instance (MonadPlus m, MonadParsec s m t) =>
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
-instance (MonadPlus m, MonadParsec s m t) =>
-         MonadParsec s (L.ReaderT e m) t where
+instance (MonadPlus m, MonadParsec s m t)
+         => MonadParsec s (L.ReaderT e m) t where
   label n       (L.ReaderT m) = L.ReaderT $ \s -> label n (m s)
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ \s -> lookAhead (m s)
@@ -738,8 +741,8 @@ instance (MonadPlus m, MonadParsec s m t) =>
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
-         MonadParsec s (L.WriterT w m) t where
+instance (MonadPlus m, Monoid w, MonadParsec s m t)
+         => MonadParsec s (L.WriterT w m) t where
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
   lookAhead     (L.WriterT m) = L.WriterT $
@@ -753,8 +756,8 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
-         MonadParsec s (S.WriterT w m) t where
+instance (MonadPlus m, Monoid w, MonadParsec s m t)
+         => MonadParsec s (S.WriterT w m) t where
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
   lookAhead     (S.WriterT m) = S.WriterT $
@@ -768,8 +771,8 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t) =>
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (Monad m, MonadParsec s m t) =>
-         MonadParsec s (IdentityT m) t where
+instance (Monad m, MonadParsec s m t)
+         => MonadParsec s (IdentityT m) t where
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m

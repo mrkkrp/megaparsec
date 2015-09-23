@@ -89,8 +89,8 @@ f <$?> xp = newperm f <|?> xp
 -- the optional combinator ('<|?>') instead. Returns a new permutation
 -- parser that includes @p@.
 
-(<||>) :: MonadParsec s m t =>
-          PermParser s m (a -> b) -> m a -> PermParser s m b
+(<||>) :: MonadParsec s m t
+       => PermParser s m (a -> b) -> m a -> PermParser s m b
 (<||>) = add
 
 -- | The expression @perm \<||> (x, p)@ adds parser @p@ to the
@@ -98,11 +98,12 @@ f <$?> xp = newperm f <|?> xp
 -- applied, the default value @x@ will be used instead. Returns a new
 -- permutation parser that includes the optional parser @p@.
 
-(<|?>) :: MonadParsec s m t =>
-          PermParser s m (a -> b) -> (a, m a) -> PermParser s m b
+(<|?>) :: MonadParsec s m t
+       => PermParser s m (a -> b) -> (a, m a) -> PermParser s m b
 perm <|?> (x, p) = addopt perm x p
 
-newperm :: MonadParsec s m t => (a -> b) -> PermParser s m (a -> b)
+newperm :: MonadParsec s m t
+        => (a -> b) -> PermParser s m (a -> b)
 newperm f = Perm (Just f) []
 
 add :: MonadParsec s m t => PermParser s m (a -> b) -> m a -> PermParser s m b
@@ -110,13 +111,13 @@ add perm@(Perm _mf fs) p = Perm Nothing (first : fmap insert fs)
   where first = Branch perm p
         insert (Branch perm' p') = Branch (add (mapPerms flip perm') p) p'
 
-addopt :: MonadParsec s m t =>
-          PermParser s m (a -> b) -> a -> m a -> PermParser s m b
+addopt :: MonadParsec s m t
+       => PermParser s m (a -> b) -> a -> m a -> PermParser s m b
 addopt perm@(Perm mf fs) x p = Perm (fmap ($ x) mf) (first : fmap insert fs)
   where first   = Branch perm p
         insert (Branch perm' p') = Branch (addopt (mapPerms flip perm') x p) p'
 
-mapPerms :: MonadParsec s m t =>
-            (a -> b) -> PermParser s m a -> PermParser s m b
+mapPerms :: MonadParsec s m t
+         => (a -> b) -> PermParser s m a -> PermParser s m b
 mapPerms f (Perm x xs) = Perm (fmap f x) (fmap mapBranch xs)
   where mapBranch (Branch perm p) = Branch (mapPerms (f .) perm) p
