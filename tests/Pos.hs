@@ -138,17 +138,15 @@ prop_updating w' pos s =
   d sourceName id           pos updated &&
   d sourceLine (+ inclines) pos updated &&
   cols >= mincols && ((last s /= '\t') || ((cols - 1) `rem` w == 0))
-  where w        = if w' < 1 then defaultTabWidth else w
+  where w        = if w' < 1 then defaultTabWidth else w'
         updated  = updatePosString w' pos s
         cols     = sourceColumn updated
         newlines = elemIndices '\n' s
-        creturns = elemIndices '\r' s
         inclines = length newlines
         total    = length s
-        allctrls = newlines ++ creturns
-        mincols  = if null allctrls
+        mincols  = if null newlines
                    then total + sourceColumn pos
-                   else total - maximum allctrls
+                   else total - maximum newlines
 
 d :: Eq b => (a -> b) -> (b -> b) -> a -> a -> Bool
 d f g x y = g (f x) == f y
