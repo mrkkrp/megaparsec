@@ -533,7 +533,7 @@ pTokens nextpos test tts = ParsecT $ \(State input pos) cok cerr _ eerr ->
                      in cok tts s' mempty
       walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
-            what = bool (showToken $ reverse is) "end of input" (null is)
+            what = bool (showToken $ reverse is) eoi (null is)
         in case uncons rs of
              Nothing -> errorCont . errExpect $ what
              Just (x,xs)
