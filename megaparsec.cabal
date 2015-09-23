@@ -125,7 +125,7 @@ test-suite old-tests
                    , Util
   build-depends:     base                   >= 4.8 && < 5
                    , megaparsec             >= 4.0.0
-                   , HUnit                  == 1.2.*
+                   , HUnit                  >= 1.2 && < 1.4
                    , test-framework         >= 0.6 && < 1
                    , test-framework-hunit   >= 0.2 && < 0.4
   default-extensions:
