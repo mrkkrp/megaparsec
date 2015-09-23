@@ -105,7 +105,7 @@ instance Stream TL.Text Char where
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
 --
---     * @Cosumed@ is a wrapper for result when some part of input stream
+--     * @Consumed@ is a wrapper for result when some part of input stream
 --       was consumed.
 --     * @Empty@ is a wrapper for result when no input was consumed.
 --
@@ -119,7 +119,7 @@ data Consumed a = Consumed a | Empty !a
 --     * @Ok@ for successfully run parser.
 --     * @Error@ for failed parser.
 --
--- See also 'Consumed'.
+-- See also: 'Consumed'.
 
 data Reply s a = Ok a !(State s) | Error ParseError
 
@@ -134,7 +134,7 @@ data Reply s a = Ok a !(State s) | Error ParseError
 -- unexpected 'a'
 -- expecting end of input
 --
--- we're getting better error messages with help of hints:
+-- We're getting better error messages with help of hints:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
 -- parse error at line 1, column 2:
@@ -202,8 +202,8 @@ refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 -- You call specific continuation when you want to proceed in that specific
 -- branch of control flow.
 
--- | @Parsec@ is non-transformer variant of more general @ParsecT@
--- monad-transformer.
+-- | @Parsec@ is non-transformer variant of more general 'ParsecT'
+-- monad transformer.
 
 type Parsec s = ParsecT s Identity
 
@@ -348,7 +348,7 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- | The parser @unexpected msg@ always fails with an unexpected error
   -- message @msg@ without consuming any input.
   --
-  -- The parsers 'fail', ('<?>') and @unexpected@ are the three parsers used
+  -- The parsers 'fail', ('<?>') and 'unexpected' are the three parsers used
   -- to generate error messages. Of these, only ('<?>') is commonly used.
 
   unexpected :: String -> m a
@@ -441,7 +441,7 @@ class (A.Alternative m, Monad m, Stream s t) =>
   -- messages. Supplied predicate @test@ is used to check equality of given
   -- and parsed tokens.
   --
-  -- This can be used to example to write 'Text.Megaparsec.Char.string':
+  -- This can be used for example to write 'Text.Megaparsec.Char.string':
   --
   -- > string = tokens updatePosString (==)
 
@@ -608,10 +608,12 @@ setParserState st = updateParserState (const st)
 
 -- Running a parser
 
--- | @parse p file input@ runs a parser @p@ over 'Identity'. The
--- @file@ is only used in error messages and may be the empty
--- string. Returns either a 'ParseError' ('Left') or a value of type @a@
--- ('Right'). This is a synonym for 'runParser'.
+-- | @parse p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
+-- if you're using the 'ParserT' monad transformer; 'parse' itself is just a
+-- synonym for 'runParser'). It returns either a 'ParseError' ('Left') or a
+-- value of type @a@ ('Right'). 'show' or 'print' can be used to turn
+-- 'ParseError' into the string representation of the error message. See
+-- "Text.Megaparsec.Error" if you need to do more advanced error analysis.
 --
 -- > main = case (parse numbers "" "11, 2, 43") of
 -- >          Left err -> print err
@@ -619,12 +621,17 @@ setParserState st = updateParserState (const st)
 -- >
 -- > numbers = commaSep integer
 
-parse :: Stream s t => Parsec s a -> String -> s -> Either ParseError a
+parse :: Stream s t =>
+         Parsec s a -- ^ Parser to run
+      -> String     -- ^ Name of source file, included in error messages
+      -> s          -- ^ Input for parser
+      -> Either ParseError a
 parse = runParser
 
 -- | @parse' p input@ runs parser @p@ on @input@ and returns result
 -- inside 'Just' on success and 'Nothing' on failure. This function also
--- parses 'eof', so all input should be consumed by the parser @p@.
+-- parses 'eof', so if the parser doesn't consume all of its input, it will
+-- fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file name) are not important and entire input
@@ -676,7 +683,7 @@ runParserT p name s = do
             Consumed r -> r
             Empty    r -> r
 
--- | Low-level unpacking of the ParsecT type. 'runParserT' and 'runParser'
+-- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'
 -- are built upon this.
 
 runParsecT :: Monad m => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))

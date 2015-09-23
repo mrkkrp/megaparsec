@@ -14,7 +14,7 @@
 -- more elegant than others. Especially important theme is parsing of write
 -- space, comments and indentation.
 --
--- This module is supposed to be imported qualified:
+-- This module is intended to be imported qualified:
 --
 -- > import qualified Text.Megaparsec.Lexer as L
 
@@ -54,8 +54,9 @@ import qualified Text.Megaparsec.Char as C
 
 -- | @space spaceChar lineComment blockComment@ produces parser that can
 -- parse white space in general. It's expected that you create such a parser
--- once and pass it to many other function in this module as needed (it's
--- usually called @spaceConsumer@ in doc-strings here).
+-- once and pass it to other functions in this module as needed (when you
+-- see @spaceConsumer@ in documentation, usually it means that something
+-- like 'space' is expected there).
 --
 -- @spaceChar@ is used to parse trivial space characters. You can use
 -- 'C.spaceChar' from "Text.Megaparsec.Char" for this purpose as well as
@@ -68,18 +69,24 @@ import qualified Text.Megaparsec.Char as C
 -- @blockComment@ is used to parse block (multi-line) comments. You can use
 -- 'skipBlockComment' if you don't need anything special.
 --
--- Parsing of white space is important part of any parser. We propose scheme
--- where every lexeme should consume all trailing white space, but not
--- leading one. You should wrap every lexeme parser with 'lexeme' to achieve
--- this. You only need to call 'space' “manually” to consume any white space
--- before the first lexeme (at the beginning of file).
+-- Parsing of white space is an important part of any parser. We propose a
+-- convention where every lexeme parser assumes no spaces before the lexeme
+-- and consumes all spaces after the lexeme; this is what the 'lexeme'
+-- combinator does, and so it's enough to wrap every lexeme parser with
+-- 'lexeme' to achieve this. Note that you'll need to call 'space' manually
+-- to consume any white space before the first lexeme (i.e. at the beginning
+-- of the file).
 
-space :: MonadParsec s m Char => m () -> m () -> m () -> m ()
+space :: MonadParsec s m Char =>
+         m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
+      -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
+      -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
+      -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
 
 -- | This is wrapper for lexemes. Typical usage is to supply first argument
 -- (parser that consumes white space, probably defined via 'space') and use
--- resulting function to wrap parsers for every lexeme.
+-- the resulting function to wrap parsers for every lexeme.
 --
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
@@ -153,7 +160,7 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 -- | The lexeme parser parses a single literal character without
 -- quotes. Purpose of this parser is to help with parsing of commonly used
 -- escape sequences. It's your responsibility to take care of character
--- literal syntax in your language (surround it with single quotes or
+-- literal syntax in your language (by surrounding it with single quotes or
 -- similar).
 --
 -- The literal character is parsed according to the grammar rules defined in
@@ -219,7 +226,7 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 -- | Parse a floating point value without sign. Representation of floating
 -- point value is expected to be according to Haskell report.
 --
--- If you need to parse signed floats, see 'signed' combinator.
+-- If you need to parse signed floats, see 'signed'.
 
 float :: MonadParsec s m Char => m Double
 float = label "float" $ read <$> f

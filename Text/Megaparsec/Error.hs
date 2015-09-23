@@ -82,16 +82,16 @@ badMessage = null . messageString
 -- 'Eq' type classes.
 
 data ParseError = ParseError
-  { -- | Extract the source position from @ParseError@.
+  { -- | Extract the source position from 'ParseError'.
     errorPos :: !SourcePos
-    -- | Extract the list of error messages from @ParseError@.
+    -- | Extract the list of error messages from 'ParseError'.
   , errorMessages :: [Message] }
   deriving Eq
 
 instance Show ParseError where
   show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
 
--- | Test whether given @ParseError@ has associated collection of error
+-- | Test whether given 'ParseError' has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
 
 errorIsUnknown :: ParseError -> Bool
@@ -99,22 +99,22 @@ errorIsUnknown (ParseError _ ms) = null ms
 
 -- Creation of parse errors
 
--- | @newErrorUnknown pos@ creates @ParseError@ without any associated
+-- | @newErrorUnknown pos@ creates 'ParseError' without any associated
 -- message but with specified position @pos@.
 
 newErrorUnknown :: SourcePos -> ParseError
 newErrorUnknown pos = ParseError pos []
 
--- | @newErrorMessage m pos@ creates @ParseError@ with message @m@ and
+-- | @newErrorMessage m pos@ creates 'ParseError' with message @m@ and
 -- associated position @pos@. If message @m@ has empty message string, it
 -- won't be included.
 
 newErrorMessage :: Message -> SourcePos -> ParseError
 newErrorMessage m pos = ParseError pos $ bool [m] [] (badMessage m)
 
--- | @addErrorMessage m err@ returns @ParseError@ @err@ with message @m@
--- added. This function makes sure that list of messages is always sorted
--- and doesn't contain duplicates or messages with empty message strings.
+-- | @addErrorMessage m err@ returns @err@ with message @m@ added. This
+-- function makes sure that list of messages is always sorted and doesn't
+-- contain duplicates or messages with empty message strings.
 
 addErrorMessage :: Message -> ParseError -> ParseError
 addErrorMessage m (ParseError pos ms) =
@@ -134,14 +134,14 @@ setErrorMessage m (ParseError pos ms) =
   where pe = ParseError pos xs
         xs = filter ((/= fromEnum m) . fromEnum) ms
 
--- | @setErrorPos pos err@ returns @ParseError@ identical to @err@, but with
+-- | @setErrorPos pos err@ returns 'ParseError' identical to @err@, but with
 -- position @pos@.
 
 setErrorPos :: SourcePos -> ParseError -> ParseError
 setErrorPos pos (ParseError _ ms) = ParseError pos ms
 
 -- | Merge two error data structures into one joining their collections of
--- messages and preferring longest match. In other words earlier error
+-- messages and preferring longest match. In other words, earlier error
 -- message is discarded. This may seem counter-intuitive, but @mergeError@
 -- is only used to merge error messages of alternative branches of parsing
 -- and in this case longest match should be preferred.
