@@ -15,18 +15,18 @@
 module Text.Megaparsec.Combinator
   ( between
   , choice
-  , count
-  , count'
-  , endBy
-  , endBy1
+  , option
   , manyTill
   , someTill
-  , option
-  , sepBy
-  , sepBy1
   , skipMany
   , skipSome
-    -- Deprecated combinators
+  , count
+  , count'
+  , sepBy
+  , sepBy1
+  , endBy
+  , endBy1
+    -- * Deprecated combinators
   , chainl
   , chainl1
   , chainr
@@ -202,8 +202,8 @@ chainr :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
 chainr p op x = chainr1 p op <|> pure x
 {-# INLINE chainr #-}
 
--- | @chainr1 p op@ parses /one/ or more occurrences of |p|,
--- separated by @op@ Returns a value obtained by a /right/ associative
+-- | @chainr1 p op@ parses /one/ or more occurrences of @p@,
+-- separated by @op@. Returns a value obtained by a /right/ associative
 -- application of all functions returned by @op@ to the values returned by
 -- @p@.
 --
