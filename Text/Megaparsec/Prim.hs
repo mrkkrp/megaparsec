@@ -36,7 +36,7 @@ module Text.Megaparsec.Prim
   , runParser
   , runParserT
   , parse
-  , parse'
+  , parseMaybe
   , parseTest )
 where
 
@@ -630,7 +630,7 @@ parse :: Stream s t
       -> Either ParseError a
 parse = runParser
 
--- | @parse' p input@ runs parser @p@ on @input@ and returns result
+-- | @parseMaybe p input@ runs parser @p@ on @input@ and returns result
 -- inside 'Just' on success and 'Nothing' on failure. This function also
 -- parses 'eof', so if the parser doesn't consume all of its input, it will
 -- fail.
@@ -640,8 +640,8 @@ parse = runParser
 -- should be parsed. For example it can be used when parsing of single
 -- number according to specification of its format is desired.
 
-parse' :: Stream s t => Parsec s a -> s -> Maybe a
-parse' p s =
+parseMaybe :: Stream s t => Parsec s a -> s -> Maybe a
+parseMaybe p s =
   case parse (p <* eof) "" s of
     Left  _ -> Nothing
     Right x -> Just x

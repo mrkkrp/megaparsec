@@ -46,7 +46,7 @@ module Text.Megaparsec
   , runParser
   , runParserT
   , parse
-  , parse'
+  , parseMaybe
   , parseTest
     -- * Combinators
   , (A.<|>)

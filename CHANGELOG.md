@@ -14,8 +14,8 @@
   Megaparsec work with any instance of `MonadParsec`, not only with
   `ParsecT`.
 
-* Added new function `parse'` for lightweight parsing where error messages
-  (and thus file name) are not important and entire input should be
+* Added new function `parseMaybe` for lightweight parsing where error
+  messages (and thus file name) are not important and entire input should be
   parsed. For example it can be used when parsing of single number according
   to specification of its format is desired.
 
