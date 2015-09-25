@@ -122,6 +122,8 @@ test-suite old-tests
                    , Bugs.Bug2
                    , Bugs.Bug6
                    , Bugs.Bug9
+                   , Bugs.Bug35
+                   , Bugs.Bug39
                    , Util
   build-depends:     base                   >= 4.8 && < 5
                    , megaparsec             >= 4.0.0
@@ -137,6 +139,15 @@ test-suite tests
   hs-source-dirs:    tests
   type:              exitcode-stdio-1.0
   ghc-options:       -O2 -Wall -rtsopts
+  other-modules:     Char
+                   , Combinator
+                   , Error
+                   , Expr
+                   , Lexer
+                   , Perm
+                   , Pos
+                   , Prim
+                   , Util
   build-depends:     base                   >= 4.8 && < 5
                    , megaparsec             >= 4.0.0
                    , mtl                    == 2.*
