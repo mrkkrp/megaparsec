@@ -14,6 +14,8 @@
 -- Doaitse Swierstra. Published as a functional pearl at the Haskell
 -- Workshop 2001.
 
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Text.Megaparsec.Perm
   ( PermParser
   , makePermParser
