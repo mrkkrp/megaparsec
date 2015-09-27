@@ -7,7 +7,7 @@
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
--- Portability :  non-portable (uses existentially quantified data constructors)
+-- Portability :  non-portable
 --
 -- This module implements permutation parsers. The algorithm is described
 -- in: /Parsing Permutation Phrases/, by Arthur Baars, Andres Loh and

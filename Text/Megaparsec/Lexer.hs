@@ -7,7 +7,7 @@
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
--- Portability :  non-portable (uses local universal quantification: PolymorphicComponents)
+-- Portability :  non-portable
 --
 -- High-level parsers to help you write your lexer. The module doesn't
 -- impose how you should write your parser, but certain approaches may be

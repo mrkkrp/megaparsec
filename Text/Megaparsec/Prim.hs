@@ -7,7 +7,7 @@
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
--- Portability :  portable
+-- Portability :  non-portable (MPTC with FD)
 --
 -- The primitive parser combinators.
 
