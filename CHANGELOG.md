@@ -41,7 +41,7 @@
 ### Error messages
 
 * Introduced type class `ShowToken` and improved representation of
-  characters and stings in error messages, see #12.
+  characters and strings in error messages, see #12.
 
 * Greatly improved quality of error messages. Fixed entire
   `Text.Megaparsec.Error` module, see #14 for more information. Made
