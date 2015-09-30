@@ -58,6 +58,10 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
 import Text.Megaparsec.String
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*))
+#endif
+
 -- | @checkParser p r s@ tries to run parser @p@ on input @s@ to parse
 -- entire @s@. Result of the parsing is compared with expected result @r@,
 -- it should match, otherwise the property doesn't hold and the test fails.
@@ -106,7 +110,7 @@ checkString p a' test l s' = checkParser p (w a' 0 s') s'
           | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
             where i'  = succ i
 
-infix 4 /=\
+infix 4 /=\   -- preserve whitespace on automatic trim
 
 -- | @p /=\\ x@ runs parser @p@ on empty input and compares its result
 -- (which should be successful) with @x@. Succeeds when the result is equal

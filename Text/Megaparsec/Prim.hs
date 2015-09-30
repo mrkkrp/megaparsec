@@ -67,6 +67,10 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.ShowToken
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*))
+#endif
+
 -- | This is Megaparsec state, it's parametrized over stream type @s@.
 
 data State s = State

@@ -40,6 +40,10 @@ import Test.QuickCheck
 
 import Text.Megaparsec.Pos
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*>), pure)
+#endif
+
 tests :: Test
 tests = testGroup "Textual source positions"
         [ testProperty "components" prop_components

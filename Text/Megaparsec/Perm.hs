@@ -28,6 +28,10 @@ where
 import Text.Megaparsec.Combinator (choice)
 import Text.Megaparsec.Prim
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*>))
+#endif
+
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>
 

@@ -39,6 +39,10 @@ import Control.Applicative
 import Control.Monad (void)
 import Data.Foldable (asum)
 
+#if !MIN_VERSION_base(4,8,0)
+import Data.Foldable (Foldable)
+#endif
+
 -- | @between open close p@ parses @open@, followed by @p@ and @close@.
 -- Returns the value returned by @p@.
 --

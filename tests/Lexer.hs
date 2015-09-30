@@ -56,6 +56,10 @@ import qualified Text.Megaparsec.Char as C
 
 import Util
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*), (<*>))
+#endif
+
 tests :: Test
 tests = testGroup "Lexer"
         [ testProperty "space combinator"            prop_space

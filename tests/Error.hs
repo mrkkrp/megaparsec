@@ -42,6 +42,10 @@ import Pos ()
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*>))
+#endif
+
 tests :: Test
 tests = testGroup "Parse errors"
         [ testProperty "extracting message string" prop_messageString

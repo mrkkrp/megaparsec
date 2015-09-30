@@ -15,6 +15,10 @@ import Test.HUnit hiding (Test)
 
 import Util
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*), (<$))
+#endif
+
 data Expr = Const Integer | Op Expr Expr deriving Show
 
 main :: Test

@@ -38,4 +38,4 @@ type Parser = Parsec T.Text
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p fname <$> T.readFile fname
+parseFromFile p fname = runParser p fname `fmap` T.readFile fname
