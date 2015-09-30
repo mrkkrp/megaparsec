@@ -197,7 +197,7 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to Haskell report except
 -- for the fact that this parser doesn't parse “0x” or “0X” prefix. It is
--- reponsibility of the programmer to parse correct prefix before parsing
+-- responsibility of the programmer to parse correct prefix before parsing
 -- the number itself.
 --
 -- For example you can make it conform to Haskell report like this:
