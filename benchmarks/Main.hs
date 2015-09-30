@@ -1,6 +1,6 @@
 -- -*- Mode: Haskell; -*-
 --
--- Criterion benmarks for Megaparsec, main module.
+-- Criterion benchmarks for Megaparsec, main module.
 --
 -- Copyright © 2015 Megaparsec contributors
 --
