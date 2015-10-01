@@ -34,6 +34,11 @@ import Data.Maybe (fromMaybe)
 
 import Text.Megaparsec.Pos
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+import Data.Foldable (foldMap)
+#endif
+
 -- | This data type represents parse error messages. There are three kinds
 -- of messages:
 --

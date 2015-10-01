@@ -38,4 +38,4 @@ type Parser = Parsec C.ByteString
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p fname <$> C.readFile fname
+parseFromFile p fname = runParser p fname `fmap` C.readFile fname

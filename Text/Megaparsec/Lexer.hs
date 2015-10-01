@@ -50,6 +50,10 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
 import qualified Text.Megaparsec.Char as C
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
+#endif
+
 -- White space and indentation
 
 -- | @space spaceChar lineComment blockComment@ produces parser that can

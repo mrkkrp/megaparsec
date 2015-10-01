@@ -36,4 +36,4 @@ type Parser = Parsec String
 -- >     Right xs -> print (sum xs)
 
 parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p fname <$> readFile fname
+parseFromFile p fname = runParser p fname `fmap` readFile fname

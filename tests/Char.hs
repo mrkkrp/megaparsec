@@ -42,6 +42,10 @@ import Text.Megaparsec.Char
 
 import Util
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 tests :: Test
 tests = testGroup "Character parsers"
         [ testProperty "newline"         prop_newline

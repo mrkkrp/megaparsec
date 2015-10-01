@@ -63,6 +63,10 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), pure)
+#endif
+
 -- | Parses a newline character.
 
 newline :: MonadParsec s m Char => m Char

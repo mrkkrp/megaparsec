@@ -43,6 +43,10 @@ import Text.Megaparsec.Prim
 
 import Util
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
+#endif
+
 tests :: Test
 tests = testGroup "Expression parsers"
         [ testProperty "correctness of expression parser" prop_correctness ]

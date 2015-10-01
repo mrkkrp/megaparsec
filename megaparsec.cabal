@@ -79,13 +79,14 @@ description:
 extra-source-files:  AUTHORS.md, CHANGELOG.md
 
 library
-  build-depends:     base                   >= 4.8 && < 5
+  build-depends:     base                   >= 4.7 && < 5
                    , mtl                    == 2.*
                    , transformers           == 0.4.*
                    , bytestring
                    , text                   >= 0.2 && < 1.3
   default-extensions:
-                     DeriveDataTypeable
+                     CPP
+                   , DeriveDataTypeable
                    , FlexibleContexts
                    , FlexibleInstances
                    , FunctionalDependencies
@@ -124,13 +125,14 @@ test-suite old-tests
                    , Bugs.Bug35
                    , Bugs.Bug39
                    , Util
-  build-depends:     base                   >= 4.8 && < 5
+  build-depends:     base                   >= 4.7 && < 5
                    , megaparsec             >= 4.0.0
                    , HUnit                  >= 1.2 && < 1.4
                    , test-framework         >= 0.6 && < 1
                    , test-framework-hunit   >= 0.2 && < 0.4
   default-extensions:
-                     FlexibleContexts
+                     CPP
+                   , FlexibleContexts
   default-language:  Haskell2010
 
 test-suite tests
@@ -147,7 +149,7 @@ test-suite tests
                    , Pos
                    , Prim
                    , Util
-  build-depends:     base                   >= 4.8 && < 5
+  build-depends:     base                   >= 4.7 && < 5
                    , megaparsec             >= 4.0.0
                    , mtl                    == 2.*
                    , transformers           == 0.4.*
@@ -155,7 +157,8 @@ test-suite tests
                    , test-framework         >= 0.6 && < 1
                    , test-framework-quickcheck2 >= 0.3 && < 0.4
   default-extensions:
-                     FlexibleContexts
+                     CPP
+                   , FlexibleContexts
                    , FlexibleInstances
   default-language:  Haskell2010
 
@@ -164,7 +167,7 @@ benchmark benchmarks
   hs-source-dirs:    benchmarks
   type:              exitcode-stdio-1.0
   ghc-options:       -O2 -Wall -rtsopts
-  build-depends:     base                   >= 4.8 && < 5
+  build-depends:     base                   >= 4.7 && < 5
                    , megaparsec             >= 4.0.0
                    , criterion              >= 0.6.2.1 && < 1.2
                    , text                   >= 1.2 && < 2

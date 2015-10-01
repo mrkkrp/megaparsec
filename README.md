@@ -35,14 +35,11 @@ Megaparsec is different from Parsec in the following ways:
 * Megaparsec's code is clearer and doesn't contain “magic” found in original
   Parsec.
 
-* Megaparsec looks into the future, it does not contain code that serves for
-  compatibility purposes, it also requires more recent version of `base`.
-
 ## Megaparsec vs Parsec
 
 There are good reasons to use Parsec:
 
-* You need to work with legacy code or with older versions of GHC (< 7.10).
+* You need to work with legacy code or with older versions of GHC (< 7.8).
 
 And that's it. In other cases you should prefer Megaparsec for your own
 sake. If you think you have a reason to use Parsec other than listed here,
