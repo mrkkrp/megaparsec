@@ -72,9 +72,6 @@ description:
     .
     * Megaparsec's code is clearer and doesn't contain “magic” found in original
       Parsec.
-    .
-    * Megaparsec looks into the future, it does not contain code that serves for
-      compatibility purposes, it also requires more recent version of `base`.
 
 extra-source-files:  AUTHORS.md, CHANGELOG.md
 
