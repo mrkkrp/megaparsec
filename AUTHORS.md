@@ -28,6 +28,7 @@ Names below are sorted alphabetically.
 * Artyom (@neongreen)
 * Auke Booij
 * Ben Pence
+* Benjamin Kästner
 * Björn Buckwalter
 * Bryan O'Sullivan
 * Cies Breijs
