@@ -1,11 +1,17 @@
 language: c
 
 env:
+ - CABALVER=1.18 GHCVER=7.8.1
+ - CABALVER=1.18 GHCVER=7.8.2
+ - CABALVER=1.18 GHCVER=7.8.3
+ - CABALVER=1.18 GHCVER=7.8.4
  - CABALVER=1.22 GHCVER=7.10.1
+ - CABALVER=1.22 ghcver=7.10.2
  - CABALVER=head GHCVER=head
 
 matrix:
   allow_failures:
+   - env: CABALVER=1.22 ghcver=7.10.2
    - env: CABALVER=head GHCVER=head
 
 before_install:
@@ -21,7 +27,7 @@ install:
  - cabal install --only-dependencies --enable-tests
 
 script:
- - cabal configure --enable-tests --enable-coverage -v2
+ - if [[ $CABALVER = 1.18 ]] ; then cabal configure --enable-tests --enable-library-coverage -v2 ; else cabal configure --enable-tests --enable-coverage -v2 ; fi
  - cabal build
  - cabal test --show-details=always
               --test-option=--threads=2
