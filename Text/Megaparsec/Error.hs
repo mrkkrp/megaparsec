@@ -28,7 +28,9 @@ module Text.Megaparsec.Error
   , showMessages )
 where
 
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
@@ -37,6 +39,11 @@ import Text.Megaparsec.Pos
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 import Data.Foldable (foldMap)
+#endif
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
 #endif
 
 -- | This data type represents parse error messages. There are three kinds
