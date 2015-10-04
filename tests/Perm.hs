@@ -30,7 +30,9 @@
 module Perm (tests) where
 
 import Control.Applicative
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.List (nub, elemIndices)
 
 import Test.Framework
@@ -41,6 +43,11 @@ import Text.Megaparsec.Char
 import Text.Megaparsec.Perm
 
 import Util
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
+#endif
 
 tests :: Test
 tests = testGroup "Permutation phrases parsers"

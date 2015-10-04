@@ -31,7 +31,9 @@
 
 module Error (tests) where
 
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.List (isPrefixOf, isInfixOf)
 
 import Test.Framework
@@ -44,6 +46,11 @@ import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
+#endif
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
 #endif
 
 tests :: Test

@@ -40,7 +40,9 @@ module Text.Megaparsec.Prim
   , parseTest )
 where
 
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.Monoid
 
 import Control.Monad
@@ -69,6 +71,11 @@ import Text.Megaparsec.ShowToken
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*))
+#endif
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
 #endif
 
 -- | This is Megaparsec state, it's parametrized over stream type @s@.

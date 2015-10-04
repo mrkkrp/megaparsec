@@ -32,7 +32,9 @@
 module Prim (tests) where
 
 import Control.Applicative
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
@@ -57,6 +59,11 @@ import Text.Megaparsec.String
 
 import Pos ()
 import Util
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
+#endif
 
 tests :: Test
 tests = testGroup "Primitive parser combinators"

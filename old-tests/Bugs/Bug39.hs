@@ -3,7 +3,9 @@ module Bugs.Bug39 (main) where
 
 import Control.Applicative (empty)
 import Control.Monad (void)
+#if MIN_VERSION_base(4,7,0)
 import Data.Either (isLeft, isRight)
+#endif
 
 import Text.Megaparsec
 import Text.Megaparsec.String
@@ -12,6 +14,14 @@ import qualified Text.Megaparsec.Lexer as L
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
+
+#if !MIN_VERSION_base(4,7,0)
+isRight, isLeft :: Either a b -> Bool
+isRight (Right _) = True
+isRight _         = False
+isLeft  (Left _ ) = True
+isLeft  _         = False
+#endif
 
 shouldFail :: [String]
 shouldFail = [" 1", " +1", " -1"]

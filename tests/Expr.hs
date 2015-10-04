@@ -30,7 +30,9 @@
 module Expr (tests) where
 
 import Control.Applicative (some, (<|>))
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -45,6 +47,12 @@ import Util
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
+#endif
+
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
 #endif
 
 tests :: Test

@@ -31,7 +31,9 @@ module Lexer (tests) where
 
 import Control.Applicative (empty)
 import Control.Monad (void)
+#if MIN_VERSION_base(4,7,0)
 import Data.Bool (bool)
+#endif
 import Data.Char
   ( readLitChar
   , showLitChar
@@ -58,6 +60,11 @@ import Util
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>))
+#endif
+#if !MIN_VERSION_base(4,7,0)
+bool :: a -> a -> Bool -> a
+bool f _ False = f
+bool _ t True  = t
 #endif
 
 tests :: Test
