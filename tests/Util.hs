@@ -101,7 +101,7 @@ checkChar p f l' s = checkParser p r s
 checkString :: Parser String -> String -> (Char -> Char -> Bool)
             -> String -> String -> Property
 checkString p a' test l s' = checkParser p (w a' 0 s') s'
-  where w [] _ []    = Right a'
+  where w [] _ []    = Right s'
         w [] i (s:_) = posErr i s' [uneCh s, exEof]
         w _  0 []    = posErr 0 s' [uneEof, exSpec l]
         w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]

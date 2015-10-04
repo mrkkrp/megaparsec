@@ -79,7 +79,8 @@ tests = testGroup "Character parsers"
         , testProperty "noneOf"          prop_noneOf
         , testProperty "noneOf'"         prop_noneOf'
         , testProperty "string"          prop_string
-        , testProperty "string'"         prop_string' ]
+        , testProperty "string'"         prop_string'_0
+        , testProperty "string' (case)"  prop_string'_1 ]
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements
@@ -238,8 +239,21 @@ prop_noneOf' a = checkChar (noneOf' a) (`notElemi` a) Nothing
 prop_string :: String -> String -> Property
 prop_string a = checkString (string a) a (==) (showToken a)
 
-prop_string' :: String -> String -> Property
-prop_string' a = checkString (string' a) a casei (showToken a)
+prop_string'_0 :: String -> String -> Property
+prop_string'_0 a = checkString (string' a) a casei (showToken a)
+
+-- | Randomly change the case in the given string.
+
+fuzzyCase :: String -> Gen String
+fuzzyCase s = do
+    b <- vector (length s)
+    return $ zipWith f s b
+  where f k True  = if isLower k then toUpper k else toLower k
+        f k False = k
+
+prop_string'_1 :: String -> Property
+prop_string'_1 a = forAll (fuzzyCase a) $ \s ->
+  checkString (string' a) a casei (showToken a) s
 
 -- | Case-insensitive equality test for characters.
 
