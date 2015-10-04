@@ -1,7 +1,7 @@
 ## Megaparsec 4.1.0
 
 * Relaxed dependency on `base`, so that minimal required version of `base`
-  is now 4.7.0.0. This allows Megaparsec to compile with GHC 7.8.x.
+  is now 4.6.0.0. This allows Megaparsec to compile with GHC 7.6.x.
 
 * Fixed some typos is documentation and other materials.
 
