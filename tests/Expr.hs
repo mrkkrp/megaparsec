@@ -130,7 +130,7 @@ arbitraryN2 0 = Val . getNonNegative <$> arbitrary
 arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
   where leaf = arbitraryN0 (n `div` 2)
 
--- Some helpers put here since we don't want to depend on
+-- Some helpers are put here since we don't want to depend on
 -- "Text.Megaparsec.Lexer".
 
 lexeme :: MonadParsec s m Char => m a -> m a

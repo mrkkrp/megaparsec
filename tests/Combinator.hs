@@ -121,7 +121,6 @@ prop_endBy1 n' c = checkParser p r s
           | c == '-' && n == 0 = posErr 0 s [uneCh '-', exCh 'a']
           | c /= '-'           = posErr (g n) s $ uneCh c :
                                  [exCh '-' | n > 0] ++
-                                 -- [exEof    | n > 1] ++
                                  [exCh 'a' | n == 0]
           | otherwise = Right (replicate n 'a')
         s = intersperse '-' (replicate n 'a') ++ [c]
