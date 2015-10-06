@@ -3,6 +3,10 @@
 * Relaxed dependency on `base`, so that minimal required version of `base`
   is now 4.6.0.0. This allows Megaparsec to compile with GHC 7.6.x.
 
+* `Text.Megaparsec` and `Text.Megaparsec.Prim` do not export data types
+  `Consumed` and `Reply` anymore because they are rather low-level
+  implementation details that should not be visible to end-user.
+
 * Fixed some typos is documentation and other materials.
 
 ## Megaparsec 4.0.0

@@ -136,8 +136,6 @@ module Text.Megaparsec
   , sourceColumn
     -- * Low-level operations
   , Stream (..)
-  , Consumed (..)
-  , Reply (..)
   , State (..)
   , getInput
   , setInput

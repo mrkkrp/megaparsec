@@ -17,8 +17,6 @@ module Text.Megaparsec.Prim
   ( -- * Used data-types
     State (..)
   , Stream (..)
-  , Consumed (..)
-  , Reply (..)
   , Parsec
   , ParsecT
     -- * Primitive combinators
