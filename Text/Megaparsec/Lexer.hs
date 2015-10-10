@@ -11,8 +11,8 @@
 --
 -- High-level parsers to help you write your lexer. The module doesn't
 -- impose how you should write your parser, but certain approaches may be
--- more elegant than others. Especially important theme is parsing of write
--- space, comments and indentation.
+-- more elegant than others. Especially important theme is parsing of white
+-- space, comments, and indentation.
 --
 -- This module is intended to be imported qualified:
 --

@@ -44,8 +44,8 @@ stack. Since most common monad transformers like `WriterT`, `StateT`,
 On the other hand `ParsecT` is instance of many type classes as well. Most
 useful of them are `Monad`, `Applicative`, `Alternative`, and `MonadParsec`.
 
-The module `Text.Megaparsec.Combinator` (its functions are included in
-`Text.Megaparsec`)contains traditional, general combinators that work with
+The module [`Text.Megaparsec.Combinator`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html) (its functions are included in
+`Text.Megaparsec`) contains traditional, general combinators that work with
 any instance of `Alternative` and some even with instances of `Applicative`.
 
 Role of `Monad`, `Applicative`, and `Alternative` should be obvious, so
@@ -66,7 +66,8 @@ via combination of these primitives:
 
 * `lookAhead` allows to parse something without consuming any input.
 
-* `notFollowedBy` succeeds when its argument fails.
+* `notFollowedBy` succeeds when its argument fails, it does not consume
+  input.
 
 * `eof` only succeeds at the end of input.
 
@@ -81,7 +82,7 @@ via combination of these primitives:
 This list of core function is longer than in some other libraries. Our goal
 was easy and readable implementation of functionality provided by every such
 primitive, not minimal number of them. You can read comprehensive
-description of every primitive function in Megaparsec documentation.
+description of every primitive function in [Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
 
 Megaparsec can currently work with the following types of input stream:
 
@@ -94,7 +95,7 @@ Megaparsec can currently work with the following types of input stream:
 ### Character parsing
 
 Megaparsec has decent support for Unicode-aware character parsing. Functions
-for character parsing live in `Text.Megaparsec.Char` module (they all are
+for character parsing live in [`Text.Megaparsec.Char`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html) module (they all are
 included in `Text.Megaparsec`). The functions can be divided into several
 categories:
 
@@ -120,13 +121,13 @@ categories:
 ### Permutation parsing
 
 For those who are interested in parsing of permutation phrases, there is
-`Text.Megaparsec.Perm`. You should import the module explicitly, it's not
+[`Text.Megaparsec.Perm`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Perm.html). You should import the module explicitly, it's not
 included in `Text.Megaparsec` module.
 
 ### Expression parsing
 
 Megaparsec has solution for parsing of expressions. Take a look at
-`Text.Megaparsec.Expr`. You should import the module explicitly, it's not
+[`Text.Megaparsec.Expr`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html). You should import the module explicitly, it's not
 included in `Text.Megaparsec` module.
 
 Given table of operators that describes their fixity and precedence, you can
@@ -135,14 +136,15 @@ operators. See documentation for comprehensive description of how it works.
 
 ### Lexer
 
-`Text.Megaparsec.Lexer` is module that should help you write your lexer. If
-you have used `Parsec` in the past, this module “fixes” its particularly
-inflexible `Text.Parsec.Token`.
+[`Text.Megaparsec.Lexer`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html)
+is module that should help you write your lexer. If you have used `Parsec`
+in the past, this module “fixes” its particularly inflexible
+`Text.Parsec.Token`.
 
 `Text.Megaparsec.Lexer` is intended to be imported qualified, it's not
 included in `Text.Megaparsec`. The module doesn't impose how you should
 write your parser, but certain approaches may be more elegant than
-others. Especially important theme is parsing of write space, comments and
+others. Especially important theme is parsing of white space, comments, and
 indentation.
 
 Design of the module allows you quickly solve simple tasks and doesn't get
@@ -158,7 +160,7 @@ Hackage](https://hackage.haskell.org/package/megaparsec) for yourself.
 ## Tutorials
 
 Megaparsec includes always-up-to-date tutorial in its source code, see
-[`Text.Megaparsec.Tutorial`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Pos.html).
+[`Text.Megaparsec.Tutorial`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Tutorial.html).
 Apart from this, you can visit
 [site of the project](https://mrkkrp.github.io/megaparsec/) which has
 several tutorials that should help you start with your parsing tasks. The
@@ -229,7 +231,7 @@ an issue.
 
 ### Megaparsec and Parsers
 
-There is [parsers](https://hackage.haskell.org/package/parsers) package,
+There is [Parsers](https://hackage.haskell.org/package/parsers) package,
 which is great. You can use it with Megaparsec or Parsec, but consider the
 following:
 
