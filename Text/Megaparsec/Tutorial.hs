@@ -1,3 +1,17 @@
+-- |
+-- Module      :  Text.Megaparsec.Tutorial
+-- Copyright   :  © 2015 Megaparsec contributors
+--                © 2007 Paolo Martini
+--                © 1999–2001 Daan Leijen
+-- License     :  BSD3
+--
+-- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- A tutorial for Megaparsec (and an introduction to monadic parsing
+-- combinators in general).
+
 module Text.Megaparsec.Tutorial
 (
   -- * Introduction
