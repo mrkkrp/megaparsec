@@ -49,8 +49,8 @@ data SourcePos = SourcePos
 instance Show SourcePos where
   show (SourcePos n l c)
     | null n    = showLC
-    | otherwise = "\"" ++ n ++ "\" " ++ showLC
-    where showLC = "line " ++ show l ++ ", column " ++ show c
+    | otherwise = n ++ ":" ++ showLC
+      where showLC = show l ++ ":" ++ show c
 
 -- | Create a new 'SourcePos' with the given source name, line number and
 -- column number.

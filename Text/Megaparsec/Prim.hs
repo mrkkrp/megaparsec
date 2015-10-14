@@ -139,16 +139,16 @@ data Reply s a = Ok a !(State s) | Error ParseError
 -- For example, without hints you could get:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
--- parse error at line 1, column 2:
--- unexpected 'a'
--- expecting end of input
+-- 1:2:
+--   unexpected 'a'
+--   expecting end of input
 --
 -- We're getting better error messages with help of hints:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
--- parse error at line 1, column 2:
--- unexpected 'a'
--- expecting 'r' or end of input
+-- 1:2:
+--   unexpected 'a'
+--   expecting 'r' or end of input
 
 newtype Hints = Hints [[String]] deriving Monoid
 
@@ -384,9 +384,9 @@ class (A.Alternative m, Monad m, Stream s t)
   -- parse word “let” or “lexical”:
   --
   -- >>> parseTest (string "let" <|> string "lexical") "lexical"
-  -- parse error at line 1, column 1:
-  -- unexpected "lex"
-  -- expecting "let"
+  -- 1:1:
+  --   unexpected "lex"
+  --   expecting "let"
   --
   -- What happens here? First parser consumes “le” and fails (because it
   -- doesn't see a “t”). The second parser, however, isn't tried, since the
@@ -400,9 +400,9 @@ class (A.Alternative m, Monad m, Stream s t)
   -- because Megaparsec's hint system can be used:
   --
   -- >>> parseTest (try (string "let") <|> string "lexical") "le"
-  -- parse error at line 1, column 1:
-  -- unexpected "le"
-  -- expecting "let" or "lexical"
+  -- 1:1:
+  --   unexpected "le"
+  --   expecting "let" or "lexical"
 
   try :: m a -> m a
 
@@ -661,7 +661,7 @@ parseMaybe p s =
 parseTest :: (Stream s t, Show a) => Parsec s a -> s -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left err -> putStr "parse error at " >> print err
+    Left err -> print err
     Right x  -> print x
 
 -- | The most general way to run a parser over the 'Identity' monad.

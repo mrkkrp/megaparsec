@@ -7,6 +7,9 @@
   `Consumed` and `Reply` anymore because they are rather low-level
   implementation details that should not be visible to end-user.
 
+* Representation of file name and textual position in error messages was
+  made conventional.
+
 * Fixed some typos is documentation and other materials.
 
 ## Megaparsec 4.0.0

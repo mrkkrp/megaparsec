@@ -75,20 +75,13 @@ prop_components pos = pos == copy
   where copy = newPos (sourceName pos) (sourceLine pos) (sourceColumn pos)
 
 prop_showFileName :: SourcePos -> Bool
-prop_showFileName pos =
-  if null name
-  then '"'`notElem` shown
-  else ("\"" ++ name ++ "\"") `isInfixOf` shown
-  where name  = sourceName pos
-        shown = show pos
+prop_showFileName pos = sourceName pos `isInfixOf` show pos
 
 prop_showLine :: SourcePos -> Bool
-prop_showLine pos = ("line " ++ line) `isInfixOf` show pos
-  where line = show $ sourceLine pos
+prop_showLine pos = show (sourceLine pos) `isInfixOf` show pos
 
 prop_showColumn :: SourcePos -> Bool
-prop_showColumn pos = ("column " ++ column) `isInfixOf` show pos
-  where column = show $ sourceColumn pos
+prop_showColumn pos = show (sourceColumn pos) `isInfixOf` show pos
 
 prop_initialPos :: String -> Bool
 prop_initialPos n =
