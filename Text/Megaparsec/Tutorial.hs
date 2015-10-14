@@ -470,10 +470,38 @@ optional :: Parser a -> Parser (Maybe a)
 optional p = (Just \<$\> p) \<|\> return Nothing
 @
 
-'option' takes a parser and a default value (which is, again, returned when the parser fails):
+'option' takes a parser and a default value (which is, again, returned if the parser fails):
 
 @
 option :: a -> Parser a -> Parser a
 option x p = p \<|\> return x
 @
+
+Finally, when you've got a lot of alternatives, instead of using '<|>' several times it might be better to use 'choice', which takes a list of parsers instead of just 2:
+
+@
+choice :: [Parser a] -> Parser a
+choice = foldr (\<|\>) empty         -- 'empty' is a parser that always fails
+@
+
+Sometimes 'choice' can make your code significantly more concise. For instance, imagine that you're parsing JSON and you need a parser for escaped characters – @"\n"@ should be parsed as a newline character, @"\t"@ as a tab character, etc. You could write it like this:
+
+> escapedChar = do
+>   char '\\'
+>   choice [
+>     '\"' <$ char '\"',
+>     '\\' <$ char '\\',
+>     '/'  <$ char '/' ,
+>     '\n' <$ char 'n' ,
+>     '\r' <$ char 'r' ,
+>     '\f' <$ char 'f' ,
+>     '\t' <$ char 't' ,
+>     '\b' <$ char 'b' ]
+
+Or you could get rid of the boilerplate, like this:
+
+> escapedChar = do
+>   char '\\'
+>   let escape result code = result <$ char code
+>   choice $ zipWith escape "\"\\/\n\r\f\t\b" "\"\\/nrftb"
 -}
