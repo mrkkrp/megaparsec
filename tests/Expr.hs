@@ -151,7 +151,7 @@ integer = lexeme (read <$> some digitChar <?> "integer")
 -- representation.
 
 expr :: MonadParsec s m Char => m Node
-expr = makeExprParser term table <?> "expression"
+expr = makeExprParser term table
 
 term :: MonadParsec s m Char => m Node
 term = parens expr <|> (Val <$> integer) <?> "term"
