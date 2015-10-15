@@ -140,15 +140,15 @@ data Reply s a = Ok a !(State s) | Error ParseError
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
 -- 1:2:
---   unexpected 'a'
---   expecting end of input
+-- unexpected 'a'
+-- expecting end of input
 --
 -- We're getting better error messages with help of hints:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
 -- 1:2:
---   unexpected 'a'
---   expecting 'r' or end of input
+-- unexpected 'a'
+-- expecting 'r' or end of input
 
 newtype Hints = Hints [[String]] deriving Monoid
 
@@ -385,8 +385,8 @@ class (A.Alternative m, Monad m, Stream s t)
   --
   -- >>> parseTest (string "let" <|> string "lexical") "lexical"
   -- 1:1:
-  --   unexpected "lex"
-  --   expecting "let"
+  -- unexpected "lex"
+  -- expecting "let"
   --
   -- What happens here? First parser consumes “le” and fails (because it
   -- doesn't see a “t”). The second parser, however, isn't tried, since the
@@ -401,8 +401,8 @@ class (A.Alternative m, Monad m, Stream s t)
   --
   -- >>> parseTest (try (string "let") <|> string "lexical") "le"
   -- 1:1:
-  --   unexpected "le"
-  --   expecting "let" or "lexical"
+  -- unexpected "le"
+  -- expecting "let" or "lexical"
 
   try :: m a -> m a
 

@@ -257,8 +257,8 @@ char c = satisfy (== c) <?> showToken c
 -- 'E'
 -- >>> parseTest (char' 'e') "G"
 -- 1:1:
---   unexpected 'G'
---   expecting 'E' or 'e'
+-- unexpected 'G'
+-- expecting 'E' or 'e'
 
 char' :: MonadParsec s m Char => Char -> m Char
 char' = choice . fmap char . extendi . pure

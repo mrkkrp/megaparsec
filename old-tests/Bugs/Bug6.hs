@@ -13,7 +13,7 @@ import Util
 main :: Test
 main =
   testCase "Look-ahead preserving error location (#6)" $
-  parseErrors variable "return" @?= ["  'return' is a reserved keyword"]
+  parseErrors variable "return" @?= ["'return' is a reserved keyword"]
 
 variable :: Parser String
 variable = do

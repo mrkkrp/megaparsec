@@ -169,12 +169,12 @@ mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
 -- their textual representation.
 
 showMessages :: [Message] -> String
-showMessages [] = "  unknown parse error"
+showMessages [] = "unknown parse error"
 showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
   where (unexpected,    ms') = span ((== 0) . fromEnum) ms
         (expected, messages) = span ((== 1) . fromEnum) ms'
         f prefix m = (prefix ++) <$> m
-        ns = ["\n  unexpected ","\n  expecting ","\n  "]
+        ns = ["\nunexpected ","\nexpecting ","\n"]
         rs = renderMsgs <$> [unexpected, expected, messages]
 
 -- | Render collection of messages. If the collection is empty, return
