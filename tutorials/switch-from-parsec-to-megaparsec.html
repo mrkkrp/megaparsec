@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content />
+    <meta name="author" content />
+    <title>Megaparsec | Switch from Parsec to Megaparsec</title>
+    <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="../css/megaparsec.css" />
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-bottom" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="../">
+            Megaparsec
+          </a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <a href="../tutorials.html">
+                Tutorials
+              </a>
+            </li>
+            <li>
+              <a href="https://hackage.haskell.org/package/megaparsec">
+                Hackage
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/mrkkrp/megaparsec">
+                GitHub
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <div class="col-sm-9 col-sm-offset-1 col-md-8 col-md-offset-2 main">
+          <div class="page-header">
+            <h1>Switch from Parsec to Megaparsec
+              
+              <br />
+              <small>
+                Practical recommendations
+              </small>
+              
+            </h1>
+            <hr />
+            <div class="content">
+              
+<em>Last updated on October 15, 2015</em>
+<hr />
+
+
+<p>Some progressive Haskell hackers may wish to switch from Parsec to Megaparsec. This tutorial explains practical differences between the two libraries that you will need to address if you choose to undertake the switch. Remember, all the functionality available in Parsec is available in Megaparsec and often in better form.</p>
+<ol style="list-style-type: decimal">
+<li><a href="#imports">Imports</a></li>
+<li><a href="#renamed-things">Renamed things</a></li>
+<li><a href="#removed-things">Removed things</a></li>
+<li><a href="#obsolete-functions">Obsolete functions</a></li>
+<li><a href="#other">Other</a></li>
+<li><a href="#character-parsing">Character parsing</a></li>
+<li><a href="#expression-parsing">Expression parsing</a></li>
+<li><a href="#what-happened-to-text.parsec.token">What happened to <code>Text.Parsec.Token</code>?</a></li>
+<li><a href="#whats-next">What’s next?</a></li>
+</ol>
+<h2 id="imports">Imports</h2>
+<p>You’ll mainly need to replace “Parsec” part in your imports with “Megaparsec”. That’s pretty simple. Typical import section of module that uses Megaparsec looks like this:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- this module contains commonly useful tools:</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec</span>
+<span class="co">-- this module depends on type of data you want to parse, you only need to</span>
+<span class="co">-- import one of these:</span>
+<span class="kw">import </span><span class="dt">Text.String</span>          <span class="co">-- if you parse ‘String’</span>
+<span class="kw">import </span><span class="dt">Text.ByteString</span>      <span class="co">-- if you parse strict ‘ByteString’</span>
+<span class="kw">import </span><span class="dt">Text.ByteString.Lazy</span> <span class="co">-- if you parse lazy ‘ByteString’</span>
+<span class="kw">import </span><span class="dt">Text.Text</span>            <span class="co">-- if you parse strict ‘Text’</span>
+<span class="kw">import </span><span class="dt">Text.Text.Lazy</span>       <span class="co">-- if you parse lazy ‘Text’</span>
+<span class="co">-- if you need to parse permutation phrases:</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.Perm</span>
+<span class="co">-- if you need to parse expressions:</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.Expr</span>
+<span class="co">-- if you need to parse languages:</span>
+<span class="kw">import qualified</span> <span class="dt">Text.Megaparsec.Lexer</span> <span class="kw">as</span> <span class="dt">L</span></code></pre></div>
+<p>So, the only noticeable difference that Megaparsec has no <code>Text.Megaparsec.Token</code> module which is replaced with <code>Text.Megaparsec.Lexer</code>, see about this in section <a href="#what-happened-to-text.parsec.token">“What happened to <code>Text.Parsec.Token</code>”</a>.</p>
+<h2 id="renamed-things">Renamed things</h2>
+<p>Megaparsec introduces more consistent naming scheme, so some things are called differently, but renaming functions is a very easy task, you don’t need to think. Here are renamed items:</p>
+<ul>
+<li><code>many1</code> → <code>some</code> (re-exported from <code>Control.Applicative</code>)</li>
+<li><code>skipMany1</code> → <code>skipSome</code></li>
+<li><code>tokenPrim</code> → <code>token</code></li>
+<li><code>optionMaybe</code> → <code>optional</code> (re-exported from <code>Control.Applicative</code>)</li>
+<li><code>permute</code> → <code>makePermParser</code></li>
+<li><code>buildExpressionParser</code> → <code>makeExprParser</code></li>
+</ul>
+<p>Character parsing:</p>
+<ul>
+<li><code>alphaNum</code> → <code>alphaNumChar</code></li>
+<li><code>digit</code> → <code>digitChar</code></li>
+<li><code>endOfLine</code> → <code>eol</code></li>
+<li><code>hexDigit</code> → <code>hexDigitChar</code></li>
+<li><code>letter</code> → <code>letterChar</code></li>
+<li><code>lower</code> → <code>lowerChar</code></li>
+<li><code>octDigit</code> → <code>octDigitChar</code></li>
+<li><code>space</code> → <code>spaceChar</code></li>
+<li><code>spaces</code> → <code>space</code></li>
+<li><code>upper</code> → <code>upperChar</code></li>
+</ul>
+<p>Error message constructors:</p>
+<ul>
+<li><p><code>UnExpect</code> and <code>SysUnExpect</code> → <code>Unexpected</code> (we don’t make the difference, all unexpected messages are the same in Megaparsec);</p></li>
+<li><p><code>Expect</code> → <code>Expected</code>.</p></li>
+</ul>
+<h2 id="removed-things">Removed things</h2>
+<p>Parsec also has many names for the same or similar things. Megaparsec usually has one function per task that does its job well. Here are the items that were removed in Megaparsec and reasons of their removal:</p>
+<ul>
+<li><p><code>getState</code>, <code>putState</code>, <code>modifyState</code> — ad-hoc backtracking user state has been eliminated.</p></li>
+<li><p><code>token</code>, now there is a bit different version of this function under the same name.</p></li>
+<li><p><code>Reply</code> and <code>Consumed</code> are not public data types anymore, because they are low-level implementation details.</p></li>
+<li><p><code>runPT</code> and <code>runP</code> were essentially synonyms for <code>runParserT</code> and <code>runParser</code> respectively.</p></li>
+</ul>
+<h2 id="obsolete-functions">Obsolete functions</h2>
+<p>Parsec has certain atavism or historical features that are supported in Megaparsec but will be removed in the future, so you better avoid using them while you are at it:</p>
+<ul>
+<li><p><code>chainl</code>, <code>chainl1</code>, <code>chainr</code>, and <code>chainr1</code> — use <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html"><code>Text.Megaparsec.Expr</code></a> instead.</p></li>
+<li><p><code>sepEndBy</code> and <code>sepEndBy1</code> — use <code>sepEnd p sep &lt;* optional sep</code> instead, it’s also easier to read without documentation lookups.</p></li>
+</ul>
+<h2 id="other">Other</h2>
+<ul>
+<li><p>Note that argument order of <code>label</code> has been flipped (the label itself goes first now), so you can write now: <code>myParser = label &quot;my parser&quot; $ …</code>.</p></li>
+<li><p>Don’t use <code>label &quot;&quot;</code> (or <code>… &lt;?&gt; &quot;&quot;</code>) idiom to “hide” some “expected” tokens from error messages, use <code>hidden</code>.</p></li>
+<li><p>New <code>token</code> parser is more powerful, its second argument has type <code>t -&gt;   Either [Message] a</code>, so if it fails, it has complete control over resulting error message.</p></li>
+<li><p>Tab width is not hard-coded anymore, use <code>getTabWidth</code> and <code>setTabWidth</code> to change it. Default tab width is <code>defaultTabWidth</code>.</p></li>
+<li><p>Now you can reliably test error messages, equality for them is now defined properly (in Parsec <code>Expect &quot;foo&quot;</code> is equal to <code>Expect &quot;bar&quot;</code>), collection of error messages is always sorted properly and duplicates cannot occur in message list as well as empty messages.</p></li>
+<li><p>To render error message in custom way, use <code>show</code> on error position and <code>showMessages</code> (lives in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Error.html"><code>Text.Megaparsec.Error</code></a>) on error messages.</p></li>
+<li><p><code>count' m n p</code> allows you to parse from <code>m</code> to <code>n</code> occurrences of <code>p</code>.</p></li>
+<li><p>Now you have <code>someTill</code> out of box.</p></li>
+</ul>
+<h2 id="character-parsing">Character parsing</h2>
+<p>New character parsers in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html"><code>Text.Megaparsec.Char</code></a> may be useful if you work with Unicode:</p>
+<ul>
+<li><code>asciiChar</code></li>
+<li><code>charCategory</code></li>
+<li><code>controlChar</code></li>
+<li><code>latin1Char</code></li>
+<li><code>markChar</code></li>
+<li><code>numberChar</code></li>
+<li><code>printChar</code></li>
+<li><code>punctuationChar</code></li>
+<li><code>separatorChar</code></li>
+<li><code>symbolChar</code></li>
+</ul>
+<p>Ever wanted to have case-insensitive character parsers? Here you go:</p>
+<ul>
+<li><code>char'</code></li>
+<li><code>oneOf'</code></li>
+<li><code>noneOf'</code></li>
+<li><code>string'</code></li>
+</ul>
+<h2 id="expression-parsing">Expression parsing</h2>
+<p><code>makeExprParser</code> has flipped order of arguments: term parser first, operator table second. To specify associativity of infix operators you use one of the three <code>Operator</code> constructors:</p>
+<ul>
+<li><code>InfixN</code> — non-associative infix</li>
+<li><code>InfixL</code> — left-associative infix</li>
+<li><code>InfixR</code> — right-associative infix</li>
+</ul>
+<h2 id="what-happened-to-text.parsec.token">What happened to <code>Text.Parsec.Token</code>?</h2>
+<p>That module was extremely inflexible and thus it has been eliminated. In Megaparsec you have <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a> instead, which doesn’t impose anything on user but provides useful helpers. The module can also parse indentation-sensitive languages.</p>
+<p>Let’s quickly describe how you go about writing your lexer with <code>Text.Megaparsec.Lexer</code>. First, you should import the module qualified, we will use <code>L</code> as its synonym here.</p>
+<h3 id="white-space">White space</h3>
+<p>Start writing your lexer by defining what counts as <em>white space</em> in your language. <code>space</code>, <code>skipLineComment</code>, and <code>skipBlockComment</code> can be helpful:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">sc ::</span> <span class="dt">Parser</span> () <span class="co">-- ‘sc’ stands for “space consumer”</span>
+sc <span class="fu">=</span> L.space (void spaceChar) lineComment blockComment
+  <span class="kw">where</span> lineComment  <span class="fu">=</span> L.skipLineComment <span class="st">&quot;//&quot;</span>
+        blockComment <span class="fu">=</span> L.skipBlockComment <span class="st">&quot;/*&quot;</span> <span class="st">&quot;*/&quot;</span></code></pre></div>
+<p>This is generally called <em>space consumer</em>, often you’ll need only one space consumer, but you can define as many of them as you want. Note that this new module allows you avoid consuming newline characters automatically, just use something different than <code>void spaceChar</code> as first argument of <code>space</code>. Even better, you can control what white space is on per-lexeme basis:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">lexeme ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+lexeme <span class="fu">=</span> L.lexeme sc
+
+<span class="ot">symbol ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">String</span>
+symbol <span class="fu">=</span> L.symbol sc</code></pre></div>
+<h3 id="monad-transformers">Monad transformers</h3>
+<p>Note that all tools in Megparsec work with any instance of <code>MonadParsec</code>. All commonly useful monad transformers like <code>StateT</code> and <code>WriterT</code> are instances of <code>MonadParsec</code> out of box. For example, what if you want to collect contents of comments, (say, they are documentation strings of a sort), you may want to have backtracking user state were you put last encountered comment satisfying some criteria, and then when you parse function definition you can check the state and attach doc-string to your parsed function. It’s all possible and easy with Megaparsec:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import </span><span class="dt">Control.Monad.State.Lazy</span>
+
+…
+
+<span class="kw">type</span> <span class="dt">MyParser</span> <span class="fu">=</span> <span class="dt">StateT</span> <span class="dt">String</span> <span class="dt">Parser</span>
+
+<span class="ot">skipLineComment' ::</span> <span class="dt">MyParser</span> ()
+skipLineComment' <span class="fu">=</span> …
+
+<span class="ot">skipBlockComment' ::</span> <span class="dt">MyParser</span> ()
+skipBlockComment' <span class="fu">=</span> …
+
+<span class="ot">sc ::</span> <span class="dt">MyParser</span> ()
+sc <span class="fu">=</span> space (void spaceChar) skipLineComment' skipBlockComment'</code></pre></div>
+<h3 id="indentation-sensitive-languages">Indentation-sensitive languages</h3>
+<p>Parsing of indentation-sensitive language deserves its own tutorial, but let’s take a look at basic tools upon which you can build. First of all you should work with space consumer that doesn’t eat newlines automatically. This means you’ll need to pick them up manually.</p>
+<p>Main helper is called <code>indentGuard</code>. It takes parser that will be used to consume white space (indentation) and a predicate of type <code>Int -&gt; Bool</code>. If after running the given parser column number does not satisfy given predicate, the parser fails with message “incorrect indentation”, otherwise it returns current column number.</p>
+<p>In simple cases you can explicitly pass around value returned by <code>indentGuard</code>, i.e. current level of indentation. If you prefer to preserve some sort of state you can achieve backtracking state combining <code>StateT</code> and <code>ParsecT</code>, like this:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="dt">StateT</span> <span class="dt">Int</span> <span class="dt">Parser</span> a</code></pre></div>
+<p>Here we have state of type <code>Int</code>. You can use <code>get</code> and <code>put</code> as usual, although it may be better to write modified version of <code>indentGuard</code> that could get current indentation level (indentation level on previous line), then consume indentation of current line, perform necessary checks, and put new level of indentation.</p>
+<h3 id="character-and-string-literals">Character and string literals</h3>
+<p>Parsing of string and character literals is done a bit differently than in Parsec. You have single helper <code>charLiteral</code>, which parses character literal. It <em>does not</em> parse surrounding quotes, because different languages may quote character literals differently. Purpose of this parser is to help with parsing of conventional escape sequences (literal character is parsed according to rules defined in Haskell report).</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">charLiteral ::</span> <span class="dt">Parser</span> <span class="dt">Char</span>
+charLiteral <span class="fu">=</span> char <span class="ch">'\''</span> <span class="fu">*&gt;</span> charLiteral <span class="fu">&lt;*</span> char <span class="ch">'\''</span></code></pre></div>
+<p>Use <code>charLiteral</code> to parse string literals. This is simplified version that will accept plain (not escaped) newlines in string literals (it’s easy to make it conform to Haskell syntax, this is left as an exercise for the reader):</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">stringLiteral ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
+stringLiteral <span class="fu">=</span> char <span class="ch">'&quot;'</span> <span class="fu">&gt;&gt;</span> manyTill L.charLiteral (char <span class="ch">'&quot;'</span>)</code></pre></div>
+<p>I should note that in <code>charLiteral</code> we use built-in support for parsing of all the tricky combinations of characters. On the other hand Parsec re-implements the whole thing. Given that it has no proper testing at all, I cannot tell for sure that it works.</p>
+<h3 id="numbers">Numbers</h3>
+<p>Parsing of numbers is easy:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">integer ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
+integer <span class="fu">=</span> lexeme L.integer
+
+<span class="ot">float ::</span> <span class="dt">Parser</span> <span class="dt">Double</span>
+float <span class="fu">=</span> lexeme L.float
+
+<span class="ot">number ::</span> <span class="dt">Parser</span> (<span class="dt">Either</span> <span class="dt">Integer</span> <span class="dt">Double</span>)
+number lexeme L.number <span class="co">-- similar to ‘naturalOrFloat’ in Parsec</span></code></pre></div>
+<p>Note that Megaparsec internally uses standard Haskell functions to parse floating point numbers, thus no precision loss is possible (and it’s tested). On the other hand, Parsec again re-implements the whole thing. Approach taken by Parsec authors is just parse the numbers one by one and then re-create the floating point number by means of floating point arithmetic. Any professional knows that this is not possible and the only way to parse floating point number is via bit-level manipulation (it’s usually done on OS level, in C libraries). Of course results produced by Parsec built-in parser for floating point numbers are incorrect. This is a known bug now, but it’s been a long time till we “discovered” it, because again, Parsec has no test suite.</p>
+<p>Hexadecimal and octal numbers do not parse “0x” or “0o” prefixes, because different languages may have other prefixes for this sort of numbers. We should parse the prefixes manually:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">hexadecimal ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
+hexadecimal <span class="fu">=</span> lexeme <span class="fu">$</span> char <span class="ch">'0'</span> <span class="fu">&gt;&gt;</span> char' <span class="ch">'x'</span> <span class="fu">&gt;&gt;</span> L.hexadecimal
+
+<span class="ot">octal ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
+octal <span class="fu">=</span> lexeme <span class="fu">$</span> char <span class="ch">'0'</span> <span class="fu">&gt;&gt;</span> char' <span class="ch">'o'</span> <span class="fu">&gt;&gt;</span> L.octal</code></pre></div>
+<p>Since Haskell report says nothing about sign in numeric literals, basic parsers like <code>integer</code> do not parse sign. You can easily create parsers for signed numbers with help of <code>signed</code>:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">signedInteger ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
+signedInteger <span class="fu">=</span> L.signed sc integer
+
+<span class="ot">signedFloat ::</span> <span class="dt">Parser</span> <span class="dt">Double</span>
+signedFloat <span class="fu">=</span> L.signed sc float
+
+<span class="ot">signedNumber ::</span> <span class="dt">Parser</span> (<span class="dt">Either</span> <span class="dt">Integer</span> <span class="dt">Double</span>)
+signedNumber <span class="fu">=</span> L.signed sc number</code></pre></div>
+<p>And that’s it, shiny and new, <code>Text.Megaparsec.Lexer</code> is at your service, now you can implement anything you want without the need to copy and edit entire <code>Text.Parsec.Token</code> module (people had to do it sometimes, you know).</p>
+<h2 id="whats-next">What’s next?</h2>
+<p>Changes you may want to perform may be more fundamental than those described here. For example, previously you may have to use a workaround because <code>Text.Parsec.Token</code> was not sufficiently flexible. Now you can replace it with proper solution. If you want to use full potential of Megaparsec, take time to read about its features, they can help you improve your code.</p>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../js/bootstrap.min.js"></script>
+
+  </body>
+</html>
