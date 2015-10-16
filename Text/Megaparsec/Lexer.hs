@@ -273,7 +273,7 @@ number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
 --
 -- > lexeme        = L.lexeme spaceConsumer
 -- > integer       = lexeme L.integer
--- > signedInteger = signed spaceConsumer integer
+-- > signedInteger = L.signed spaceConsumer integer
 
 signed :: (MonadParsec s m Char, Num a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
