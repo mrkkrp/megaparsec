@@ -70,7 +70,7 @@ import Control.Applicative ((<$>), pure)
 -- | Parses a newline character.
 
 newline :: MonadParsec s m Char => m Char
-newline = char '\n' <?> "newline"
+newline = char '\n'
 
 -- | Parses a carriage return character followed by a newline
 -- character. Returns sequence of characters parsed.
@@ -89,7 +89,7 @@ eol = (pure <$> newline) <|> crlf <?> "end of line"
 -- | Parses a tab character.
 
 tab :: MonadParsec s m Char => m Char
-tab = char '\t' <?> "tab"
+tab = char '\t'
 
 -- | Skips /zero/ or more white space characters.
 --
