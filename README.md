@@ -21,8 +21,8 @@
 * [Contribution](#contribution)
 * [License](#license)
 
-This is an industrial-strength monadic parser combinator library. Megaparsec is
-a fork of [Parsec](https://github.com/aslatter/parsec) library originally
+This is an industrial-strength monadic parser combinator library. Megaparsec
+is a fork of [Parsec](https://github.com/aslatter/parsec) library originally
 written by Daan Leijen.
 
 ## Features
@@ -34,19 +34,23 @@ comprehensive documentation, see the
 
 ### Core features
 
-The package is built around `MonadParsec`, a MTL-style monad transformer. All
-tools and features work with any instance of `MonadParsec`. You can achieve
-various effects combining monad transformers, i.e. building monad
-stack. Since most common monad transformers like `WriterT`, `StateT`,
-`ReaderT` and others are instances of `MonadParsec`, you can wrap `ParsecT`
-*in* these monads, achieving, for example, backtracking state.
+The package is built around `MonadParsec`, a MTL-style monad
+transformer. All tools and features work with any instance of
+`MonadParsec`. You can achieve various effects combining monad transformers,
+i.e. building monad stack. Since most common monad transformers like
+`WriterT`, `StateT`, `ReaderT` and others are instances of `MonadParsec`,
+you can wrap `ParsecT` *in* these monads, achieving, for example,
+backtracking state.
 
-On the other hand `ParsecT` is instance of many type classes as well. The most
-useful ones are `Monad`, `Applicative`, `Alternative`, and `MonadParsec`.
+On the other hand `ParsecT` is instance of many type classes as well. The
+most useful ones are `Monad`, `Applicative`, `Alternative`, and
+`MonadParsec`.
 
-The module [`Text.Megaparsec.Combinator`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html) (its functions are included in
-`Text.Megaparsec`) contains traditional, general combinators that work with
-any instance of `Alternative` and some even with instances of `Applicative`.
+The module
+[`Text.Megaparsec.Combinator`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html)
+(its functions are included in `Text.Megaparsec`) contains traditional,
+general combinators that work with any instance of `Alternative` and some
+even with instances of `Applicative`.
 
 Role of `Monad`, `Applicative`, and `Alternative` should be obvious, so
 let's enumerate methods of `MonadParsec` type class. The class represents
@@ -103,13 +107,13 @@ categories:
   characters of the same kind. This includes `newline`, `crlf`, `eol`,
   `tab`, and `space`.
 
-* *Parsers corresponding to categories of characters* parse single characters 
-  that belongs to certain category of characters, for example: `controlChar`,
-  `spaceChar`, `upperChar`, `lowerChar`, `printChar`, `digitChar`, and
-  others.
+* *Parsers corresponding to categories of characters* parse single character
+  that belongs to certain category of characters, for example:
+  `controlChar`, `spaceChar`, `upperChar`, `lowerChar`, `printChar`,
+  `digitChar`, and others.
 
-* *General parsers* that allow you to parse a single character you specify or
-  one of given characters, or any character except for given ones, or
+* *General parsers* that allow you to parse a single character you specify
+  or one of given characters, or any character except for given ones, or
   character satisfying given predicate. Case-insensitive versions of the
   parsers are available.
 
@@ -130,8 +134,8 @@ Megaparsec has a solution for parsing of expressions. Take a look at
 [`Text.Megaparsec.Expr`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html). You have to import the module explicitly, it's not
 included in the `Text.Megaparsec` module.
 
-Given a table of operators that describes their fixity and precedence, you can
-construct a parser that will parse any expression involving the
+Given a table of operators that describes their fixity and precedence, you
+can construct a parser that will parse any expression involving the
 operators. See documentation for comprehensive description of how it works.
 
 ### Lexer
@@ -144,11 +148,11 @@ in the past, this module “fixes” its particularly inflexible
 `Text.Megaparsec.Lexer` is intended to be imported qualified, it's not
 included in `Text.Megaparsec`. The module doesn't impose how you should
 write your parser, but certain approaches may be more elegant than
-others. An especially important theme is parsing of white space, comments, 
+others. An especially important theme is parsing of white space, comments,
 and indentation.
 
-The design of the module allows you quickly solve simple tasks and doesn't get
-in your way when you want to implemented something less standard.
+The design of the module allows you quickly solve simple tasks and doesn't
+get in your way when you want to implemented something less standard.
 
 ## Documentation
 
