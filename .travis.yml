@@ -40,7 +40,7 @@ script:
               --test-option=--threads=2
               --test-option=--maximum-generated-tests=1000
  - cabal sdist
- - cabal haddock
+ - cabal haddock | grep "100%" | wc -l | grep "15"
 
 after_script:
  - cabal install hpc-coveralls
