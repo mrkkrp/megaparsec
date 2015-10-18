@@ -81,6 +81,7 @@ library
                    , Text.Megaparsec.String
                    , Text.Megaparsec.Text
                    , Text.Megaparsec.Text.Lazy
+                   , Text.Megaparsec.Tutorial
   ghc-options:       -O2 -Wall
   default-language:  Haskell2010
 
