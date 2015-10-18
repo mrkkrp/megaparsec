@@ -28,6 +28,9 @@ module Text.Megaparsec.Tutorial
 
   -- * Choice
   -- $choice
+
+  -- * Backtracking
+  -- $backtracking
 )
 where
 
@@ -504,4 +507,50 @@ Or you could get rid of the boilerplate, like this:
 >   char '\\'
 >   let escape result code = result <$ char code
 >   choice $ zipWith escape "\"\\/\n\r\f\t\b" "\"\\/nrftb"
+-}
+
+{- $backtracking
+
+Here's a puzzle for you: what would happen in the following case?
+
+>>> let ab = string "ab"    -- same as (char 'a' *> char 'b')
+>>> let ac = string "ac"
+>>> parseTest (ab <|> ac) "ac"
+
+There are 3 possible answers:
+
+  1. Parsing “ab” will fail. '<|>' will try to parse “ac” next, and it will succeed.
+
+  2. Parsing “ab” will fail – but “a” will already be consumed by @char \'a\'@. So, when '<|>' tries to parse “ac”, the input will be just “c”, and thus parsing “ac” will fail too.
+
+  3. Parsing “ab” will fail. '<|>' can't un-consume “a”, so instead of trying to parse “ac” it'll just give up.
+
+All of these are sensible. #1 is intuitively obvious, #2 leads to a very simple implementation, and #3 prevents you from shooting yourself in the foot. So, which one is it? The only way to find out is to check:
+
+>>> parseTest (ab <|> ac) "ac"
+parse error at line 1, column 1:
+unexpected "ac"
+expecting "ab"
+
+Okay, so it's not #1. To distinguish between #2 and #3, let's try to parse “c” instead of “ac”:
+
+>>> parseTest (ab <|> string "c") "ac"
+parse error at line 1, column 1:
+unexpected "ac"
+expecting "ab"
+
+This leaves #3 as the only candidate, and indeed it's correct – '<|>' checks whether the first parser has consumed any input, and if it has, it doesn't try the second parser. So, if your parsers don't overlap, you're safe.
+
+When your parsers /do/ overlap, there's a combinator called 'try' that you could use to un-consume input consumed by a parser. (This un-consumption is called “backtracking” or “rewinding input”.) @try p@ behaves exactly the same as @p@, but it only consumes input if it succeeds:
+
+>>> parseTest (try ab <|> ac) "ac"
+"ac"
+
+You may wonder why doesn't '<|>' do it automatically if it's so easy to do. There are 2 reasons for that. First of all, 'try' can cause space leaks. To be able to un-consume input, 'try' has to store that input in memory. It means that if you're parsing a 200 MB file, those 200 MB will likely remain in memory until the parsing is done (of course, it can be less, but only if your parser doesn't have @(try ... \<|\> ...)@ at the top level).
+
+Second, 'try' can lead to bad error messages.
+
+TODO: can it really?
+
+Finally, a warning: it's easy to forget that combinators like 'optional' and 'string' don't use 'try', so be careful and remember that /none/ of standard combinators use 'try'.
 -}
