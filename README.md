@@ -68,7 +68,7 @@ via combination of these primitives:
 
 * `try` enables backtracking in parsing.
 
-* `lookAhead` allows to parse something without consuming any input.
+* `lookAhead` allows to parse something without consuming input.
 
 * `notFollowedBy` succeeds when its argument fails, it does not consume
   input.
@@ -132,7 +132,7 @@ included in the `Text.Megaparsec` module.
 
 Megaparsec has a solution for parsing of expressions. Take a look at
 [`Text.Megaparsec.Expr`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html). You have to import the module explicitly, it's not
-included in the `Text.Megaparsec` module.
+included in the `Text.Megaparsec`.
 
 Given a table of operators that describes their fixity and precedence, you
 can construct a parser that will parse any expression involving the
@@ -163,12 +163,10 @@ Hackage](https://hackage.haskell.org/package/megaparsec) for yourself.
 
 ## Tutorials
 
-Megaparsec includes always-up-to-date tutorial in its source code, see
-[`Text.Megaparsec.Tutorial`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Tutorial.html).
-Apart from this, you can visit
-[site of the project](https://mrkkrp.github.io/megaparsec/) which has
-several tutorials that should help you to start with your parsing tasks. The
-site also has instructions and tips for Parsec users who decide to switch.
+You can visit [site of the project](https://mrkkrp.github.io/megaparsec/)
+which has several tutorials that should help you to start with your parsing
+tasks. The site also has instructions and tips for Parsec users who decide
+to switch.
 
 ## Comparison with other solutions
 
@@ -257,10 +255,11 @@ it is feature-rich and self-contained.
 
 ## Authors
 
-You can find complete list of contributors in `AUTHORS.md` file in this
-repository. Thanks to all the people who propose features and ideas,
-although they are not in `AUTHORS.md`, without them Megaparsec would not be
-that good.
+The project was started and is currently maintained by Mark Karpov. You can
+find complete list of contributors in `AUTHORS.md` file in official
+repository of the project. Thanks to all the people who propose features and
+ideas, although they are not in `AUTHORS.md`, without them Megaparsec would
+not be that good.
 
 ## Contribution
 
