@@ -55,6 +55,8 @@ tests = testGroup "Generic parser combinators"
         , testProperty "combinator option"    prop_option
         , testProperty "combinator sepBy"     prop_sepBy
         , testProperty "combinator sepBy1"    prop_sepBy1
+        , testProperty "combinator sepEndBy"  prop_sepEndBy
+        , testProperty "combinator sepEndBy1" prop_sepEndBy1
         , testProperty "combinator skipMany"  prop_skipMany
         , testProperty "combinator skipSome"  prop_skipSome ]
 
@@ -175,6 +177,33 @@ prop_sepBy1 n' c' = checkParser p r s
           | c == 'a' && n == 0 = Right "a"
           | n == 0    = posErr 0 s [uneCh c, exCh 'a']
           | c == '-'  = posErr (length s) s [uneEof, exCh 'a']
+          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+        s = intersperse '-' (replicate n 'a') ++ maybeToList c'
+
+prop_sepEndBy :: NonNegative Int -> Maybe Char -> Property
+prop_sepEndBy n' c' = checkParser p r s
+  where n = getNonNegative n'
+        c = fromJust c'
+        p = sepEndBy (char 'a') (char '-')
+        a = Right $ replicate n 'a'
+        r | isNothing c' = a
+          | c == 'a' && n == 0 = a
+          | n == 0    = posErr 0 s [uneCh c, exCh 'a', exEof]
+          | c == '-'  = a
+          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+        s = intersperse '-' (replicate n 'a') ++ maybeToList c'
+
+prop_sepEndBy1 :: NonNegative Int -> Maybe Char -> Property
+prop_sepEndBy1 n' c' = checkParser p r s
+  where n = getNonNegative n'
+        c = fromJust c'
+        p = sepEndBy1 (char 'a') (char '-')
+        a = Right $ replicate n 'a'
+        r | isNothing c' && n >= 1 = a
+          | isNothing c' = posErr 0 s [uneEof, exCh 'a']
+          | c == 'a' && n == 0 = a
+          | n == 0    = posErr 0 s [uneCh c, exCh 'a']
+          | c == '-'  = a
           | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
         s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 

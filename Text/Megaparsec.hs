@@ -78,6 +78,8 @@ module Text.Megaparsec
   , option
   , sepBy
   , sepBy1
+  , sepEndBy
+  , sepEndBy1
   , skipMany
   , skipSome
     -- Deprecated combinators
@@ -85,8 +87,6 @@ module Text.Megaparsec
   , chainl1
   , chainr
   , chainr1
-  , sepEndBy
-  , sepEndBy1
     -- * Character parsing
   , newline
   , crlf

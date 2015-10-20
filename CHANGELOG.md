@@ -1,3 +1,10 @@
+## Megaparsec 4.1.1
+
+* Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed
+  deprecation notes for these functions.
+
+* Added tests for `sepEndBy` and `sepEndBy1`.
+
 ## Megaparsec 4.1.0
 
 * Relaxed dependency on `base`, so that minimal required version of `base`

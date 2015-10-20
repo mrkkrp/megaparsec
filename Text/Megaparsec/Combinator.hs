@@ -24,15 +24,15 @@ module Text.Megaparsec.Combinator
   , option
   , sepBy
   , sepBy1
+  , sepEndBy
+  , sepEndBy1
   , skipMany
   , skipSome
     -- Deprecated combinators
   , chainl
   , chainl1
   , chainr
-  , chainr1
-  , sepEndBy
-  , sepEndBy1 )
+  , chainr1 )
 where
 
 import Control.Applicative
@@ -148,6 +148,22 @@ sepBy1 :: Alternative m => m a -> m sep -> m [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 {-# INLINE sepBy1 #-}
 
+-- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
+-- separated and optionally ended by @sep@. Returns a list of values
+-- returned by @p@.
+
+sepEndBy :: Alternative m => m a -> m sep -> m [a]
+sepEndBy p sep = sepEndBy1 p sep <|> pure []
+{-# INLINE sepEndBy #-}
+
+-- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
+-- separated and optionally ended by @sep@. Returns a list of values
+-- returned by @p@.
+
+sepEndBy1 :: Alternative m => m a -> m sep -> m [a]
+sepEndBy1 p sep = (:) <$> p <*> ((sep *> sepEndBy p sep) <|> pure [])
+{-# INLINE sepEndBy1 #-}
+
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.
 --
@@ -220,23 +236,3 @@ chainr1 p op = scan where
   scan = flip id <$> p <*> rst
   rst  = (flip <$> op <*> scan) <|> pure id
 {-# INLINE chainr1 #-}
-
--- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
--- separated and optionally ended by @sep@. Returns a list of values
--- returned by @p@.
-
-{-# DEPRECATED sepEndBy "Use @sepBy p sep <* optional sep@ instead." #-}
-
-sepEndBy :: Alternative m => m a -> m sep -> m [a]
-sepEndBy p sep = sepBy p sep <* optional sep
-{-# INLINE sepEndBy #-}
-
--- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
--- separated and optionally ended by @sep@. Returns a list of values
--- returned by @p@.
-
-{-# DEPRECATED sepEndBy1 "Use @sepBy1 p sep <* optional sep@ instead." #-}
-
-sepEndBy1 :: Alternative m => m a -> m sep -> m [a]
-sepEndBy1 p sep = sepBy1 p sep <* optional sep
-{-# INLINE sepEndBy1 #-}
