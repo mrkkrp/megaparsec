@@ -709,7 +709,7 @@ runParsecT p s = unParser p s cok cerr eok eerr
 
 instance (MonadPlus m, MonadParsec s m t) =>
          MonadParsec s (L.StateT e m) t where
-  label n       (L.StateT m) = L.StateT $ \s -> label n (m s)
+  label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
   lookAhead     (L.StateT m) = L.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
@@ -724,7 +724,7 @@ instance (MonadPlus m, MonadParsec s m t) =>
 
 instance (MonadPlus m, MonadParsec s m t)
          => MonadParsec s (S.StateT e m) t where
-  label n       (S.StateT m) = S.StateT $ \s -> label n (m s)
+  label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
@@ -739,9 +739,9 @@ instance (MonadPlus m, MonadParsec s m t)
 
 instance (MonadPlus m, MonadParsec s m t)
          => MonadParsec s (L.ReaderT e m) t where
-  label n       (L.ReaderT m) = L.ReaderT $ \s -> label n (m s)
+  label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
-  lookAhead     (L.ReaderT m) = L.ReaderT $ \s -> lookAhead (m s)
+  lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
   unexpected                  = lift . unexpected
   eof                         = lift eof
