@@ -187,7 +187,7 @@ prop_sepEndBy n' c' = checkParser p r s
         p = sepEndBy (char 'a') (char '-')
         a = Right $ replicate n 'a'
         r | isNothing c' = a
-          | c == 'a' && n == 0 = a
+          | c == 'a' && n == 0 = Right "a"
           | n == 0    = posErr 0 s [uneCh c, exCh 'a', exEof]
           | c == '-'  = a
           | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
@@ -201,7 +201,7 @@ prop_sepEndBy1 n' c' = checkParser p r s
         a = Right $ replicate n 'a'
         r | isNothing c' && n >= 1 = a
           | isNothing c' = posErr 0 s [uneEof, exCh 'a']
-          | c == 'a' && n == 0 = a
+          | c == 'a' && n == 0 = Right "a"
           | n == 0    = posErr 0 s [uneCh c, exCh 'a']
           | c == '-'  = a
           | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
