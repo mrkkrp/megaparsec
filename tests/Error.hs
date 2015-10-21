@@ -47,6 +47,7 @@ import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
+import Data.Monoid (mempty)
 #endif
 #if !MIN_VERSION_base(4,7,0)
 bool :: a -> a -> Bool -> a
