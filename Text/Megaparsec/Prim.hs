@@ -162,8 +162,7 @@ toHints err = Hints hints
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
 
 withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
-withHints (Hints xs) c = c . addHints
-  where addHints err = foldr addErrorMessage err (Expected <$> concat xs)
+withHints (Hints xs) c = c . addErrorMessages (Expected <$> concat xs)
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
@@ -315,15 +314,15 @@ instance MonadState s m => MonadState s (ParsecT s' m) where
 
 instance MonadCont m => MonadCont (ParsecT s m) where
   callCC f = mkPT $ \s ->
-     callCC $ \c ->
-       runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
+    callCC $ \c ->
+      runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
     where pack s a = Empty $ return (Ok a s)
 
 instance MonadError e m => MonadError e (ParsecT s m) where
   throwError = lift . throwError
   p `catchError` h = mkPT $ \s ->
-      runParsecT p s `catchError` \e ->
-          runParsecT (h e) s
+    runParsecT p s `catchError` \e ->
+      runParsecT (h e) s
 
 instance MonadPlus (ParsecT s m) where
   mzero = pZero
@@ -335,9 +334,9 @@ pZero = ParsecT $ \(State _ pos _) _ _ _ eerr -> eerr $ newErrorUnknown pos
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err =
-        let ncerr   err' = cerr (mergeError err' err)
+        let ncerr   err' = cerr (err' <> err)
             neok x s' hs = eok x s' (toHints err <> hs)
-            neerr   err' = eerr (mergeError err' err)
+            neerr   err' = eerr (err' <> err)
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
@@ -525,7 +524,7 @@ pToken nextpos test = ParsecT $ \(State input pos w) cok _ _ eerr ->
       Nothing     -> eerr $ unexpectedErr eoi pos
       Just (c,cs) ->
         case test c of
-          Left ms -> eerr $ foldr addErrorMessage (newErrorUnknown pos) ms
+          Left ms -> eerr $ addErrorMessages ms (newErrorUnknown pos)
           Right x -> let newpos   = nextpos w pos c
                          newstate = State cs newpos w
                      in seq newpos $ seq newstate $ cok x newstate mempty

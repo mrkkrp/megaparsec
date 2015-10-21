@@ -20,8 +20,10 @@ module Text.Megaparsec.Error
   , errorMessages
   , errorIsUnknown
   , newErrorMessage
+  , newErrorMessages
   , newErrorUnknown
   , addErrorMessage
+  , addErrorMessages
   , setErrorMessage
   , setErrorPos
   , mergeError
@@ -103,26 +105,34 @@ data ParseError = ParseError
 instance Show ParseError where
   show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
 
+instance Monoid ParseError where
+  mempty  = newErrorUnknown (initialPos "")
+  mappend = mergeError
+
 -- | Test whether given 'ParseError' has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.
 
 errorIsUnknown :: ParseError -> Bool
 errorIsUnknown (ParseError _ ms) = null ms
 
--- Creation of parse errors
+-- | @newErrorMessage m pos@ creates 'ParseError' with message @m@ and
+-- associated position @pos@. If message @m@ has empty message string, it
+-- won't be included.
+
+newErrorMessage :: Message -> SourcePos -> ParseError
+newErrorMessage m = newErrorMessages [m]
+
+-- | @newErrorMessages ms pos@ creates 'ParseError' with messages @ms@ and
+-- associated position @pos@.
+
+newErrorMessages :: [Message] -> SourcePos -> ParseError
+newErrorMessages ms pos = addErrorMessages ms $ newErrorUnknown pos
 
 -- | @newErrorUnknown pos@ creates 'ParseError' without any associated
 -- message but with specified position @pos@.
 
 newErrorUnknown :: SourcePos -> ParseError
 newErrorUnknown pos = ParseError pos []
-
--- | @newErrorMessage m pos@ creates 'ParseError' with message @m@ and
--- associated position @pos@. If message @m@ has empty message string, it
--- won't be included.
-
-newErrorMessage :: Message -> SourcePos -> ParseError
-newErrorMessage m pos = ParseError pos $ bool [m] [] (badMessage m)
 
 -- | @addErrorMessage m err@ returns @err@ with message @m@ added. This
 -- function makes sure that list of messages is always sorted and doesn't
@@ -134,6 +144,12 @@ addErrorMessage m (ParseError pos ms) =
   where pre  = filter (< m) ms
         post = filter (> m) ms
 
+-- | @addErrorMessages ms err@ returns @err@ with messages @ms@ added. The
+-- function is defined in terms of 'addErrorMessage'.
+
+addErrorMessages :: [Message] -> ParseError -> ParseError
+addErrorMessages ms err = foldr addErrorMessage err ms
+
 -- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
 -- function also deletes all existing error messages that were created with
 -- the same constructor as @m@. If message @m@ has empty message string, the
@@ -142,9 +158,9 @@ addErrorMessage m (ParseError pos ms) =
 
 setErrorMessage :: Message -> ParseError -> ParseError
 setErrorMessage m (ParseError pos ms) =
-  bool (addErrorMessage m pe) pe (badMessage m)
-  where pe = ParseError pos xs
-        xs = filter ((/= fromEnum m) . fromEnum) ms
+  bool (addErrorMessage m err) err (badMessage m)
+  where err = ParseError pos xs
+        xs  = filter ((/= fromEnum m) . fromEnum) ms
 
 -- | @setErrorPos pos err@ returns 'ParseError' identical to @err@, but with
 -- position @pos@.
@@ -162,7 +178,7 @@ mergeError :: ParseError -> ParseError -> ParseError
 mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
   case pos1 `compare` pos2 of
     LT -> e2
-    EQ -> foldr addErrorMessage e1 ms2
+    EQ -> addErrorMessages ms2 e1
     GT -> e1
 
 -- | @showMessages ms@ transforms list of error messages @ms@ into

@@ -5,6 +5,12 @@
   number or column number. Unfortunately we cannot use `Numeric.Natural`
   because we need to support older versions of `base`.
 
+* `ParseError` is now a monoid. `MergeError` is used as `mappend`.
+
+* Added functions `addErrorMessages` and `newErrorMessages` to add several
+  messages to existing error and to construct error with several attached
+  messages respectively.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

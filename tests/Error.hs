@@ -35,6 +35,7 @@ module Error (tests) where
 import Data.Bool (bool)
 #endif
 import Data.List (isPrefixOf, isInfixOf)
+import Data.Monoid ((<>))
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -55,7 +56,10 @@ bool _ t True  = t
 
 tests :: Test
 tests = testGroup "Parse errors"
-        [ testProperty "extracting message string" prop_messageString
+        [ testProperty "monoid left identity" prop_monoid_left_id
+        , testProperty "monoid right identity" prop_monoid_right_id
+        , testProperty "monoid associativity" prop_monoid_assoc
+        , testProperty "extraction of message string" prop_messageString
         , testProperty "creation of new error messages" prop_newErrorMessage
         , testProperty "messages are always well-formed" prop_wellFormedMessages
         , testProperty "copying of error positions" prop_parseErrorCopy
@@ -73,10 +77,19 @@ instance Arbitrary Message where
 
 instance Arbitrary ParseError where
   arbitrary = do
-    ms <- listOf arbitrary
-    pe <- oneof [ newErrorUnknown <$> arbitrary
-                , newErrorMessage <$> arbitrary <*> arbitrary ]
-    return $ foldr addErrorMessage pe ms
+    ms  <- listOf arbitrary
+    err <- oneof [ newErrorUnknown <$> arbitrary
+                 , newErrorMessage <$> arbitrary <*> arbitrary ]
+    return $ addErrorMessages ms err
+
+prop_monoid_left_id :: ParseError -> Bool
+prop_monoid_left_id x = mempty <> x == x
+
+prop_monoid_right_id :: ParseError -> Bool
+prop_monoid_right_id x = x <> mempty == x
+
+prop_monoid_assoc :: ParseError -> ParseError -> ParseError -> Bool
+prop_monoid_assoc x y z = (x <> y) <> z == x <> (y <> z)
 
 prop_messageString :: Message -> Bool
 prop_messageString m@(Unexpected s) = s == messageString m
@@ -89,7 +102,7 @@ prop_newErrorMessage msg pos = added && errorPos new == pos
         added = errorMessages new == bool [msg] [] (badMessage msg)
 
 prop_wellFormedMessages :: ParseError -> Bool
-prop_wellFormedMessages err = wellFormed $ errorMessages err
+prop_wellFormedMessages = wellFormed . errorMessages
 
 prop_parseErrorCopy :: ParseError -> Bool
 prop_parseErrorCopy err =
@@ -131,13 +144,16 @@ prop_visiblePos :: ParseError -> Bool
 prop_visiblePos err = show (errorPos err) `isPrefixOf` show err
 
 prop_visibleMsgs :: ParseError -> Bool
-prop_visibleMsgs err = all (`isInfixOf` shown) (errorMessages err >>= f)
+prop_visibleMsgs err = if null msgs
+                       then "unknown" `isInfixOf` shown
+                       else all (`isInfixOf` shown) (msgs >>= f)
   where shown = show err
+        msgs  = errorMessages err
         f (Unexpected s) = ["unexpected", s]
         f (Expected   s) = ["expecting", s]
         f (Message    s) = [s]
 
--- | @iwellFormed xs@ checks that list @xs@ is sorted and contains no
+-- | @wellFormed xs@ checks that list @xs@ is sorted and contains no
 -- duplicates and no empty messages.
 
 wellFormed :: [Message] -> Bool
