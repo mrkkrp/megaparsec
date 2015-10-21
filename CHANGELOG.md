@@ -1,3 +1,10 @@
+## Megaparsec 4.2.0
+
+* Made `newPos` constructor and other functions in `Text.Megaparsec.Pos`
+  smarter. Now it's impossible to create `SourcePos` with non-positive line
+  number or column number. Unfortunately we cannot use `Numeric.Natural`
+  because we need to support older versions of `base`.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

@@ -28,9 +28,7 @@ module Text.Megaparsec.Pos
   , defaultTabWidth )
 where
 
-import Data.Data (Data)
 import Data.List (foldl')
-import Data.Typeable (Typeable)
 
 -- | The abstract data type @SourcePos@ represents source positions. It
 -- contains the name of the source (i.e. file name), a line number and a
@@ -44,7 +42,7 @@ data SourcePos = SourcePos
   , sourceLine   :: !Int
     -- | Extract the column number from a source position.
   , sourceColumn :: !Int }
-  deriving (Eq, Ord, Data, Typeable)
+  deriving (Eq, Ord)
 
 instance Show SourcePos where
   show (SourcePos n l c)
@@ -54,9 +52,12 @@ instance Show SourcePos where
 
 -- | Create a new 'SourcePos' with the given source name, line number and
 -- column number.
+--
+-- In call @newPos name line column@, if @line@ is not a positive
+-- number, 1 will be used. The same holds for @column@ value.
 
 newPos :: String -> Int -> Int -> SourcePos
-newPos = SourcePos
+newPos n l c = SourcePos n (max 1 l) (max 1 c)
 
 -- | Create a new 'SourcePos' with the given source name, and line number
 -- and column number set to 1, the upper left.
@@ -64,30 +65,34 @@ newPos = SourcePos
 initialPos :: String -> SourcePos
 initialPos name = newPos name 1 1
 
--- | Increment the line number of a source position.
+-- | Increment the line number of a source position. If resulting line
+-- number is not positive, line number will be equal to 1.
 
 incSourceLine :: SourcePos -> Int -> SourcePos
-incSourceLine (SourcePos n l c) d = SourcePos n (l + d) c
+incSourceLine (SourcePos n l c) d = SourcePos n (max 1 $ l + d) c
 
--- | Increments the column number of a source position.
+-- | Increments the column number of a source position. If resulting column
+-- number is not positive, column number will be equal to 1.
 
 incSourceColumn :: SourcePos -> Int -> SourcePos
-incSourceColumn (SourcePos n l c) d = SourcePos n l (c + d)
+incSourceColumn (SourcePos n l c) d = SourcePos n l (max 1 $ c + d)
 
 -- | Set the name of the source.
 
 setSourceName :: SourcePos -> String -> SourcePos
 setSourceName (SourcePos _ l c) n = SourcePos n l c
 
--- | Set the line number of a source position.
+-- | Set the line number of a source position. If the line number is not
+-- positive, 1 will be used.
 
 setSourceLine :: SourcePos -> Int -> SourcePos
-setSourceLine (SourcePos n _ c) l = SourcePos n l c
+setSourceLine (SourcePos n _ c) l = SourcePos n (max 1 l) c
 
--- | Set the column number of a source position.
+-- | Set the column number of a source position. If the line number is not
+-- positive, 1 will be used.
 
 setSourceColumn :: SourcePos -> Int -> SourcePos
-setSourceColumn (SourcePos n l _) = SourcePos n l
+setSourceColumn (SourcePos n l _) c = SourcePos n l (max 1 c)
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line
