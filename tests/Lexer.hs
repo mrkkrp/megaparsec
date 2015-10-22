@@ -31,9 +31,6 @@ module Lexer (tests) where
 
 import Control.Applicative (empty)
 import Control.Monad (void)
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 import Data.Char
   ( readLitChar
   , showLitChar
@@ -60,11 +57,6 @@ import Util
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>))
-#endif
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
 #endif
 
 tests :: Test
@@ -229,8 +221,9 @@ prop_signed n i plus = checkParser p r s
         r | i > length z = Right n
           | otherwise = posErr i s $ uneCh '?' :
                         (if i <= 0 then [exCh '+', exCh '-'] else []) ++
-                        [exSpec $ bool "rest of integer" "integer" $
-                         isNothing . find isDigit $ take i s]
+                        [exSpec $ if isNothing . find isDigit $ take i s
+                                  then "integer"
+                                  else "rest of integer"]
                         ++ [exEof | i > head (findIndices isDigit s)]
         z = let bar = showSigned showInt 0 n ""
             in if n < 0 || plus then bar else '+' : bar

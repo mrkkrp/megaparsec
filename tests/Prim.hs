@@ -32,9 +32,6 @@
 module Prim (tests) where
 
 import Control.Applicative
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
@@ -59,11 +56,6 @@ import Text.Megaparsec.String
 
 import Pos ()
 import Util
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
-#endif
 
 tests :: Test
 tests = testGroup "Primitive parser combinators"
@@ -287,8 +279,8 @@ prop_try pre s1' s2' = checkParser p r s
         s2 = pre ++ s2'
         p = try (string s1) <|> string s2
         r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
-                        ++ [uneStr pre, exStr s1, exStr s2]
+          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
+                        : [uneStr pre, exStr s1, exStr s2]
         s = pre
 
 prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
@@ -408,8 +400,8 @@ prop_IdentityT_try pre s1' s2' = checkParser (runIdentityT p) r s
         s2 = pre ++ s2'
         p = try (string s1) <|> string s2
         r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
-                        ++ [uneStr pre, exStr s1, exStr s2]
+          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
+                        : [uneStr pre, exStr s1, exStr s2]
         s = pre
 
 prop_IdentityT_notFollowedBy :: NonNegative Int -> NonNegative Int
@@ -431,8 +423,8 @@ prop_ReaderT_try pre s1' s2' = checkParser (runReaderT p (s1', s2')) r s
         getS2 = asks ((pre ++) . snd)
         p = try (string =<< getS1) <|> (string =<< getS2)
         r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ bool [uneStr pre] [uneEof] (null s)
-                        ++ [uneStr pre, exStr s1, exStr s2]
+          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
+                        : [uneStr pre, exStr s1, exStr s2]
         s = pre
 
 prop_ReaderT_notFollowedBy :: NonNegative Int -> NonNegative Int

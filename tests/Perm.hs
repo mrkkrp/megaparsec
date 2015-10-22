@@ -30,9 +30,6 @@
 module Perm (tests) where
 
 import Control.Applicative
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 import Data.List (nub, elemIndices)
 
 import Test.Framework
@@ -43,11 +40,6 @@ import Text.Megaparsec.Char
 import Text.Megaparsec.Perm
 
 import Util
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
-#endif
 
 tests :: Test
 tests = testGroup "Permutation phrases parsers"
@@ -89,13 +81,13 @@ prop_perm_0 a' c' v = checkParser (makePermParser p) r s
           | length cis > 1 =
             posErr (cis !! 1) s $ [uneCh c] ++
             [exCh a | a `notElem` prec] ++
-            [bool (exCh b) exEof (b `elem` prec)]
+            [if b `elem` prec then exEof else exCh b]
           | b `notElem` s = posErr (length s) s $ [uneEof, exCh b] ++
                             [exCh a | a `notElem` s || last s == a] ++
                             [exCh c | c `notElem` s]
-          | otherwise = Right ( bool a' (filter (== a) s) (a `elem` s)
+          | otherwise = Right ( if a `elem` s then filter (== a) s else a'
                               , b
-                              , bool c' c (c `elem` s) )
+                              , if c `elem` s then c else c' )
         bis  = elemIndices b s
         preb = take (bis !! 1) s
         cis  = elemIndices c s

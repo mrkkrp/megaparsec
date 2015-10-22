@@ -30,9 +30,6 @@
 module Expr (tests) where
 
 import Control.Applicative (some, (<|>))
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -47,12 +44,6 @@ import Util
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
-#endif
-
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
 #endif
 
 tests :: Test
@@ -100,13 +91,13 @@ showNode n@(Div x y) = showGT n x ++ " / " ++ showGE n y
 showNode n@(Exp x y) = showGE n x ++ " ^ " ++ showGT n y
 
 showGT :: Node -> Node -> String
-showGT parent node = bool showNode showCmp (node > parent) node
+showGT parent node = (if node > parent then showCmp else showNode) node
 
 showGE :: Node -> Node -> String
-showGE parent node = bool showNode showCmp (node >= parent) node
+showGE parent node = (if node >= parent then showCmp else showNode) node
 
 showCmp :: Node -> String
-showCmp node = bool inParens showNode (fromEnum node == 0) node
+showCmp node = (if fromEnum node == 0 then showNode else inParens) node
 
 inParens :: Node -> String
 inParens x = "(" ++ showNode x ++ ")"

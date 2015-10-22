@@ -38,11 +38,6 @@ module Text.Megaparsec.Prim
   , parseTest )
 where
 
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
-import Data.Monoid
-
 import Control.Monad
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
@@ -51,6 +46,7 @@ import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
+import Data.Monoid
 import qualified Control.Applicative as A
 import qualified Control.Monad.Trans.Reader as L
 import qualified Control.Monad.Trans.State.Lazy as L
@@ -69,11 +65,6 @@ import Text.Megaparsec.ShowToken
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*))
-#endif
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
 #endif
 
 -- | This is Megaparsec state, it's parametrized over stream type @s@.
@@ -544,7 +535,7 @@ pTokens nextpos test tts = ParsecT $ \(State input pos w) cok cerr _ eerr ->
                       in cok (reverse is) s' mempty
       walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
-            what = bool (showToken $ reverse is) eoi (null is)
+            what      = if null is then eoi  else showToken $ reverse is
         in case uncons rs of
              Nothing -> errorCont . errExpect $ what
              Just (x,xs)

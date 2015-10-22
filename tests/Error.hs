@@ -31,9 +31,6 @@
 
 module Error (tests) where
 
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Monoid ((<>))
 
@@ -48,11 +45,6 @@ import Text.Megaparsec.Pos
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (mempty)
-#endif
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
 #endif
 
 tests :: Test
@@ -100,7 +92,7 @@ prop_messageString m@(Message    s) = s == messageString m
 prop_newErrorMessage :: Message -> SourcePos -> Bool
 prop_newErrorMessage msg pos = added && errorPos new == pos
   where new   = newErrorMessage msg pos
-        added = errorMessages new == bool [msg] [] (badMessage msg)
+        added = errorMessages new == if badMessage msg then [] else [msg]
 
 prop_wellFormedMessages :: ParseError -> Bool
 prop_wellFormedMessages = wellFormed . errorMessages

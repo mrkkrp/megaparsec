@@ -30,9 +30,6 @@ module Text.Megaparsec.Error
   , showMessages )
 where
 
-#if MIN_VERSION_base(4,7,0)
-import Data.Bool (bool)
-#endif
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
@@ -42,11 +39,6 @@ import Text.Megaparsec.Pos
 import Control.Applicative ((<$>))
 import Data.Foldable (foldMap)
 import Data.Monoid
-#endif
-#if !MIN_VERSION_base(4,7,0)
-bool :: a -> a -> Bool -> a
-bool f _ False = f
-bool _ t True  = t
 #endif
 
 -- | This data type represents parse error messages. There are three kinds
@@ -141,7 +133,7 @@ newErrorUnknown pos = ParseError pos []
 
 addErrorMessage :: Message -> ParseError -> ParseError
 addErrorMessage m (ParseError pos ms) =
-  ParseError pos $ bool (pre ++ [m] ++ post) ms (badMessage m)
+  ParseError pos $ if badMessage m then ms else pre ++ [m] ++ post
   where pre  = filter (< m) ms
         post = filter (> m) ms
 
@@ -159,7 +151,7 @@ addErrorMessages ms err = foldr addErrorMessage err ms
 
 setErrorMessage :: Message -> ParseError -> ParseError
 setErrorMessage m (ParseError pos ms) =
-  bool (addErrorMessage m err) err (badMessage m)
+  if badMessage m then err else addErrorMessage m err
   where err = ParseError pos xs
         xs  = filter ((/= fromEnum m) . fromEnum) ms
 
