@@ -8,34 +8,16 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Convenience definitions for working with 'C.ByteString'.
+-- Convenience definitions for working with 'B.ByteString'.
 
-module Text.Megaparsec.ByteString
-  ( Parser
-  , parseFromFile )
-where
+module Text.Megaparsec.ByteString (Parser) where
 
-import Text.Megaparsec.Error
 import Text.Megaparsec.Prim
-
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString as B
 
 -- | Different modules corresponding to various types of streams (@String@,
 -- @Text@, @ByteString@) define it differently, so user can use “abstract”
 -- @Parser@ type and easily change it by importing different “type
--- modules”. This one is for strict bytestrings.
+-- modules”. This one is for strict byte-strings.
 
-type Parser = Parsec C.ByteString
-
--- | @parseFromFile p filePath@ runs a strict bytestring parser @p@ on the
--- input read from @filePath@ using 'ByteString.Char8.readFile'. Returns
--- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
---
--- > main = do
--- >   result <- parseFromFile numbers "digits.txt"
--- >   case result of
--- >     Left err -> print err
--- >     Right xs -> print (sum xs)
-
-parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p fname `fmap` C.readFile fname
+type Parser = Parsec B.ByteString

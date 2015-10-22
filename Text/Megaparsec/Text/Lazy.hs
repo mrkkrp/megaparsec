@@ -10,15 +10,10 @@
 --
 -- Convenience definitions for working with lazy 'T.Text'.
 
-module Text.Megaparsec.Text.Lazy
-  ( Parser
-  , parseFromFile )
-where
+module Text.Megaparsec.Text.Lazy (Parser) where
 
-import Text.Megaparsec.Error
 import Text.Megaparsec.Prim
 import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
 
 -- | Different modules corresponding to various types of streams (@String@,
 -- @Text@, @ByteString@) define it differently, so user can use “abstract”
@@ -26,16 +21,3 @@ import qualified Data.Text.Lazy.IO as T
 -- modules”. This one is for lazy text.
 
 type Parser = Parsec T.Text
-
--- | @parseFromFile p filePath@ runs a lazy text parser @p@ on the
--- input read from @filePath@ using 'Data.Text.Lazy.IO.readFile'. Returns
--- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
---
--- > main = do
--- >   result <- parseFromFile numbers "digits.txt"
--- >   case result of
--- >     Left err -> print err
--- >     Right xs -> print (sum xs)
-
-parseFromFile :: Parser a -> String -> IO (Either ParseError a)
-parseFromFile p fname = runParser p fname `fmap` T.readFile fname

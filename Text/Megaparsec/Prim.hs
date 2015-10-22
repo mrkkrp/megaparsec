@@ -17,6 +17,7 @@ module Text.Megaparsec.Prim
   ( -- * Used data-types
     State (..)
   , Stream (..)
+  , StorableStream (..)
   , Parsec
   , ParsecT
     -- * Primitive combinators
@@ -35,7 +36,8 @@ module Text.Megaparsec.Prim
   , runParserT
   , parse
   , parseMaybe
-  , parseTest )
+  , parseTest
+  , parseFromFile )
 where
 
 import Control.Monad
@@ -57,7 +59,9 @@ import qualified Control.Monad.Trans.Writer.Strict as S
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
@@ -101,6 +105,24 @@ instance Stream T.Text Char where
 instance Stream TL.Text Char where
   uncons = TL.uncons
   {-# INLINE uncons #-}
+
+class Stream s t => StorableStream s t where
+  fromFile :: FilePath -> IO s
+
+instance StorableStream String Char where
+  fromFile = readFile
+
+instance StorableStream B.ByteString Char where
+  fromFile = B.readFile
+
+instance StorableStream BL.ByteString Char where
+  fromFile = BL.readFile
+
+instance StorableStream T.Text Char where
+  fromFile = T.readFile
+
+instance StorableStream TL.Text Char where
+  fromFile = TL.readFile
 
 -- | This data structure represents an aspect of result of parser's
 -- work. The two constructors have the following meaning:
@@ -694,6 +716,22 @@ runParsecT p s = unParser p s cok cerr eok eerr
         cerr err   = return . Consumed . return $ Error err
         eok a s' _ = return . Empty    . return $ Ok a s'
         eerr err   = return . Empty    . return $ Error err
+
+-- | @parseFromFile p filename@ runs parser @p@ on the input read from
+-- @filename@. Returns either a 'ParseError' ('Left') or a value of type @a@
+-- ('Right').
+--
+-- > main = do
+-- >   result <- parseFromFile numbers "digits.txt"
+-- >   case result of
+-- >     Left err -> print err
+-- >     Right xs -> print $ sum xs
+
+parseFromFile :: StorableStream s t
+              => Parsec s a -- ^ Parser to run
+              -> FilePath   -- ^ Name of file to parse
+              -> IO (Either ParseError a)
+parseFromFile p filename = runParser p filename <$> fromFile filename
 
 -- Instances of 'MonadParsec'
 

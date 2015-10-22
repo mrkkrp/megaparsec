@@ -11,6 +11,13 @@
   messages to existing error and to construct error with several attached
   messages respectively.
 
+* `parseFromFile` now lives in `Text.Megaparsec.Prim`. Previously we had 5
+  nearly identical definitions of the function, varying only in
+  type-specific `readFile` function. Now the problem is solved by
+  introduction of `StorableStream` type class. All supported stream types
+  are instances of the class out of box and thus we have polymorphic version
+  of `parseFromFile`.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed
