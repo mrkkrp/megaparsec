@@ -106,7 +106,14 @@ instance Stream TL.Text Char where
   uncons = TL.uncons
   {-# INLINE uncons #-}
 
+-- | @StorableStream@ abstracts ability of some streams to be stored in a
+-- file. This is used by polymorphic function 'readFromFile'.
+
 class Stream s t => StorableStream s t where
+
+  -- | @fromFile filename@ returns action that will try to read contents of
+  -- file named @filename@.
+
   fromFile :: FilePath -> IO s
 
 instance StorableStream String Char where
