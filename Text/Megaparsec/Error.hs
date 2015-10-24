@@ -30,8 +30,10 @@ module Text.Megaparsec.Error
   , showMessages )
 where
 
+import Control.Exception (Exception)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
+import Data.Typeable (Typeable)
 
 import Text.Megaparsec.Pos
 
@@ -93,7 +95,7 @@ data ParseError = ParseError
     errorPos :: !SourcePos
     -- | Extract the list of error messages from 'ParseError'.
   , errorMessages :: [Message] }
-  deriving Eq
+  deriving (Eq, Typeable)
 
 instance Show ParseError where
   show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
@@ -101,6 +103,8 @@ instance Show ParseError where
 instance Monoid ParseError where
   mempty  = newErrorUnknown (initialPos "")
   mappend = mergeError
+
+instance Exception ParseError
 
 -- | Test whether given 'ParseError' has associated collection of error
 -- messages. Return @True@ if it has none and @False@ otherwise.

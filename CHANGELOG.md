@@ -18,6 +18,8 @@
   are instances of the class out of box and thus we have polymorphic version
   of `parseFromFile`.
 
+* `ParseError` is now instance of `Exception` (and `Typeable`).
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed
