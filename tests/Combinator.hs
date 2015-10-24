@@ -67,7 +67,7 @@ prop_between pre c n' post = checkParser p r s
         b = length $ takeWhile (== c) post
         r | b > 0 = posErr (length pre + n + b) s $ exStr post :
                     if length post == b
-                    then [uneEof]
+                    then [uneEof, exCh c]
                     else [uneCh (post !! b), exCh c]
           | otherwise = Right z
         z = replicate n c
