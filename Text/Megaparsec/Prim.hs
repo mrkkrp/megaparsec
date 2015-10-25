@@ -723,7 +723,7 @@ runParser' p = runIdentity . runParserT' p
 
 runParserT :: (Monad m, Stream s t)
            => ParsecT s m a -> String -> s -> m (Either ParseError a)
-runParserT p name s = snd <$> runParserT' p (initialState name s)
+runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
 -- accepts and returns parser state. This is thus the most general way to
