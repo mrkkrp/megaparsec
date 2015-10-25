@@ -33,6 +33,7 @@ module Util
   , checkChar
   , checkString
   , (/=\)
+  , (!=!)
   , abcRow
   , abcRow'
   , posErr
@@ -118,6 +119,15 @@ infix 4 /=\   -- preserve whitespace on automatic trim
 
 (/=\) :: (Eq a, Show a) => Parser a -> a -> Property
 p /=\ x = simpleParse p "" === Right x
+
+infix 4 !=!
+
+-- | @n !=! m@ represents property that holds when results of running @n@
+-- and @m@ parsers are identical. This is useful when checking monad laws
+-- for example.
+
+(!=!) :: (Eq a, Show a) => Parser a -> Parser a -> Property
+n !=! m = simpleParse n "" === simpleParse m ""
 
 -- | @abcRow a b c@ generates string consisting of character “a” repeated
 -- @a@ times, character “b” repeated @b@ times, and finally character “c”

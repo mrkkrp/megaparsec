@@ -37,6 +37,8 @@ import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList, fromMaybe)
 
+import Control.Monad.Cont
+import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 import qualified Control.Monad.State.Lazy    as L
@@ -74,6 +76,16 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT monad (>>)" prop_monad_1
         , testProperty "ParsecT monad (>>=)" prop_monad_2
         , testProperty "ParsecT monad fail" prop_monad_3
+        , testProperty "ParsecT monad laws: left identity" prop_monad_left_id
+        , testProperty "ParsecT monad laws: right identity" prop_monad_right_id
+        , testProperty "ParsecT monad laws: associativity" prop_monad_assoc
+        , testProperty "ParsecT monad reader ask" prop_monad_reader_ask
+        , testProperty "ParsecT monad reader local" prop_monad_reader_local
+        , testProperty "ParsecT monad state get" prop_monad_state_get
+        , testProperty "ParsecT monad state put" prop_monad_state_put
+        , testProperty "ParsecT monad cont" prop_monad_cont
+        , testProperty "ParsecT monad error: throw" prop_monad_error_throw
+        , testProperty "ParsecT monad error: catch" prop_monad_error_catch
         , testProperty "combinator unexpected" prop_unexpected
         , testProperty "combinator label" prop_label
         , testProperty "combinator hidden hints" prop_hidden_0
@@ -210,13 +222,55 @@ prop_monad_3 m = checkParser p r s
           | otherwise = posErr 0 s [msg m]
         s = ""
 
--- TODO MonadReader instance of ParsecT
+prop_monad_left_id :: Integer -> Integer -> Property
+prop_monad_left_id a b = (return a >>= f) !=! (f a)
+  where f x = return $ x + b
 
--- TODO MonadState instance of ParsecT
+prop_monad_right_id :: Integer -> Property
+prop_monad_right_id a = (m >>= return) !=! m
+  where m = return a
 
--- TODO MonadCont instance of ParsecT
+prop_monad_assoc :: Integer -> Integer -> Integer -> Property
+prop_monad_assoc a b c = ((m >>= f) >>= g) !=! (m >>= (\x -> f x >>= g))
+  where m = return a
+        f x = return $ x + b
+        g x = return $ x + c
 
--- TODO MonadError instance of ParsecT
+-- MonadReader instance
+
+prop_monad_reader_ask :: Integer -> Property
+prop_monad_reader_ask a = runReader (runParserT ask "" "") a === Right a
+
+prop_monad_reader_local :: Integer -> Integer -> Property
+prop_monad_reader_local a b = runReader (runParserT p "" "") a === Right (a + b)
+  where p = local (+ b) ask
+
+-- MonadState instance
+
+prop_monad_state_get :: Integer -> Property
+prop_monad_state_get a = L.evalState (runParserT L.get "" "") a === Right a
+
+prop_monad_state_put :: Integer -> Integer -> Property
+prop_monad_state_put a b = L.execState (runParserT (L.put b) "" "") a === b
+
+-- MonadCont instance
+
+prop_monad_cont :: Integer -> Integer -> Property
+prop_monad_cont a b = runCont (runParserT p "" "") id === Right (max a b)
+  where p = do x <- callCC $ \e -> when (a > b) (e a) >> return b
+               return x
+
+-- MonadError instance
+
+prop_monad_error_throw :: Integer -> Integer -> Property
+prop_monad_error_throw a b = runExcept (runParserT p "" "") === Left a
+  where p = throwError a >> return b
+
+prop_monad_error_catch :: Integer -> Integer -> Property
+prop_monad_error_catch a b =
+  runExcept (runParserT p "" "") === Right (Right $ a + b)
+  where p = (throwError a >> return b) `catchError` handler
+        handler e = return $ e + b
 
 -- Primitive combinators
 
