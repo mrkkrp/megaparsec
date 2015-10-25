@@ -278,8 +278,8 @@ manyAcc p = ParsecT $ \s cok cerr eok _ ->
 
 manyErr :: a
 manyErr = error
-    "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
-    \that accepts an empty string."
+  "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
+  \that accepts an empty string."
 
 instance Monad (ParsecT s m) where
   return = pReturn
@@ -680,8 +680,8 @@ parseMaybe p s =
 parseTest :: (Stream s t, Show a) => Parsec s a -> s -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left err -> print err
-    Right x  -> print x
+    Left  e -> print e
+    Right x -> print x
 
 -- | The most general way to run a parser over the 'Identity' monad.
 -- @runParser p file input@ runs parser @p@ on the input list of tokens

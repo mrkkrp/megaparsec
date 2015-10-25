@@ -110,7 +110,7 @@ test-suite tests
   main-is:           Main.hs
   hs-source-dirs:    tests
   type:              exitcode-stdio-1.0
-  ghc-options:       -O2 -Wall -rtsopts
+  ghc-options:       -O2 -Wall
   other-modules:     Char
                    , Combinator
                    , Error
@@ -137,7 +137,7 @@ benchmark benchmarks
   main-is:           Main.hs
   hs-source-dirs:    benchmarks
   type:              exitcode-stdio-1.0
-  ghc-options:       -O2 -Wall -rtsopts
+  ghc-options:       -O2 -Wall
   build-depends:     base                   >= 4.6 && < 5
                    , megaparsec             >= 4.1.1
                    , criterion              >= 0.6.2.1 && < 1.2
