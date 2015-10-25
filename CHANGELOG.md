@@ -20,6 +20,10 @@
 
 * `ParseError` is now instance of `Exception` (and `Typeable`).
 
+* Introduced `runParser'` and `runParserT'` functions that take and return
+  parser state. This makes it possible to partially parse input, resume
+  parsing, specify non-standard initial textual position, etc.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

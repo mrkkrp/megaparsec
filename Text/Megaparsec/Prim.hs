@@ -33,7 +33,9 @@ module Text.Megaparsec.Prim
   , setParserState
     -- * Running parser
   , runParser
+  , runParser'
   , runParserT
+  , runParserT'
   , parse
   , parseMaybe
   , parseTest
@@ -78,6 +80,81 @@ data State s = State
   , statePos      :: !SourcePos
   , stateTabWidth :: !Int }
   deriving (Show, Eq)
+
+-- | All information available after parsing. This includes consumption of
+-- input, success (with return value) or failure (with parse error), parser
+-- state at the end of parsing.
+--
+-- See also: 'Consumption', 'Result'.
+
+data Reply s a = Reply !(State s) Consumption (Result a)
+
+-- | This data structure represents an aspect of result of parser's
+-- work. The two constructors have the following meaning:
+--
+--     * @Consumed@ means that some part of input stream was consumed.
+--     * @Virgin@ means that no input was consumed.
+--
+-- See also: 'Result', 'Reply'.
+
+data Consumption = Consumed | Virgin
+
+-- | This data structure represents an aspect of result of parser's
+-- work. The two constructors have the following meaning:
+--
+--     * @OK@ means that parser succeeded.
+--     * @Error@ means that parser failed.
+--
+-- See also: 'Consumption', 'Reply'.
+
+data Result a = OK a | Error ParseError
+
+-- | 'Hints' represent collection of strings to be included into 'ParserError'
+-- as “expected” messages when a parser fails without consuming input right
+-- after successful parser that produced the hints.
+--
+-- For example, without hints you could get:
+--
+-- >>> parseTest (many (char 'r') <* eof) "ra"
+-- 1:2:
+-- unexpected 'a'
+-- expecting end of input
+--
+-- We're getting better error messages with help of hints:
+--
+-- >>> parseTest (many (char 'r') <* eof) "ra"
+-- 1:2:
+-- unexpected 'a'
+-- expecting 'r' or end of input
+
+newtype Hints = Hints [[String]] deriving Monoid
+
+-- | Convert 'ParseError' record into 'Hints'.
+
+toHints :: ParseError -> Hints
+toHints err = Hints hints
+  where hints = if null msgs then [] else [messageString <$> msgs]
+        msgs  = filter ((== 1) . fromEnum) $ errorMessages err
+
+-- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
+
+withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
+withHints (Hints xs) c = c . addErrorMessages (Expected <$> concat xs)
+
+-- | @accHints hs c@ results in “OK” continuation that will add given hints
+-- @hs@ to third argument of original continuation @c@.
+
+accHints :: Hints -> (a -> State s -> Hints -> m b) ->
+            a -> State s -> Hints -> m b
+accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
+
+-- | Replace most recent group of hints (if any) with given string. Used in
+-- 'label' combinator.
+
+refreshLastHint :: Hints -> String -> Hints
+refreshLastHint (Hints [])     _  = Hints []
+refreshLastHint (Hints (_:xs)) "" = Hints xs
+refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 
 -- | An instance of @Stream s t@ has stream type @s@, and token type @t@
 -- determined by the stream.
@@ -130,74 +207,6 @@ instance StorableStream T.Text Char where
 
 instance StorableStream TL.Text Char where
   fromFile = TL.readFile
-
--- | This data structure represents an aspect of result of parser's
--- work. The two constructors have the following meaning:
---
---     * @Consumed@ is a wrapper for result when some part of input stream
---       was consumed.
---     * @Empty@ is a wrapper for result when no input was consumed.
---
--- See also: 'Reply'.
-
-data Consumed a = Consumed a | Empty !a
-
--- | This data structure represents an aspect of result of parser's
--- work. The two constructors have the following meaning:
---
---     * @Ok@ for successfully run parser.
---     * @Error@ for failed parser.
---
--- See also: 'Consumed'.
-
-data Reply s a = Ok a !(State s) | Error ParseError
-
--- | 'Hints' represent collection of strings to be included into 'ParserError'
--- as “expected” messages when a parser fails without consuming input right
--- after successful parser that produced the hints.
---
--- For example, without hints you could get:
---
--- >>> parseTest (many (char 'r') <* eof) "ra"
--- 1:2:
--- unexpected 'a'
--- expecting end of input
---
--- We're getting better error messages with help of hints:
---
--- >>> parseTest (many (char 'r') <* eof) "ra"
--- 1:2:
--- unexpected 'a'
--- expecting 'r' or end of input
-
-newtype Hints = Hints [[String]] deriving Monoid
-
--- | Convert 'ParseError' record into 'Hints'.
-
-toHints :: ParseError -> Hints
-toHints err = Hints hints
-  where hints = if null msgs then [] else [messageString <$> msgs]
-        msgs  = filter ((== 1) . fromEnum) $ errorMessages err
-
--- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
-
-withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
-withHints (Hints xs) c = c . addErrorMessages (Expected <$> concat xs)
-
--- | @accHints hs c@ results in “OK” continuation that will add given hints
--- @hs@ to third argument of original continuation @c@.
-
-accHints :: Hints -> (a -> State s -> Hints -> m b) ->
-            a -> State s -> Hints -> m b
-accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
-
--- | Replace most recent group of hints (if any) with given string. Used in
--- 'label' combinator.
-
-refreshLastHint :: Hints -> String -> Hints
-refreshLastHint (Hints [])     _  = Hints []
-refreshLastHint (Hints (_:xs)) "" = Hints xs
-refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 
 -- If you're reading this, you may be interested in how Megaparsec works on
 -- lower level. That's quite simple. 'ParsecT' is a wrapper around function
@@ -306,20 +315,18 @@ pFail msg = ParsecT $ \s _ _ _ eerr ->
 
 -- | Low-level creation of the ParsecT type.
 
-mkPT :: Monad m => (State s -> m (Consumed (m (Reply s a)))) -> ParsecT s m a
+mkPT :: Monad m => (State s -> m (Reply s a)) -> ParsecT s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
-  cons <- k s
-  case cons of
-    Consumed mrep -> do
-      rep <- mrep
-      case rep of
-        Ok x s'   -> cok x s' mempty
-        Error err -> cerr err
-    Empty mrep -> do
-      rep <- mrep
-      case rep of
-        Ok x s'   -> eok x s' mempty
-        Error err -> eerr err
+  (Reply s' consumption result) <- k s
+  case consumption of
+    Consumed -> do
+      case result of
+        OK    x -> cok x s' mempty
+        Error e -> cerr e
+    Virgin -> do
+      case result of
+        OK    x -> eok x s' mempty
+        Error e -> eerr e
 
 instance MonadIO m => MonadIO (ParsecT s m) where
   liftIO = lift . liftIO
@@ -336,7 +343,7 @@ instance MonadCont m => MonadCont (ParsecT s m) where
   callCC f = mkPT $ \s ->
     callCC $ \c ->
       runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
-    where pack s a = Empty $ return (Ok a s)
+    where pack s a = Reply s Virgin (OK a)
 
 instance MonadError e m => MonadError e (ParsecT s m) where
   throwError = lift . throwError
@@ -653,7 +660,7 @@ setParserState st = updateParserState (const st)
 
 parse :: Stream s t
       => Parsec s a -- ^ Parser to run
-      -> String     -- ^ Name of source file, included in error messages
+      -> String     -- ^ Name of source file
       -> s          -- ^ Input for parser
       -> Either ParseError a
 parse = runParser
@@ -683,46 +690,72 @@ parseTest p input =
     Left  e -> print e
     Right x -> print x
 
--- | The most general way to run a parser over the 'Identity' monad.
--- @runParser p file input@ runs parser @p@ on the input list of tokens
+-- | @runParser p file input@ runs parser @p@ on the input list of tokens
 -- @input@, obtained from source @file@. The @file@ is only used in error
 -- messages and may be the empty string. Returns either a 'ParseError'
 -- ('Left') or a value of type @a@ ('Right').
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
 
-runParser :: Stream s t => Parsec s a -> String -> s -> Either ParseError a
-runParser p name s = runIdentity $ runParserT p name s
+runParser :: Stream s t
+          => Parsec s a -- ^ Parser to run
+          -> String     -- ^ Name of source file
+          -> s          -- ^ Input for parser
+          -> Either ParseError a
+runParser p name s = snd $ runParser' p (initialState name s)
 
--- | The most general way to run a parser. @runParserT p file input@ runs
--- parser @p@ on the input list of tokens @input@, obtained from source
--- @file@. The @file@ is only used in error messages and may be the empty
--- string. Returns a computation in the underlying monad @m@ that return
--- either a 'ParseError' ('Left') or a value of type @a@ ('Right').
+-- | The function is similar to 'runParser' with the difference that it
+-- accepts and returns parser state. This allows to specify arbitrary
+-- textual position at the beginning of parsing, for example. This is the
+-- most general way to run a parser over the 'Identity' monad.
+
+runParser' :: Stream s t
+           => Parsec s a -- ^ Parser to run
+           -> State s    -- ^ Initial state
+           -> (State s, Either ParseError a)
+runParser' p = runIdentity . runParserT' p
+
+-- | @runParserT p file input@ runs parser @p@ on the input list of tokens
+-- @input@, obtained from source @file@. The @file@ is only used in error
+-- messages and may be the empty string. Returns a computation in the
+-- underlying monad @m@ that returns either a 'ParseError' ('Left') or a
+-- value of type @a@ ('Right').
 
 runParserT :: (Monad m, Stream s t)
            => ParsecT s m a -> String -> s -> m (Either ParseError a)
-runParserT p name s = do
-  res <- runParsecT p $ State s (initialPos name) defaultTabWidth
-  r <- parserReply res
-  case r of
-    Ok x _    -> return $ Right x
-    Error err -> return $ Left err
-  where parserReply res =
-          case res of
-            Consumed r -> r
-            Empty    r -> r
+runParserT p name s = snd <$> runParserT' p (initialState name s)
+
+-- | This function is similar to 'runParserT', but like 'runParser'' it
+-- accepts and returns parser state. This is thus the most general way to
+-- run a parser.
+
+runParserT' :: (Monad m, Stream s t)
+            => ParsecT s m a -- ^ Parser to run
+            -> State s       -- ^ Initial state
+            -> m (State s, Either ParseError a)
+runParserT' p s = do
+  (Reply s' _ result) <- runParsecT p s
+  case result of
+    OK    x -> return $ (s', Right x)
+    Error e -> return $ (s', Left  e)
+
+-- | Given name of source file and input construct initial state for parser.
+
+initialState :: Stream s t => String -> s -> State s
+initialState name s = State s (initialPos name) defaultTabWidth
 
 -- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'
 -- are built upon this.
 
 runParsecT :: Monad m
-           => ParsecT s m a -> State s -> m (Consumed (m (Reply s a)))
+           => ParsecT s m a -- ^ Parser to run
+           -> State s       -- ^ Initial state
+           -> m (Reply s a)
 runParsecT p s = unParser p s cok cerr eok eerr
-  where cok a s' _ = return . Consumed . return $ Ok a s'
-        cerr err   = return . Consumed . return $ Error err
-        eok a s' _ = return . Empty    . return $ Ok a s'
-        eerr err   = return . Empty    . return $ Error err
+  where cok a s' _ = return $ Reply s' Consumed (OK a)
+        cerr err   = return $ Reply s  Consumed (Error err)
+        eok a s' _ = return $ Reply s' Virgin   (OK a)
+        eerr err   = return $ Reply s  Virgin   (Error err)
 
 -- | @parseFromFile p filename@ runs parser @p@ on the input read from
 -- @filename@. Returns either a 'ParseError' ('Left') or a value of type @a@

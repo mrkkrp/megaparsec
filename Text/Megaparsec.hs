@@ -43,7 +43,9 @@ module Text.Megaparsec
     Parsec
   , ParsecT
   , runParser
+  , runParser'
   , runParserT
+  , runParserT'
   , parse
   , parseMaybe
   , parseTest

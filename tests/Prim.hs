@@ -39,6 +39,7 @@ import Data.Maybe (maybeToList, fromMaybe)
 
 import Control.Monad.Cont
 import Control.Monad.Except
+import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 import qualified Control.Monad.State.Lazy    as L
@@ -51,7 +52,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (label)
 
 import Text.Megaparsec.Char
-import Text.Megaparsec.Error (Message (..))
+import Text.Megaparsec.Error (Message (..), ParseError, newErrorMessages)
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
@@ -103,6 +104,8 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "parser state input" prop_state_input
         , testProperty "parser state tab width" prop_state_tab
         , testProperty "parser state general" prop_state
+        , testProperty "custom state parsing" prop_runParser'
+        , testProperty "custom state parsing (transformer)" prop_runParserT'
         , testProperty "IdentityT try" prop_IdentityT_try
         , testProperty "IdentityT notFollowedBy" prop_IdentityT_notFollowedBy
         , testProperty "ReaderT try" prop_ReaderT_try
@@ -113,7 +116,7 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "WriterT" prop_WriterT ]
 
 instance Arbitrary (State String) where
-  arbitrary = State <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = State <$> arbitrary <*> arbitrary <*> choose (1, 20)
 
 -- Functor instance
 
@@ -445,6 +448,28 @@ prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
           setParserState s1
           updateParserState (f s2)
           getParserState
+
+-- Running a parser
+
+prop_runParser' :: State String -> String -> Property
+prop_runParser' st s = runParser' p st === r
+  where p = string s
+        r = emulateStrParsing st s
+
+prop_runParserT' :: State String -> String -> Property
+prop_runParserT' st s = runIdentity (runParserT' p st) === r
+  where p = string s
+        r = emulateStrParsing st s
+
+emulateStrParsing :: State String
+                  -> String
+                  -> (State String, Either ParseError String)
+emulateStrParsing st@(State i pos t) s =
+  if l == length s
+  then (State (drop l i) (updatePosString t pos s) t, Right s)
+  else let uneStuff = if null i then uneEof else uneStr (take (l + 1) i)
+       in (st, Left $ newErrorMessages (exStr s : [uneStuff]) pos)
+  where l = length $ takeWhile id $ zipWith (==) s i
 
 -- IdentityT instance of MonadParsec
 
