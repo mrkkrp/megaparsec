@@ -28,7 +28,7 @@
 -- possibility of such damage.
 
 name:                megaparsec
-version:             4.1.1
+version:             4.2.0
 cabal-version:       >= 1.10
 license:             BSD3
 license-file:        LICENSE.md
@@ -97,7 +97,7 @@ test-suite old-tests
                    , Bugs.Bug39
                    , Util
   build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.1.1
+                   , megaparsec             >= 4.2
                    , HUnit                  >= 1.2 && < 1.4
                    , test-framework         >= 0.6 && < 1
                    , test-framework-hunit   >= 0.2 && < 0.4
@@ -121,7 +121,7 @@ test-suite tests
                    , Prim
                    , Util
   build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.1.1
+                   , megaparsec             >= 4.2
                    , mtl                    == 2.*
                    , transformers           == 0.4.*
                    , QuickCheck             >= 2.4 && < 3
@@ -139,7 +139,7 @@ benchmark benchmarks
   type:              exitcode-stdio-1.0
   ghc-options:       -O2 -Wall
   build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.1.1
+                   , megaparsec             >= 4.2
                    , criterion              >= 0.6.2.1 && < 1.2
                    , text                   >= 1.2 && < 2
                    , bytestring             >= 0.10 && < 2
