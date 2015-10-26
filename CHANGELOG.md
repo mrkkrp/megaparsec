@@ -29,6 +29,13 @@
   `failure`. One consequence of this design decision is that `failure` is
   now method of `MonadParsec`, while `unexpected` is not.
 
+* Removed deprecated combinators from `Text.Megaparsec.Combinator`:
+
+    * `chainl`
+    * `chainl1`
+    * `chainr`
+    * `chainr1`
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

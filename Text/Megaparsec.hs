@@ -85,11 +85,6 @@ module Text.Megaparsec
   , sepEndBy1
   , skipMany
   , skipSome
-    -- Deprecated combinators
-  , chainl
-  , chainl1
-  , chainr
-  , chainr1
     -- * Character parsing
   , newline
   , crlf

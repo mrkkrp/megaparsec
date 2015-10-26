@@ -27,12 +27,7 @@ module Text.Megaparsec.Combinator
   , sepEndBy
   , sepEndBy1
   , skipMany
-  , skipSome
-    -- Deprecated combinators
-  , chainl
-  , chainl1
-  , chainr
-  , chainr1 )
+  , skipSome )
 where
 
 import Control.Applicative
@@ -179,60 +174,3 @@ skipMany p = void $ many p
 skipSome :: Alternative m => m a -> m ()
 skipSome p = void $ some p
 {-# INLINE skipSome #-}
-
--- Deprecated combinators
-
--- | @chainl p op x@ parses /zero/ or more occurrences of @p@,
--- separated by @op@. Returns a value obtained by a /left/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. If there are zero occurrences of @p@, the value @x@ is returned.
-
-{-# DEPRECATED chainl "Use \"Text.Megaparsec.Expr\" instead." #-}
-
-chainl :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
-chainl p op x = chainl1 p op <|> pure x
-{-# INLINE chainl #-}
-
--- | @chainl1 p op@ parses /one/ or more occurrences of @p@,
--- separated by @op@ Returns a value obtained by a /left/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. This parser can for example be used to eliminate left recursion
--- which typically occurs in expression grammars.
---
--- Consider using "Text.Megaparsec.Expr" instead.
-
-{-# DEPRECATED chainl1 "Use \"Text.Megaparsec.Expr\" instead." #-}
-
-chainl1 :: Alternative m => m a -> m (a -> a -> a) -> m a
-chainl1 p op = scan
-  where scan = flip id <$> p <*> rst
-        rst  = (\f y g x -> g (f x y)) <$> op <*> p <*> rst <|> pure id
-{-# INLINE chainl1 #-}
-
--- | @chainr p op x@ parses /zero/ or more occurrences of @p@,
--- separated by @op@ Returns a value obtained by a /right/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@. If there are no occurrences of @p@, the value @x@ is returned.
---
--- Consider using "Text.Megaparsec.Expr" instead.
-
-{-# DEPRECATED chainr "Use \"Text.Megaparsec.Expr\" instead." #-}
-
-chainr :: Alternative m => m a -> m (a -> a -> a) -> a -> m a
-chainr p op x = chainr1 p op <|> pure x
-{-# INLINE chainr #-}
-
--- | @chainr1 p op@ parses /one/ or more occurrences of @p@,
--- separated by @op@. Returns a value obtained by a /right/ associative
--- application of all functions returned by @op@ to the values returned by
--- @p@.
---
--- Consider using "Text.Megaparsec.Expr" instead.
-
-{-# DEPRECATED chainr1 "Use \"Text.Megaparsec.Expr\" instead." #-}
-
-chainr1 :: Alternative m => m a -> m (a -> a -> a) -> m a
-chainr1 p op = scan where
-  scan = flip id <$> p <*> rst
-  rst  = (flip <$> op <*> scan) <|> pure id
-{-# INLINE chainr1 #-}
