@@ -23,6 +23,7 @@ module Text.Megaparsec.Prim
     -- * Primitive combinators
   , MonadParsec (..)
   , (<?>)
+  , unexpected
     -- * Parser state combinators
   , getInput
   , setInput
@@ -378,13 +379,13 @@ instance MonadTrans (ParsecT s) where
 class (A.Alternative m, Monad m, Stream s t)
       => MonadParsec s m t | m -> s t where
 
-  -- | The parser @unexpected msg@ always fails with an unexpected error
-  -- message @msg@ without consuming any input.
+  -- | The most general way to stop parsing and report 'ParseError'.
   --
-  -- The parsers 'fail', ('<?>') and 'unexpected' are the three parsers used
-  -- to generate error messages. Of these, only ('<?>') is commonly used.
+  -- 'unexpected' is defined in terms of the function:
+  --
+  -- > unexpected = failure . pure . Unexpected
 
-  unexpected :: String -> m a
+  failure :: [Message] -> m a
 
   -- | The parser @label name p@ behaves as parser @p@, but whenever the
   -- parser @p@ fails /without consuming any input/, it replaces names of
@@ -493,7 +494,7 @@ class (A.Alternative m, Monad m, Stream s t)
   updateParserState :: (State s -> State s) -> m ()
 
 instance Stream s t => MonadParsec s (ParsecT s m) t where
-  unexpected        = pUnexpected
+  failure           = pFailure
   label             = pLabel
   try               = pTry
   lookAhead         = pLookAhead
@@ -504,9 +505,9 @@ instance Stream s t => MonadParsec s (ParsecT s m) t where
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
-pUnexpected :: String -> ParsecT s m a
-pUnexpected msg = ParsecT $ \(State _ pos _) _ _ _ eerr ->
-  eerr $ newErrorMessage (Unexpected msg) pos
+pFailure :: [Message] -> ParsecT s m a
+pFailure msgs = ParsecT $ \(State _ pos _) _ _ _ eerr ->
+  eerr $ newErrorMessages msgs pos
 
 pLabel :: String -> ParsecT s m a -> ParsecT s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
@@ -594,6 +595,15 @@ infix 0 <?>
 
 (<?>) :: MonadParsec s m t => m a -> String -> m a
 (<?>) = flip label
+
+-- | The parser @unexpected msg@ always fails with an unexpected error
+-- message @msg@ without consuming any input.
+--
+-- The parsers 'fail', 'label' and 'unexpected' are the three parsers used
+-- to generate error messages. Of these, only 'label' is commonly used.
+
+unexpected :: MonadParsec s m t => String -> m a
+unexpected = failure . pure . Unexpected
 
 unexpectedErr :: String -> SourcePos -> ParseError
 unexpectedErr msg = newErrorMessage (Unexpected msg)
@@ -783,7 +793,7 @@ instance (MonadPlus m, MonadParsec s m t) =>
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (L.StateT m) = L.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
-  unexpected                 = lift . unexpected
+  failure                    = lift . failure
   eof                        = lift eof
   token  f e                 = lift $ token  f e
   tokens f e ts              = lift $ tokens f e ts
@@ -798,7 +808,7 @@ instance (MonadPlus m, MonadParsec s m t)
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (S.StateT m) = S.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
-  unexpected                 = lift . unexpected
+  failure                    = lift . failure
   eof                        = lift eof
   token  f e                 = lift $ token  f e
   tokens f e ts              = lift $ tokens f e ts
@@ -811,7 +821,7 @@ instance (MonadPlus m, MonadParsec s m t)
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
-  unexpected                  = lift . unexpected
+  failure                     = lift . failure
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -826,7 +836,7 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
     (,mempty) . fst <$> lookAhead m
   notFollowedBy (L.WriterT m) = L.WriterT $
     (,mempty) <$> notFollowedBy (fst <$> m)
-  unexpected                  = lift . unexpected
+  failure                     = lift . failure
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -841,7 +851,7 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
     (,mempty) . fst <$> lookAhead m
   notFollowedBy (S.WriterT m) = S.WriterT $
     (,mempty) <$> notFollowedBy (fst <$> m)
-  unexpected                  = lift . unexpected
+  failure                     = lift . failure
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -854,7 +864,7 @@ instance (Monad m, MonadParsec s m t)
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m
   notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
-  unexpected                  = lift . unexpected
+  failure                     = lift . failure
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts

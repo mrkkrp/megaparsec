@@ -60,6 +60,7 @@ module Text.Megaparsec
   , A.optional
   -- $optional
   , unexpected
+  , failure
   , (<?>)
   , label
   , hidden

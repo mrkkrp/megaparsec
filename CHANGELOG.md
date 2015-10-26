@@ -24,6 +24,11 @@
   parser state. This makes it possible to partially parse input, resume
   parsing, specify non-standard initial textual position, etc.
 
+* Introduced `failure` function that allows to fail with arbitrary
+  collection of messages. `unexpected` is now defined in terms of
+  `failure`. One consequence of this design decision is that `failure` is
+  now method of `MonadParsec`, while `unexpected` is not.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

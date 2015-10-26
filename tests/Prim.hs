@@ -58,6 +58,7 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.String
 
 import Pos ()
+import Error ()
 import Util
 
 tests :: Test
@@ -88,6 +89,7 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "ParsecT monad error: throw" prop_monad_error_throw
         , testProperty "ParsecT monad error: catch" prop_monad_error_catch
         , testProperty "combinator unexpected" prop_unexpected
+        , testProperty "combinator failure" prop_failure
         , testProperty "combinator label" prop_label
         , testProperty "combinator hidden hints" prop_hidden_0
         , testProperty "combinator hidden error" prop_hidden_1
@@ -278,22 +280,29 @@ prop_monad_error_catch a b =
 -- Primitive combinators
 
 prop_unexpected :: String -> Property
-prop_unexpected m = conjoin [ checkParser p r s
+prop_unexpected m = checkParser p r s
+  where p = unexpected m :: Parser ()
+        r | null m    = posErr 0 s []
+          | otherwise = posErr 0 s [uneSpec m]
+        s = ""
+
+prop_failure :: [Message] -> Property
+prop_failure msgs = conjoin [ checkParser p r s
                             , checkParser (runIdentityT p_IdentityT) r s
                             , checkParser (runReaderT p_ReaderT ()) r s
                             , checkParser (L.evalStateT p_lStateT ()) r s
                             , checkParser (S.evalStateT p_sStateT ()) r s
                             , checkParser (L.runWriterT p_lWriterT) r s
                             , checkParser (S.runWriterT p_sWriterT) r s ]
-  where p           = unexpected m :: Parser ()
-        p_IdentityT = unexpected m :: IdentityT Parser ()
-        p_ReaderT   = unexpected m :: ReaderT () Parser ()
-        p_lStateT   = unexpected m :: L.StateT () Parser ()
-        p_sStateT   = unexpected m :: S.StateT () Parser ()
-        p_lWriterT  = unexpected m :: L.WriterT [Integer] Parser ()
-        p_sWriterT  = unexpected m :: S.WriterT [Integer] Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
+  where p = failure msgs :: Parser ()
+        p_IdentityT = failure msgs :: IdentityT Parser ()
+        p_ReaderT   = failure msgs :: ReaderT () Parser ()
+        p_lStateT   = failure msgs :: L.StateT () Parser ()
+        p_sStateT   = failure msgs :: S.StateT () Parser ()
+        p_lWriterT  = failure msgs :: L.WriterT [Integer] Parser ()
+        p_sWriterT  = failure msgs :: S.WriterT [Integer] Parser ()
+        r | null msgs = posErr 0 s []
+          | otherwise = Left $ newErrorMessages msgs (initialPos "")
         s = ""
 
 prop_label :: NonNegative Int -> NonNegative Int
