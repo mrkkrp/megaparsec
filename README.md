@@ -57,7 +57,7 @@ let's enumerate methods of `MonadParsec` type class. The class represents
 core, basic functions of Megaparsec parsing. The rest of library is built
 via combination of these primitives:
 
-* `unexpected` allows to fail specifying what exactly is unexpected.
+* `failure` allows to fail with arbitrary collection of messages.
 
 * `label` allows to add a “label” to any parser, so when it fails the user will
   see the label in the error message where “expected” items are enumerated.
