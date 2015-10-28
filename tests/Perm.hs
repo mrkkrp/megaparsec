@@ -44,7 +44,7 @@ import Util
 tests :: Test
 tests = testGroup "Permutation phrases parsers"
         [ testProperty "permutation parser pure" prop_pure
-        , testProperty "permutation test 0" prop_perm_0 ]
+        , testProperty "permutation test 0"      prop_perm_0 ]
 
 data CharRows = CharRows
   { getChars :: (Char, Char, Char)

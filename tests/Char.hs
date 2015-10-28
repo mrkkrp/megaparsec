@@ -245,9 +245,7 @@ prop_string'_0 a = checkString (string' a) a casei (showToken a)
 -- | Randomly change the case in the given string.
 
 fuzzyCase :: String -> Gen String
-fuzzyCase s = do
-    b <- vector (length s)
-    return $ zipWith f s b
+fuzzyCase s = zipWith f s <$> vector (length s)
   where f k True  = if isLower k then toUpper k else toLower k
         f k False = k
 

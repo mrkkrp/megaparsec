@@ -46,18 +46,18 @@ import Control.Applicative ((<$>), (<*>), pure)
 
 tests :: Test
 tests = testGroup "Textual source positions"
-        [ testProperty "components" prop_components
-        , testProperty "positive coordinates" prop_positive
+        [ testProperty "components"                         prop_components
+        , testProperty "positive coordinates"               prop_positive
         , testProperty "show file name in source positions" prop_showFileName
-        , testProperty "show line in source positions" prop_showLine
-        , testProperty "show column in source positions" prop_showColumn
-        , testProperty "initial position" prop_initialPos
-        , testProperty "increment source line" prop_incSourceLine
-        , testProperty "increment source column" prop_incSourceColumn
-        , testProperty "set source name" prop_setSourceName
-        , testProperty "set source line" prop_setSourceLine
-        , testProperty "set source column" prop_setSourceColumn
-        , testProperty "position updating" prop_updating ]
+        , testProperty "show line in source positions"      prop_showLine
+        , testProperty "show column in source positions"    prop_showColumn
+        , testProperty "initial position"                   prop_initialPos
+        , testProperty "increment source line"              prop_incSourceLine
+        , testProperty "increment source column"            prop_incSourceColumn
+        , testProperty "set source name"                    prop_setSourceName
+        , testProperty "set source line"                    prop_setSourceLine
+        , testProperty "set source column"                  prop_setSourceColumn
+        , testProperty "position updating"                  prop_updating ]
 
 instance Arbitrary SourcePos where
   arbitrary = newPos <$> fileName <*> choose (-10, 1000) <*> choose (-10, 100)

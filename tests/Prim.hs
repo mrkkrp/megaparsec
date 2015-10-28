@@ -63,59 +63,59 @@ import Util
 
 tests :: Test
 tests = testGroup "Primitive parser combinators"
-        [ testProperty "ParsecT functor" prop_functor
-        , testProperty "ParsecT applicative (<*>)" prop_applicative_0
-        , testProperty "ParsecT applicative (*>)" prop_applicative_1
-        , testProperty "ParsecT applicative (<*)" prop_applicative_2
+        [ testProperty "ParsecT functor"                     prop_functor
+        , testProperty "ParsecT applicative (<*>)"           prop_applicative_0
+        , testProperty "ParsecT applicative (*>)"            prop_applicative_1
+        , testProperty "ParsecT applicative (<*)"            prop_applicative_2
         , testProperty "ParsecT alternative empty and (<|>)" prop_alternative_0
-        , testProperty "ParsecT alternative (<|>)" prop_alternative_1
-        , testProperty "ParsecT alternative (<|>) pos" prop_alternative_2
-        , testProperty "ParsecT alternative (<|>) hints" prop_alternative_3
-        , testProperty "ParsecT alternative many" prop_alternative_4
-        , testProperty "ParsecT alternative some" prop_alternative_5
-        , testProperty "ParsecT alternative optional" prop_alternative_6
-        , testProperty "ParsecT monad return" prop_monad_0
-        , testProperty "ParsecT monad (>>)" prop_monad_1
-        , testProperty "ParsecT monad (>>=)" prop_monad_2
-        , testProperty "ParsecT monad fail" prop_monad_3
-        , testProperty "ParsecT monad laws: left identity" prop_monad_left_id
-        , testProperty "ParsecT monad laws: right identity" prop_monad_right_id
-        , testProperty "ParsecT monad laws: associativity" prop_monad_assoc
-        , testProperty "ParsecT monad reader ask" prop_monad_reader_ask
+        , testProperty "ParsecT alternative (<|>)"           prop_alternative_1
+        , testProperty "ParsecT alternative (<|>) pos"       prop_alternative_2
+        , testProperty "ParsecT alternative (<|>) hints"     prop_alternative_3
+        , testProperty "ParsecT alternative many"            prop_alternative_4
+        , testProperty "ParsecT alternative some"            prop_alternative_5
+        , testProperty "ParsecT alternative optional"        prop_alternative_6
+        , testProperty "ParsecT monad return"                prop_monad_0
+        , testProperty "ParsecT monad (>>)"                  prop_monad_1
+        , testProperty "ParsecT monad (>>=)"                 prop_monad_2
+        , testProperty "ParsecT monad fail"                  prop_monad_3
+        , testProperty "ParsecT monad laws: left identity"   prop_monad_left_id
+        , testProperty "ParsecT monad laws: right identity"  prop_monad_right_id
+        , testProperty "ParsecT monad laws: associativity"   prop_monad_assoc
+        , testProperty "ParsecT monad reader ask"   prop_monad_reader_ask
         , testProperty "ParsecT monad reader local" prop_monad_reader_local
-        , testProperty "ParsecT monad state get" prop_monad_state_get
-        , testProperty "ParsecT monad state put" prop_monad_state_put
-        , testProperty "ParsecT monad cont" prop_monad_cont
+        , testProperty "ParsecT monad state get"    prop_monad_state_get
+        , testProperty "ParsecT monad state put"    prop_monad_state_put
+        , testProperty "ParsecT monad cont"         prop_monad_cont
         , testProperty "ParsecT monad error: throw" prop_monad_error_throw
         , testProperty "ParsecT monad error: catch" prop_monad_error_catch
-        , testProperty "combinator unexpected" prop_unexpected
-        , testProperty "combinator failure" prop_failure
-        , testProperty "combinator label" prop_label
-        , testProperty "combinator hidden hints" prop_hidden_0
-        , testProperty "combinator hidden error" prop_hidden_1
-        , testProperty "combinator try" prop_try
-        , testProperty "combinator lookAhead" prop_lookAhead_0
-        , testProperty "combinator lookAhead hints" prop_lookAhead_1
-        , testProperty "combinator lookAhead messages" prop_lookAhead_2
-        , testProperty "combinator notFollowedBy" prop_notFollowedBy_0
+        , testProperty "combinator unexpected"      prop_unexpected
+        , testProperty "combinator failure"                  prop_failure
+        , testProperty "combinator label"                    prop_label
+        , testProperty "combinator hidden hints"             prop_hidden_0
+        , testProperty "combinator hidden error"             prop_hidden_1
+        , testProperty "combinator try"                      prop_try
+        , testProperty "combinator lookAhead"                prop_lookAhead_0
+        , testProperty "combinator lookAhead hints"          prop_lookAhead_1
+        , testProperty "combinator lookAhead messages"       prop_lookAhead_2
+        , testProperty "combinator notFollowedBy"       prop_notFollowedBy_0
         , testProperty "combinator notFollowedBy twice" prop_notFollowedBy_1
-        , testProperty "combinator notFollowedBy eof" prop_notFollowedBy_2
-        , testProperty "combinator token" prop_token
-        , testProperty "combinator tokens" prop_tokens
-        , testProperty "parser state position" prop_state_pos
-        , testProperty "parser state input" prop_state_input
-        , testProperty "parser state tab width" prop_state_tab
-        , testProperty "parser state general" prop_state
-        , testProperty "custom state parsing" prop_runParser'
-        , testProperty "custom state parsing (transformer)" prop_runParserT'
-        , testProperty "IdentityT try" prop_IdentityT_try
-        , testProperty "IdentityT notFollowedBy" prop_IdentityT_notFollowedBy
-        , testProperty "ReaderT try" prop_ReaderT_try
-        , testProperty "ReaderT notFollowedBy" prop_ReaderT_notFollowedBy
+        , testProperty "combinator notFollowedBy eof"   prop_notFollowedBy_2
+        , testProperty "combinator token"                    prop_token
+        , testProperty "combinator tokens"                   prop_tokens
+        , testProperty "parser state position"               prop_state_pos
+        , testProperty "parser state input"                  prop_state_input
+        , testProperty "parser state tab width"              prop_state_tab
+        , testProperty "parser state general"                prop_state
+        , testProperty "custom state parsing"                prop_runParser'
+        , testProperty "custom state parsing (transformer)"  prop_runParserT'
+        , testProperty "IdentityT try"            prop_IdentityT_try
+        , testProperty "IdentityT notFollowedBy"  prop_IdentityT_notFollowedBy
+        , testProperty "ReaderT try"              prop_ReaderT_try
+        , testProperty "ReaderT notFollowedBy"    prop_ReaderT_notFollowedBy
         , testProperty "StateT alternative (<|>)" prop_StateT_alternative
-        , testProperty "StateT lookAhead" prop_StateT_lookAhead
-        , testProperty "StateT notFollowedBy" prop_StateT_notFollowedBy
-        , testProperty "WriterT" prop_WriterT ]
+        , testProperty "StateT lookAhead"         prop_StateT_lookAhead
+        , testProperty "StateT notFollowedBy"     prop_StateT_notFollowedBy
+        , testProperty "WriterT"                  prop_WriterT ]
 
 instance Arbitrary (State String) where
   arbitrary = State <$> arbitrary <*> arbitrary <*> choose (1, 20)
@@ -527,16 +527,18 @@ prop_ReaderT_notFollowedBy a' b' c' = checkParser (runReaderT p 'a') r s
 -- StateT instance of MonadParsec
 
 prop_StateT_alternative :: Integer -> Property
-prop_StateT_alternative n = checkParser (L.evalStateT p 0) (Right n) "" .&&.
-                            checkParser (S.evalStateT p' 0) (Right n) ""
+prop_StateT_alternative n =
+  checkParser (L.evalStateT p 0) (Right n) "" .&&.
+  checkParser (S.evalStateT p' 0) (Right n) ""
   where p  = L.put n >> ((L.modify (* 2) >>
                           void (string "xxx")) <|> return ()) >> L.get
         p' = S.put n >> ((S.modify (* 2) >>
                           void (string "xxx")) <|> return ()) >> S.get
 
 prop_StateT_lookAhead :: Integer -> Property
-prop_StateT_lookAhead n = checkParser (L.evalStateT p 0) (Right n) "" .&&.
-                          checkParser (S.evalStateT p' 0) (Right n) ""
+prop_StateT_lookAhead n =
+  checkParser (L.evalStateT p 0) (Right n) "" .&&.
+  checkParser (S.evalStateT p' 0) (Right n) ""
   where p  = L.put n >> lookAhead (L.modify (* 2) >> eof) >> L.get
         p' = S.put n >> lookAhead (S.modify (* 2) >> eof) >> S.get
 
@@ -556,8 +558,9 @@ prop_StateT_notFollowedBy n = checkParser (L.runStateT p 0) r "abx" .&&.
 -- WriterT instance of MonadParsec
 
 prop_WriterT :: String -> String -> Property
-prop_WriterT pre post = checkParser (L.runWriterT p) r "abx" .&&.
-                        checkParser (S.runWriterT p') r "abx"
+prop_WriterT pre post =
+  checkParser (L.runWriterT p) r "abx" .&&.
+  checkParser (S.runWriterT p') r "abx"
   where logged_letter  = letterChar >>= \x -> L.tell [x] >> return x
         logged_letter' = letterChar >>= \x -> L.tell [x] >> return x
         logged_eof     = eof >> L.tell "EOF"

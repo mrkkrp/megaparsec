@@ -49,20 +49,20 @@ import Data.Monoid (mempty)
 
 tests :: Test
 tests = testGroup "Parse errors"
-        [ testProperty "monoid left identity" prop_monoid_left_id
-        , testProperty "monoid right identity" prop_monoid_right_id
-        , testProperty "monoid associativity" prop_monoid_assoc
-        , testProperty "extraction of message string" prop_messageString
-        , testProperty "creation of new error messages" prop_newErrorMessage
+        [ testProperty "monoid left identity"            prop_monoid_left_id
+        , testProperty "monoid right identity"           prop_monoid_right_id
+        , testProperty "monoid associativity"            prop_monoid_assoc
+        , testProperty "extraction of message string"    prop_messageString
+        , testProperty "creation of new error messages"  prop_newErrorMessage
         , testProperty "messages are always well-formed" prop_wellFormedMessages
-        , testProperty "copying of error positions" prop_parseErrorCopy
-        , testProperty "setting of error position" prop_setErrorPos
-        , testProperty "addition of error message" prop_addErrorMessage
-        , testProperty "setting of error message" prop_setErrorMessage
-        , testProperty "position of merged error" prop_mergeErrorPos
-        , testProperty "messages of merged error" prop_mergeErrorMsgs
-        , testProperty "position of error is visible" prop_visiblePos
-        , testProperty "message components are visible" prop_visibleMsgs ]
+        , testProperty "copying of error positions"      prop_parseErrorCopy
+        , testProperty "setting of error position"       prop_setErrorPos
+        , testProperty "addition of error message"       prop_addErrorMessage
+        , testProperty "setting of error message"        prop_setErrorMessage
+        , testProperty "position of merged error"        prop_mergeErrorPos
+        , testProperty "messages of merged error"        prop_mergeErrorMsgs
+        , testProperty "position of error is visible"    prop_visiblePos
+        , testProperty "message components are visible"  prop_visibleMsgs ]
 
 instance Arbitrary Message where
   arbitrary = ($) <$> elements constructors <*> arbitrary
@@ -143,7 +143,7 @@ prop_visibleMsgs err = if null msgs
   where shown = show err
         msgs  = errorMessages err
         f (Unexpected s) = ["unexpected", s]
-        f (Expected   s) = ["expecting", s]
+        f (Expected   s) = ["expecting",  s]
         f (Message    s) = [s]
 
 -- | @wellFormed xs@ checks that list @xs@ is sorted and contains no

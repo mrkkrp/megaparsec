@@ -61,19 +61,21 @@ import Control.Applicative ((<$>), (<*), (<*>))
 
 tests :: Test
 tests = testGroup "Lexer"
-        [ testProperty "space combinator"            prop_space
-        , testProperty "symbol combinator"           prop_symbol
-        , testProperty "symbol' combinator"          prop_symbol'
-        , testProperty "indentGuard combinator"      prop_indentGuard
-        , testProperty "charLiteral"                 prop_charLiteral
-        , testProperty "integer"                     prop_integer
-        , testProperty "decimal"                     prop_decimal
-        , testProperty "hexadecimal"                 prop_hexadecimal
-        , testProperty "octal"                       prop_octal
-        , testProperty "float 0"                     prop_float_0
-        , testProperty "float 1"                     prop_float_1
-        , testProperty "number"                      prop_number
-        , testProperty "signed"                      prop_signed ]
+        [ testProperty "space combinator"       prop_space
+        , testProperty "symbol combinator"      prop_symbol
+        , testProperty "symbol' combinator"     prop_symbol'
+        , testProperty "indentGuard combinator" prop_indentGuard
+        , testProperty "charLiteral"            prop_charLiteral
+        , testProperty "integer"                prop_integer
+        , testProperty "decimal"                prop_decimal
+        , testProperty "hexadecimal"            prop_hexadecimal
+        , testProperty "octal"                  prop_octal
+        , testProperty "float 0"                prop_float_0
+        , testProperty "float 1"                prop_float_1
+        , testProperty "number 0"               prop_number_0
+        , testProperty "number 1"               prop_number_1
+        , testProperty "number 2 (signed)"      prop_number_2
+        , testProperty "signed"                 prop_signed ]
 
 newtype WhiteSpace = WhiteSpace
   { getWhiteSpace :: String }
@@ -203,17 +205,22 @@ prop_float_1 n' = checkParser float r s
                                   , exCh 'e', exSpec "digit" ]
         s = maybe "" (show . getNonNegative) n'
 
-prop_number :: Either (NonNegative Integer) (NonNegative Double)
-            -> Integer -> Property
-prop_number n' i = checkParser number r s
-  where r | null s    = posErr 0 s [uneEof, exSpec "number"]
-          | otherwise =
-            Right $ case n' of
+prop_number_0 :: Either (NonNegative Integer) (NonNegative Double) -> Property
+prop_number_0 n' = checkParser number r s
+  where r = Right $ case n' of
                       Left  x -> Left  $ getNonNegative x
                       Right x -> Right $ getNonNegative x
-        s = if i < 5
-            then ""
-            else either (show . getNonNegative) (show . getNonNegative) n'
+        s = either (show . getNonNegative) (show . getNonNegative) n'
+
+prop_number_1 :: Property
+prop_number_1 = checkParser number r s
+  where r = posErr 0 s [uneEof, exSpec "number"]
+        s = ""
+
+prop_number_2 :: Either Integer Double -> Property
+prop_number_2 n = checkParser p (Right n) s
+  where p = signed (hidden C.space) number
+        s = either show show n
 
 prop_signed :: Integer -> Int -> Bool -> Property
 prop_signed n i plus = checkParser p r s
