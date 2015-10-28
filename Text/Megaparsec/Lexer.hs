@@ -30,6 +30,7 @@ module Text.Megaparsec.Lexer
     -- * Character and string literals
   , charLiteral
     -- * Numbers
+  , Signed (..)
   , integer
   , decimal
   , hexadecimal
@@ -43,6 +44,8 @@ import Control.Applicative ((<|>), some)
 import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe)
+import Prelude hiding (negate)
+import qualified Prelude
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Pos
@@ -184,6 +187,26 @@ charLiteral = label "literal character" $ do
 
 -- Numbers
 
+-- | This type class abstracts the concept of signed number in context of
+-- this module. This is especially useful when you want to compose 'signed'
+-- and 'number'.
+
+class Signed a where
+
+  -- | Unary negation.
+
+  negate :: a -> a
+
+instance Signed Integer where
+  negate = Prelude.negate
+
+instance Signed Double where
+  negate = Prelude.negate
+
+instance (Signed l, Signed r) => Signed (Either l r) where
+  negate (Left  x) = Left  $ negate x
+  negate (Right x) = Right $ negate x
+
 -- | Parse an integer without sign in decimal representation (according to
 -- format of integer literals described in Haskell report).
 --
@@ -275,11 +298,11 @@ number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
 -- > integer       = lexeme L.integer
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec s m Char, Num a) => m () -> m a -> m a
+signed :: (MonadParsec s m Char, Signed a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
 
 -- | Parse a sign and return either 'id' or 'negate' according to parsed
 -- sign.
 
-sign :: (MonadParsec s m Char, Num a) => m (a -> a)
+sign :: (MonadParsec s m Char, Signed a) => m (a -> a)
 sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)

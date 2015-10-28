@@ -36,6 +36,9 @@
     * `chainr`
     * `chainr1`
 
+* `number` parser in `Text.Megaparsec.Lexer` now can be used with `signed`
+  combinator to parse either signed `Integer` or signed `Double`.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed
