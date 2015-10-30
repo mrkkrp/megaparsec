@@ -2,7 +2,7 @@
 -- Module      :  Text.Megaparsec.Text.Lazy
 -- Copyright   :  © 2015 Megaparsec contributors
 --                © 2011 Antoine Latter
--- License     :  BSD3
+-- License     :  BSD 3 clause
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental

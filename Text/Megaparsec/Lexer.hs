@@ -3,7 +3,7 @@
 -- Copyright   :  © 2015 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
--- License     :  BSD3
+-- License     :  BSD 3 clause
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental

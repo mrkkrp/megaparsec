@@ -1,7 +1,7 @@
 -- |
 -- Module      :  Text.Megaparsec.ShowToken
 -- Copyright   :  © 2015 Megaparsec contributors
--- License     :  BSD3
+-- License     :  BSD 3 clause
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental

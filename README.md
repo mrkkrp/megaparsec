@@ -278,4 +278,4 @@ Copyright © 2015 Megaparsec contributors<br>
 Copyright © 2007 Paolo Martini<br>
 Copyright © 1999–2000 Daan Leijen
 
-Distributed under BSD3 license.
+Distributed under BSD 3 clause license.
