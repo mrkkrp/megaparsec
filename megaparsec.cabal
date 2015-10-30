@@ -34,7 +34,7 @@
 name:                megaparsec
 version:             4.2.0
 cabal-version:       >= 1.10
-license:             BSD 3 clause
+license:             BSD3
 license-file:        LICENSE.md
 author:              Megaparsec contributors,
                      Paolo Martini <paolo@nemail.it>,
