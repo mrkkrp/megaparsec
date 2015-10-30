@@ -47,7 +47,6 @@ import Control.Applicative ((<$>), (<*>), pure)
 tests :: Test
 tests = testGroup "Textual source positions"
         [ testProperty "components"                         prop_components
-        , testProperty "positive coordinates"               prop_positive
         , testProperty "show file name in source positions" prop_showFileName
         , testProperty "show line in source positions"      prop_showLine
         , testProperty "show column in source positions"    prop_showColumn
@@ -60,7 +59,7 @@ tests = testGroup "Textual source positions"
         , testProperty "position updating"                  prop_updating ]
 
 instance Arbitrary SourcePos where
-  arbitrary = newPos <$> fileName <*> choose (-10, 1000) <*> choose (-10, 100)
+  arbitrary = newPos <$> fileName <*> choose (1, 1000) <*> choose (1, 100)
 
 fileName :: Gen String
 fileName = do
@@ -74,9 +73,6 @@ fileName = do
 prop_components :: SourcePos -> Bool
 prop_components pos = pos == copy
   where copy = newPos (sourceName pos) (sourceLine pos) (sourceColumn pos)
-
-prop_positive :: SourcePos -> Bool
-prop_positive pos = sourceLine pos > 0 && sourceColumn pos > 0
 
 prop_showFileName :: SourcePos -> Bool
 prop_showFileName pos = sourceName pos `isInfixOf` show pos
@@ -94,20 +90,20 @@ prop_initialPos n =
   sourceColumn ipos == 1
   where ipos = initialPos n
 
-prop_incSourceLine :: SourcePos -> Int -> Bool
-prop_incSourceLine pos l =
-  d sourceName   id pos incp &&
-  d sourceLine   f  pos incp &&
-  d sourceColumn id pos incp
-  where f    = max 1 . (+ l)
+prop_incSourceLine :: SourcePos -> NonNegative Int -> Bool
+prop_incSourceLine pos l' =
+  d sourceName   id    pos incp &&
+  d sourceLine   (+ l) pos incp &&
+  d sourceColumn id    pos incp
+  where l    = getNonNegative l'
         incp = incSourceLine pos l
 
-prop_incSourceColumn :: SourcePos -> Int -> Bool
-prop_incSourceColumn pos c =
-  d sourceName   id pos incp &&
-  d sourceLine   id pos incp &&
-  d sourceColumn f  pos incp
-  where f    = max 1 . (+ c)
+prop_incSourceColumn :: SourcePos -> NonNegative Int -> Bool
+prop_incSourceColumn pos c' =
+  d sourceName   id    pos incp &&
+  d sourceLine   id    pos incp &&
+  d sourceColumn (+ c) pos incp
+  where c    = getNonNegative c'
         incp = incSourceColumn pos c
 
 prop_setSourceName :: SourcePos -> String -> Bool
@@ -117,20 +113,20 @@ prop_setSourceName pos n =
   d sourceColumn id        pos setp
   where setp = setSourceName pos n
 
-prop_setSourceLine :: SourcePos -> Int -> Bool
-prop_setSourceLine pos l =
-  d sourceName   id         pos setp &&
-  d sourceLine   (const l') pos setp &&
-  d sourceColumn id         pos setp
-  where l'   = max 1 l
+prop_setSourceLine :: SourcePos -> Positive Int -> Bool
+prop_setSourceLine pos l' =
+  d sourceName   id        pos setp &&
+  d sourceLine   (const l) pos setp &&
+  d sourceColumn id        pos setp
+  where l    = getPositive l'
         setp = setSourceLine pos l
 
-prop_setSourceColumn :: SourcePos -> Int -> Bool
-prop_setSourceColumn pos c =
-  d sourceName   id         pos setp &&
-  d sourceLine   id         pos setp &&
-  d sourceColumn (const c') pos setp
-  where c'   = max 1 c
+prop_setSourceColumn :: SourcePos -> Positive Int -> Bool
+prop_setSourceColumn pos c' =
+  d sourceName   id        pos setp &&
+  d sourceLine   id        pos setp &&
+  d sourceColumn (const c) pos setp
+  where c    = getPositive c'
         setp = setSourceColumn pos c
 
 prop_updating :: Int -> SourcePos -> String -> Bool

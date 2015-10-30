@@ -16,19 +16,22 @@ module Text.Megaparsec.Pos
   , sourceName
   , sourceLine
   , sourceColumn
+  , InvalidTextualPosition (..)
+  , newPos
+  , initialPos
   , incSourceLine
   , incSourceColumn
   , setSourceName
   , setSourceLine
   , setSourceColumn
-  , newPos
-  , initialPos
   , updatePosChar
   , updatePosString
   , defaultTabWidth )
 where
 
+import Control.Exception (Exception, throw)
 import Data.List (foldl')
+import Data.Typeable (Typeable)
 
 -- | The abstract data type @SourcePos@ represents source positions. It
 -- contains the name of the source (i.e. file name), a line number and a
@@ -50,14 +53,36 @@ instance Show SourcePos where
     | otherwise = n ++ ":" ++ showLC
       where showLC = show l ++ ":" ++ show c
 
+-- | This exception is thrown when some action on 'SourcePos' is performed
+-- that would make column number or line number inside this data structure
+-- non-positive.
+--
+-- The 'InvalidTextualPosition' structure includes in order:
+--
+--     * name of file
+--     * line number (possibly non-positive value)
+--     * column number (possibly non-positive value)
+
+data InvalidTextualPosition =
+  InvalidTextualPosition String Int Int
+  deriving (Eq, Show, Typeable)
+
+instance Exception InvalidTextualPosition
+
 -- | Create a new 'SourcePos' with the given source name, line number and
 -- column number.
 --
--- In call @newPos name line column@, if @line@ is not a positive
--- number, 1 will be used. The same holds for @column@ value.
+-- If line number of column number is not positive, 'InvalidTextualPosition'
+-- will be thrown.
 
-newPos :: String -> Int -> Int -> SourcePos
-newPos n l c = SourcePos n (max 1 l) (max 1 c)
+newPos :: String -- ^ File name
+       -> Int    -- ^ Line number, minimum is 1
+       -> Int    -- ^ Column number, minimum is 1
+       -> SourcePos
+newPos n l c =
+  if l < 1 || c < 1
+  then throw $ InvalidTextualPosition n l c
+  else SourcePos n l c
 
 -- | Create a new 'SourcePos' with the given source name, and line number
 -- and column number set to 1, the upper left.
@@ -66,33 +91,33 @@ initialPos :: String -> SourcePos
 initialPos name = newPos name 1 1
 
 -- | Increment the line number of a source position. If resulting line
--- number is not positive, line number will be equal to 1.
+-- number is not positive, 'InvalidTextualPosition' will be thrown.
 
 incSourceLine :: SourcePos -> Int -> SourcePos
-incSourceLine (SourcePos n l c) d = SourcePos n (max 1 $ l + d) c
+incSourceLine (SourcePos n l c) d = newPos n (l + d) c
 
--- | Increments the column number of a source position. If resulting column
--- number is not positive, column number will be equal to 1.
+-- | Increment the column number of a source position. If resulting column
+-- number is not positive, 'InvalidTextualPosition' will be thrown.
 
 incSourceColumn :: SourcePos -> Int -> SourcePos
-incSourceColumn (SourcePos n l c) d = SourcePos n l (max 1 $ c + d)
+incSourceColumn (SourcePos n l c) d = newPos n l (c + d)
 
 -- | Set the name of the source.
 
 setSourceName :: SourcePos -> String -> SourcePos
-setSourceName (SourcePos _ l c) n = SourcePos n l c
+setSourceName (SourcePos _ l c) n = newPos n l c
 
 -- | Set the line number of a source position. If the line number is not
--- positive, 1 will be used.
+-- positive, 'InvalidTextualPosition' will be thrown.
 
 setSourceLine :: SourcePos -> Int -> SourcePos
-setSourceLine (SourcePos n _ c) l = SourcePos n (max 1 l) c
+setSourceLine (SourcePos n _ c) l = newPos n l c
 
 -- | Set the column number of a source position. If the line number is not
--- positive, 1 will be used.
+-- positive, 'InvalidTextualPosition' will be thrown.
 
 setSourceColumn :: SourcePos -> Int -> SourcePos
-setSourceColumn (SourcePos n l _) c = SourcePos n l (max 1 c)
+setSourceColumn (SourcePos n l _) c = newPos n l c
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line
