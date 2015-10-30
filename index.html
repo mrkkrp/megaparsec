@@ -85,7 +85,7 @@
 <p>The module <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html"><code>Text.Megaparsec.Combinator</code></a> (its functions are included in <code>Text.Megaparsec</code>) contains traditional, general combinators that work with any instance of <code>Alternative</code> and some even with instances of <code>Applicative</code>.</p>
 <p>Role of <code>Monad</code>, <code>Applicative</code>, and <code>Alternative</code> should be obvious, so let’s enumerate methods of <code>MonadParsec</code> type class. The class represents core, basic functions of Megaparsec parsing. The rest of library is built via combination of these primitives:</p>
 <ul>
-<li><p><code>unexpected</code> allows to fail specifying what exactly is unexpected.</p></li>
+<li><p><code>failure</code> allows to fail with arbitrary collection of messages.</p></li>
 <li><p><code>label</code> allows to add a “label” to any parser, so when it fails the user will see the label in the error message where “expected” items are enumerated.</p></li>
 <li><p><code>hidden</code> hides any parser from error messages altogether, this is officially recommended way to hide things, prefer it to the <code>label &quot;&quot;</code> approach.</p></li>
 <li><p><code>try</code> enables backtracking in parsing.</p></li>
@@ -163,7 +163,7 @@
 <p>If you want to write a tutorial to be hosted on Megaparsec’s site, open an issue or pull request <a href="https://github.com/mrkkrp/megaparsec-site">here</a>.</p>
 <h2 id="license">License</h2>
 <p>Copyright © 2015 Megaparsec contributors<br> Copyright © 2007 Paolo Martini<br> Copyright © 1999–2000 Daan Leijen</p>
-<p>Distributed under BSD3 license.</p>
+<p>Distributed under BSD 3 clause license.</p>
             </div>
           </div>
         </div>
