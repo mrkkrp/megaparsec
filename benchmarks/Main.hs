@@ -1,6 +1,6 @@
 -- -*- Mode: Haskell; -*-
 --
--- Criterion benchmarks for Megaparsec, main module.
+-- Criterion benchmarks for Megaparsec.
 --
 -- Copyright © 2015 Megaparsec contributors
 --
@@ -78,11 +78,12 @@ import Data.ByteString.Lazy.Char8 (pack)
 #endif
 
 -- benchSteps and benchSize control the benchmark test points
+
 benchSteps :: Int
 #if BENCHMARK_STEPS
-benchSteps    = BENCHMARK_STEPS
+benchSteps = BENCHMARK_STEPS
 #else
-benchSteps    = 5
+benchSteps = 5
 #endif
 benchSize :: Int
 #if BENCHMARK_SIZE
@@ -92,7 +93,6 @@ benchSize = 1000
 #endif
 
 -- End of configuration parameters
-
 
 main :: IO ()
 main = defaultMain benchmarks
