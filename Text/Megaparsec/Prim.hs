@@ -289,7 +289,7 @@ manyAcc p = ParsecT $ \s cok cerr eok _ ->
 manyErr :: a
 manyErr = error
   "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
-  \that accepts an empty string."
+   that accepts an empty string."
 
 instance Monad (ParsecT s m) where
   return = pReturn
