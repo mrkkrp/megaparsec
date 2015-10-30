@@ -1,6 +1,6 @@
 # Megaparsec
 
-[![License BSD3](https://img.shields.io/badge/license-BSD3-brightgreen.svg)](http://opensource.org/licenses/BSD-3-Clause)
+[![License FreeBSD](https://img.shields.io/badge/license-FreeBSD-brightgreen.svg)](http://opensource.org/licenses/BSD-2-Clause)
 [![Hackage](https://img.shields.io/hackage/v/megaparsec.svg?style=flat)](https://hackage.haskell.org/package/megaparsec)
 [![Build Status](https://travis-ci.org/mrkkrp/megaparsec.svg?branch=master)](https://travis-ci.org/mrkkrp/megaparsec)
 [![Coverage Status](https://coveralls.io/repos/mrkkrp/megaparsec/badge.svg?branch=master&service=github)](https://coveralls.io/github/mrkkrp/megaparsec?branch=master)
@@ -278,4 +278,4 @@ Copyright © 2015 Megaparsec contributors<br>
 Copyright © 2007 Paolo Martini<br>
 Copyright © 1999–2000 Daan Leijen
 
-Distributed under BSD 3 clause license.
+Distributed under FreeBSD license.
