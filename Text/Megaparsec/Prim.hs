@@ -287,9 +287,9 @@ manyAcc p = ParsecT $ \s cok cerr eok _ ->
   in unParser p s (walk []) cerr manyErr (errToHints $ eok [] s)
 
 manyErr :: a
-manyErr = error
-  "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser \
-  \that accepts an empty string."
+manyErr = error $ concat
+  [ "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser"
+  , " that accepts an empty string." ]
 
 instance Monad (ParsecT s m) where
   return = pReturn
