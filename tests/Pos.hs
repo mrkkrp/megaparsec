@@ -31,6 +31,7 @@
 
 module Pos (tests) where
 
+import Control.Exception (try, evaluate)
 import Data.Char (isAlphaNum)
 import Data.List (intercalate, isInfixOf, elemIndices)
 
@@ -47,6 +48,7 @@ import Control.Applicative ((<$>), (<*>), pure)
 tests :: Test
 tests = testGroup "Textual source positions"
         [ testProperty "components"                         prop_components
+        , testProperty "exception on invalid position"      prop_exception
         , testProperty "show file name in source positions" prop_showFileName
         , testProperty "show line in source positions"      prop_showLine
         , testProperty "show column in source positions"    prop_showColumn
@@ -73,6 +75,13 @@ fileName = do
 prop_components :: SourcePos -> Bool
 prop_components pos = pos == copy
   where copy = newPos (sourceName pos) (sourceLine pos) (sourceColumn pos)
+
+prop_exception :: String -> Int -> Int -> Property
+prop_exception file l c = ioProperty $ do
+  result <- try . evaluate $ newPos file l c
+  return $ r === result
+  where r | l < 1 || c < 1 = Left  $ InvalidTextualPosition file l c
+          | otherwise      = Right $ newPos file l c
 
 prop_showFileName :: SourcePos -> Bool
 prop_showFileName pos = sourceName pos `isInfixOf` show pos
