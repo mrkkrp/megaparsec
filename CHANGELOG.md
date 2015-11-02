@@ -39,6 +39,10 @@
 * `number` parser in `Text.Megaparsec.Lexer` now can be used with `signed`
   combinator to parse either signed `Integer` or signed `Double`.
 
+* `makeExprParser` now generates parsers that can handle several occurrences
+  of the same prefix or postfix operator in a row. This allows to parse
+  something like C pointers (for example `**i`) without resorting to hacks.
+
 ## Megaparsec 4.1.1
 
 * Fixed bug in implementation of `sepEndBy` and `sepEndBy1` and removed

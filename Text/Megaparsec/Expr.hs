@@ -17,7 +17,7 @@ module Text.Megaparsec.Expr
   , makeExprParser )
 where
 
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), many)
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Prim
@@ -41,10 +41,11 @@ data Operator m a
 -- descending precedence. All operators in one list have the same precedence
 -- (but may have a different associativity).
 --
--- Prefix and postfix operators of the same precedence can only occur once
--- (i.e. @--2@ is not allowed if @-@ is prefix negate). Prefix and postfix
--- operators of the same precedence associate to the left (i.e. if @++@ is
--- postfix increment, than @-2++@ equals @-1@, not @-3@).
+-- Prefix and postfix operators of the same precedence can only occur once,
+-- but the same operator can be repeated several times in a row (i.e. @--2@
+-- is allowed if @-@ is prefix negate). Prefix and postfix operators of the
+-- same precedence associate to the left (i.e. if @++@ is postfix increment,
+-- than @-2++@ equals @-1@, not @-3@).
 --
 -- @makeExprParser@ takes care of all the complexity involved in building an
 -- expression parser. Here is an example of an expression parser that
@@ -90,10 +91,10 @@ addPrecLevel term ops =
 
 pTerm :: MonadParsec s m t => m (a -> a) -> m a -> m (a -> a) -> m a
 pTerm prefix term postfix = do
-  pre  <- option id (hidden prefix)
+  pre  <- foldr (.) id <$> hidden (many prefix)
   x    <- term
-  post <- option id (hidden postfix)
-  return $ post (pre x)
+  post <- foldr (.) id <$> hidden (many postfix)
+  return . post . pre $ x
 
 -- | @pInfixN op p x@ parses non-associative infix operator @op@, then term
 -- with parser @p@, then returns result of the operator application on @x@

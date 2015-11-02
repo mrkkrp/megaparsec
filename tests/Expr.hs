@@ -111,14 +111,11 @@ arbitraryN0 n = frequency [ (1, Mod <$> leaf <*> leaf)
   where leaf = arbitraryN1 (n `div` 2)
 
 arbitraryN1 :: Int -> Gen Node
-arbitraryN1 n =
-  frequency [ (1, Neg <$> arbitraryN2 n)
-            , (1, Fac <$> arbitraryN2 n)
-            , (7, arbitraryN2 n)]
-
-arbitraryN2 :: Int -> Gen Node
-arbitraryN2 0 = Val . getNonNegative <$> arbitrary
-arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
+arbitraryN1 0 = Val . getNonNegative <$> arbitrary
+arbitraryN1 n = frequency
+                [ (1, Neg <$> arbitraryN1 n)
+                , (1, Neg <$> arbitraryN1 n)
+                , (7, elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf) ]
   where leaf = arbitraryN0 (n `div` 2)
 
 -- Some helpers are put here since we don't want to depend on
