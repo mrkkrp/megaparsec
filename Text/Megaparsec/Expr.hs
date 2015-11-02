@@ -22,6 +22,10 @@ import Control.Applicative ((<|>), many)
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Prim
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 -- | This data type specifies operators that work on values of type @a@.
 -- An operator is either binary infix or unary prefix or postfix. A binary
 -- operator has also an associated associativity.
