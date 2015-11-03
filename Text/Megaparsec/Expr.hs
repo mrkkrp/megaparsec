@@ -17,14 +17,10 @@ module Text.Megaparsec.Expr
   , makeExprParser )
 where
 
-import Control.Applicative ((<|>), many)
+import Control.Applicative ((<|>))
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Prim
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
 
 -- | This data type specifies operators that work on values of type @a@.
 -- An operator is either binary infix or unary prefix or postfix. A binary
@@ -41,15 +37,22 @@ data Operator m a
 -- @term@ with operators from @table@, taking the associativity and
 -- precedence specified in @table@ into account.
 --
--- @table@ is a list of @[Operator s u m a]@ lists. The list is ordered in
+-- @table@ is a list of @[Operator m a]@ lists. The list is ordered in
 -- descending precedence. All operators in one list have the same precedence
--- (but may have a different associativity).
+-- (but may have different associativity).
 --
--- Prefix and postfix operators of the same precedence can only occur once,
--- but the same operator can be repeated several times in a row (i.e. @--2@
--- is allowed if @-@ is prefix negate). Prefix and postfix operators of the
--- same precedence associate to the left (i.e. if @++@ is postfix increment,
--- than @-2++@ equals @-1@, not @-3@).
+-- Prefix and postfix operators of the same precedence associate to the left
+-- (i.e. if @++@ is postfix increment, than @-2++@ equals @-1@, not @-3@).
+--
+-- Unary operators of the same precedence can only occur once (i.e. @--2@ is
+-- not allowed if @-@ is prefix negate). If you need to parse several prefix
+-- or postfix operators in a row, (like C pointers — @**i@) you can use this
+-- approach:
+--
+-- > manyUnaryOp = foldr1 (.) <$> some singleUnaryOp
+--
+-- This is not done by default because in some cases you don't want to allow
+-- repeating prefix or postfix operators.
 --
 -- @makeExprParser@ takes care of all the complexity involved in building an
 -- expression parser. Here is an example of an expression parser that
@@ -95,9 +98,9 @@ addPrecLevel term ops =
 
 pTerm :: MonadParsec s m t => m (a -> a) -> m a -> m (a -> a) -> m a
 pTerm prefix term postfix = do
-  pre  <- foldr (.) id <$> hidden (many prefix)
+  pre  <- option id (hidden prefix)
   x    <- term
-  post <- foldr (.) id <$> hidden (many postfix)
+  post <- option id (hidden postfix)
   return . post . pre $ x
 
 -- | @pInfixN op p x@ parses non-associative infix operator @op@, then term
