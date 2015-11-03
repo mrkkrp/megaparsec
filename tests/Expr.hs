@@ -30,6 +30,7 @@
 module Expr (tests) where
 
 import Control.Applicative (some, (<|>))
+import Data.Char (isDigit, digitToInt)
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -48,7 +49,10 @@ import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
 
 tests :: Test
 tests = testGroup "Expression parsers"
-        [ testProperty "correctness of expression parser" prop_correctness ]
+        [ testProperty "correctness of expression parser" prop_correctness
+        , testProperty "error message on empty input"     prop_empty_error
+        , testProperty "error message on missing term"    prop_missing_term
+        , testProperty "error message on missing op"      prop_missing_op ]
 
 -- Algebraic structures to build abstract syntax tree of our expression.
 
@@ -159,3 +163,24 @@ table = [ [ Prefix  (symbol "-" *> pure Neg)
 
 prop_correctness :: Node -> Property
 prop_correctness node = checkParser expr (Right node) (showNode node)
+
+prop_empty_error :: Property
+prop_empty_error = checkParser expr r s
+  where r = posErr 0 s [uneEof, exSpec "term"]
+        s = ""
+
+prop_missing_term :: Char -> Property
+prop_missing_term c = checkParser expr r s
+  where r | c `elem` "-(" = posErr 1 s [uneEof, exSpec "term"]
+          | isDigit c     = Right . Val . fromIntegral . digitToInt $ c
+          | otherwise     = posErr 0 s [uneCh c, exSpec "term"]
+        s = pure c
+
+prop_missing_op :: Node -> Node -> Property
+prop_missing_op a b = checkParser expr r s
+  where a' = inParens a
+        c = s !! n
+        n = succ $ length a'
+        r | c == '-'  = Right $ Sub a b
+          | otherwise = posErr n s $ [uneCh c, exEof, exSpec "operator"]
+        s = a' ++ " " ++ inParens b
