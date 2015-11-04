@@ -47,7 +47,9 @@ description:
     This is industrial-strength monadic parser combinator library. Megaparsec is
     a fork of Parsec library originally written by Daan Leijen.
 
-extra-source-files:  AUTHORS.md, CHANGELOG.md
+extra-source-files:  AUTHORS.md
+                   , CHANGELOG.md
+                   , README.md
 
 library
   build-depends:     base                   >= 4.6 && < 5
