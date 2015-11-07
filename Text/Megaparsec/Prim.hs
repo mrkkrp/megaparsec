@@ -287,9 +287,9 @@ manyAcc p = ParsecT $ \s cok cerr eok _ ->
   in unParser p s (walk []) cerr manyErr (errToHints $ eok [] s)
 
 manyErr :: a
-manyErr = error $ concat
-  [ "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser"
-  , " that accepts an empty string." ]
+manyErr = error $
+  "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser"
+  ++ " that accepts an empty string."
 
 instance Monad (ParsecT s m) where
   return = pReturn
@@ -320,11 +320,11 @@ mkPT :: Monad m => (State s -> m (Reply s a)) -> ParsecT s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
   case consumption of
-    Consumed -> do
+    Consumed ->
       case result of
         OK    x -> cok x s' mempty
         Error e -> cerr e
-    Virgin -> do
+    Virgin ->
       case result of
         OK    x -> eok x s' mempty
         Error e -> eerr e
@@ -746,8 +746,8 @@ runParserT' :: (Monad m, Stream s t)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
   case result of
-    OK    x -> return $ (s', Right x)
-    Error e -> return $ (s', Left  e)
+    OK    x -> return (s', Right x)
+    Error e -> return (s', Left  e)
 
 -- | Given name of source file and input construct initial state for parser.
 

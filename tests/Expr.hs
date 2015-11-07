@@ -182,5 +182,5 @@ prop_missing_op a b = checkParser expr r s
         c = s !! n
         n = succ $ length a'
         r | c == '-'  = Right $ Sub a b
-          | otherwise = posErr n s $ [uneCh c, exEof, exSpec "operator"]
+          | otherwise = posErr n s [uneCh c, exEof, exSpec "operator"]
         s = a' ++ " " ++ inParens b

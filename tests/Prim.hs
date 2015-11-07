@@ -228,7 +228,7 @@ prop_monad_3 m = checkParser p r s
         s = ""
 
 prop_monad_left_id :: Integer -> Integer -> Property
-prop_monad_left_id a b = (return a >>= f) !=! (f a)
+prop_monad_left_id a b = (return a >>= f) !=! f a
   where f x = return $ x + b
 
 prop_monad_right_id :: Integer -> Property

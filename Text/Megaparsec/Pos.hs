@@ -117,7 +117,7 @@ setSourceLine (SourcePos n _ c) l = newPos n l c
 -- positive, 'InvalidTextualPosition' will be thrown.
 
 setSourceColumn :: SourcePos -> Int -> SourcePos
-setSourceColumn (SourcePos n l _) c = newPos n l c
+setSourceColumn (SourcePos n l _) = newPos n l
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line
