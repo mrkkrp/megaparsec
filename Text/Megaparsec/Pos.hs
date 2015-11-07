@@ -40,7 +40,7 @@ import Data.Typeable (Typeable)
 
 data SourcePos = SourcePos
   { -- | Extract the name of the source from a source position.
-    sourceName   :: String
+    sourceName   :: !String
     -- | Extract the line number from a source position.
   , sourceLine   :: !Int
     -- | Extract the column number from a source position.
