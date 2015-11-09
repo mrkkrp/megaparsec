@@ -107,7 +107,7 @@ endBy1 p sep = some (p <* sep)
 -- \"-->\"@ overlap and @string \"-->\"@ could consume input before failing.
 
 manyTill :: Alternative m => m a -> m end -> m [a]
-manyTill p end = (end *> pure []) <|> someTill p end
+manyTill p end = ([] <$ end) <|> someTill p end
 {-# INLINE manyTill #-}
 
 -- | @someTill p end@ works similarly to @manyTill p end@, but @p@ should
@@ -115,7 +115,6 @@ manyTill p end = (end *> pure []) <|> someTill p end
 
 someTill :: Alternative m => m a -> m end -> m [a]
 someTill p end = (:) <$> p <*> manyTill p end
-{-# INLINE someTill #-}
 
 -- | @option x p@ tries to apply parser @p@. If @p@ fails without
 -- consuming input, it returns the value @x@, otherwise the value returned
@@ -157,7 +156,6 @@ sepEndBy p sep = sepEndBy1 p sep <|> pure []
 
 sepEndBy1 :: Alternative m => m a -> m sep -> m [a]
 sepEndBy1 p sep = (:) <$> p <*> ((sep *> sepEndBy p sep) <|> pure [])
-{-# INLINE sepEndBy1 #-}
 
 -- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
 -- its result.
