@@ -27,11 +27,11 @@ import Text.Megaparsec.Prim
 -- operator has also an associated associativity.
 
 data Operator m a
-  = InfixN  (m (a -> a -> a)) -- ^ non-associative infix
-  | InfixL  (m (a -> a -> a)) -- ^ left-associative infix
-  | InfixR  (m (a -> a -> a)) -- ^ right-associative infix
-  | Prefix  (m (a -> a))      -- ^ prefix
-  | Postfix (m (a -> a))      -- ^ postfix
+  = InfixN  (m (a -> a -> a)) -- ^ Non-associative infix
+  | InfixL  (m (a -> a -> a)) -- ^ Left-associative infix
+  | InfixR  (m (a -> a -> a)) -- ^ Right-associative infix
+  | Prefix  (m (a -> a))      -- ^ Prefix
+  | Postfix (m (a -> a))      -- ^ Postfix
 
 -- | @makeExprParser term table@ builds an expression parser for terms
 -- @term@ with operators from @table@, taking the associativity and

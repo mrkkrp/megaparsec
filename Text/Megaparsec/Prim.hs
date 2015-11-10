@@ -91,24 +91,22 @@ data State s = State
 data Reply s a = Reply !(State s) Consumption (Result a)
 
 -- | This data structure represents an aspect of result of parser's
--- work. The two constructors have the following meaning:
---
---     * @Consumed@ means that some part of input stream was consumed.
---     * @Virgin@ means that no input was consumed.
+-- work.
 --
 -- See also: 'Result', 'Reply'.
 
-data Consumption = Consumed | Virgin
+data Consumption
+  = Consumed -- ^ Some part of input stream was consumed
+  | Virgin   -- ^ No input was consumed
 
 -- | This data structure represents an aspect of result of parser's
--- work. The two constructors have the following meaning:
---
---     * @OK@ means that parser succeeded.
---     * @Error@ means that parser failed.
+-- work.
 --
 -- See also: 'Consumption', 'Reply'.
 
-data Result a = OK a | Error ParseError
+data Result a
+  = OK a             -- ^ Parser succeeded
+  | Error ParseError -- ^ Parser failed
 
 -- | 'Hints' represent collection of strings to be included into 'ParserError'
 -- as “expected” messages when a parser fails without consuming input right

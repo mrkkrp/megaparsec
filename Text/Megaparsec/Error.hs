@@ -54,9 +54,9 @@ import Data.Monoid
 -- system to generate quite good error messages for the user.
 
 data Message
-  = Unexpected !String
-  | Expected   !String
-  | Message    !String
+  = Unexpected !String -- ^ Parser ran into an unexpected token
+  | Expected   !String -- ^ What is expected instead
+  | Message    !String -- ^ General-purpose error message component
   deriving (Show, Eq)
 
 instance Enum Message where
