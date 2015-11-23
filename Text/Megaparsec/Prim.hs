@@ -263,9 +263,9 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
 {-# INLINE pMap #-}
 
 instance A.Applicative (ParsecT s m) where
-  pure     = return
+  pure     = pPure
   (<*>)    = ap
-  (*>)     = (>>)
+  p1 *> p2 = p1 `pBind` \_ -> p2
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 instance A.Alternative (ParsecT s m) where
@@ -290,13 +290,13 @@ manyErr = error $
   ++ " that accepts an empty string."
 
 instance Monad (ParsecT s m) where
-  return = pReturn
+  return = pure
   (>>=)  = pBind
   fail   = pFail
 
-pReturn :: a -> ParsecT s m a
-pReturn x = ParsecT $ \s _ _ eok _ -> eok x s mempty
-{-# INLINE pReturn #-}
+pPure :: a -> ParsecT s m a
+pPure x = ParsecT $ \s _ _ eok _ -> eok x s mempty
+{-# INLINE pPure #-}
 
 pBind :: ParsecT s m a -> (a -> ParsecT s m b) -> ParsecT s m b
 pBind m k = ParsecT $ \s cok cerr eok eerr ->
