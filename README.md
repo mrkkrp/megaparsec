@@ -84,7 +84,7 @@ via combination of these primitives:
 
 * `updateParserState` applies given function on parser state.
 
-This list of core function is longer than in some other libraries. Our goal
+This list of core functions is longer than in some other libraries. Our goal
 was easy and readable implementation of functionality provided by every such
 primitive, not minimal number of them. You can read the comprehensive
 description of every primitive function in [Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
