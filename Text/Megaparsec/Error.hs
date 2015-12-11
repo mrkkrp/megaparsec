@@ -188,15 +188,19 @@ showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
         (expected, messages) = span ((== 1) . fromEnum) ms'
         f prefix m = (prefix ++) <$> m
         ns = ["\nunexpected ","\nexpecting ","\n"]
-        rs = renderMsgs <$> [unexpected, expected, messages]
+        rs = (renderMsgs orList <$> [unexpected, expected]) ++
+             [renderMsgs (intercalate "\n") messages]
 
 -- | Render collection of messages. If the collection is empty, return
--- 'Nothing', else return textual representation of the messages inside
+-- 'Nothing', otherwise return textual representation of the messages inside
 -- 'Just'.
 
-renderMsgs :: [Message] -> Maybe String
-renderMsgs [] = Nothing
-renderMsgs ms = Just . orList $ messageString <$> ms
+renderMsgs
+  :: ([String] -> String) -- ^ Function to combine results
+  -> [Message]         -- ^ Collection of messages to render
+  -> Maybe String      -- ^ Result, if any
+renderMsgs _ [] = Nothing
+renderMsgs f ms = Just . f $ messageString <$> ms
 
 -- | Print a pretty list where items are separated with commas and the word
 -- “or” according to rules of English punctuation.
