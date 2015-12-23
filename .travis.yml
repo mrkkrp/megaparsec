@@ -31,9 +31,9 @@ install:
 
 script:
  - case "$CABALVER" in
-    "1.16") cabal configure --enable-tests -v2 ;;
-    "1.18") cabal configure --enable-tests --enable-library-coverage -v2 ;;
-    *)      cabal configure --enable-tests --enable-coverage -v2 ;;
+    "1.16") cabal configure --enable-tests -v2 -f dev ;;
+    "1.18") cabal configure --enable-tests --enable-library-coverage -v2 -f dev ;;
+    *)      cabal configure --enable-tests --enable-coverage -v2 -f dev ;;
    esac
  - cabal build
  - cabal test --show-details=always
