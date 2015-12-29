@@ -19,14 +19,17 @@
 -- > import qualified Text.Megaparsec.Lexer as L
 
 module Text.Megaparsec.Lexer
-  ( -- * White space and indentation
+  ( -- * White space
     space
   , lexeme
   , symbol
   , symbol'
-  , indentGuard
   , skipLineComment
   , skipBlockComment
+    -- * Indentation
+  , indentGuard
+  , notIndented
+  , withBlock
     -- * Character and string literals
   , charLiteral
     -- * Numbers
@@ -40,7 +43,7 @@ module Text.Megaparsec.Lexer
   , signed )
 where
 
-import Control.Applicative ((<|>), some)
+import Control.Applicative ((<|>), many, some)
 import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe)
@@ -134,28 +137,6 @@ symbol' :: MonadParsec s m Char
   -> m String
 symbol' spc = lexeme spc . C.string'
 
--- | @indentGuard spaceConsumer test@ first consumes all white space
--- (indentation) with @spaceConsumer@ parser, then it checks column
--- position. It should satisfy supplied predicate @test@, otherwise the
--- parser fails with error message “incorrect indentation”. On success
--- current column position is returned.
---
--- When you want to parse block of indentation first run this parser with
--- predicate like @(> 1)@ — this will make sure you have some
--- indentation. Use returned value to check indentation on every subsequent
--- line according to syntax of your language.
-
-indentGuard :: MonadParsec s m Char
-  => m ()              -- ^ How to consume indentation (white space)
-  -> (Int -> Bool)     -- ^ Predicate checking indentation level
-  -> m Int             -- ^ Current column (indentation level)
-indentGuard spc p = do
-  spc
-  pos <- sourceColumn <$> getPosition
-  if p pos
-  then return pos
-  else fail "incorrect indentation"
-
 -- | Given comment prefix this function returns parser that skips line
 -- comments. Note that it stops just before newline character but doesn't
 -- consume the newline. Newline is either supposed to be consumed by 'space'
@@ -178,6 +159,61 @@ skipBlockComment :: MonadParsec s m Char
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
   where p = try (C.string start)
         n = try (C.string end)
+
+-- Indentation
+
+-- | @indentGuard spaceConsumer test@ first consumes all white space
+-- (indentation) with @spaceConsumer@ parser, then it checks column
+-- position. It should satisfy supplied predicate @test@, otherwise the
+-- parser fails with error message “incorrect indentation”. On success
+-- current column position is returned.
+--
+-- When you want to parse block of indentation first run this parser with
+-- predicate like @(> 1)@ — this will make sure you have some
+-- indentation. Use returned value to check indentation on every subsequent
+-- line according to syntax of your language.
+
+indentGuard :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> (Int -> Bool)     -- ^ Predicate checking indentation level
+  -> m Int             -- ^ Current column (indentation level)
+indentGuard spc p = do
+  spc
+  pos <- sourceColumn <$> getPosition
+  if p pos
+  then return pos
+  else fail "incorrect indentation"
+
+-- | Parse non-indented construction. This ensures that there is no
+-- indentation before actual data. Useful as a wrapper for top-level
+-- function definitions, for example.
+
+notIndented :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> m a               -- ^ How to parse actual data
+  -> m a
+notIndented sc p = indentGuard sc (== 1) *> p
+
+-- | Parse a “reference” token and a number of other tokens that have
+-- greater (but the same) level of indentation than that of “reference”
+-- token.
+--
+-- Note that the second argument (function that's used to combine results of
+-- parsing of “reference” token and indented tokens) lives in parser monad,
+-- this allows to perform additional checks and fail with custom error
+-- messages, for example.
+
+withBlock :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> (a -> [b] -> m c) -- ^ How to create output from parsed pieces
+  -> m a               -- ^ How to parse “reference” token
+  -> m b               -- ^ How to parse indented tokens
+  -> m c
+withBlock sc f r p = do
+  ref <- indentGuard sc (const True)
+  a <- r
+  b <- many (indentGuard sc (> ref) *> p)
+  f a b
 
 -- Character and string literals
 
