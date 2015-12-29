@@ -85,10 +85,10 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 -- of the file).
 
 space :: MonadParsec s m Char
-      => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
-      -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
-      -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
-      -> m ()
+  => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
+  -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
+  -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
+  -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
 
 -- | This is wrapper for lexemes. Typical usage is to supply first argument
@@ -98,7 +98,10 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
 
-lexeme :: MonadParsec s m Char => m () -> m a -> m a
+lexeme :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> m a               -- ^ How to parse actual lexeme
+  -> m a
 lexeme spc p = p <* spc
 
 -- | This is a helper to parse symbols, i.e. verbatim strings. You pass the
@@ -116,13 +119,19 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: MonadParsec s m Char => m () -> String -> m String
+symbol :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> String            -- ^ String to parse
+  -> m String
 symbol spc = lexeme spc . C.string
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: MonadParsec s m Char => m () -> String -> m String
+symbol' :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> String            -- ^ String to parse (case-insensitive)
+  -> m String
 symbol' spc = lexeme spc . C.string'
 
 -- | @indentGuard spaceConsumer test@ first consumes all white space
@@ -136,7 +145,10 @@ symbol' spc = lexeme spc . C.string'
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
-indentGuard :: MonadParsec s m Char => m () -> (Int -> Bool) -> m Int
+indentGuard :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> (Int -> Bool)     -- ^ Predicate checking indentation level
+  -> m Int             -- ^ Current column (indentation level)
 indentGuard spc p = do
   spc
   pos <- sourceColumn <$> getPosition
@@ -149,18 +161,23 @@ indentGuard spc p = do
 -- consume the newline. Newline is either supposed to be consumed by 'space'
 -- parser or picked up manually.
 
-skipLineComment :: MonadParsec s m Char => String -> m ()
+skipLineComment :: MonadParsec s m Char
+  => String            -- ^ Line comment prefix
+  -> m ()
 skipLineComment prefix = p >> void (manyTill C.anyChar n)
-  where p = try $ C.string prefix
+  where p = try (C.string prefix)
         n = lookAhead C.newline
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: MonadParsec s m Char => String -> String -> m ()
+skipBlockComment :: MonadParsec s m Char
+  => String            -- ^ Start of block comment
+  -> String            -- ^ End of block comment
+  -> m ()
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
-  where p = try $ C.string start
-        n = try $ C.string end
+  where p = try (C.string start)
+        n = try (C.string end)
 
 -- Character and string literals
 
@@ -256,21 +273,18 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 -- If you need to parse signed floats, see 'signed'.
 
 float :: MonadParsec s m Char => m Double
-float = label "float" $ read <$> f
-  where f = do
-          d    <- some C.digitChar
-          rest <- fraction <|> fExp
-          return $ d ++ rest
+float = label "float" (read <$> f)
+  where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
 
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
 
 fraction :: MonadParsec s m Char => m String
 fraction = do
-  void $ C.char '.'
+  void (C.char '.')
   d <- some C.digitChar
   e <- option "" fExp
-  return $ '.' : d ++ e
+  return ('.' : d ++ e)
 
 -- | This helper parses exponent of floating point numbers.
 
@@ -279,7 +293,7 @@ fExp = do
   expChar <- C.char' 'e'
   signStr <- option "" (pure <$> choice (C.char <$> "+-"))
   d       <- some C.digitChar
-  return $ expChar : signStr ++ d
+  return (expChar : signStr ++ d)
 
 -- | Parse a number: either integer or floating point. The parser can handle
 -- overlapping grammars graciously.
