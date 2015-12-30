@@ -76,11 +76,11 @@
 <span class="kw">import </span><span class="dt">Text.Megaparsec</span>
 <span class="co">-- this module depends on type of data you want to parse, you only need to</span>
 <span class="co">-- import one of these:</span>
-<span class="kw">import </span><span class="dt">Text.String</span>          <span class="co">-- if you parse ‘String’</span>
-<span class="kw">import </span><span class="dt">Text.ByteString</span>      <span class="co">-- if you parse strict ‘ByteString’</span>
-<span class="kw">import </span><span class="dt">Text.ByteString.Lazy</span> <span class="co">-- if you parse lazy ‘ByteString’</span>
-<span class="kw">import </span><span class="dt">Text.Text</span>            <span class="co">-- if you parse strict ‘Text’</span>
-<span class="kw">import </span><span class="dt">Text.Text.Lazy</span>       <span class="co">-- if you parse lazy ‘Text’</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.String</span>          <span class="co">-- if you parse ‘String’</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.ByteString</span>      <span class="co">-- if you parse strict ‘ByteString’</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.ByteString.Lazy</span> <span class="co">-- if you parse lazy ‘ByteString’</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.Text</span>            <span class="co">-- if you parse strict ‘Text’</span>
+<span class="kw">import </span><span class="dt">Text.Megaparsec.Text.Lazy</span>       <span class="co">-- if you parse lazy ‘Text’</span>
 <span class="co">-- if you need to parse permutation phrases:</span>
 <span class="kw">import </span><span class="dt">Text.Megaparsec.Perm</span>
 <span class="co">-- if you need to parse expressions:</span>
