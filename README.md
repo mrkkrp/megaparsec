@@ -153,7 +153,7 @@ others. An especially important theme is parsing of white space, comments,
 and indentation.
 
 The design of the module allows you quickly solve simple tasks and doesn't
-get in your way when you want to implemented something less standard.
+get in your way when you want to implement something less standard.
 
 ## Documentation
 
@@ -181,7 +181,7 @@ library for parsing. Although the both libraries deal with parsing, it's
 usually easy to decide which you will need in particular project:
 
 * *Attoparsec* is much faster but not that feature-rich. It should be used
-  when you want to process large amounts of data where performance matter
+  when you want to process large amounts of data where performance matters
   more than quality of error messages.
 
 * *Megaparsec* is good for parsing of source code or other human-readable
@@ -246,7 +246,7 @@ following:
 
 * It currently has a bug in definition of `lookAhead` for various monad
   transformers like `StateT`, etc. which is visible when you create
-  backtracking state via monad stack, not via built-in features. See #27.
+  backtracking state via monad stack, not via built-in features.
 
 We intended to use Parsers library in Megaparsec at some point, but aside
 from already mentioned flaws the library has different conventions for
