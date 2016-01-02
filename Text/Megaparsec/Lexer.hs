@@ -28,8 +28,9 @@ module Text.Megaparsec.Lexer
   , skipBlockComment
     -- * Indentation
   , indentGuard
-  , notIndented
-  , withBlock
+  , nonIndented
+  , indentBlock
+  , indentBlock1
     -- * Character and string literals
   , charLiteral
     -- * Numbers
@@ -43,7 +44,7 @@ module Text.Megaparsec.Lexer
   , signed )
 where
 
-import Control.Applicative ((<|>), many, some)
+import Control.Applicative ((<|>), some, optional)
 import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe)
@@ -182,38 +183,86 @@ indentGuard spc p = do
   pos <- sourceColumn <$> getPosition
   if p pos
   then return pos
-  else fail "incorrect indentation"
+  else fail ii
 
 -- | Parse non-indented construction. This ensures that there is no
--- indentation before actual data. Useful as a wrapper for top-level
--- function definitions, for example.
+-- indentation before actual data. Useful, for example, as a wrapper for
+-- top-level function definitions.
 
-notIndented :: MonadParsec s m Char
+nonIndented :: MonadParsec s m Char
   => m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse actual data
   -> m a
-notIndented sc p = indentGuard sc (== 1) *> p
+nonIndented sc p = indentGuard sc (== 1) *> p
 
 -- | Parse a “reference” token and a number of other tokens that have
 -- greater (but the same) level of indentation than that of “reference”
--- token.
+-- token. This parser also accepts inputs without indented tokens at
+-- all. See 'indentBlock1' if you wish to ensure that at least one indented
+-- token is present.
 --
--- Note that the second argument (function that's used to combine results of
+-- Note that the first argument (function that's used to combine results of
 -- parsing of “reference” token and indented tokens) lives in parser monad,
 -- this allows to perform additional checks and fail with custom error
--- messages, for example.
+-- messages.
+--
+-- Tokens /must not/ consume newlines after them. On the other hand, the
+-- second argument of this function /should/ consume newlines among other
+-- white space characters.
 
-withBlock :: MonadParsec s m Char
-  => m ()              -- ^ How to consume indentation (white space)
-  -> (a -> [b] -> m c) -- ^ How to create output from parsed pieces
+indentBlock :: MonadParsec s m Char
+  => (a -> [b] -> m c) -- ^ How to create output from parsed pieces
+  -> m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse “reference” token
   -> m b               -- ^ How to parse indented tokens
   -> m c
-withBlock sc f r p = do
+indentBlock f sc r p = do
+  ref  <- indentGuard sc (const True)
+  a    <- r
+  mlvl <- lookAhead . optional . try $ C.eol *> indentGuard sc (> ref)
+  case mlvl of
+    Nothing -> f a []
+    Just lvl -> indentedItems ref lvl sc p >>= f a
+
+-- | Similar to 'indentBlock', but requires that at least one indented
+-- token to be present.
+
+indentBlock1 :: MonadParsec s m Char
+  => (a -> [b] -> m c) -- ^ How to create output from parsed pieces
+  -> m ()              -- ^ How to consume indentation (white space)
+  -> m a               -- ^ How to parse “reference” token
+  -> m b               -- ^ How to parse indented tokens
+  -> m c
+indentBlock1 f sc r p = do
   ref <- indentGuard sc (const True)
-  a <- r
-  b <- many (indentGuard sc (> ref) *> p)
+  a   <- r
+  lvl <- lookAhead . try $ C.eol *> indentGuard sc (> ref)
+  b   <- indentedItems ref lvl sc p
   f a b
+
+-- | Grab indented items. This is a helper for 'indentBlock' and
+-- 'indentBlock1', it's not part of public API.
+
+indentedItems :: MonadParsec s m Char
+  => Int               -- ^ Reference indentation level
+  -> Int               -- ^ Level of the first indented item ('lookAhead'ed)
+  -> m ()              -- ^ How to consume indentation (white space)
+  -> m b               -- ^ How to parse indented tokens
+  -> m [b]
+indentedItems ref lvl sc p = go
+  where
+    go = do
+      meol <- optional (try C.eol)
+      case meol of
+        Nothing -> return []
+        Just  _ -> (sc *> getPosition) >>= re . sourceColumn
+    re pos
+      | pos <= ref = return []
+      | pos == lvl = (:) <$> p <*> go
+      | otherwise  = fail ii
+
+ii :: String
+ii = "incorrect indentation"
 
 -- Character and string literals
 
