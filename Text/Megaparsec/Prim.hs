@@ -183,7 +183,7 @@ instance Stream TL.Text Char where
   {-# INLINE uncons #-}
 
 -- | @StorableStream@ abstracts ability of some streams to be stored in a
--- file. This is used by polymorphic function 'readFromFile'.
+-- file. This is used by the polymorphic function 'parseFromFile'.
 
 class Stream s t => StorableStream s t where
 
