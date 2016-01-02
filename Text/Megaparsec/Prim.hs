@@ -136,9 +136,18 @@ toHints err = Hints hints
         msgs  = filter ((== 1) . fromEnum) $ errorMessages err
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
+--
+-- Note that if resulting continuation gets 'ParseError' where all messages
+-- are created with 'Message' constructor, hints are ignored.
 
 withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
-withHints (Hints xs) c = c . addErrorMessages (Expected <$> concat xs)
+withHints (Hints xs) c e =
+  let isMessage (Message _) = True
+      isMessage _           = False
+  in (if all isMessage (errorMessages e)
+      then c
+      else c . addErrorMessages (Expected <$> concat xs))
+     e
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
