@@ -265,7 +265,7 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
 instance A.Applicative (ParsecT s m) where
   pure     = pPure
   (<*>)    = ap
-  p1 *> p2 = p1 `pBind` \_ -> p2
+  p1 *> p2 = p1 `pBind` const p2
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 instance A.Alternative (ParsecT s m) where
