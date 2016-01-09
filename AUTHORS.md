@@ -37,6 +37,7 @@ Names below are sorted alphabetically.
 * Dennis Gosnell
 * Derek Elkins
 * Emil Sköldberg
+* Herbert Valerio Riedel
 * Joel Williamson
 * Mark Karpov
 * Paolo Martini
