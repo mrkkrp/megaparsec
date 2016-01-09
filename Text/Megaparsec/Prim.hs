@@ -391,6 +391,8 @@ class (A.Alternative m, Monad m, Stream s t)
   -- 'unexpected' is defined in terms of the function:
   --
   -- > unexpected = failure . pure . Unexpected
+  --
+  -- @since 4.2.0
 
   failure :: [Message] -> m a
 
@@ -725,6 +727,8 @@ runParser p name s = snd $ runParser' p (initialState name s)
 -- accepts and returns parser state. This allows to specify arbitrary
 -- textual position at the beginning of parsing, for example. This is the
 -- most general way to run a parser over the 'Identity' monad.
+--
+-- @since 4.2.0
 
 runParser' :: Stream s t
            => Parsec s a -- ^ Parser to run
@@ -745,6 +749,8 @@ runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 -- | This function is similar to 'runParserT', but like 'runParser'' it
 -- accepts and returns parser state. This is thus the most general way to
 -- run a parser.
+--
+-- @since 4.2.0
 
 runParserT' :: (Monad m, Stream s t)
             => ParsecT s m a -- ^ Parser to run

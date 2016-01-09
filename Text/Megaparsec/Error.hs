@@ -121,6 +121,8 @@ newErrorMessage m = newErrorMessages [m]
 
 -- | @newErrorMessages ms pos@ creates 'ParseError' with messages @ms@ and
 -- associated position @pos@.
+--
+-- @since 4.2.0
 
 newErrorMessages :: [Message] -> SourcePos -> ParseError
 newErrorMessages ms pos = addErrorMessages ms $ newErrorUnknown pos
@@ -143,6 +145,8 @@ addErrorMessage m (ParseError pos ms) =
 
 -- | @addErrorMessages ms err@ returns @err@ with messages @ms@ added. The
 -- function is defined in terms of 'addErrorMessage'.
+--
+-- @since 4.2.0
 
 addErrorMessages :: [Message] -> ParseError -> ParseError
 addErrorMessages ms err = foldr addErrorMessage err ms

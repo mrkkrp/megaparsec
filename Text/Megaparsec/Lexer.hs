@@ -169,6 +169,8 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 -- The function is a simple shortcut defined as:
 --
 -- > indentLevel = sourceColumn <$> getPosition
+--
+-- @since 4.3.0
 
 indentLevel :: MonadParsec s m t => m Int
 indentLevel = sourceColumn <$> getPosition
@@ -198,6 +200,8 @@ indentGuard spc p = do
 -- | Parse non-indented construction. This ensures that there is no
 -- indentation before actual data. Useful, for example, as a wrapper for
 -- top-level function definitions.
+--
+-- @since 4.3.0
 
 nonIndented :: MonadParsec s m Char
   => m ()              -- ^ How to consume indentation (white space)
@@ -207,6 +211,8 @@ nonIndented sc p = indentGuard sc (== 1) *> p
 
 -- | The data type represents available behaviors for parsing of indented
 -- tokens. This is used in 'indentBlock', which see.
+--
+-- @since 4.3.0
 
 data IndentOpt m a b
   = IndentNone a
@@ -228,6 +234,8 @@ data IndentOpt m a b
 -- Tokens /must not/ consume newlines after them. On the other hand, the
 -- first argument of this function /should/ consume newlines among other
 -- white space characters.
+--
+-- @since 4.3.0
 
 indentBlock :: MonadParsec String m Char
   => m ()              -- ^ How to consume indentation (white space)
