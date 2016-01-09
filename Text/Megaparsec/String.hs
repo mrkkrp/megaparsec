@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.String
--- Copyright   :  © 2015 Megaparsec contributors
+-- Copyright   :  © 2015–2016 Megaparsec contributors
 --                © 2007 Paolo Martini
 -- License     :  FreeBSD
 --

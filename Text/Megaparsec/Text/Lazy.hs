@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Text.Lazy
--- Copyright   :  © 2015 Megaparsec contributors
+-- Copyright   :  © 2015–2016 Megaparsec contributors
 --                © 2011 Antoine Latter
 -- License     :  FreeBSD
 --

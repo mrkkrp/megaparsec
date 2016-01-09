@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.ShowToken
--- Copyright   :  © 2015 Megaparsec contributors
+-- Copyright   :  © 2015–2016 Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
