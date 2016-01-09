@@ -1,3 +1,18 @@
+## Megaparsec 4.3.0
+
+* Canonicalized `Applicative`/`Monad` instances. Thanks to Herbert Valerio
+  Riedel.
+
+* Custom messages in `ParseError` are printed each on its own line.
+
+* Now accumulated hints are not used with `ParseError` records that have
+  only custom messages in them (created with `Message` constructor, as
+  opposed to `Unexpected` or `Expected`). This strips “expected” line from
+  custom error messages where it's unlikely to be relevant anyway.
+
+* Added higher-level combinators for indentation-sensitive grammars:
+  `indentLevel`, `nonIndented`, and `indentBlock`.
+
 ## Megaparsec 4.2.0
 
 * Made `newPos` constructor and other functions in `Text.Megaparsec.Pos`

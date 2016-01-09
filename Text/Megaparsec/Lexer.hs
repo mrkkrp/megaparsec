@@ -19,14 +19,19 @@
 -- > import qualified Text.Megaparsec.Lexer as L
 
 module Text.Megaparsec.Lexer
-  ( -- * White space and indentation
+  ( -- * White space
     space
   , lexeme
   , symbol
   , symbol'
-  , indentGuard
   , skipLineComment
   , skipBlockComment
+    -- * Indentation
+  , indentLevel
+  , indentGuard
+  , nonIndented
+  , IndentOpt (..)
+  , indentBlock
     -- * Character and string literals
   , charLiteral
     -- * Numbers
@@ -40,10 +45,10 @@ module Text.Megaparsec.Lexer
   , signed )
 where
 
-import Control.Applicative ((<|>), some)
+import Control.Applicative ((<|>), some, optional)
 import Control.Monad (void)
 import Data.Char (readLitChar)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, fromMaybe)
 import Prelude hiding (negate)
 import qualified Prelude
 
@@ -85,10 +90,10 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 -- of the file).
 
 space :: MonadParsec s m Char
-      => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
-      -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
-      -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
-      -> m ()
+  => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
+  -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
+  -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
+  -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
 
 -- | This is wrapper for lexemes. Typical usage is to supply first argument
@@ -98,7 +103,10 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
 
-lexeme :: MonadParsec s m Char => m () -> m a -> m a
+lexeme :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> m a               -- ^ How to parse actual lexeme
+  -> m a
 lexeme spc p = p <* spc
 
 -- | This is a helper to parse symbols, i.e. verbatim strings. You pass the
@@ -116,14 +124,54 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: MonadParsec s m Char => m () -> String -> m String
+symbol :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> String            -- ^ String to parse
+  -> m String
 symbol spc = lexeme spc . C.string
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: MonadParsec s m Char => m () -> String -> m String
+symbol' :: MonadParsec s m Char
+  => m ()              -- ^ How to consume white space after lexeme
+  -> String            -- ^ String to parse (case-insensitive)
+  -> m String
 symbol' spc = lexeme spc . C.string'
+
+-- | Given comment prefix this function returns parser that skips line
+-- comments. Note that it stops just before newline character but doesn't
+-- consume the newline. Newline is either supposed to be consumed by 'space'
+-- parser or picked up manually.
+
+skipLineComment :: MonadParsec s m Char
+  => String            -- ^ Line comment prefix
+  -> m ()
+skipLineComment prefix = p >> void (manyTill C.anyChar n)
+  where p = try (C.string prefix)
+        n = lookAhead C.newline
+
+-- | @skipBlockComment start end@ skips non-nested block comment starting
+-- with @start@ and ending with @end@.
+
+skipBlockComment :: MonadParsec s m Char
+  => String            -- ^ Start of block comment
+  -> String            -- ^ End of block comment
+  -> m ()
+skipBlockComment start end = p >> void (manyTill C.anyChar n)
+  where p = try (C.string start)
+        n = try (C.string end)
+
+-- Indentation
+
+-- | Return current indentation level.
+--
+-- The function is a simple shortcut defined as:
+--
+-- > indentLevel = sourceColumn <$> getPosition
+
+indentLevel :: MonadParsec s m t => m Int
+indentLevel = sourceColumn <$> getPosition
 
 -- | @indentGuard spaceConsumer test@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks column
@@ -136,31 +184,88 @@ symbol' spc = lexeme spc . C.string'
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
-indentGuard :: MonadParsec s m Char => m () -> (Int -> Bool) -> m Int
+indentGuard :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> (Int -> Bool)     -- ^ Predicate checking indentation level
+  -> m Int             -- ^ Current column (indentation level)
 indentGuard spc p = do
   spc
-  pos <- sourceColumn <$> getPosition
-  if p pos
-  then return pos
-  else fail "incorrect indentation"
+  lvl <- indentLevel
+  if p lvl
+  then return lvl
+  else fail ii
 
--- | Given comment prefix this function returns parser that skips line
--- comments. Note that it stops just before newline character but doesn't
--- consume the newline. Newline is either supposed to be consumed by 'space'
--- parser or picked up manually.
+-- | Parse non-indented construction. This ensures that there is no
+-- indentation before actual data. Useful, for example, as a wrapper for
+-- top-level function definitions.
 
-skipLineComment :: MonadParsec s m Char => String -> m ()
-skipLineComment prefix = p >> void (manyTill C.anyChar n)
-  where p = try $ C.string prefix
-        n = lookAhead C.newline
+nonIndented :: MonadParsec s m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> m a               -- ^ How to parse actual data
+  -> m a
+nonIndented sc p = indentGuard sc (== 1) *> p
 
--- | @skipBlockComment start end@ skips non-nested block comment starting
--- with @start@ and ending with @end@.
+-- | The data type represents available behaviors for parsing of indented
+-- tokens. This is used in 'indentBlock', which see.
 
-skipBlockComment :: MonadParsec s m Char => String -> String -> m ()
-skipBlockComment start end = p >> void (manyTill C.anyChar n)
-  where p = try $ C.string start
-        n = try $ C.string end
+data IndentOpt m a b
+  = IndentNone a
+    -- ^ Parse no indented tokens, just return the value
+  | IndentMany (Maybe Int) ([b] -> m a) (m b)
+    -- ^ Parse many indented tokens (possibly zero), use given indentation
+    -- level (if 'Nothing', use level of the first indented token); the
+    -- second argument tells how to get final result, and third argument
+    -- describes how to parse indented token
+  | IndentSome (Maybe Int) ([b] -> m a) (m b)
+    -- ^ Just like 'ManyIndent', but requires at least one indented token to
+    -- be present
+
+-- | Parse a “reference” token and a number of other tokens that have
+-- greater (but the same) level of indentation than that of “reference”
+-- token. Reference token can influence parsing, see 'IndentOpt' for more
+-- information.
+--
+-- Tokens /must not/ consume newlines after them. On the other hand, the
+-- first argument of this function /should/ consume newlines among other
+-- white space characters.
+
+indentBlock :: MonadParsec String m Char
+  => m ()              -- ^ How to consume indentation (white space)
+  -> m (IndentOpt m a b) -- ^ How to parse “reference” token
+  -> m a
+indentBlock sc r = do
+  ref <- indentGuard sc (const True)
+  a   <- r
+  case a of
+    IndentNone x -> return x
+    IndentMany indent f p -> do
+      mlvl <- lookAhead . optional . try $ C.eol *> indentGuard sc (> ref)
+      case mlvl of
+        Nothing  -> sc *> f []
+        Just lvl -> indentedItems ref (fromMaybe lvl indent) sc p >>= f
+    IndentSome indent f p -> do
+      lvl <- lookAhead . try $ C.eol *> indentGuard sc (> ref)
+      indentedItems ref (fromMaybe lvl indent) sc p >>= f
+
+-- | Grab indented items. This is a helper for 'indentBlock', it's not a
+-- part of public API.
+
+indentedItems :: MonadParsec String m Char
+  => Int               -- ^ Reference indentation level
+  -> Int               -- ^ Level of the first indented item ('lookAhead'ed)
+  -> m ()              -- ^ How to consume indentation (white space)
+  -> m b               -- ^ How to parse indented tokens
+  -> m [b]
+indentedItems ref lvl sc p = go
+  where
+    go = (sc *> indentLevel) >>= re
+    re pos
+      | pos <= ref = return []
+      | pos == lvl = (:) <$> p <*> go
+      | otherwise  = fail ii
+
+ii :: String
+ii = "incorrect indentation"
 
 -- Character and string literals
 
@@ -256,21 +361,18 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 -- If you need to parse signed floats, see 'signed'.
 
 float :: MonadParsec s m Char => m Double
-float = label "float" $ read <$> f
-  where f = do
-          d    <- some C.digitChar
-          rest <- fraction <|> fExp
-          return $ d ++ rest
+float = label "float" (read <$> f)
+  where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
 
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
 
 fraction :: MonadParsec s m Char => m String
 fraction = do
-  void $ C.char '.'
+  void (C.char '.')
   d <- some C.digitChar
   e <- option "" fExp
-  return $ '.' : d ++ e
+  return ('.' : d ++ e)
 
 -- | This helper parses exponent of floating point numbers.
 
@@ -279,7 +381,7 @@ fExp = do
   expChar <- C.char' 'e'
   signStr <- option "" (pure <$> choice (C.char <$> "+-"))
   d       <- some C.digitChar
-  return $ expChar : signStr ++ d
+  return (expChar : signStr ++ d)
 
 -- | Parse a number: either integer or floating point. The parser can handle
 -- overlapping grammars graciously.

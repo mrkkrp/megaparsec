@@ -136,9 +136,18 @@ toHints err = Hints hints
         msgs  = filter ((== 1) . fromEnum) $ errorMessages err
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
+--
+-- Note that if resulting continuation gets 'ParseError' where all messages
+-- are created with 'Message' constructor, hints are ignored.
 
 withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
-withHints (Hints xs) c = c . addErrorMessages (Expected <$> concat xs)
+withHints (Hints xs) c e =
+  let isMessage (Message _) = True
+      isMessage _           = False
+  in (if all isMessage (errorMessages e)
+      then c
+      else c . addErrorMessages (Expected <$> concat xs))
+     e
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
@@ -183,7 +192,7 @@ instance Stream TL.Text Char where
   {-# INLINE uncons #-}
 
 -- | @StorableStream@ abstracts ability of some streams to be stored in a
--- file. This is used by polymorphic function 'readFromFile'.
+-- file. This is used by the polymorphic function 'parseFromFile'.
 
 class Stream s t => StorableStream s t where
 
@@ -265,7 +274,7 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
 instance A.Applicative (ParsecT s m) where
   pure     = pPure
   (<*>)    = ap
-  p1 *> p2 = p1 `pBind` \_ -> p2
+  p1 *> p2 = p1 `pBind` const p2
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 instance A.Alternative (ParsecT s m) where
