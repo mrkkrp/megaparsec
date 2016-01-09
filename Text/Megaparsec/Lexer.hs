@@ -237,7 +237,7 @@ data IndentOpt m a b
 --
 -- @since 4.3.0
 
-indentBlock :: MonadParsec String m Char
+indentBlock :: MonadParsec s m Char
   => m ()              -- ^ How to consume indentation (white space)
   -> m (IndentOpt m a b) -- ^ How to parse “reference” token
   -> m a
@@ -258,7 +258,7 @@ indentBlock sc r = do
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of public API.
 
-indentedItems :: MonadParsec String m Char
+indentedItems :: MonadParsec s m Char
   => Int               -- ^ Reference indentation level
   -> Int               -- ^ Level of the first indented item ('lookAhead'ed)
   -> m ()              -- ^ How to consume indentation (white space)
