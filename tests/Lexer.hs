@@ -94,12 +94,15 @@ mkSymbol :: Gen String
 mkSymbol = (++) <$> symbolName <*> whiteChars
 
 mkIndent :: String -> Int -> Gen String
-mkIndent x n = concat <$> sequence [spc, sym, tra, eol]
+mkIndent x n = (++) <$> mkIndent' x n <*> eol
+  where eol = frequency [(5, return "\n"), (1, listOf1 (return '\n'))]
+
+mkIndent' :: String -> Int -> Gen String
+mkIndent' x n = concat <$> sequence [spc, sym, tra]
   where spc = frequency [(5, vectorOf n itm), (1, listOf itm)]
         tra = listOf itm
         itm = elements " \t"
         sym = return x
-        eol = frequency [(5, return "\n"), (1, listOf1 (return '\n'))]
 
 whiteChars :: Gen String
 whiteChars = listOf (elements "\t\n ")
@@ -207,7 +210,7 @@ prop_indentBlock mn' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
           l1 <- mkIndent sblb ib
           l2 <- mkIndent sblc (ib + 2)
           l3 <- mkIndent sblb ib
-          l4 <- mkIndent sblc (ib + 2)
+          l4 <- mkIndent' sblc (ib + 2)
           return (l0,l1,l2,l3,l4)
         p = lvla
         lvla = indentBlock sc $ IndentMany mn      (l sbla) lvlb <$ b sbla
@@ -219,7 +222,7 @@ prop_indentBlock mn' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
         ib   = fromMaybe 2 mn
 
 prop_indentMany :: Property
-prop_indentMany = forAll (mkIndent "xxx" 0) (checkParser p r)
+prop_indentMany = forAll (mkIndent sbla 0) (checkParser p r)
   where r = Right (sbla, [])
         p = lvla
         lvla = indentBlock sc $ IndentMany Nothing (l sbla) lvlb <$ b sbla

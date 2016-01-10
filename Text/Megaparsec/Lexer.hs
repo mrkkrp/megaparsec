@@ -48,7 +48,7 @@ where
 import Control.Applicative ((<|>), some, optional)
 import Control.Monad (void)
 import Data.Char (readLitChar)
-import Data.Maybe (listToMaybe, fromMaybe)
+import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Prelude hiding (negate)
 import qualified Prelude
 
@@ -194,8 +194,8 @@ indentGuard spc p = do
   spc
   lvl <- indentLevel
   if p lvl
-  then return lvl
-  else fail ii
+    then return lvl
+    else fail ii
 
 -- | Parse non-indented construction. This ensures that there is no
 -- indentation before actual data. Useful, for example, as a wrapper for
@@ -232,8 +232,8 @@ data IndentOpt m a b
 -- information.
 --
 -- Tokens /must not/ consume newlines after them. On the other hand, the
--- first argument of this function /should/ consume newlines among other
--- white space characters.
+-- first argument of this function /must/ consume newlines among other white
+-- space characters.
 --
 -- @since 4.3.0
 
@@ -247,12 +247,12 @@ indentBlock sc r = do
   case a of
     IndentNone x -> return x
     IndentMany indent f p -> do
-      mlvl <- lookAhead . optional . try $ C.eol *> indentGuard sc (> ref)
+      mlvl <- optional . try $ C.eol *> indentGuard sc (> ref)
       case mlvl of
         Nothing  -> sc *> f []
         Just lvl -> indentedItems ref (fromMaybe lvl indent) sc p >>= f
     IndentSome indent f p -> do
-      lvl <- lookAhead . try $ C.eol *> indentGuard sc (> ref)
+      lvl <- C.eol *> indentGuard sc (> ref)
       indentedItems ref (fromMaybe lvl indent) sc p >>= f
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
@@ -270,7 +270,11 @@ indentedItems ref lvl sc p = go
     re pos
       | pos <= ref = return []
       | pos == lvl = (:) <$> p <*> go
-      | otherwise  = fail ii
+      | otherwise  = do
+          done <- isJust <$> optional eof
+          if done
+            then return []
+            else fail ii
 
 ii :: String
 ii = "incorrect indentation"
