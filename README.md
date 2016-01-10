@@ -165,9 +165,9 @@ Hackage](https://hackage.haskell.org/package/megaparsec) for yourself.
 ## Tutorials
 
 You can visit [site of the project](https://mrkkrp.github.io/megaparsec/)
-which has several tutorials that should help you to start with your parsing
-tasks. The site also has instructions and tips for Parsec users who decide
-to switch.
+which has [several tutorials](https://mrkkrp.github.io/megaparsec/tutorials.html) that
+should help you to start with your parsing tasks. The site also has
+instructions and tips for Parsec users who decide to switch.
 
 ## Comparison with other solutions
 
