@@ -120,17 +120,17 @@
 <h3 id="lexer">Lexer</h3>
 <p><a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a> is a module that should help you write your lexer. If you have used <code>Parsec</code> in the past, this module “fixes” its particularly inflexible <code>Text.Parsec.Token</code>.</p>
 <p><code>Text.Megaparsec.Lexer</code> is intended to be imported qualified, it’s not included in <code>Text.Megaparsec</code>. The module doesn’t impose how you should write your parser, but certain approaches may be more elegant than others. An especially important theme is parsing of white space, comments, and indentation.</p>
-<p>The design of the module allows you quickly solve simple tasks and doesn’t get in your way when you want to implemented something less standard.</p>
+<p>The design of the module allows you quickly solve simple tasks and doesn’t get in your way when you want to implement something less standard.</p>
 <h2 id="documentation">Documentation</h2>
 <p>Megaparsec is well-documented. All functions and data-types are thoroughly described. We pay attention to avoid outdated info or unclear phrases in our documentation. See the <a href="https://hackage.haskell.org/package/megaparsec">current version of Megaparsec documentation on Hackage</a> for yourself.</p>
 <h2 id="tutorials">Tutorials</h2>
-<p>You can visit <a href="https://mrkkrp.github.io/megaparsec/">site of the project</a> which has several tutorials that should help you to start with your parsing tasks. The site also has instructions and tips for Parsec users who decide to switch.</p>
+<p>You can visit <a href="https://mrkkrp.github.io/megaparsec/">site of the project</a> which has <a href="https://mrkkrp.github.io/megaparsec/tutorials.html">several tutorials</a> that should help you to start with your parsing tasks. The site also has instructions and tips for Parsec users who decide to switch.</p>
 <h2 id="comparison-with-other-solutions">Comparison with other solutions</h2>
 <p>There are quite a few libraries that can be used for parsing in Haskell, let’s compare Megaparsec with some of them.</p>
 <h3 id="megaparsec-and-attoparsec">Megaparsec and Attoparsec</h3>
 <p><a href="https://github.com/bos/attoparsec">Attoparsec</a> is another prominent Haskell library for parsing. Although the both libraries deal with parsing, it’s usually easy to decide which you will need in particular project:</p>
 <ul>
-<li><p><em>Attoparsec</em> is much faster but not that feature-rich. It should be used when you want to process large amounts of data where performance matter more than quality of error messages.</p></li>
+<li><p><em>Attoparsec</em> is much faster but not that feature-rich. It should be used when you want to process large amounts of data where performance matters more than quality of error messages.</p></li>
 <li><p><em>Megaparsec</em> is good for parsing of source code or other human-readable texts. It has better error messages and it’s implemented as monad transformer.</p></li>
 </ul>
 <p>So, if you work with something human-readable where size of input data is usually not huge, just go with Megaparsec, otherwise Attoparsec may be a better choice.</p>
@@ -152,7 +152,7 @@
 <p>There is <a href="https://hackage.haskell.org/package/parsers">Parsers</a> package, which is great. You can use it with Megaparsec or Parsec, but consider the following:</p>
 <ul>
 <li><p>It depends on <em>both</em> Attoparsec and Parsec, which means you always grab useless code installing it. This is ridiculous, by the way, because this package is supposed to be useful for parser builders, so they can write basic core functionality and get the rest “for free”. But with these useful functions you get two more parsers as dependencies.</p></li>
-<li><p>It currently has a bug in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features. See #27.</p></li>
+<li><p>It currently has a bug in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features.</p></li>
 </ul>
 <p>We intended to use Parsers library in Megaparsec at some point, but aside from already mentioned flaws the library has different conventions for naming of things, different set of “core” functions, etc., different approach to lexer. So it didn’t happen, Megaparsec has minimal dependencies, it is feature-rich and self-contained.</p>
 <h2 id="authors">Authors</h2>
@@ -162,7 +162,7 @@
 <p>Pull requests are also welcome (and yes, they will get attention and will be merged quickly if they are good, we are progressive folks).</p>
 <p>If you want to write a tutorial to be hosted on Megaparsec’s site, open an issue or pull request <a href="https://github.com/mrkkrp/megaparsec-site">here</a>.</p>
 <h2 id="license">License</h2>
-<p>Copyright © 2015 Megaparsec contributors<br> Copyright © 2007 Paolo Martini<br> Copyright © 1999–2000 Daan Leijen</p>
+<p>Copyright © 2015–2016 Megaparsec contributors<br> Copyright © 2007 Paolo Martini<br> Copyright © 1999–2000 Daan Leijen</p>
 <p>Distributed under FreeBSD license.</p>
             </div>
           </div>
