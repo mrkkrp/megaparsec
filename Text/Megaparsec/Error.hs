@@ -43,15 +43,7 @@ import Data.Foldable (foldMap)
 import Data.Monoid
 #endif
 
--- | This data type represents parse error messages. There are three kinds
--- of messages:
---
--- > data Message = Unexpected String
--- >              | Expected   String
--- >              | Message    String
---
--- The fine distinction between different kinds of parse errors allows the
--- system to generate quite good error messages for the user.
+-- | This data type represents parse error messages.
 
 data Message
   = Unexpected !String -- ^ Parser ran into an unexpected token
@@ -86,9 +78,7 @@ badMessage = null . messageString
 
 -- | The data type @ParseError@ represents parse errors. It provides the
 -- source position ('SourcePos') of the error and a list of error messages
--- ('Message'). A @ParseError@ can be returned by the function
--- 'Text.Parsec.Prim.parse'. @ParseError@ is an instance of the 'Show' and
--- 'Eq' type classes.
+-- ('Message').
 
 data ParseError = ParseError
   { -- | Extract the source position from 'ParseError'.
