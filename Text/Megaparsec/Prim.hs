@@ -743,7 +743,10 @@ runParser' p = runIdentity . runParserT' p
 -- value of type @a@ ('Right').
 
 runParserT :: (Monad m, Stream s t)
-           => ParsecT s m a -> String -> s -> m (Either ParseError a)
+           => ParsecT s m a -- ^ Parser to run
+           -> String        -- ^ Name of source file
+           -> s             -- ^ Input for parser
+           -> m (Either ParseError a)
 runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
