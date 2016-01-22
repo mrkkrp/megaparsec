@@ -665,7 +665,7 @@ setParserState st = updateParserState (const st)
 -- Running a parser
 
 -- | @parse p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
--- if you're using the 'ParserT' monad transformer; 'parse' itself is just a
+-- if you're using the 'ParsecT' monad transformer; 'parse' itself is just a
 -- synonym for 'runParser'). It returns either a 'ParseError' ('Left') or a
 -- value of type @a@ ('Right'). 'show' or 'print' can be used to turn
 -- 'ParseError' into the string representation of the error message. See
