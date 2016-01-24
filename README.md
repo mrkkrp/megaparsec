@@ -19,6 +19,7 @@
     * [Megaparsec and Attoparsec](#megaparsec-and-attoparsec)
     * [Megaparsec and Parsec](#megaparsec-and-parsec)
     * [Megaparsec and Parsers](#megaparsec-and-parsers)
+* [Related packages](#related-packages)
 * [Authors](#authors)
 * [Contribution](#contribution)
 * [License](#license)
@@ -254,6 +255,14 @@ from already mentioned flaws the library has different conventions for
 naming of things, different set of “core” functions, etc., different
 approach to lexer. So it didn't happen, Megaparsec has minimal dependencies,
 it is feature-rich and self-contained.
+
+## Related packages
+
+The following packages are designed to be used with Megaparsec:
+
+* [`hspec-megaparsec`](https://hackage.haskell.org/package/hspec-megaparsec)
+  — utilities for testing Megaparsec parsers with with
+  [Hspec](https://hackage.haskell.org/package/hspec).
 
 ## Authors
 
