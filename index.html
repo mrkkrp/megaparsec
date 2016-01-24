@@ -13,7 +13,7 @@
 
   <body>
 
-    <div class="navbar navbar-inverse navbar-fixed-bottom" role="navigation">
+    <div class="navbar navbar-inverse" role="navigation">
       <div class="container-fluid">
         <div class="navbar-header">
           <a class="navbar-brand" href="./">
@@ -42,7 +42,7 @@
 
     <div class="container">
       <div class="row-fluid">
-        <div class="col-sm-9 col-sm-offset-1 col-md-8 col-md-offset-2 main">
+        <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2 main">
           <div class="page-header">
             <h1>Megaparsec
               
@@ -54,7 +54,7 @@
             </h1>
             <hr />
             <div class="content">
-              <p><a href="http://opensource.org/licenses/BSD-2-Clause"><img src="https://img.shields.io/badge/license-FreeBSD-brightgreen.svg" alt="License FreeBSD" /></a> <a href="https://hackage.haskell.org/package/megaparsec"><img src="https://img.shields.io/hackage/v/megaparsec.svg?style=flat" alt="Hackage" /></a> <a href="http://stackage.org/nightly/package/megaparsec"><img src="http://stackage.org/package/megaparsec/badge/nightly" alt="Stackage Nightly" /></a> <a href="https://travis-ci.org/mrkkrp/megaparsec"><img src="https://travis-ci.org/mrkkrp/megaparsec.svg?branch=master" alt="Build Status" /></a> <a href="https://coveralls.io/github/mrkkrp/megaparsec?branch=master"><img src="https://coveralls.io/repos/mrkkrp/megaparsec/badge.svg?branch=master&amp;service=github" alt="Coverage Status" /></a></p>
+              <p><a href="http://opensource.org/licenses/BSD-2-Clause"><img src="https://img.shields.io/badge/license-FreeBSD-brightgreen.svg" alt="License FreeBSD" /></a> <a href="https://hackage.haskell.org/package/megaparsec"><img src="https://img.shields.io/hackage/v/megaparsec.svg?style=flat" alt="Hackage" /></a> <a href="http://stackage.org/nightly/package/megaparsec"><img src="http://stackage.org/package/megaparsec/badge/nightly" alt="Stackage Nightly" /></a> <a href="http://stackage.org/lts/package/megaparsec"><img src="http://stackage.org/package/megaparsec/badge/lts" alt="Stackage LTS" /></a> <a href="https://travis-ci.org/mrkkrp/megaparsec"><img src="https://travis-ci.org/mrkkrp/megaparsec.svg?branch=master" alt="Build Status" /></a> <a href="https://coveralls.io/github/mrkkrp/megaparsec?branch=master"><img src="https://coveralls.io/repos/mrkkrp/megaparsec/badge.svg?branch=master&amp;service=github" alt="Coverage Status" /></a></p>
 <ul>
 <li><a href="#features">Features</a>
 <ul>
@@ -72,6 +72,7 @@
 <li><a href="#megaparsec-and-parsec">Megaparsec and Parsec</a></li>
 <li><a href="#megaparsec-and-parsers">Megaparsec and Parsers</a></li>
 </ul></li>
+<li><a href="#related-packages">Related packages</a></li>
 <li><a href="#authors">Authors</a></li>
 <li><a href="#contribution">Contribution</a></li>
 <li><a href="#license">License</a></li>
@@ -155,6 +156,11 @@
 <li><p>It currently has a bug in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features.</p></li>
 </ul>
 <p>We intended to use Parsers library in Megaparsec at some point, but aside from already mentioned flaws the library has different conventions for naming of things, different set of “core” functions, etc., different approach to lexer. So it didn’t happen, Megaparsec has minimal dependencies, it is feature-rich and self-contained.</p>
+<h2 id="related-packages">Related packages</h2>
+<p>The following packages are designed to be used with Megaparsec:</p>
+<ul>
+<li><a href="https://hackage.haskell.org/package/hspec-megaparsec"><code>hspec-megaparsec</code></a> — utilities for testing Megaparsec parsers with with <a href="https://hackage.haskell.org/package/hspec">Hspec</a>.</li>
+</ul>
 <h2 id="authors">Authors</h2>
 <p>The project was started and is currently maintained by Mark Karpov. You can find complete list of contributors in <code>AUTHORS.md</code> file in official repository of the project. Thanks to all the people who propose features and ideas, although they are not in <code>AUTHORS.md</code>, without them Megaparsec would not be that good.</p>
 <h2 id="contribution">Contribution</h2>
