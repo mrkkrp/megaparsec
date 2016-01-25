@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- QuickCheck tests for Megaparsec's textual source positions.
 --

@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- Criterion benchmarks for Megaparsec.
 --
@@ -138,7 +137,6 @@ benchmarks =
         ""
         (pack $ replicate (size-1) 'a' ++ "b")
   ]
-
 
 benchManual :: [Benchmark]
 benchManual =
