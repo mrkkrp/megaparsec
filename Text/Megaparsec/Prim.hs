@@ -91,6 +91,7 @@ longestMatch s1@(State _ pos1 _) s2@(State _ pos2 _) =
     LT -> s2
     EQ -> s2
     GT -> s1
+{-# INLINE longestMatch #-}
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with return value) or failure (with parse error), parser
@@ -383,9 +384,9 @@ pZero = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err ms =
-        let ncerr err' s' = cerr (err' <> err) (longestMatch ms s')
+        let ncerr err' s' = cerr (mergeError err' err) (longestMatch ms s')
             neok x s' hs  = eok x s' (toHints err <> hs)
-            neerr err' s' = eerr (err' <> err) (longestMatch ms s')
+            neerr err' s' = eerr (mergeError err' err) (longestMatch ms s')
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}

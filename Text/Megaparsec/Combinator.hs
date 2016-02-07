@@ -57,13 +57,11 @@ choice = asum
 -- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
 -- equal to zero, the parser equals to @return []@. Returns a list of @n@
 -- values.
---
--- This parser is defined in terms of 'count'', like this:
---
--- > count n = count' n n
 
-count :: Alternative m => Int -> m a -> m [a]
-count n = count' n n
+count :: Applicative m => Int -> m a -> m [a]
+count n p
+  | n <= 0    = pure []
+  | otherwise = sequenceA (replicate n p)
 {-# INLINE count #-}
 
 -- | @count\' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
@@ -108,7 +106,6 @@ endBy1 p sep = some (p <* sep)
 
 manyTill :: Alternative m => m a -> m end -> m [a]
 manyTill p end = ([] <$ end) <|> someTill p end
-{-# INLINE manyTill #-}
 
 -- | @someTill p end@ works similarly to @manyTill p end@, but @p@ should
 -- succeed at least once.
@@ -148,7 +145,6 @@ sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 
 sepEndBy :: Alternative m => m a -> m sep -> m [a]
 sepEndBy p sep = sepEndBy1 p sep <|> pure []
-{-# INLINE sepEndBy #-}
 
 -- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
 -- separated and optionally ended by @sep@. Returns a list of values
