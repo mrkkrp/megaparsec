@@ -60,7 +60,7 @@ library
                     , bytestring
                     , mtl          == 2.*
                     , text         >= 0.2
-                    , transformers >= 0.4
+                    , transformers >= 0.4 && < 0.6
   default-extensions: CPP
                     , DeriveDataTypeable
                     , FlexibleContexts
@@ -139,7 +139,7 @@ test-suite tests
                     , mtl            == 2.*
                     , test-framework >= 0.6 && < 1
                     , test-framework-quickcheck2 >= 0.3 && < 0.4
-                    , transformers   >= 0.4
+                    , transformers   >= 0.4 && < 0.6
   default-extensions: CPP
                     , FlexibleContexts
                     , FlexibleInstances
