@@ -43,21 +43,21 @@ import Util
 
 tests :: Test
 tests = testGroup "Generic parser combinators"
-        [ testProperty "combinator between"   prop_between
-        , testProperty "combinator choice"    prop_choice
-        , testProperty "combinator count"     prop_count
-        , testProperty "combinator count'"    prop_count'
-        , testProperty "combinator endBy"     prop_endBy
-        , testProperty "combinator endBy1"    prop_endBy1
-        , testProperty "combinator manyTill"  prop_manyTill
-        , testProperty "combinator someTill"  prop_someTill
-        , testProperty "combinator option"    prop_option
-        , testProperty "combinator sepBy"     prop_sepBy
-        , testProperty "combinator sepBy1"    prop_sepBy1
-        , testProperty "combinator sepEndBy"  prop_sepEndBy
-        , testProperty "combinator sepEndBy1" prop_sepEndBy1
-        , testProperty "combinator skipMany"  prop_skipMany
-        , testProperty "combinator skipSome"  prop_skipSome ]
+  [ testProperty "combinator between"   prop_between
+  , testProperty "combinator choice"    prop_choice
+  , testProperty "combinator count"     prop_count
+  , testProperty "combinator count'"    prop_count'
+  , testProperty "combinator endBy"     prop_endBy
+  , testProperty "combinator endBy1"    prop_endBy1
+  , testProperty "combinator manyTill"  prop_manyTill
+  , testProperty "combinator someTill"  prop_someTill
+  , testProperty "combinator option"    prop_option
+  , testProperty "combinator sepBy"     prop_sepBy
+  , testProperty "combinator sepBy1"    prop_sepBy1
+  , testProperty "combinator sepEndBy"  prop_sepEndBy
+  , testProperty "combinator sepEndBy1" prop_sepEndBy1
+  , testProperty "combinator skipMany"  prop_skipMany
+  , testProperty "combinator skipSome"  prop_skipSome ]
 
 prop_between :: String -> Char -> NonNegative Int -> String -> Property
 prop_between pre c n' post = checkParser p r s

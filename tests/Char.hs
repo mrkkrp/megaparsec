@@ -47,39 +47,39 @@ import Control.Applicative ((<$>))
 
 tests :: Test
 tests = testGroup "Character parsers"
-        [ testProperty "newline"         prop_newline
-        , testProperty "crlf"            prop_crlf
-        , testProperty "eol"             prop_eol
-        , testProperty "tab"             prop_tab
-        , testProperty "space"           prop_space
-        , testProperty "controlChar"     prop_controlChar
-        , testProperty "spaceChar"       prop_spaceChar
-        , testProperty "upperChar"       prop_upperChar
-        , testProperty "lowerChar"       prop_lowerChar
-        , testProperty "letterChar"      prop_letterChar
-        , testProperty "alphaNumChar"    prop_alphaNumChar
-        , testProperty "printChar"       prop_printChar
-        , testProperty "digitChar"       prop_digitChar
-        , testProperty "hexDigitChar"    prop_hexDigitChar
-        , testProperty "octDigitChar"    prop_octDigitChar
-        , testProperty "markChar"        prop_markChar
-        , testProperty "numberChar"      prop_numberChar
-        , testProperty "punctuationChar" prop_punctuationChar
-        , testProperty "symbolChar"      prop_symbolChar
-        , testProperty "separatorChar"   prop_separatorChar
-        , testProperty "asciiChar"       prop_asciiChar
-        , testProperty "latin1Char"      prop_latin1Char
-        , testProperty "charCategory"    prop_charCategory
-        , testProperty "char"            prop_char
-        , testProperty "char'"           prop_char'
-        , testProperty "anyChar"         prop_anyChar
-        , testProperty "oneOf"           prop_oneOf
-        , testProperty "oneOf'"          prop_oneOf'
-        , testProperty "noneOf"          prop_noneOf
-        , testProperty "noneOf'"         prop_noneOf'
-        , testProperty "string"          prop_string
-        , testProperty "string'"         prop_string'_0
-        , testProperty "string' (case)"  prop_string'_1 ]
+  [ testProperty "newline"         prop_newline
+  , testProperty "crlf"            prop_crlf
+  , testProperty "eol"             prop_eol
+  , testProperty "tab"             prop_tab
+  , testProperty "space"           prop_space
+  , testProperty "controlChar"     prop_controlChar
+  , testProperty "spaceChar"       prop_spaceChar
+  , testProperty "upperChar"       prop_upperChar
+  , testProperty "lowerChar"       prop_lowerChar
+  , testProperty "letterChar"      prop_letterChar
+  , testProperty "alphaNumChar"    prop_alphaNumChar
+  , testProperty "printChar"       prop_printChar
+  , testProperty "digitChar"       prop_digitChar
+  , testProperty "hexDigitChar"    prop_hexDigitChar
+  , testProperty "octDigitChar"    prop_octDigitChar
+  , testProperty "markChar"        prop_markChar
+  , testProperty "numberChar"      prop_numberChar
+  , testProperty "punctuationChar" prop_punctuationChar
+  , testProperty "symbolChar"      prop_symbolChar
+  , testProperty "separatorChar"   prop_separatorChar
+  , testProperty "asciiChar"       prop_asciiChar
+  , testProperty "latin1Char"      prop_latin1Char
+  , testProperty "charCategory"    prop_charCategory
+  , testProperty "char"            prop_char
+  , testProperty "char'"           prop_char'
+  , testProperty "anyChar"         prop_anyChar
+  , testProperty "oneOf"           prop_oneOf
+  , testProperty "oneOf'"          prop_oneOf'
+  , testProperty "noneOf"          prop_noneOf
+  , testProperty "noneOf'"         prop_noneOf'
+  , testProperty "string"          prop_string
+  , testProperty "string'"         prop_string'_0
+  , testProperty "string' (case)"  prop_string'_1 ]
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements

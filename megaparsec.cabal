@@ -26,143 +26,140 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
-name:                megaparsec
-version:             4.3.0
-cabal-version:       >= 1.10
-license:             BSD2
-license-file:        LICENSE.md
-author:              Megaparsec contributors,
-                     Paolo Martini <paolo@nemail.it>,
-                     Daan Leijen <daan@microsoft.com>
+name:                 megaparsec
+version:              4.3.0
+cabal-version:        >= 1.10
+license:              BSD2
+license-file:         LICENSE.md
+author:               Megaparsec contributors,
+                      Paolo Martini <paolo@nemail.it>,
+                      Daan Leijen <daan@microsoft.com>
 
-maintainer:          Mark Karpov <markkarpov@opmbx.org>
-homepage:            https://github.com/mrkkrp/megaparsec
-bug-reports:         https://github.com/mrkkrp/megaparsec/issues
-category:            Parsing
-synopsis:            Monadic parser combinators
-build-type:          Simple
+maintainer:           Mark Karpov <markkarpov@opmbx.org>
+homepage:             https://github.com/mrkkrp/megaparsec
+bug-reports:          https://github.com/mrkkrp/megaparsec/issues
+category:             Parsing
+synopsis:             Monadic parser combinators
+build-type:           Simple
 description:
 
-    This is industrial-strength monadic parser combinator library. Megaparsec is
-    a fork of Parsec library originally written by Daan Leijen.
+  This is industrial-strength monadic parser combinator library. Megaparsec
+  is a fork of Parsec library originally written by Daan Leijen.
 
-extra-source-files:  AUTHORS.md
-                   , CHANGELOG.md
-                   , README.md
+extra-source-files:   AUTHORS.md
+                    , CHANGELOG.md
+                    , README.md
 
 flag dev
-  description:       Turn on development settings.
-  manual:            True
-  default:           False
+  description:        Turn on development settings.
+  manual:             True
+  default:            False
 
 library
-  build-depends:     base                   >= 4.6 && < 5
-                   , mtl                    == 2.*
-                   , transformers           >= 0.4
-                   , bytestring
-                   , text                   >= 0.2
-  default-extensions:
-                     CPP
-                   , DeriveDataTypeable
-                   , FlexibleContexts
-                   , FlexibleInstances
-                   , FunctionalDependencies
-                   , GeneralizedNewtypeDeriving
-                   , MultiParamTypeClasses
-                   , PolymorphicComponents
-                   , TupleSections
-                   , UndecidableInstances
-  exposed-modules:   Text.Megaparsec
-                   , Text.Megaparsec.ByteString
-                   , Text.Megaparsec.ByteString.Lazy
-                   , Text.Megaparsec.Char
-                   , Text.Megaparsec.Combinator
-                   , Text.Megaparsec.Error
-                   , Text.Megaparsec.Expr
-                   , Text.Megaparsec.Lexer
-                   , Text.Megaparsec.Perm
-                   , Text.Megaparsec.Pos
-                   , Text.Megaparsec.Prim
-                   , Text.Megaparsec.ShowToken
-                   , Text.Megaparsec.String
-                   , Text.Megaparsec.Text
-                   , Text.Megaparsec.Text.Lazy
+  build-depends:      base         >= 4.6 && < 5
+                    , bytestring
+                    , mtl          == 2.*
+                    , text         >= 0.2
+                    , transformers >= 0.4
+  default-extensions: CPP
+                    , DeriveDataTypeable
+                    , FlexibleContexts
+                    , FlexibleInstances
+                    , FunctionalDependencies
+                    , GeneralizedNewtypeDeriving
+                    , MultiParamTypeClasses
+                    , PolymorphicComponents
+                    , TupleSections
+                    , UndecidableInstances
+  exposed-modules:    Text.Megaparsec
+                    , Text.Megaparsec.ByteString
+                    , Text.Megaparsec.ByteString.Lazy
+                    , Text.Megaparsec.Char
+                    , Text.Megaparsec.Combinator
+                    , Text.Megaparsec.Error
+                    , Text.Megaparsec.Expr
+                    , Text.Megaparsec.Lexer
+                    , Text.Megaparsec.Perm
+                    , Text.Megaparsec.Pos
+                    , Text.Megaparsec.Prim
+                    , Text.Megaparsec.ShowToken
+                    , Text.Megaparsec.String
+                    , Text.Megaparsec.Text
+                    , Text.Megaparsec.Text.Lazy
   if flag(dev)
-    ghc-options:     -Wall -Werror
+    ghc-options:      -Wall -Werror
   else
-    ghc-options:     -O2 -Wall
-  default-language:  Haskell2010
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
 
 test-suite old-tests
-  main-is:           Main.hs
-  hs-source-dirs:    old-tests
-  type:              exitcode-stdio-1.0
+  main-is:            Main.hs
+  hs-source-dirs:     old-tests
+  type:               exitcode-stdio-1.0
   if flag(dev)
-    ghc-options:     -Wall -Werror
+    ghc-options:      -Wall -Werror
   else
-    ghc-options:     -O2 -Wall
-  other-modules:     Bugs
-                   , Bugs.Bug2
-                   , Bugs.Bug6
-                   , Bugs.Bug9
-                   , Bugs.Bug35
-                   , Bugs.Bug39
-                   , Util
-  build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.3
-                   , HUnit                  >= 1.2 && < 1.4
-                   , test-framework         >= 0.6 && < 1
-                   , test-framework-hunit   >= 0.2 && < 0.4
-  default-extensions:
-                     CPP
-                   , FlexibleContexts
-  default-language:  Haskell2010
+    ghc-options:      -O2 -Wall
+  other-modules:      Bugs
+                    , Bugs.Bug2
+                    , Bugs.Bug6
+                    , Bugs.Bug9
+                    , Bugs.Bug35
+                    , Bugs.Bug39
+                    , Util
+  build-depends:      base                 >= 4.6 && < 5
+                    , HUnit                >= 1.2 && < 1.4
+                    , megaparsec           >= 4.3
+                    , test-framework       >= 0.6 && < 1
+                    , test-framework-hunit >= 0.2 && < 0.4
+  default-extensions: CPP
+                    , FlexibleContexts
+  default-language:   Haskell2010
 
 test-suite tests
-  main-is:           Main.hs
-  hs-source-dirs:    tests
-  type:              exitcode-stdio-1.0
+  main-is:            Main.hs
+  hs-source-dirs:     tests
+  type:               exitcode-stdio-1.0
   if flag(dev)
-    ghc-options:     -Wall -Werror
+    ghc-options:      -Wall -Werror
   else
-    ghc-options:     -O2 -Wall
-  other-modules:     Char
-                   , Combinator
-                   , Error
-                   , Expr
-                   , Lexer
-                   , Perm
-                   , Pos
-                   , Prim
-                   , Util
-  build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.3
-                   , mtl                    == 2.*
-                   , transformers           >= 0.4
-                   , QuickCheck             >= 2.4 && < 3
-                   , test-framework         >= 0.6 && < 1
-                   , test-framework-quickcheck2 >= 0.3 && < 0.4
-  default-extensions:
-                     CPP
-                   , FlexibleContexts
-                   , FlexibleInstances
-  default-language:  Haskell2010
+    ghc-options:      -O2 -Wall
+  other-modules:      Char
+                    , Combinator
+                    , Error
+                    , Expr
+                    , Lexer
+                    , Perm
+                    , Pos
+                    , Prim
+                    , Util
+  build-depends:      base           >= 4.6 && < 5
+                    , QuickCheck     >= 2.4 && < 3
+                    , megaparsec     >= 4.3
+                    , mtl            == 2.*
+                    , test-framework >= 0.6 && < 1
+                    , test-framework-quickcheck2 >= 0.3 && < 0.4
+                    , transformers   >= 0.4
+  default-extensions: CPP
+                    , FlexibleContexts
+                    , FlexibleInstances
+  default-language:   Haskell2010
 
 benchmark benchmarks
-  main-is:           Main.hs
-  hs-source-dirs:    benchmarks
-  type:              exitcode-stdio-1.0
+  main-is:            Main.hs
+  hs-source-dirs:     benchmarks
+  type:               exitcode-stdio-1.0
   if flag(dev)
-    ghc-options:     -O2 -Wall -Werror
+    ghc-options:      -O2 -Wall -Werror
   else
-    ghc-options:     -O2 -Wall
-  build-depends:     base                   >= 4.6 && < 5
-                   , megaparsec             >= 4.3
-                   , criterion              >= 0.6.2.1 && < 1.2
-                   , text                   >= 0.2
-                   , bytestring             >= 0.10 && < 2
+    ghc-options:      -O2 -Wall
+  build-depends:      base       >= 4.6 && < 5
+                    , bytestring >= 0.10 && < 2
+                    , criterion  >= 0.6.2.1 && < 1.2
+                    , megaparsec >= 4.3
+                    , text       >= 0.2
   default-language:  Haskell2010
 
 source-repository head
-  type:              git
-  location:          https://github.com/mrkkrp/megaparsec.git
+  type:               git
+  location:           https://github.com/mrkkrp/megaparsec.git

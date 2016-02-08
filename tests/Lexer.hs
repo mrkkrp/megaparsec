@@ -63,25 +63,25 @@ import Control.Applicative ((<$>), (<*), (<*>), (<$))
 
 tests :: Test
 tests = testGroup "Lexer"
-        [ testProperty "space combinator"       prop_space
-        , testProperty "symbol combinator"      prop_symbol
-        , testProperty "symbol' combinator"     prop_symbol'
-        , testProperty "indentLevel"            prop_indentLevel
-        , testProperty "indentGuard combinator" prop_indentGuard
-        , testProperty "nonIndented combinator" prop_nonIndented
-        , testProperty "indentBlock combinator" prop_indentBlock
-        , testProperty "indentBlock (many)"     prop_indentMany
-        , testProperty "charLiteral"            prop_charLiteral
-        , testProperty "integer"                prop_integer
-        , testProperty "decimal"                prop_decimal
-        , testProperty "hexadecimal"            prop_hexadecimal
-        , testProperty "octal"                  prop_octal
-        , testProperty "float 0"                prop_float_0
-        , testProperty "float 1"                prop_float_1
-        , testProperty "number 0"               prop_number_0
-        , testProperty "number 1"               prop_number_1
-        , testProperty "number 2 (signed)"      prop_number_2
-        , testProperty "signed"                 prop_signed ]
+  [ testProperty "space combinator"       prop_space
+  , testProperty "symbol combinator"      prop_symbol
+  , testProperty "symbol' combinator"     prop_symbol'
+  , testProperty "indentLevel"            prop_indentLevel
+  , testProperty "indentGuard combinator" prop_indentGuard
+  , testProperty "nonIndented combinator" prop_nonIndented
+  , testProperty "indentBlock combinator" prop_indentBlock
+  , testProperty "indentBlock (many)"     prop_indentMany
+  , testProperty "charLiteral"            prop_charLiteral
+  , testProperty "integer"                prop_integer
+  , testProperty "decimal"                prop_decimal
+  , testProperty "hexadecimal"            prop_hexadecimal
+  , testProperty "octal"                  prop_octal
+  , testProperty "float 0"                prop_float_0
+  , testProperty "float 1"                prop_float_1
+  , testProperty "number 0"               prop_number_0
+  , testProperty "number 1"               prop_number_1
+  , testProperty "number 2 (signed)"      prop_number_2
+  , testProperty "signed"                 prop_signed ]
 
 -- White space
 
@@ -320,8 +320,8 @@ prop_signed n i plus = checkParser p r s
         s = if i <= length z then take i z ++ "?" ++ drop i z else z
 
 quasiCorrupted :: NonNegative Integer -> Int
-               -> (Integer -> String -> String) -> String
-               -> (Either ParseError Integer, String)
+  -> (Integer -> String -> String) -> String
+  -> (Either ParseError Integer, String)
 quasiCorrupted n' i shower l = (r, s)
   where n = getNonNegative n'
         r | i > length z = Right n

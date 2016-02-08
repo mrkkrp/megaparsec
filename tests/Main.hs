@@ -41,11 +41,11 @@ import qualified Lexer
 
 main :: IO ()
 main = defaultMain
-       [ Pos.tests
-       , Error.tests
-       , Prim.tests
-       , Combinator.tests
-       , Char.tests
-       , Expr.tests
-       , Perm.tests
-       , Lexer.tests ]
+  [ Pos.tests
+  , Error.tests
+  , Prim.tests
+  , Combinator.tests
+  , Char.tests
+  , Expr.tests
+  , Perm.tests
+  , Lexer.tests ]

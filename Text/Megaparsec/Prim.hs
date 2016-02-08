@@ -488,9 +488,12 @@ class (A.Alternative m, Monad m, Stream s t)
   -- >                      then Right x
   -- >                      else Left . pure . Unexpected . showToken $ x
 
-  token :: (Int -> SourcePos -> t -> SourcePos) -- ^ Next position calculating function
-        -> (t -> Either [Message] a) -- ^ Matching function for the token to parse
-        -> m a
+  token
+    :: (Int -> SourcePos -> t -> SourcePos)
+       -- ^ Next position calculating function
+    -> (t -> Either [Message] a)
+       -- ^ Matching function for the token to parse
+    -> m a
 
   -- | The parser @tokens posFromTok test@ parses list of tokens and returns
   -- it. @posFromTok@ is called with three arguments: tab width, initial
@@ -504,10 +507,13 @@ class (A.Alternative m, Monad m, Stream s t)
   -- > string = tokens updatePosString (==)
 
   tokens :: Eq t
-         => (Int -> SourcePos -> [t] -> SourcePos) -- ^ Computes position of tokens
-         -> (t -> t -> Bool)      -- ^ Predicate to check equality of tokens
-         -> [t]                   -- ^ List of tokens to parse
-         -> m [t]
+    => (Int -> SourcePos -> [t] -> SourcePos)
+       -- ^ Computes position of tokens
+    -> (t -> t -> Bool)
+       -- ^ Predicate to check equality of tokens
+    -> [t]
+       -- ^ List of tokens to parse
+    -> m [t]
 
   -- | Returns the full parser state as a 'State' record.
 
@@ -568,9 +574,9 @@ pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
 {-# INLINE pEof #-}
 
 pToken :: Stream s t
-       => (Int -> SourcePos -> t -> SourcePos)
-       -> (t -> Either [Message] a)
-       -> ParsecT s m a
+  => (Int -> SourcePos -> t -> SourcePos)
+  -> (t -> Either [Message] a)
+  -> ParsecT s m a
 pToken nextpos test = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
     case uncons input of
       Nothing     -> eerr (unexpectedErr eoi pos) s
@@ -695,10 +701,10 @@ setParserState st = updateParserState (const st)
 -- > numbers = commaSep integer
 
 parse :: Stream s t
-      => Parsec s a -- ^ Parser to run
-      -> String     -- ^ Name of source file
-      -> s          -- ^ Input for parser
-      -> Either ParseError a
+  => Parsec s a -- ^ Parser to run
+  -> String     -- ^ Name of source file
+  -> s          -- ^ Input for parser
+  -> Either ParseError a
 parse = runParser
 
 -- | @parseMaybe p input@ runs parser @p@ on @input@ and returns result
@@ -734,10 +740,10 @@ parseTest p input =
 -- > parseFromFile p file = runParser p file <$> readFile file
 
 runParser :: Stream s t
-          => Parsec s a -- ^ Parser to run
-          -> String     -- ^ Name of source file
-          -> s          -- ^ Input for parser
-          -> Either ParseError a
+  => Parsec s a -- ^ Parser to run
+  -> String     -- ^ Name of source file
+  -> s          -- ^ Input for parser
+  -> Either ParseError a
 runParser p name s = snd $ runParser' p (initialState name s)
 
 -- | The function is similar to 'runParser' with the difference that it
@@ -748,9 +754,9 @@ runParser p name s = snd $ runParser' p (initialState name s)
 -- @since 4.2.0
 
 runParser' :: Stream s t
-           => Parsec s a -- ^ Parser to run
-           -> State s    -- ^ Initial state
-           -> (State s, Either ParseError a)
+  => Parsec s a -- ^ Parser to run
+  -> State s    -- ^ Initial state
+  -> (State s, Either ParseError a)
 runParser' p = runIdentity . runParserT' p
 
 -- | @runParserT p file input@ runs parser @p@ on the input list of tokens
@@ -760,10 +766,10 @@ runParser' p = runIdentity . runParserT' p
 -- value of type @a@ ('Right').
 
 runParserT :: (Monad m, Stream s t)
-           => ParsecT s m a -- ^ Parser to run
-           -> String        -- ^ Name of source file
-           -> s             -- ^ Input for parser
-           -> m (Either ParseError a)
+  => ParsecT s m a -- ^ Parser to run
+  -> String        -- ^ Name of source file
+  -> s             -- ^ Input for parser
+  -> m (Either ParseError a)
 runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
@@ -773,9 +779,9 @@ runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 -- @since 4.2.0
 
 runParserT' :: (Monad m, Stream s t)
-            => ParsecT s m a -- ^ Parser to run
-            -> State s       -- ^ Initial state
-            -> m (State s, Either ParseError a)
+  => ParsecT s m a -- ^ Parser to run
+  -> State s       -- ^ Initial state
+  -> m (State s, Either ParseError a)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
   case result of
@@ -791,9 +797,9 @@ initialState name s = State s (initialPos name) defaultTabWidth
 -- are built upon this.
 
 runParsecT :: Monad m
-           => ParsecT s m a -- ^ Parser to run
-           -> State s       -- ^ Initial state
-           -> m (Reply s a)
+  => ParsecT s m a -- ^ Parser to run
+  -> State s       -- ^ Initial state
+  -> m (Reply s a)
 runParsecT p s = unParser p s cok cerr eok eerr
   where cok a s' _  = return $ Reply s' Consumed (OK a)
         cerr err s' = return $ Reply s' Consumed (Error err)
@@ -811,9 +817,9 @@ runParsecT p s = unParser p s cok cerr eok eerr
 -- >     Right xs -> print $ sum xs
 
 parseFromFile :: StorableStream s t
-              => Parsec s a -- ^ Parser to run
-              -> FilePath   -- ^ Name of file to parse
-              -> IO (Either ParseError a)
+  => Parsec s a -- ^ Parser to run
+  -> FilePath   -- ^ Name of file to parse
+  -> IO (Either ParseError a)
 parseFromFile p filename = runParser p filename <$> fromFile filename
 
 -- Instances of 'MonadParsec'

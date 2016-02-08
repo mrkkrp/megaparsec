@@ -48,10 +48,10 @@ import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
 
 tests :: Test
 tests = testGroup "Expression parsers"
-        [ testProperty "correctness of expression parser" prop_correctness
-        , testProperty "error message on empty input"     prop_empty_error
-        , testProperty "error message on missing term"    prop_missing_term
-        , testProperty "error message on missing op"      prop_missing_op ]
+  [ testProperty "correctness of expression parser" prop_correctness
+  , testProperty "error message on empty input"     prop_empty_error
+  , testProperty "error message on missing term"    prop_missing_term
+  , testProperty "error message on missing op"      prop_missing_op ]
 
 -- Algebraic structures to build abstract syntax tree of our expression.
 
