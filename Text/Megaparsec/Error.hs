@@ -34,13 +34,14 @@ import Control.Exception (Exception)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Typeable (Typeable)
+import Data.Semigroup (Semigroup((<>)))
 
 import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 import Data.Foldable (foldMap)
-import Data.Monoid
+import Data.Monoid (Monoid(..))
 #endif
 
 -- | This data type represents parse error messages.
@@ -92,7 +93,10 @@ instance Show ParseError where
 
 instance Monoid ParseError where
   mempty  = newErrorUnknown (initialPos "")
-  mappend = mergeError
+  mappend = (<>)
+
+instance Semigroup ParseError where
+  (<>) = mergeError
 
 instance Exception ParseError
 
