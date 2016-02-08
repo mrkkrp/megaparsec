@@ -297,7 +297,9 @@ ii = "incorrect indentation"
 
 charLiteral :: MonadParsec s m Char => m Char
 charLiteral = label "literal character" $ do
-  r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
+  -- The @~@ is needed to avoid requiring a MonadFail constraint,
+  -- and we do know that r will be non-empty if count' succeeds.
+  ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
   case listToMaybe (readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
     Nothing      -> unexpected (showToken x)

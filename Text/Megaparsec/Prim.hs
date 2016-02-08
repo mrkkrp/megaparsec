@@ -44,6 +44,7 @@ module Text.Megaparsec.Prim
 where
 
 import Control.Monad
+import qualified Control.Monad.Fail as Fail
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
 import Control.Monad.Identity
@@ -51,7 +52,7 @@ import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
-import Data.Monoid
+import Data.Semigroup
 import qualified Control.Applicative as A
 import qualified Control.Monad.Trans.Reader as L
 import qualified Control.Monad.Trans.State.Lazy as L
@@ -137,7 +138,7 @@ data Result a
 -- unexpected 'a'
 -- expecting 'r' or end of input
 
-newtype Hints = Hints [[String]] deriving Monoid
+newtype Hints = Hints [[String]] deriving (Monoid, Semigroup)
 
 -- | Convert 'ParseError' record into 'Hints'.
 
@@ -315,6 +316,9 @@ manyErr = error $
 instance Monad (ParsecT s m) where
   return = pure
   (>>=)  = pBind
+  fail   = Fail.fail
+
+instance Fail.MonadFail (ParsecT s m) where
   fail   = pFail
 
 pPure :: a -> ParsecT s m a
