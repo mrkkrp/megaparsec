@@ -1,3 +1,16 @@
+## Megaparsec 4.4.0
+
+* Now state returned on failure is the exact state of parser at the moment
+  when it failed, which makes incremental parsing feature much better and
+  opens possibilities for features like “on-the-fly” recovering from parse
+  errors. This made `<|>` operator slower, it's now about 9 % slower than
+  equivalent Parsec's operator and 28 % slower than previous version of
+  Megaparsec. However, other combinators showed no performance degradation
+  and Megaparsec is still generally faster than Parsec.
+
+* The `count` combinator now works with `Applicative` instances (previously
+  it worked only with instances of `Alternative`). It's now also faster.
+
 ## Megaparsec 4.3.0
 
 * Canonicalized `Applicative`/`Monad` instances. Thanks to Herbert Valerio

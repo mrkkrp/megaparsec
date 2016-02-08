@@ -51,7 +51,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (label)
 
 import Text.Megaparsec.Char
-import Text.Megaparsec.Error (Message (..), ParseError, newErrorMessages)
+import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
@@ -107,6 +107,10 @@ tests = testGroup "Primitive parser combinators"
         , testProperty "parser state general"                prop_state
         , testProperty "custom state parsing"                prop_runParser'
         , testProperty "custom state parsing (transformer)"  prop_runParserT'
+        , testProperty "state on failure (mplus)"         prop_stOnFail_0
+        , testProperty "state on failure (tab)"           prop_stOnFail_1
+        , testProperty "state on failure (eof)"           prop_stOnFail_2
+        , testProperty "state on failure (notFollowedBy)" prop_stOnFail_3
         , testProperty "IdentityT try"            prop_IdentityT_try
         , testProperty "IdentityT notFollowedBy"  prop_IdentityT_notFollowedBy
         , testProperty "ReaderT try"              prop_ReaderT_try
@@ -478,6 +482,44 @@ emulateStrParsing st@(State i pos t) s =
   else let uneStuff = if null i then uneEof else uneStr (take (l + 1) i)
        in (st, Left $ newErrorMessages (exStr s : [uneStuff]) pos)
   where l = length $ takeWhile id $ zipWith (==) s i
+
+-- Additional tests to check returned state on failure
+
+prop_stOnFail_0 :: Positive Int -> Positive Int -> Property
+prop_stOnFail_0 na' nb' = runParser' p (stateFromInput s) === (i, r)
+  where i = let (Left x) = r in State "" (errorPos x) defaultTabWidth
+        na = getPositive na'
+        nb = getPositive nb'
+        p = try (many (char 'a') <* many (char 'b') <* char 'c')
+          <|> (many (char 'a') <* char 'c')
+        r = posErr (na + nb) s [exCh 'b', exCh 'c', uneEof]
+        s = replicate na 'a' ++ replicate nb 'b'
+
+prop_stOnFail_1 :: Positive Int -> Positive Int -> Property
+prop_stOnFail_1 na' t' = runParser' p (stateFromInput s) === (i, r)
+  where i = let (Left x) = r in State "" (errorPos x) t
+        na = getPositive na'
+        t = getPositive t'
+        p = many (char 'a') <* setTabWidth t <* fail myMsg
+        r = posErr na s [msg myMsg]
+        s = replicate na 'a'
+        myMsg = "failing now!"
+
+prop_stOnFail_2 :: String -> Char -> Property
+prop_stOnFail_2 s' ch = runParser' p (stateFromInput s) === (i, r)
+  where i = let (Left x) = r in State [ch] (errorPos x) defaultTabWidth
+        r = posErr (length s') s [uneCh ch, exEof]
+        p = string s' <* eof
+        s = s' ++ [ch]
+
+prop_stOnFail_3 :: String -> Property
+prop_stOnFail_3 s = runParser' p (stateFromInput s) === (i, r)
+  where i = let (Left x) = r in State s (errorPos x) defaultTabWidth
+        r = posErr 0 s [if null s then uneEof else uneCh (head s)]
+        p = notFollowedBy (string s)
+
+stateFromInput :: Stream s t => s -> State s
+stateFromInput s = State s (initialPos "") defaultTabWidth
 
 -- IdentityT instance of MonadParsec
 

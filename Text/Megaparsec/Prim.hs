@@ -82,6 +82,17 @@ data State s = State
   , stateTabWidth :: !Int }
   deriving (Show, Eq)
 
+-- | From two states, return the one with greater textual position. If the
+-- positions are equal, prefer the latter state.
+
+longestMatch :: State s -> State s -> State s
+longestMatch s1@(State _ pos1 _) s2@(State _ pos2 _) =
+  case pos1 `compare` pos2 of
+    LT -> s2
+    EQ -> s2
+    GT -> s1
+{-# INLINE longestMatch #-}
+
 -- | All information available after parsing. This includes consumption of
 -- input, success (with return value) or failure (with parse error), parser
 -- state at the end of parsing.
@@ -140,14 +151,18 @@ toHints err = Hints hints
 -- Note that if resulting continuation gets 'ParseError' where all messages
 -- are created with 'Message' constructor, hints are ignored.
 
-withHints :: Hints -> (ParseError -> m b) -> ParseError -> m b
+withHints
+  :: Hints             -- ^ Hints to use
+  -> (ParseError -> State s -> m b) -- ^ Continuation to influence
+  -> ParseError        -- ^ First argument of resulting continuation
+  -> State s           -- ^ Second argument of resulting continuation
+  -> m b
 withHints (Hints xs) c e =
   let isMessage (Message _) = True
       isMessage _           = False
-  in (if all isMessage (errorMessages e)
-      then c
-      else c . addErrorMessages (Expected <$> concat xs))
-     e
+  in if all isMessage (errorMessages e)
+       then c e
+       else c (addErrorMessages (Expected <$> concat xs) e)
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
@@ -221,7 +236,7 @@ instance StorableStream TL.Text Char where
 -- that takes five arguments:
 --
 --     * State. It includes input stream, position in input stream and
---     user's backtracking state.
+--     current value of tab width.
 --
 --     * “Consumed-OK” continuation (cok). This is just a function that
 --     takes three arguments: result of parsing, state after parsing, and
@@ -231,9 +246,8 @@ instance StorableStream TL.Text Char where
 --
 --     * “Consumed-error” continuation (cerr). This function is called when
 --     some part of input stream has been consumed and parsing resulted in
---     an error. When error happens, parsing stops and we're only interested
---     in error message, so this continuation takes 'ParseError' as its only
---     argument.
+--     an error. This continuation takes 'ParseError' and state information
+--     at the time error occurred.
 --
 --     * “Empty-OK” continuation (eok). The function takes the same
 --     arguments as “consumed-OK” continuation. “Empty-OK” is called when no
@@ -241,8 +255,8 @@ instance StorableStream TL.Text Char where
 --
 --     * “Empty-error” continuation (eerr). The function is called when no
 --     input has been consumed, but nonetheless parsing resulted in an
---     error. Just like “consumed-error”, the continuation take single
---     argument — 'ParseError' record.
+--     error. Just like “consumed-error”, the continuation takes
+--     'ParseError' record and state information.
 --
 -- You call specific continuation when you want to proceed in that specific
 -- branch of control flow.
@@ -258,9 +272,9 @@ type Parsec s = ParsecT s Identity
 newtype ParsecT s m a = ParsecT
   { unParser :: forall b. State s
              -> (a -> State s -> Hints -> m b) -- consumed-OK
-             -> (ParseError -> m b)            -- consumed-error
+             -> (ParseError -> State s -> m b) -- consumed-error
              -> (a -> State s -> Hints -> m b) -- empty-OK
-             -> (ParseError -> m b)            -- empty-error
+             -> (ParseError -> State s -> m b) -- empty-error
              -> m b }
 
 instance Functor (ParsecT s m) where
@@ -284,7 +298,7 @@ instance A.Alternative (ParsecT s m) where
 
 manyAcc :: ParsecT s m a -> ParsecT s m [a]
 manyAcc p = ParsecT $ \s cok cerr eok _ ->
-  let errToHints c err = c (toHints err)
+  let errToHints c err _ = c (toHints err)
       walk xs x s' _ =
         unParser p s'
         (seq xs $ walk $ x:xs)       -- consumed-OK
@@ -317,8 +331,8 @@ pBind m k = ParsecT $ \s cok cerr eok eerr ->
 {-# INLINE pBind #-}
 
 pFail :: String -> ParsecT s m a
-pFail msg = ParsecT $ \s _ _ _ eerr ->
-  eerr $ newErrorMessage (Message msg) (statePos s)
+pFail msg = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+  eerr (newErrorMessage (Message msg) pos) s
 {-# INLINE pFail #-}
 
 -- | Low-level creation of the ParsecT type.
@@ -330,11 +344,11 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
     Consumed ->
       case result of
         OK    x -> cok x s' mempty
-        Error e -> cerr e
+        Error e -> cerr e s'
     Virgin ->
       case result of
         OK    x -> eok x s' mempty
-        Error e -> eerr e
+        Error e -> eerr e s'
 
 instance MonadIO m => MonadIO (ParsecT s m) where
   liftIO = lift . liftIO
@@ -364,14 +378,15 @@ instance MonadPlus (ParsecT s m) where
   mplus = pPlus
 
 pZero :: ParsecT s m a
-pZero = ParsecT $ \(State _ pos _) _ _ _ eerr -> eerr $ newErrorUnknown pos
+pZero = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+  eerr (newErrorUnknown pos) s
 
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
-  let meerr err =
-        let ncerr   err' = cerr (err' <> err)
-            neok x s' hs = eok x s' (toHints err <> hs)
-            neerr   err' = eerr (err' <> err)
+  let meerr err ms =
+        let ncerr err' s' = cerr (mergeError err' err) (longestMatch ms s')
+            neok x s' hs  = eok x s' (toHints err <> hs)
+            neerr err' s' = eerr (mergeError err' err) (longestMatch ms s')
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
@@ -515,8 +530,8 @@ instance Stream s t => MonadParsec s (ParsecT s m) t where
   updateParserState = pUpdateParserState
 
 pFailure :: [Message] -> ParsecT s m a
-pFailure msgs = ParsecT $ \(State _ pos _) _ _ _ eerr ->
-  eerr $ newErrorMessages msgs pos
+pFailure msgs = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+  eerr (newErrorMessages msgs pos) s
 
 pLabel :: String -> ParsecT s m a -> ParsecT s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
@@ -539,54 +554,56 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 pNotFollowedBy :: Stream s t => ParsecT s m a -> ParsecT s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
   let l = maybe eoi (showToken . fst) (uncons input)
-      cok' _ _ _ = eerr $ unexpectedErr l pos
-      cerr'    _ = eok () s mempty
-      eok' _ _ _ = eerr $ unexpectedErr l pos
-      eerr'    _ = eok () s mempty
+      cok' _ _ _ = eerr (unexpectedErr l pos) s
+      cerr'  _ _ = eok () s mempty
+      eok' _ _ _ = eerr (unexpectedErr l pos) s
+      eerr'  _ _ = eok () s mempty
   in unParser p s cok' cerr' eok' eerr'
 
 pEof :: Stream s t => ParsecT s m ()
 pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
   case uncons input of
     Nothing    -> eok () s mempty
-    Just (x,_) -> eerr $ unexpectedErr (showToken x) pos
+    Just (x,_) -> eerr (unexpectedErr (showToken x) pos) s
 {-# INLINE pEof #-}
 
 pToken :: Stream s t
        => (Int -> SourcePos -> t -> SourcePos)
        -> (t -> Either [Message] a)
        -> ParsecT s m a
-pToken nextpos test = ParsecT $ \(State input pos w) cok _ _ eerr ->
+pToken nextpos test = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
     case uncons input of
-      Nothing     -> eerr $ unexpectedErr eoi pos
+      Nothing     -> eerr (unexpectedErr eoi pos) s
       Just (c,cs) ->
         case test c of
-          Left ms -> eerr $ addErrorMessages ms (newErrorUnknown pos)
+          Left ms -> eerr (addErrorMessages ms (newErrorUnknown pos)) s
           Right x -> let newpos   = nextpos w pos c
                          newstate = State cs newpos w
                      in seq newpos $ seq newstate $ cok x newstate mempty
 {-# INLINE pToken #-}
 
 pTokens :: Stream s t
-        => (Int -> SourcePos -> [t] -> SourcePos)
-        -> (t -> t -> Bool)
-        -> [t]
-        -> ParsecT s m [t]
+  => (Int -> SourcePos -> [t] -> SourcePos)
+  -> (t -> t -> Bool)
+  -> [t]
+  -> ParsecT s m [t]
 pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens nextpos test tts = ParsecT $ \(State input pos w) cok cerr _ eerr ->
-  let errExpect x = setErrorMessage (Expected $ showToken tts)
-                    (newErrorMessage (Unexpected x) pos)
-      walk [] is rs = let pos' = nextpos w pos tts
-                          s'   = State rs pos' w
-                      in cok (reverse is) s' mempty
+pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok cerr _ eerr ->
+  let r = showToken . reverse
+      errExpect x = setErrorMessage (Expected $ showToken tts)
+        (newErrorMessage (Unexpected x) pos)
+      walk [] is rs =
+        let pos' = nextpos w pos tts
+            s'   = State rs pos' w
+        in cok (reverse is) s' mempty
       walk (t:ts) is rs =
         let errorCont = if null is then eerr else cerr
-            what      = if null is then eoi  else showToken $ reverse is
+            what      = if null is then eoi  else r is
         in case uncons rs of
-             Nothing -> errorCont . errExpect $ what
+             Nothing -> errorCont (errExpect what) s
              Just (x,xs)
                | test t x  -> walk ts (x:is) xs
-               | otherwise -> errorCont . errExpect . showToken $ reverse (x:is)
+               | otherwise -> errorCont (errExpect $ r (x:is)) s
   in walk tts [] input
 {-# INLINE pTokens #-}
 
@@ -778,10 +795,10 @@ runParsecT :: Monad m
            -> State s       -- ^ Initial state
            -> m (Reply s a)
 runParsecT p s = unParser p s cok cerr eok eerr
-  where cok a s' _ = return $ Reply s' Consumed (OK a)
-        cerr err   = return $ Reply s  Consumed (Error err)
-        eok a s' _ = return $ Reply s' Virgin   (OK a)
-        eerr err   = return $ Reply s  Virgin   (Error err)
+  where cok a s' _  = return $ Reply s' Consumed (OK a)
+        cerr err s' = return $ Reply s' Consumed (Error err)
+        eok a s' _  = return $ Reply s' Virgin   (OK a)
+        eerr err s' = return $ Reply s' Virgin   (Error err)
 
 -- | @parseFromFile p filename@ runs parser @p@ on the input read from
 -- @filename@. Returns either a 'ParseError' ('Left') or a value of type @a@

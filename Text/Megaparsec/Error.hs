@@ -171,6 +171,7 @@ mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
     LT -> e2
     EQ -> addErrorMessages ms2 e1
     GT -> e1
+{-# INLINE mergeError #-}
 
 -- | @showMessages ms@ transforms list of error messages @ms@ into
 -- their textual representation.
