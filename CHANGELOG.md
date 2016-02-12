@@ -11,6 +11,10 @@
 * The `count` combinator now works with `Applicative` instances (previously
   it worked only with instances of `Alternative`). It's now also faster.
 
+* New primitive parser `withRecovery` added. The parser allows to recover
+  from parse errors “on-the-fly” and continue parsing. Once parsing is
+  finished, several parse errors may be reported or ignored altogether.
+
 ## Megaparsec 4.3.0
 
 * Canonicalized `Applicative`/`Monad` instances. Thanks to Herbert Valerio
