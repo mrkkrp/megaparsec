@@ -11,6 +11,15 @@
 * The `count` combinator now works with `Applicative` instances (previously
   it worked only with instances of `Alternative`). It's now also faster.
 
+* `tokens` and parsers built upon it (such as `string` and `string'`)
+  backtrack automatically on failure now, that is, when they fail, they
+  never consume any input. This is done to make their consumption model
+  match how error messages are reported (which becomes an important thing as
+  user gets more control with primitives like `withRecovery`). This means,
+  in particular, that it's no longer necessary to use `try` with
+  `tokens`-based parsers. This new feature *does not* affect performance in
+  any way.
+
 * New primitive parser `withRecovery` added. The parser allows to recover
   from parse errors “on-the-fly” and continue parsing. Once parsing is
   finished, several parse errors may be reported or ignored altogether.

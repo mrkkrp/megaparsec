@@ -34,7 +34,7 @@ import Control.Applicative
 import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, fromMaybe)
+import Data.Maybe (maybeToList)
 
 import Control.Monad.Cont
 import Control.Monad.Except
@@ -152,7 +152,7 @@ prop_alternative_1 s0 s1
   | s0 `isPrefixOf` s1 =
       checkParser p (posErr s0l s1 [uneCh (s1 !! s0l), exEof]) s1
   | otherwise = checkParser p (Right s0) s0 .&&. checkParser p (Right s1) s1
-    where p   = try (string s0) <|> string s1
+    where p   = string s0 <|> string s1
           s0l = length s0
 
 prop_alternative_2 :: Char -> Char -> Char -> Bool -> Property
@@ -166,8 +166,8 @@ prop_alternative_2 a b c l = checkParser p r s
 
 prop_alternative_3 :: Property
 prop_alternative_3 = checkParser p r s
-  where p  = asum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
-        p' = bsum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
+  where p  = asum [empty, string ">>>", empty, return "foo"] <?> "bar"
+        p' = bsum [empty, string ">>>", empty, return "foo"] <?> "bar"
         bsum = foldl (<|>) empty
         r = simpleParse p' s
         s = ">>"
@@ -333,24 +333,23 @@ prop_hidden_0 a' b' c' = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_hidden_1 :: String -> NonEmptyList Char -> String -> Property
-prop_hidden_1 a c' s = checkParser p r s
+prop_hidden_1 :: NonEmptyList Char -> String -> Property
+prop_hidden_1 c' s = checkParser p r s
   where c = getNonEmpty c'
-        p = fromMaybe a <$> optional (hidden $ string c)
-        r | null s = Right a
-          | c == s = Right s
-          | head c /= head s = posErr 0 s [uneCh (head s), exEof]
-          | otherwise = simpleParse (string c) s
+        cn = length c
+        p = optional (hidden $ string c)
+        r | null s           = Right Nothing
+          | c == s           = Right (Just s)
+          | c `isPrefixOf` s = posErr cn s [uneCh (s !! cn), exEof]
+          | otherwise        = posErr 0 s [uneCh (head s), exEof]
 
-prop_try :: String -> String -> String -> Property
-prop_try pre s1' s2' = checkParser p r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        p = try (string s1) <|> string s2
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_try :: Char -> Char -> Char -> Property
+prop_try pre ch1 ch2 = checkParser p r s
+  where s1 = sequence [char pre, char ch1]
+        s2 = sequence [char pre, char ch2]
+        p = try s1 <|> s2
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
 prop_lookAhead_0 a b c = checkParser p r s
@@ -523,15 +522,13 @@ stateFromInput s = State s (initialPos "") defaultTabWidth
 
 -- IdentityT instance of MonadParsec
 
-prop_IdentityT_try :: String -> String -> String -> Property
-prop_IdentityT_try pre s1' s2' = checkParser (runIdentityT p) r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        p = try (string s1) <|> string s2
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_IdentityT_try :: Char -> Char -> Char -> Property
+prop_IdentityT_try pre ch1 ch2 = checkParser (runIdentityT p) r s
+  where s1 = sequence [char pre, char ch1]
+        s2 = sequence [char pre, char ch2]
+        p = try s1 <|> s2
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_IdentityT_notFollowedBy :: NonNegative Int -> NonNegative Int
                              -> NonNegative Int -> Property
@@ -544,17 +541,16 @@ prop_IdentityT_notFollowedBy a' b' c' = checkParser (runIdentityT p) r s
 
 -- ReaderT instance of MonadParsec
 
-prop_ReaderT_try :: String -> String -> String -> Property
-prop_ReaderT_try pre s1' s2' = checkParser (runReaderT p (s1', s2')) r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        getS1 = asks ((pre ++) . fst)
-        getS2 = asks ((pre ++) . snd)
-        p = try (string =<< getS1) <|> (string =<< getS2)
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_ReaderT_try :: Char -> Char -> Char -> Property
+prop_ReaderT_try pre ch1 ch2 = checkParser (runReaderT p (s1, s2)) r s
+  where s1 = pre : [ch1]
+        s2 = pre : [ch2]
+        getS1 = asks fst
+        getS2 = asks snd
+        p = try (g =<< getS1) <|> (g =<< getS2)
+        g = sequence . fmap char
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_ReaderT_notFollowedBy :: NonNegative Int -> NonNegative Int
                            -> NonNegative Int -> Property

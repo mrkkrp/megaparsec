@@ -100,10 +100,7 @@ endBy1 p sep = some (p <* sep)
 -- parser @end@ succeeds. Returns the list of values returned by @p@. This
 -- parser can be used to scan comments:
 --
--- > simpleComment = string "<!--" >> manyTill anyChar (try $ string "-->")
---
--- Note that we need to use 'try' since parsers @anyChar@ and @string
--- \"-->\"@ overlap and @string \"-->\"@ could consume input before failing.
+-- > simpleComment = string "<!--" >> manyTill anyChar (string "-->")
 
 manyTill :: Alternative m => m a -> m end -> m [a]
 manyTill p end = ([] <$ end) <|> someTill p end

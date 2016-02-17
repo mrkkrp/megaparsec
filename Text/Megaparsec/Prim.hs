@@ -458,6 +458,11 @@ class (A.Alternative m, Monad m, Stream s t)
   -- 1:1:
   -- unexpected "le"
   -- expecting "let" or "lexical"
+  --
+  -- Please note that as of Megaparsec 4.4.0, 'string' backtracks
+  -- automatically (see 'tokens'), so it does not need 'try'. However, the
+  -- examples above demonstrate the idea behind 'try' so well that it was
+  -- decided to keep them.
 
   try :: m a -> m a
 
@@ -524,6 +529,22 @@ class (A.Alternative m, Monad m, Stream s t)
   -- This can be used for example to write 'Text.Megaparsec.Char.string':
   --
   -- > string = tokens updatePosString (==)
+  --
+  -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
+  -- primitive, which means that if it fails, it never consumes any
+  -- input. This is done to make its consumption model match how error
+  -- messages for this primitive are reported (which becomes an important
+  -- thing as user gets more control with primitives like 'withRecovery'):
+  --
+  -- >>> parseTest (string "abc") "abd"
+  -- 1:1:
+  -- unexpected "abd"
+  -- expecting "abc"
+  --
+  -- This means, in particular, that it's no longer necessary to use 'try'
+  -- with 'tokens'-based parsers, such as 'Text.Megaparsec.Char.string' and
+  -- 'Text.Megaparsec.Char.string''. This new feature /does not/ affect
+  -- performance in any way.
 
   tokens :: Eq t
     => (Int -> SourcePos -> [t] -> SourcePos)
@@ -568,7 +589,8 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   in unParser p s cok' cerr eok' eerr'
 
 pTry :: ParsecT s m a -> ParsecT s m a
-pTry p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
+pTry p = ParsecT $ \s cok _ eok eerr ->
+  unParser p s cok eerr eok eerr
 {-# INLINE pTry #-}
 
 pLookAhead :: ParsecT s m a -> ParsecT s m a
@@ -632,7 +654,7 @@ pTokens :: Stream s t
   -> [t]
   -> ParsecT s m [t]
 pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok cerr _ eerr ->
+pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
   let r = showToken . reverse
       errExpect x = setErrorMessage (Expected $ showToken tts)
         (newErrorMessage (Unexpected x) pos)
@@ -641,13 +663,12 @@ pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok cerr _ eerr ->
             s'   = State rs pos' w
         in cok (reverse is) s' mempty
       walk (t:ts) is rs =
-        let errorCont = if null is then eerr else cerr
-            what      = if null is then eoi  else r is
+        let what = if null is then eoi  else r is
         in case uncons rs of
-             Nothing -> errorCont (errExpect what) s
+             Nothing -> eerr (errExpect what) s
              Just (x,xs)
                | test t x  -> walk ts (x:is) xs
-               | otherwise -> errorCont (errExpect $ r (x:is)) s
+               | otherwise -> eerr (errExpect $ r (x:is)) s
   in walk tts [] input
 {-# INLINE pTokens #-}
 
