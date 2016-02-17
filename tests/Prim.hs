@@ -47,8 +47,10 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 
 import Test.Framework
+import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (label)
+import Test.HUnit (Assertion, (@?=))
 
 import Text.Megaparsec.Char
 import Text.Megaparsec.Error
@@ -96,9 +98,15 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "combinator lookAhead"                prop_lookAhead_0
   , testProperty "combinator lookAhead hints"          prop_lookAhead_1
   , testProperty "combinator lookAhead messages"       prop_lookAhead_2
+  , testCase     "combinator lookAhead cerr"           case_lookAhead_3
   , testProperty "combinator notFollowedBy"       prop_notFollowedBy_0
   , testProperty "combinator notFollowedBy twice" prop_notFollowedBy_1
   , testProperty "combinator notFollowedBy eof"   prop_notFollowedBy_2
+  , testCase     "combinator notFollowedBy cerr"  case_notFollowedBy_3a
+  , testCase     "combinator notFollowedBy cerr"  case_notFollowedBy_3b
+  , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4a
+  , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4b
+  , testCase     "combinator eof return value"    case_eof
   , testProperty "combinator token"                    prop_token
   , testProperty "combinator tokens"                   prop_tokens
   , testProperty "parser state position"               prop_state_pos
@@ -203,7 +211,7 @@ prop_alternative_6 a b c = checkParser p r s
         r | c = posErr ab s $ [uneCh 'c', exEof] ++
                 [exCh 'a' | not a && not b] ++ [exCh 'b' | not b]
           | otherwise = Right s
-        s = abcRow' a b c
+        s = abcRow a b c
         ab = fromEnum a + fromEnum b
 
 -- Monad instance
@@ -363,7 +371,7 @@ prop_lookAhead_0 a b c = checkParser p r s
           | h == 'b' = posErr 0 s [uneCh 'b', exCh 'a']
           | h == 'c' = posErr 0 s [uneCh 'c', exSpec "label"]
           | otherwise  = posErr 1 s [uneCh (s !! 1), exEof]
-        s = abcRow' a b c
+        s = abcRow a b c
 
 prop_lookAhead_1 :: String -> Property
 prop_lookAhead_1 s = checkParser p r s
@@ -379,7 +387,13 @@ prop_lookAhead_2 a b c = checkParser p r s
         r | null s    = posErr 0 s [uneEof, exCh 'a']
           | a         = posErr 0 s [uneCh 'a', exCh 'b']
           | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
-        s = abcRow' a b c
+        s = abcRow a b c
+
+case_lookAhead_3 :: Assertion
+case_lookAhead_3 = parse p "" s @?= posErr 1 s [msg emsg]
+  where p    = lookAhead (char 'a' *> fail emsg) :: Parser String
+        emsg = "ops!"
+        s    = "abc"
 
 prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
@@ -410,8 +424,26 @@ prop_notFollowedBy_2 a' b' c' = checkParser p r s
           | otherwise      = posErr a s [uneEof, exCh 'a']
         s = abcRow a b c
 
--- We omit tests for 'eof' here because it's used virtually everywhere, it's
--- already thoroughly tested.
+case_notFollowedBy_3a :: Assertion
+case_notFollowedBy_3a = parse p "" "ab" @?= Right ()
+  where p = notFollowedBy (char 'a' *> char 'c')
+
+case_notFollowedBy_3b :: Assertion
+case_notFollowedBy_3b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
+  where p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
+        s = "ab"
+
+case_notFollowedBy_4a :: Assertion
+case_notFollowedBy_4a = parse p "" "ab" @?= Right ()
+  where p = notFollowedBy (fail "ops!")
+
+case_notFollowedBy_4b :: Assertion
+case_notFollowedBy_4b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
+  where p = notFollowedBy (fail "ops!") <* char 'c'
+        s = "ab"
+
+case_eof :: Assertion
+case_eof = parse eof "" "" @?= Right ()
 
 prop_token :: String -> Property
 prop_token s = checkParser p r s
