@@ -53,6 +53,7 @@ import Test.QuickCheck hiding (label)
 import Test.HUnit (Assertion, (@?=))
 
 import Text.Megaparsec.Char
+import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
@@ -106,6 +107,17 @@ tests = testGroup "Primitive parser combinators"
   , testCase     "combinator notFollowedBy cerr"  case_notFollowedBy_3b
   , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4a
   , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4b
+  , testProperty "combinator withRecovery"             prop_withRecovery_0
+  , testCase     "combinator withRecovery eok"         case_withRecovery_1
+  , testCase     "combinator withRecovery meerr-rcerr" case_withRecovery_2
+  , testCase     "combinator withRecovery meerr-reok"  case_withRecovery_3a
+  , testCase     "combinator withRecovery meerr-reok"  case_withRecovery_3b
+  , testCase     "combinator withRecovery mcerr-rcok"  case_withRecovery_4a
+  , testCase     "combinator withRecovery mcerr-rcok"  case_withRecovery_4b
+  , testCase     "combinator withRecovery mcerr-rcerr" case_withRecovery_5
+  , testCase     "combinator withRecovery mcerr-reok"  case_withRecovery_6a
+  , testCase     "combinator withRecovery mcerr-reok"  case_withRecovery_6b
+  , testCase     "combinator withRecovery mcerr-reerr" case_withRecovery_7
   , testCase     "combinator eof return value"    case_eof
   , testProperty "combinator token"                    prop_token
   , testProperty "combinator tokens"                   prop_tokens
@@ -441,6 +453,81 @@ case_notFollowedBy_4b :: Assertion
 case_notFollowedBy_4b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
   where p = notFollowedBy (fail "ops!") <* char 'c'
         s = "ab"
+
+prop_withRecovery_0 :: NonNegative Int -> NonNegative Int
+                  -> NonNegative Int -> Property
+prop_withRecovery_0 a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = v <$>
+          withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
+        v (Right x) y = Right (x ++ y)
+        v (Left  m) _ = Left m
+        g = count' 1 3 . char
+        r | a == 0 && b == 0 && c == 0 = posErr 0 s [uneEof, exCh 'a']
+          | a == 0 && b == 0 && c >  3 = posErr 0 s [uneCh 'c', exCh 'a']
+          | a == 0 && b == 0           = posErr 0 s [uneCh 'c', exCh 'a']
+          | a == 0 && b >  3           = posErr 3 s [uneCh 'b', exCh 'a', exCh 'c']
+          | a == 0 &&           c == 0 = posErr b s [uneEof, exCh 'a', exCh 'c']
+          | a == 0 &&           c >  3 = posErr (b + 3) s [uneCh 'c', exEof]
+          | a == 0                     = Right (posErr 0 s [uneCh 'b', exCh 'a'])
+          | a >  3                     = posErr 3 s [uneCh 'a', exCh 'c']
+          |           b == 0 && c == 0 = posErr a s $ [uneEof, exCh 'c'] ++ ma
+          |           b == 0 && c >  3 = posErr (a + 3) s [uneCh 'c', exEof]
+          |           b == 0           = Right (Right s)
+          | otherwise                  = posErr a s $ [uneCh 'b', exCh 'c'] ++ ma
+        ma = [exCh 'a' | a < 3]
+        s = abcRow a b c
+
+case_withRecovery_1 :: Assertion
+case_withRecovery_1 = parse p "" "abc" @?= Right "foo"
+  where p = withRecovery (const $ return "bar") (return "foo")
+
+case_withRecovery_2 :: Assertion
+case_withRecovery_2 = parse p "" s @?= posErr 0 s [uneCh 'a', exStr "cba"]
+  where p = withRecovery (\_ -> char 'a' *> fail "ops!") (string "cba")
+        s = "abc"
+
+case_withRecovery_3a :: Assertion
+case_withRecovery_3a = parse p "" "abc" @?= Right "abd"
+  where p = withRecovery (const $ return "abd") (string "cba")
+
+case_withRecovery_3b :: Assertion
+case_withRecovery_3b = parse p "" s @?= posErr 0 s r
+  where p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
+        r = [uneCh 'a', exStr "cba", exCh 'd']
+        s = "abc"
+
+case_withRecovery_4a :: Assertion
+case_withRecovery_4a = parse p "" "abc" @?= Right "bc"
+  where p = withRecovery (const $ string "bc") (char 'a' *> fail "ops!")
+
+case_withRecovery_4b :: Assertion
+case_withRecovery_4b = parse p "" s @?= posErr 3 s [uneEof, exCh 'f']
+  where p = withRecovery (const $ string "bc") h <* char 'f'
+        h = char 'a' *> char 'd' *> pure "foo"
+        s = "abc"
+
+case_withRecovery_5 :: Assertion
+case_withRecovery_5 = parse p "" s @?= posErr 1 s [msg emsg]
+  where p :: Parser String
+        p = withRecovery (\_ -> char 'b' *> fail emsg) (char 'a' *> fail emsg)
+        emsg = "ops!"
+        s = "abc"
+
+case_withRecovery_6a :: Assertion
+case_withRecovery_6a = parse p "" "abc" @?= Right "abd"
+  where p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
+
+case_withRecovery_6b :: Assertion
+case_withRecovery_6b = parse p "" "abc" @?= posErr 0 s r
+  where p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
+        r = [uneCh 'b', exCh 'd', exCh 'f']
+        s = "abc"
+
+case_withRecovery_7 :: Assertion
+case_withRecovery_7 = parse p "" s @?= posErr 1 s [uneCh 'b', exCh 'd']
+  where p = withRecovery (const $ fail "ops!") (char 'a' *> char 'd')
+        s = "abc"
 
 case_eof :: Assertion
 case_eof = parse eof "" "" @?= Right ()
