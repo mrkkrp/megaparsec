@@ -614,15 +614,17 @@ pWithRecovery :: Stream s t
   -> ParsecT s m a
 pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
   let mcerr err ms =
-        let rcerr _ _   = cerr err ms
+        let rcok x s' _ = cok x s' mempty
+            rcerr   _ _ = cerr err ms
             reok x s' _ = eok x s' (toHints err)
-            reerr _ _   = cerr err ms
-        in unParser (r err) ms cok rcerr reok reerr
+            reerr   _ _ = cerr err ms
+        in unParser (r err) ms rcok rcerr reok reerr
       meerr err ms =
-        let rcerr _ _ = eerr err ms
+        let rcok x s' _ = cok x s' (toHints err)
+            rcerr   _ _ = eerr err ms
             reok x s' _ = eok x s' (toHints err)
-            reerr _ _ = eerr err ms
-        in unParser (r err) ms cok rcerr reok reerr
+            reerr   _ _ = eerr err ms
+        in unParser (r err) ms rcok rcerr reok reerr
   in unParser p s cok mcerr eok meerr
 {-# INLINE pWithRecovery #-}
 

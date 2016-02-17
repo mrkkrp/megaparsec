@@ -519,7 +519,7 @@ case_withRecovery_6a = parse p "" "abc" @?= Right "abd"
   where p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
 
 case_withRecovery_6b :: Assertion
-case_withRecovery_6b = parse p "" "abc" @?= posErr 0 s r
+case_withRecovery_6b = parse p "" "abc" @?= posErr 1 s r
   where p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
         r = [uneCh 'b', exCh 'd', exCh 'f']
         s = "abc"
