@@ -21,6 +21,8 @@
   from parse errors “on-the-fly” and continue parsing. Once parsing is
   finished, several parse errors may be reported or ignored altogether.
 
+* `eitherP` combinator added.
+
 ## Megaparsec 4.3.0
 
 * Canonicalized `Applicative`/`Monad` instances. Thanks to Herbert Valerio

@@ -17,6 +17,7 @@ module Text.Megaparsec.Combinator
   , choice
   , count
   , count'
+  , eitherP
   , endBy
   , endBy1
   , manyTill
@@ -79,6 +80,12 @@ count' m n p
   | otherwise       =
       let f t ts = maybe [] (:ts) t
       in f <$> optional p <*> count' 0 (pred n) p
+
+-- | Combine two alternatives.
+
+eitherP :: Alternative m => m a -> m b -> m (Either a b)
+eitherP a b = (Left <$> a) <|> (Right <$> b)
+{-# INLINE eitherP #-}
 
 -- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
 -- and ended by @sep@. Returns a list of values returned by @p@.

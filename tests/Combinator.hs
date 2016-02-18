@@ -29,6 +29,7 @@
 module Combinator (tests) where
 
 import Control.Applicative
+import Data.Char (isLetter, isDigit)
 import Data.List (intersperse)
 import Data.Maybe (fromMaybe, maybeToList, isNothing, fromJust)
 
@@ -47,6 +48,7 @@ tests = testGroup "Generic parser combinators"
   , testProperty "combinator choice"    prop_choice
   , testProperty "combinator count"     prop_count
   , testProperty "combinator count'"    prop_count'
+  , testProperty "combinator eitherP"   prop_eitherP
   , testProperty "combinator endBy"     prop_endBy
   , testProperty "combinator endBy1"    prop_endBy1
   , testProperty "combinator manyTill"  prop_manyTill
@@ -99,6 +101,14 @@ prop_count' m n x' = checkParser p r s
           | x < m            = posErr x s [uneEof, exCh 'x']
           | otherwise        = posErr n s [uneCh 'x', exEof]
         s = replicate x 'x'
+
+prop_eitherP :: Char -> Property
+prop_eitherP ch = checkParser p r s
+  where p = eitherP letterChar digitChar
+        r | isLetter ch = Right (Left  ch)
+          | isDigit  ch = Right (Right ch)
+          | otherwise   = posErr 0 s [uneCh ch, exSpec "letter", exSpec "digit"]
+        s = pure ch
 
 prop_endBy :: NonNegative Int -> Char -> Property
 prop_endBy n' c = checkParser p r s

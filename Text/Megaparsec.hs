@@ -75,6 +75,7 @@ module Text.Megaparsec
   , choice
   , count
   , count'
+  , eitherP
   , endBy
   , endBy1
   , manyTill
