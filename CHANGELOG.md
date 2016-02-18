@@ -3,13 +3,23 @@
 * Now state returned on failure is the exact state of parser at the moment
   when it failed, which makes incremental parsing feature much better and
   opens possibilities for features like “on-the-fly” recovering from parse
-  errors. This made `<|>` operator slower, it's now about 9 % slower than
-  equivalent Parsec's operator and 28 % slower than previous version of
-  Megaparsec. However, other combinators showed no performance degradation
-  and Megaparsec is still generally faster than Parsec.
+  errors.
 
 * The `count` combinator now works with `Applicative` instances (previously
   it worked only with instances of `Alternative`). It's now also faster.
+
+* `tokens` and parsers built upon it (such as `string` and `string'`)
+  backtrack automatically on failure now, that is, when they fail, they
+  never consume any input. This is done to make their consumption model
+  match how error messages are reported (which becomes an important thing as
+  user gets more control with primitives like `withRecovery`). This means,
+  in particular, that it's no longer necessary to use `try` with
+  `tokens`-based parsers. This new feature *does not* affect performance in
+  any way.
+
+* New primitive parser `withRecovery` added. The parser allows to recover
+  from parse errors “on-the-fly” and continue parsing. Once parsing is
+  finished, several parse errors may be reported or ignored altogether.
 
 ## Megaparsec 4.3.0
 

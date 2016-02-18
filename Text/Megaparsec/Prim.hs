@@ -388,9 +388,9 @@ pZero = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err ms =
-        let ncerr err' s' = cerr (mergeError err' err) (longestMatch ms s')
+        let ncerr err' s' = cerr (err' <> err) (longestMatch ms s')
             neok x s' hs  = eok x s' (toHints err <> hs)
-            neerr err' s' = eerr (mergeError err' err) (longestMatch ms s')
+            neerr err' s' = eerr (err' <> err) (longestMatch ms s')
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
@@ -458,6 +458,11 @@ class (A.Alternative m, Monad m, Stream s t)
   -- 1:1:
   -- unexpected "le"
   -- expecting "let" or "lexical"
+  --
+  -- Please note that as of Megaparsec 4.4.0, 'string' backtracks
+  -- automatically (see 'tokens'), so it does not need 'try'. However, the
+  -- examples above demonstrate the idea behind 'try' so well that it was
+  -- decided to keep them.
 
   try :: m a -> m a
 
@@ -473,6 +478,21 @@ class (A.Alternative m, Monad m, Stream s t)
   -- match” rule.
 
   notFollowedBy :: m a -> m ()
+
+  -- | @withRecovery r p@ allows continue parsing even if parser @p@
+  -- fails. In this case @r@ is called with actual 'ParseError' as its
+  -- argument. Typical usage is to return value signifying failure to parse
+  -- this particular object and to consume some part of input up to start of
+  -- next object.
+  --
+  -- Note that if @r@ fails, original error message is reported as if
+  -- without 'withRecovery'. In no way recovering parser @r@ can influence
+  -- error messages.
+
+  withRecovery
+    :: (ParseError -> m a) -- ^ How to recover from failure
+    -> m a             -- ^ Original parser
+    -> m a             -- ^ Parser that can recover from failures
 
   -- | This parser only succeeds at the end of the input.
 
@@ -509,6 +529,22 @@ class (A.Alternative m, Monad m, Stream s t)
   -- This can be used for example to write 'Text.Megaparsec.Char.string':
   --
   -- > string = tokens updatePosString (==)
+  --
+  -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
+  -- primitive, which means that if it fails, it never consumes any
+  -- input. This is done to make its consumption model match how error
+  -- messages for this primitive are reported (which becomes an important
+  -- thing as user gets more control with primitives like 'withRecovery'):
+  --
+  -- >>> parseTest (string "abc") "abd"
+  -- 1:1:
+  -- unexpected "abd"
+  -- expecting "abc"
+  --
+  -- This means, in particular, that it's no longer necessary to use 'try'
+  -- with 'tokens'-based parsers, such as 'Text.Megaparsec.Char.string' and
+  -- 'Text.Megaparsec.Char.string''. This new feature /does not/ affect
+  -- performance in any way.
 
   tokens :: Eq t
     => (Int -> SourcePos -> [t] -> SourcePos)
@@ -533,6 +569,7 @@ instance Stream s t => MonadParsec s (ParsecT s m) t where
   try               = pTry
   lookAhead         = pLookAhead
   notFollowedBy     = pNotFollowedBy
+  withRecovery      = pWithRecovery
   eof               = pEof
   token             = pToken
   tokens            = pTokens
@@ -552,7 +589,8 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   in unParser p s cok' cerr eok' eerr'
 
 pTry :: ParsecT s m a -> ParsecT s m a
-pTry p = ParsecT $ \s cok _ eok eerr -> unParser p s cok eerr eok eerr
+pTry p = ParsecT $ \s cok _ eok eerr ->
+  unParser p s cok eerr eok eerr
 {-# INLINE pTry #-}
 
 pLookAhead :: ParsecT s m a -> ParsecT s m a
@@ -569,6 +607,26 @@ pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
       eok' _ _ _ = eerr (unexpectedErr l pos) s
       eerr'  _ _ = eok () s mempty
   in unParser p s cok' cerr' eok' eerr'
+
+pWithRecovery :: Stream s t
+  => (ParseError -> ParsecT s m a)
+  -> ParsecT s m a
+  -> ParsecT s m a
+pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
+  let mcerr err ms =
+        let rcok x s' _ = cok x s' mempty
+            rcerr   _ _ = cerr err ms
+            reok x s' _ = eok x s' (toHints err)
+            reerr   _ _ = cerr err ms
+        in unParser (r err) ms rcok rcerr reok reerr
+      meerr err ms =
+        let rcok x s' _ = cok x s' (toHints err)
+            rcerr   _ _ = eerr err ms
+            reok x s' _ = eok x s' (toHints err)
+            reerr   _ _ = eerr err ms
+        in unParser (r err) ms rcok rcerr reok reerr
+  in unParser p s cok mcerr eok meerr
+{-# INLINE pWithRecovery #-}
 
 pEof :: Stream s t => ParsecT s m ()
 pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
@@ -598,7 +656,7 @@ pTokens :: Stream s t
   -> [t]
   -> ParsecT s m [t]
 pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok cerr _ eerr ->
+pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
   let r = showToken . reverse
       errExpect x = setErrorMessage (Expected $ showToken tts)
         (newErrorMessage (Unexpected x) pos)
@@ -607,13 +665,12 @@ pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok cerr _ eerr ->
             s'   = State rs pos' w
         in cok (reverse is) s' mempty
       walk (t:ts) is rs =
-        let errorCont = if null is then eerr else cerr
-            what      = if null is then eoi  else r is
+        let what = if null is then eoi  else r is
         in case uncons rs of
-             Nothing -> errorCont (errExpect what) s
+             Nothing -> eerr (errExpect what) s
              Just (x,xs)
                | test t x  -> walk ts (x:is) xs
-               | otherwise -> errorCont (errExpect $ r (x:is)) s
+               | otherwise -> eerr (errExpect $ r (x:is)) s
   in walk tts [] input
 {-# INLINE pTokens #-}
 
@@ -830,13 +887,15 @@ parseFromFile p filename = runParser p filename <$> fromFile filename
 
 instance (MonadPlus m, MonadParsec s m t) =>
          MonadParsec s (L.StateT e m) t where
+  failure                    = lift . failure
   label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
   lookAhead     (L.StateT m) = L.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (L.StateT m) = L.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
-  failure                    = lift . failure
+  withRecovery r (L.StateT m) = L.StateT $ \s ->
+    withRecovery (\e -> L.runStateT (r e) s) (m s)
   eof                        = lift eof
   token  f e                 = lift $ token  f e
   tokens f e ts              = lift $ tokens f e ts
@@ -845,13 +904,15 @@ instance (MonadPlus m, MonadParsec s m t) =>
 
 instance (MonadPlus m, MonadParsec s m t)
          => MonadParsec s (S.StateT e m) t where
+  failure                    = lift . failure
   label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (S.StateT m) = S.StateT $ \s ->
     notFollowedBy (fst <$> m s) >> return ((),s)
-  failure                    = lift . failure
+  withRecovery r (S.StateT m) = S.StateT $ \s ->
+    withRecovery (\e -> S.runStateT (r e) s) (m s)
   eof                        = lift eof
   token  f e                 = lift $ token  f e
   tokens f e ts              = lift $ tokens f e ts
@@ -860,11 +921,13 @@ instance (MonadPlus m, MonadParsec s m t)
 
 instance (MonadPlus m, MonadParsec s m t)
          => MonadParsec s (L.ReaderT e m) t where
+  failure                     = lift . failure
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
-  failure                     = lift . failure
+  withRecovery r (L.ReaderT m) = L.ReaderT $ \s ->
+    withRecovery (\e -> L.runReaderT (r e) s) (m s)
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -873,13 +936,15 @@ instance (MonadPlus m, MonadParsec s m t)
 
 instance (MonadPlus m, Monoid w, MonadParsec s m t)
          => MonadParsec s (L.WriterT w m) t where
+  failure                     = lift . failure
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
   lookAhead     (L.WriterT m) = L.WriterT $
     (,mempty) . fst <$> lookAhead m
   notFollowedBy (L.WriterT m) = L.WriterT $
     (,mempty) <$> notFollowedBy (fst <$> m)
-  failure                     = lift . failure
+  withRecovery r (L.WriterT m) = L.WriterT $
+    withRecovery (L.runWriterT . r) m
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -888,13 +953,15 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
 
 instance (MonadPlus m, Monoid w, MonadParsec s m t)
          => MonadParsec s (S.WriterT w m) t where
+  failure                     = lift . failure
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
   lookAhead     (S.WriterT m) = S.WriterT $
     (,mempty) . fst <$> lookAhead m
   notFollowedBy (S.WriterT m) = S.WriterT $
     (,mempty) <$> notFollowedBy (fst <$> m)
-  failure                     = lift . failure
+  withRecovery r (S.WriterT m) = S.WriterT $
+    withRecovery (S.runWriterT . r) m
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts
@@ -903,11 +970,13 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
 
 instance (Monad m, MonadParsec s m t)
          => MonadParsec s (IdentityT m) t where
+  failure                     = lift . failure
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m
   notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
-  failure                     = lift . failure
+  withRecovery r (IdentityT m) = IdentityT $
+    withRecovery (runIdentityT . r) m
   eof                         = lift eof
   token  f e                  = lift $ token  f e
   tokens f e ts               = lift $ tokens f e ts

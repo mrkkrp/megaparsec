@@ -67,6 +67,7 @@ module Text.Megaparsec
   , try
   , lookAhead
   , notFollowedBy
+  , withRecovery
   , eof
   , token
   , tokens

@@ -76,6 +76,10 @@ via combination of these primitives:
 * `notFollowedBy` succeeds when its argument fails, it does not consume
   input.
 
+* `withRecovery` allows to recover from parse errors “on-the-fly” and
+  continue parsing. Once parsing is finished, several parse errors may be
+  reported or ignored altogether.
+
 * `eof` only succeeds at the end of input.
 
 * `token` is used to parse single token.

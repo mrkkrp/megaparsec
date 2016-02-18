@@ -34,7 +34,6 @@ module Util
   , (/=\)
   , (!=!)
   , abcRow
-  , abcRow'
   , posErr
   , uneCh
   , uneStr
@@ -132,15 +131,9 @@ n !=! m = simpleParse n "" === simpleParse m ""
 -- @a@ times, character “b” repeated @b@ times, and finally character “c”
 -- repeated @c@ times.
 
-abcRow :: Int -> Int -> Int -> String
-abcRow a b c = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
-
--- | @abcRow' a b c@ generates string that includes character “a” if @a@ is
--- 'True', then optionally character “b” if @b@ is 'True', then character
--- “c” if @c@ is 'True'.
-
-abcRow' :: Bool -> Bool -> Bool -> String
-abcRow' a b c = abcRow (fromEnum a) (fromEnum b) (fromEnum c)
+abcRow :: Enum a => a -> a -> a -> String
+abcRow a b c = f a 'a' ++ f b 'b' ++ f c 'c'
+  where f x = replicate (fromEnum x)
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before

@@ -131,8 +131,7 @@ prop_eol s = checkParser eol r s
           | "\r\n" `isPrefixOf` s = posErr 2 s [uneCh (s !! 2), exEof]
           | otherwise   = posErr 0 s [ uneStr (take 2 s)
                                      , uneCh '\r'
-                                     , exSpec "crlf newline"
-                                     , exSpec "newline" ]
+                                     , exSpec "end of line" ]
 
 prop_tab :: String -> Property
 prop_tab = checkChar tab (== '\t') (Just "tab")

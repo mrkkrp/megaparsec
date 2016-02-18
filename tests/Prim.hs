@@ -34,7 +34,7 @@ import Control.Applicative
 import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList, fromMaybe)
+import Data.Maybe (maybeToList)
 
 import Control.Monad.Cont
 import Control.Monad.Except
@@ -47,10 +47,13 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 
 import Test.Framework
+import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (label)
+import Test.HUnit (Assertion, (@?=))
 
 import Text.Megaparsec.Char
+import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
@@ -96,9 +99,26 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "combinator lookAhead"                prop_lookAhead_0
   , testProperty "combinator lookAhead hints"          prop_lookAhead_1
   , testProperty "combinator lookAhead messages"       prop_lookAhead_2
+  , testCase     "combinator lookAhead cerr"           case_lookAhead_3
   , testProperty "combinator notFollowedBy"       prop_notFollowedBy_0
   , testProperty "combinator notFollowedBy twice" prop_notFollowedBy_1
   , testProperty "combinator notFollowedBy eof"   prop_notFollowedBy_2
+  , testCase     "combinator notFollowedBy cerr"  case_notFollowedBy_3a
+  , testCase     "combinator notFollowedBy cerr"  case_notFollowedBy_3b
+  , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4a
+  , testCase     "combinator notFollowedBy eerr"  case_notFollowedBy_4b
+  , testProperty "combinator withRecovery"             prop_withRecovery_0
+  , testCase     "combinator withRecovery eok"         case_withRecovery_1
+  , testCase     "combinator withRecovery meerr-rcerr" case_withRecovery_2
+  , testCase     "combinator withRecovery meerr-reok"  case_withRecovery_3a
+  , testCase     "combinator withRecovery meerr-reok"  case_withRecovery_3b
+  , testCase     "combinator withRecovery mcerr-rcok"  case_withRecovery_4a
+  , testCase     "combinator withRecovery mcerr-rcok"  case_withRecovery_4b
+  , testCase     "combinator withRecovery mcerr-rcerr" case_withRecovery_5
+  , testCase     "combinator withRecovery mcerr-reok"  case_withRecovery_6a
+  , testCase     "combinator withRecovery mcerr-reok"  case_withRecovery_6b
+  , testCase     "combinator withRecovery mcerr-reerr" case_withRecovery_7
+  , testCase     "combinator eof return value"    case_eof
   , testProperty "combinator token"                    prop_token
   , testProperty "combinator tokens"                   prop_tokens
   , testProperty "parser state position"               prop_state_pos
@@ -152,7 +172,7 @@ prop_alternative_1 s0 s1
   | s0 `isPrefixOf` s1 =
       checkParser p (posErr s0l s1 [uneCh (s1 !! s0l), exEof]) s1
   | otherwise = checkParser p (Right s0) s0 .&&. checkParser p (Right s1) s1
-    where p   = try (string s0) <|> string s1
+    where p   = string s0 <|> string s1
           s0l = length s0
 
 prop_alternative_2 :: Char -> Char -> Char -> Bool -> Property
@@ -166,8 +186,8 @@ prop_alternative_2 a b c l = checkParser p r s
 
 prop_alternative_3 :: Property
 prop_alternative_3 = checkParser p r s
-  where p  = asum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
-        p' = bsum [empty, try (string ">>>"), empty, return "foo"] <?> "bar"
+  where p  = asum [empty, string ">>>", empty, return "foo"] <?> "bar"
+        p' = bsum [empty, string ">>>", empty, return "foo"] <?> "bar"
         bsum = foldl (<|>) empty
         r = simpleParse p' s
         s = ">>"
@@ -203,7 +223,7 @@ prop_alternative_6 a b c = checkParser p r s
         r | c = posErr ab s $ [uneCh 'c', exEof] ++
                 [exCh 'a' | not a && not b] ++ [exCh 'b' | not b]
           | otherwise = Right s
-        s = abcRow' a b c
+        s = abcRow a b c
         ab = fromEnum a + fromEnum b
 
 -- Monad instance
@@ -333,24 +353,23 @@ prop_hidden_0 a' b' c' = checkParser p r s
           | otherwise = Right s
         s = abcRow a b c
 
-prop_hidden_1 :: String -> NonEmptyList Char -> String -> Property
-prop_hidden_1 a c' s = checkParser p r s
+prop_hidden_1 :: NonEmptyList Char -> String -> Property
+prop_hidden_1 c' s = checkParser p r s
   where c = getNonEmpty c'
-        p = fromMaybe a <$> optional (hidden $ string c)
-        r | null s = Right a
-          | c == s = Right s
-          | head c /= head s = posErr 0 s [uneCh (head s), exEof]
-          | otherwise = simpleParse (string c) s
+        cn = length c
+        p = optional (hidden $ string c)
+        r | null s           = Right Nothing
+          | c == s           = Right (Just s)
+          | c `isPrefixOf` s = posErr cn s [uneCh (s !! cn), exEof]
+          | otherwise        = posErr 0 s [uneCh (head s), exEof]
 
-prop_try :: String -> String -> String -> Property
-prop_try pre s1' s2' = checkParser p r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        p = try (string s1) <|> string s2
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_try :: Char -> Char -> Char -> Property
+prop_try pre ch1 ch2 = checkParser p r s
+  where s1 = sequence [char pre, char ch1]
+        s2 = sequence [char pre, char ch2]
+        p = try s1 <|> s2
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
 prop_lookAhead_0 a b c = checkParser p r s
@@ -364,7 +383,7 @@ prop_lookAhead_0 a b c = checkParser p r s
           | h == 'b' = posErr 0 s [uneCh 'b', exCh 'a']
           | h == 'c' = posErr 0 s [uneCh 'c', exSpec "label"]
           | otherwise  = posErr 1 s [uneCh (s !! 1), exEof]
-        s = abcRow' a b c
+        s = abcRow a b c
 
 prop_lookAhead_1 :: String -> Property
 prop_lookAhead_1 s = checkParser p r s
@@ -380,7 +399,13 @@ prop_lookAhead_2 a b c = checkParser p r s
         r | null s    = posErr 0 s [uneEof, exCh 'a']
           | a         = posErr 0 s [uneCh 'a', exCh 'b']
           | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
-        s = abcRow' a b c
+        s = abcRow a b c
+
+case_lookAhead_3 :: Assertion
+case_lookAhead_3 = parse p "" s @?= posErr 1 s [msg emsg]
+  where p    = lookAhead (char 'a' *> fail emsg) :: Parser String
+        emsg = "ops!"
+        s    = "abc"
 
 prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
@@ -411,8 +436,101 @@ prop_notFollowedBy_2 a' b' c' = checkParser p r s
           | otherwise      = posErr a s [uneEof, exCh 'a']
         s = abcRow a b c
 
--- We omit tests for 'eof' here because it's used virtually everywhere, it's
--- already thoroughly tested.
+case_notFollowedBy_3a :: Assertion
+case_notFollowedBy_3a = parse p "" "ab" @?= Right ()
+  where p = notFollowedBy (char 'a' *> char 'c')
+
+case_notFollowedBy_3b :: Assertion
+case_notFollowedBy_3b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
+  where p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
+        s = "ab"
+
+case_notFollowedBy_4a :: Assertion
+case_notFollowedBy_4a = parse p "" "ab" @?= Right ()
+  where p = notFollowedBy (fail "ops!")
+
+case_notFollowedBy_4b :: Assertion
+case_notFollowedBy_4b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
+  where p = notFollowedBy (fail "ops!") <* char 'c'
+        s = "ab"
+
+prop_withRecovery_0 :: NonNegative Int -> NonNegative Int
+                  -> NonNegative Int -> Property
+prop_withRecovery_0 a' b' c' = checkParser p r s
+  where [a,b,c] = getNonNegative <$> [a',b',c']
+        p = v <$>
+          withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
+        v (Right x) y = Right (x ++ y)
+        v (Left  m) _ = Left m
+        g = count' 1 3 . char
+        r | a == 0 && b == 0 && c == 0 = posErr 0 s [uneEof, exCh 'a']
+          | a == 0 && b == 0 && c >  3 = posErr 0 s [uneCh 'c', exCh 'a']
+          | a == 0 && b == 0           = posErr 0 s [uneCh 'c', exCh 'a']
+          | a == 0 && b >  3           = posErr 3 s [uneCh 'b', exCh 'a', exCh 'c']
+          | a == 0 &&           c == 0 = posErr b s [uneEof, exCh 'a', exCh 'c']
+          | a == 0 &&           c >  3 = posErr (b + 3) s [uneCh 'c', exEof]
+          | a == 0                     = Right (posErr 0 s [uneCh 'b', exCh 'a'])
+          | a >  3                     = posErr 3 s [uneCh 'a', exCh 'c']
+          |           b == 0 && c == 0 = posErr a s $ [uneEof, exCh 'c'] ++ ma
+          |           b == 0 && c >  3 = posErr (a + 3) s [uneCh 'c', exEof]
+          |           b == 0           = Right (Right s)
+          | otherwise                  = posErr a s $ [uneCh 'b', exCh 'c'] ++ ma
+        ma = [exCh 'a' | a < 3]
+        s = abcRow a b c
+
+case_withRecovery_1 :: Assertion
+case_withRecovery_1 = parse p "" "abc" @?= Right "foo"
+  where p = withRecovery (const $ return "bar") (return "foo")
+
+case_withRecovery_2 :: Assertion
+case_withRecovery_2 = parse p "" s @?= posErr 0 s [uneCh 'a', exStr "cba"]
+  where p = withRecovery (\_ -> char 'a' *> fail "ops!") (string "cba")
+        s = "abc"
+
+case_withRecovery_3a :: Assertion
+case_withRecovery_3a = parse p "" "abc" @?= Right "abd"
+  where p = withRecovery (const $ return "abd") (string "cba")
+
+case_withRecovery_3b :: Assertion
+case_withRecovery_3b = parse p "" s @?= posErr 0 s r
+  where p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
+        r = [uneCh 'a', exStr "cba", exCh 'd']
+        s = "abc"
+
+case_withRecovery_4a :: Assertion
+case_withRecovery_4a = parse p "" "abc" @?= Right "bc"
+  where p = withRecovery (const $ string "bc") (char 'a' *> fail "ops!")
+
+case_withRecovery_4b :: Assertion
+case_withRecovery_4b = parse p "" s @?= posErr 3 s [uneEof, exCh 'f']
+  where p = withRecovery (const $ string "bc") h <* char 'f'
+        h = char 'a' *> char 'd' *> pure "foo"
+        s = "abc"
+
+case_withRecovery_5 :: Assertion
+case_withRecovery_5 = parse p "" s @?= posErr 1 s [msg emsg]
+  where p :: Parser String
+        p = withRecovery (\_ -> char 'b' *> fail emsg) (char 'a' *> fail emsg)
+        emsg = "ops!"
+        s = "abc"
+
+case_withRecovery_6a :: Assertion
+case_withRecovery_6a = parse p "" "abc" @?= Right "abd"
+  where p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
+
+case_withRecovery_6b :: Assertion
+case_withRecovery_6b = parse p "" "abc" @?= posErr 1 s r
+  where p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
+        r = [uneCh 'b', exCh 'd', exCh 'f']
+        s = "abc"
+
+case_withRecovery_7 :: Assertion
+case_withRecovery_7 = parse p "" s @?= posErr 1 s [uneCh 'b', exCh 'd']
+  where p = withRecovery (const $ fail "ops!") (char 'a' *> char 'd')
+        s = "abc"
+
+case_eof :: Assertion
+case_eof = parse eof "" "" @?= Right ()
 
 prop_token :: String -> Property
 prop_token s = checkParser p r s
@@ -523,15 +641,13 @@ stateFromInput s = State s (initialPos "") defaultTabWidth
 
 -- IdentityT instance of MonadParsec
 
-prop_IdentityT_try :: String -> String -> String -> Property
-prop_IdentityT_try pre s1' s2' = checkParser (runIdentityT p) r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        p = try (string s1) <|> string s2
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_IdentityT_try :: Char -> Char -> Char -> Property
+prop_IdentityT_try pre ch1 ch2 = checkParser (runIdentityT p) r s
+  where s1 = sequence [char pre, char ch1]
+        s2 = sequence [char pre, char ch2]
+        p = try s1 <|> s2
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_IdentityT_notFollowedBy :: NonNegative Int -> NonNegative Int
                              -> NonNegative Int -> Property
@@ -544,17 +660,16 @@ prop_IdentityT_notFollowedBy a' b' c' = checkParser (runIdentityT p) r s
 
 -- ReaderT instance of MonadParsec
 
-prop_ReaderT_try :: String -> String -> String -> Property
-prop_ReaderT_try pre s1' s2' = checkParser (runReaderT p (s1', s2')) r s
-  where s1 = pre ++ s1'
-        s2 = pre ++ s2'
-        getS1 = asks ((pre ++) . fst)
-        getS2 = asks ((pre ++) . snd)
-        p = try (string =<< getS1) <|> (string =<< getS2)
-        r | s == s1 || s == s2 = Right s
-          | otherwise = posErr 0 s $ (if null s then uneEof else uneStr pre)
-                        : [uneStr pre, exStr s1, exStr s2]
-        s = pre
+prop_ReaderT_try :: Char -> Char -> Char -> Property
+prop_ReaderT_try pre ch1 ch2 = checkParser (runReaderT p (s1, s2)) r s
+  where s1 = pre : [ch1]
+        s2 = pre : [ch2]
+        getS1 = asks fst
+        getS2 = asks snd
+        p = try (g =<< getS1) <|> (g =<< getS2)
+        g = sequence . fmap char
+        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        s = [pre]
 
 prop_ReaderT_notFollowedBy :: NonNegative Int -> NonNegative Int
                            -> NonNegative Int -> Property

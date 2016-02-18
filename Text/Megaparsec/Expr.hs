@@ -73,9 +73,6 @@ data Operator m a
 -- > binary  name f = InfixL  (reservedOp name >> return f)
 -- > prefix  name f = Prefix  (reservedOp name >> return f)
 -- > postfix name f = Postfix (reservedOp name >> return f)
---
--- Please note that multi-character operators should use 'try' in order to
--- be reported correctly in error messages.
 
 makeExprParser :: MonadParsec s m t => m a -> [[Operator m a]] -> m a
 makeExprParser = foldl addPrecLevel

@@ -148,7 +148,7 @@ skipLineComment :: MonadParsec s m Char
   => String            -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix = p >> void (manyTill C.anyChar n)
-  where p = try (C.string prefix)
+  where p = C.string prefix
         n = lookAhead C.newline
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
@@ -159,8 +159,8 @@ skipBlockComment :: MonadParsec s m Char
   -> String            -- ^ End of block comment
   -> m ()
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
-  where p = try (C.string start)
-        n = try (C.string end)
+  where p = C.string start
+        n = C.string end
 
 -- Indentation
 

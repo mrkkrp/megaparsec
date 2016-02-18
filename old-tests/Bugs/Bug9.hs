@@ -1,4 +1,3 @@
-
 module Bugs.Bug9 (main) where
 
 import Control.Applicative (empty)
@@ -41,7 +40,7 @@ integer :: Parser Integer
 integer = lexeme L.integer
 
 operator :: String -> Parser String
-operator = try . L.symbol sc
+operator = L.symbol sc
 
 parseTopLevel :: Parser Expr
 parseTopLevel = parseExpr <* eof
