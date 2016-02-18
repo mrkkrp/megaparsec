@@ -13,6 +13,9 @@
 
 module Text.Megaparsec.Error
   ( Message (..)
+  , isUnexpected
+  , isExpected
+  , isMessage
   , messageString
   , badMessage
   , ParseError
@@ -31,10 +34,11 @@ module Text.Megaparsec.Error
 where
 
 import Control.Exception (Exception)
+import Data.Foldable (find)
 import Data.List (intercalate)
-import Data.Maybe (fromMaybe)
-import Data.Typeable (Typeable)
+import Data.Maybe (fromMaybe, fromJust)
 import Data.Semigroup (Semigroup((<>)))
+import Data.Typeable (Typeable)
 
 import Text.Megaparsec.Pos
 
@@ -50,20 +54,31 @@ data Message
   = Unexpected !String -- ^ Parser ran into an unexpected token
   | Expected   !String -- ^ What is expected instead
   | Message    !String -- ^ General-purpose error message component
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
-instance Enum Message where
-  fromEnum (Unexpected _) = 0
-  fromEnum (Expected   _) = 1
-  fromEnum (Message    _) = 2
-  toEnum _ = error "Text.Megaparsec.Error: toEnum is undefined for Message"
+-- | Check if given 'Message' is created with 'Unexpected' constructor.
+--
+-- @since 4.4.0
 
-instance Ord Message where
-  compare m1 m2 =
-    case compare (fromEnum m1) (fromEnum m2) of
-      LT -> LT
-      EQ -> compare (messageString m1) (messageString m2)
-      GT -> GT
+isUnexpected :: Message -> Bool
+isUnexpected (Unexpected _) = True
+isUnexpected _              = False
+
+-- | Check if given 'Message' is created with 'Expected' constructor.
+--
+-- @since 4.4.0
+
+isExpected :: Message -> Bool
+isExpected (Expected _) = True
+isExpected _            = False
+
+-- | Check if given 'Message' is created with 'Message' constructor.
+--
+-- @since 4.4.0
+
+isMessage :: Message -> Bool
+isMessage (Message _) = True
+isMessage _           = False
 
 -- | Extract the message string from an error message.
 
@@ -154,8 +169,8 @@ addErrorMessages ms err = foldr addErrorMessage err ms
 setErrorMessage :: Message -> ParseError -> ParseError
 setErrorMessage m (ParseError pos ms) =
   if badMessage m then err else addErrorMessage m err
-  where err = ParseError pos xs
-        xs  = filter ((/= fromEnum m) . fromEnum) ms
+  where err = ParseError pos (filter (not . f) ms)
+        f   = fromJust $ find ($ m) [isUnexpected, isExpected, isMessage]
 
 -- | @setErrorPos pos err@ returns 'ParseError' identical to @err@, but with
 -- position @pos@.
@@ -183,8 +198,8 @@ mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
 showMessages :: [Message] -> String
 showMessages [] = "unknown parse error"
 showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
-  where (unexpected,    ms') = span ((== 0) . fromEnum) ms
-        (expected, messages) = span ((== 1) . fromEnum) ms'
+  where (unexpected,    ms') = span isUnexpected ms
+        (expected, messages) = span isExpected   ms'
         f prefix m = (prefix ++) <$> m
         ns = ["\nunexpected ","\nexpecting ","\n"]
         rs = (renderMsgs orList <$> [unexpected, expected]) ++

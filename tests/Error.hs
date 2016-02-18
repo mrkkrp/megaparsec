@@ -30,7 +30,9 @@
 
 module Error (tests) where
 
+import Data.Foldable (find)
 import Data.List (isPrefixOf, isInfixOf)
+import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 
 import Test.Framework
@@ -120,7 +122,8 @@ prop_setErrorMessage msg err =
   where new    = setErrorMessage msg err
         msgs   = errorMessages new
         added  = msg `elem` msgs && not (errorIsUnknown new)
-        unique = length (filter (== fromEnum msg) (fromEnum <$> msgs)) == 1
+        unique = length (filter f msgs) == 1
+        f      = fromJust $ find ($ msg) [isUnexpected, isExpected, isMessage]
 
 prop_mergeErrorPos :: ParseError -> ParseError -> Bool
 prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == max pos1 pos2

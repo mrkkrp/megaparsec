@@ -23,6 +23,13 @@
 
 * `eitherP` combinator added.
 
+* Removed `Enum` instance of `Message` type. This was Parsec's legacy that
+  we should eliminate now. `Message` does not constitute enumeration,
+  `toEnum` was never properly defined for it. The idea to use `fromEnum` to
+  determine type of `Message` is also ugly, for this purpose new functions
+  `isUnexpected`, `isExpected`, and `isMessage` are defined in
+  `Text.Megaparsec.Error`.
+
 ## Megaparsec 4.3.0
 
 * Canonicalized `Applicative`/`Monad` instances. Thanks to Herbert Valerio

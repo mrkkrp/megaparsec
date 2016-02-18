@@ -148,7 +148,7 @@ newtype Hints = Hints [[String]] deriving (Monoid, Semigroup)
 toHints :: ParseError -> Hints
 toHints err = Hints hints
   where hints = if null msgs then [] else [messageString <$> msgs]
-        msgs  = filter ((== 1) . fromEnum) $ errorMessages err
+        msgs  = filter isExpected (errorMessages err)
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
 --
@@ -162,11 +162,9 @@ withHints
   -> State s           -- ^ Second argument of resulting continuation
   -> m b
 withHints (Hints xs) c e =
-  let isMessage (Message _) = True
-      isMessage _           = False
-  in if all isMessage (errorMessages e)
-       then c e
-       else c (addErrorMessages (Expected <$> concat xs) e)
+  if all isMessage (errorMessages e)
+    then c e
+    else c (addErrorMessages (Expected <$> concat xs) e)
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
