@@ -26,6 +26,7 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+{-# LANGUAGE Rank2Types       #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Prim (tests) where
@@ -40,7 +41,6 @@ import Control.Monad.Cont
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
-import Control.Monad.Trans.Identity
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
@@ -50,7 +50,7 @@ import Test.Framework
 import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (label)
-import Test.HUnit (Assertion, (@?=))
+import Test.HUnit (Assertion)
 
 import Text.Megaparsec.Char
 import Text.Megaparsec.Combinator
@@ -131,8 +131,6 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "state on failure (tab)"           prop_stOnFail_1
   , testProperty "state on failure (eof)"           prop_stOnFail_2
   , testProperty "state on failure (notFollowedBy)" prop_stOnFail_3
-  , testProperty "IdentityT try"            prop_IdentityT_try
-  , testProperty "IdentityT notFollowedBy"  prop_IdentityT_notFollowedBy
   , testProperty "ReaderT try"              prop_ReaderT_try
   , testProperty "ReaderT notFollowedBy"    prop_ReaderT_notFollowedBy
   , testProperty "StateT alternative (<|>)" prop_StateT_alternative
@@ -303,35 +301,24 @@ prop_monad_error_catch a b =
 -- Primitive combinators
 
 prop_unexpected :: String -> Property
-prop_unexpected m = checkParser p r s
-  where p = unexpected m :: Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [uneSpec m]
+prop_unexpected m = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
+        p = unexpected m
+        r = posErr 0 s $ if null m then [] else [uneSpec m]
         s = ""
 
 prop_failure :: [Message] -> Property
-prop_failure msgs = conjoin [ checkParser p r s
-                            , checkParser (runIdentityT p_IdentityT) r s
-                            , checkParser (runReaderT p_ReaderT ()) r s
-                            , checkParser (L.evalStateT p_lStateT ()) r s
-                            , checkParser (S.evalStateT p_sStateT ()) r s
-                            , checkParser (L.runWriterT p_lWriterT) r s
-                            , checkParser (S.runWriterT p_sWriterT) r s ]
-  where p = failure msgs :: Parser ()
-        p_IdentityT = failure msgs :: IdentityT Parser ()
-        p_ReaderT   = failure msgs :: ReaderT () Parser ()
-        p_lStateT   = failure msgs :: L.StateT () Parser ()
-        p_sStateT   = failure msgs :: S.StateT () Parser ()
-        p_lWriterT  = failure msgs :: L.WriterT [Integer] Parser ()
-        p_sWriterT  = failure msgs :: S.WriterT [Integer] Parser ()
+prop_failure msgs = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
+        p = failure msgs
         r | null msgs = posErr 0 s []
           | otherwise = Left $ newErrorMessages msgs (initialPos "")
         s = ""
 
 prop_label :: NonNegative Int -> NonNegative Int
            -> NonNegative Int -> String -> Property
-prop_label a' b' c' l = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
+prop_label a' b' c' l = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
         p = (++) <$> many (char 'a') <*> (many (char 'b') <?> l)
         r | null s = Right s
           | c > 0 = posErr (a + b) s $ [uneCh 'c', exEof]
@@ -341,39 +328,43 @@ prop_label a' b' c' l = checkParser p r s
                         else exSpec $ "rest of " ++ l]
           | otherwise = Right s
         s = abcRow a b c
+        [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_hidden_0 :: NonNegative Int -> NonNegative Int
               -> NonNegative Int -> Property
-prop_hidden_0 a' b' c' = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
+prop_hidden_0 a' b' c' = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
         p = (++) <$> many (char 'a') <*> hidden (many (char 'b'))
         r | null s = Right s
           | c > 0  = posErr (a + b) s $ [uneCh 'c', exEof]
                      ++ [exCh 'a' | b == 0]
           | otherwise = Right s
         s = abcRow a b c
+        [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_hidden_1 :: NonEmptyList Char -> String -> Property
-prop_hidden_1 c' s = checkParser p r s
-  where c = getNonEmpty c'
-        cn = length c
+prop_hidden_1 c' s = checkParser' p r s
+  where p :: MonadParsec s m Char => m (Maybe String)
         p = optional (hidden $ string c)
         r | null s           = Right Nothing
           | c == s           = Right (Just s)
           | c `isPrefixOf` s = posErr cn s [uneCh (s !! cn), exEof]
           | otherwise        = posErr 0 s [uneCh (head s), exEof]
+        c = getNonEmpty c'
+        cn = length c
 
 prop_try :: Char -> Char -> Char -> Property
-prop_try pre ch1 ch2 = checkParser p r s
-  where s1 = sequence [char pre, char ch1]
-        s2 = sequence [char pre, char ch2]
-        p = try s1 <|> s2
+prop_try pre ch1 ch2 = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
+        p = try (sequence [char pre, char ch1])
+          <|> sequence [char pre, char ch2]
         r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
         s = [pre]
 
 prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
-prop_lookAhead_0 a b c = checkParser p r s
-  where p = do
+prop_lookAhead_0 a b c = checkParser' p r s
+  where p :: MonadParsec s m Char => m Char
+        p = do
           l <- lookAhead (oneOf "ab" <?> "label")
           guard (l == h)
           char 'a'
@@ -386,158 +377,199 @@ prop_lookAhead_0 a b c = checkParser p r s
         s = abcRow a b c
 
 prop_lookAhead_1 :: String -> Property
-prop_lookAhead_1 s = checkParser p r s
-  where p = lookAhead (some letterChar) >> fail "failed" :: Parser ()
+prop_lookAhead_1 s = checkParser' p r s
+  where p :: MonadParsec s m Char => m ()
+        p = lookAhead (some letterChar) >> fail "failed"
         h = head s
         r | null s     = posErr 0 s [uneEof, exSpec "letter"]
           | isLetter h = posErr 0 s [msg "failed"]
           | otherwise  = posErr 0 s [uneCh h, exSpec "letter"]
 
 prop_lookAhead_2 :: Bool -> Bool -> Bool -> Property
-prop_lookAhead_2 a b c = checkParser p r s
-  where p = lookAhead (some (char 'a')) >> char 'b'
+prop_lookAhead_2 a b c = checkParser' p r s
+  where p :: MonadParsec s m Char => m Char
+        p = lookAhead (some (char 'a')) >> char 'b'
         r | null s    = posErr 0 s [uneEof, exCh 'a']
           | a         = posErr 0 s [uneCh 'a', exCh 'b']
           | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
         s = abcRow a b c
 
 case_lookAhead_3 :: Assertion
-case_lookAhead_3 = parse p "" s @?= posErr 1 s [msg emsg]
-  where p    = lookAhead (char 'a' *> fail emsg) :: Parser String
+case_lookAhead_3 = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = lookAhead (char 'a' *> fail emsg)
+        r = posErr 1 s [msg emsg]
         emsg = "ops!"
-        s    = "abc"
+        s = "abc"
 
 prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
-prop_notFollowedBy_0 a' b' c' = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
+prop_notFollowedBy_0 a' b' c' = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
         p = many (char 'a') <* notFollowedBy (char 'b') <* many (char 'c')
-        r | b > 0 = posErr a s [uneCh 'b', exCh 'a']
+        r | b > 0     = posErr a s [uneCh 'b', exCh 'a']
           | otherwise = Right (replicate a 'a')
         s = abcRow a b c
+        [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_notFollowedBy_1 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
-prop_notFollowedBy_1 a' b' c' = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
-        p = many (char 'a') <* f (char 'c') <* many (char 'c')
-        f = notFollowedBy . notFollowedBy -- = 'lookAhead' in this case
+prop_notFollowedBy_1 a' b' c' = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
+        p = many (char 'a')
+          <* (notFollowedBy . notFollowedBy) (char 'c')
+          <* many (char 'c')
         r | b == 0 && c > 0 = Right (replicate a 'a')
           | b > 0           = posErr a s [uneCh 'b', exCh 'a']
           | otherwise       = posErr a s [uneEof, exCh 'a']
         s = abcRow a b c
+        [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_notFollowedBy_2 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
-prop_notFollowedBy_2 a' b' c' = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
+prop_notFollowedBy_2 a' b' c' = checkParser' p r s
+  where p :: MonadParsec s m Char => m String
         p = many (char 'a') <* notFollowedBy eof <* many anyChar
         r | b > 0 || c > 0 = Right (replicate a 'a')
           | otherwise      = posErr a s [uneEof, exCh 'a']
         s = abcRow a b c
+        [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_notFollowedBy_3a :: Assertion
-case_notFollowedBy_3a = parse p "" "ab" @?= Right ()
-  where p = notFollowedBy (char 'a' *> char 'c')
+case_notFollowedBy_3a = checkCase p r s
+  where p :: MonadParsec s m Char => m ()
+        p = notFollowedBy (char 'a' *> char 'c')
+        r = Right ()
+        s = "ab"
 
 case_notFollowedBy_3b :: Assertion
-case_notFollowedBy_3b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
-  where p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
+case_notFollowedBy_3b = checkCase p r s
+  where p :: MonadParsec s m Char => m ()
+        p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
+        r = posErr 0 s [uneCh 'a', exCh 'c']
         s = "ab"
 
 case_notFollowedBy_4a :: Assertion
-case_notFollowedBy_4a = parse p "" "ab" @?= Right ()
-  where p = notFollowedBy (fail "ops!")
+case_notFollowedBy_4a = checkCase p r s
+  where p :: MonadParsec s m Char => m ()
+        p = notFollowedBy (fail "ops!")
+        r = Right ()
+        s = "ab"
 
 case_notFollowedBy_4b :: Assertion
-case_notFollowedBy_4b = parse p "" s @?= posErr 0 s [uneCh 'a', exCh 'c']
-  where p = notFollowedBy (fail "ops!") <* char 'c'
+case_notFollowedBy_4b = checkCase p r s
+  where p :: MonadParsec s m Char => m ()
+        p = notFollowedBy (fail "ops!") <* char 'c'
+        r = posErr 0 s [uneCh 'a', exCh 'c']
         s = "ab"
 
 prop_withRecovery_0 :: NonNegative Int -> NonNegative Int
-                  -> NonNegative Int -> Property
-prop_withRecovery_0 a' b' c' = checkParser p r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
-        p = v <$>
-          withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
-        v (Right x) y = Right (x ++ y)
-        v (Left  m) _ = Left m
-        g = count' 1 3 . char
-        r | a == 0 && b == 0 && c == 0 = posErr 0 s [uneEof, exCh 'a']
-          | a == 0 && b == 0 && c >  3 = posErr 0 s [uneCh 'c', exCh 'a']
-          | a == 0 && b == 0           = posErr 0 s [uneCh 'c', exCh 'a']
-          | a == 0 && b >  3           = posErr 3 s [uneCh 'b', exCh 'a', exCh 'c']
-          | a == 0 &&           c == 0 = posErr b s [uneEof, exCh 'a', exCh 'c']
-          | a == 0 &&           c >  3 = posErr (b + 3) s [uneCh 'c', exEof]
-          | a == 0                     = Right (posErr 0 s [uneCh 'b', exCh 'a'])
-          | a >  3                     = posErr 3 s [uneCh 'a', exCh 'c']
-          |           b == 0 && c == 0 = posErr a s $ [uneEof, exCh 'c'] ++ ma
-          |           b == 0 && c >  3 = posErr (a + 3) s [uneCh 'c', exEof]
-          |           b == 0           = Right (Right s)
-          | otherwise                  = posErr a s $ [uneCh 'b', exCh 'c'] ++ ma
-        ma = [exCh 'a' | a < 3]
-        s = abcRow a b c
+                    -> NonNegative Int -> Property
+prop_withRecovery_0 a' b' c' = checkParser' p r s
+  where
+    p :: MonadParsec s m Char => m (Either ParseError String)
+    p = let g = count' 1 3 . char in v <$>
+      withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
+    v (Right x) y = Right (x ++ y)
+    v (Left  m) _ = Left m
+    r | a == 0 && b == 0 && c == 0 = posErr 0 s [uneEof, exCh 'a']
+      | a == 0 && b == 0 && c >  3 = posErr 0 s [uneCh 'c', exCh 'a']
+      | a == 0 && b == 0           = posErr 0 s [uneCh 'c', exCh 'a']
+      | a == 0 && b >  3           = posErr 3 s [uneCh 'b', exCh 'a', exCh 'c']
+      | a == 0 &&           c == 0 = posErr b s [uneEof, exCh 'a', exCh 'c']
+      | a == 0 &&           c >  3 = posErr (b + 3) s [uneCh 'c', exEof]
+      | a == 0                     = Right (posErr 0 s [uneCh 'b', exCh 'a'])
+      | a >  3                     = posErr 3 s [uneCh 'a', exCh 'c']
+      |           b == 0 && c == 0 = posErr a s $ [uneEof, exCh 'c'] ++ ma
+      |           b == 0 && c >  3 = posErr (a + 3) s [uneCh 'c', exEof]
+      |           b == 0           = Right (Right s)
+      | otherwise                  = posErr a s $ [uneCh 'b', exCh 'c'] ++ ma
+    ma = [exCh 'a' | a < 3]
+    s = abcRow a b c
+    [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_withRecovery_1 :: Assertion
-case_withRecovery_1 = parse p "" "abc" @?= Right "foo"
-  where p = withRecovery (const $ return "bar") (return "foo")
+case_withRecovery_1 = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ return "bar") (return "foo")
+        r = Right "foo"
+        s = "abc"
 
 case_withRecovery_2 :: Assertion
-case_withRecovery_2 = parse p "" s @?= posErr 0 s [uneCh 'a', exStr "cba"]
-  where p = withRecovery (\_ -> char 'a' *> fail "ops!") (string "cba")
+case_withRecovery_2 = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (\_ -> char 'a' *> fail "ops!") (string "cba")
+        r = posErr 0 s [uneCh 'a', exStr "cba"]
         s = "abc"
 
 case_withRecovery_3a :: Assertion
-case_withRecovery_3a = parse p "" "abc" @?= Right "abd"
-  where p = withRecovery (const $ return "abd") (string "cba")
+case_withRecovery_3a = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ return "abd") (string "cba")
+        r = Right "abd"
+        s = "abc"
 
 case_withRecovery_3b :: Assertion
-case_withRecovery_3b = parse p "" s @?= posErr 0 s r
-  where p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
-        r = [uneCh 'a', exStr "cba", exCh 'd']
+case_withRecovery_3b = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
+        r = posErr 0 s [uneCh 'a', exStr "cba", exCh 'd']
         s = "abc"
 
 case_withRecovery_4a :: Assertion
-case_withRecovery_4a = parse p "" "abc" @?= Right "bc"
-  where p = withRecovery (const $ string "bc") (char 'a' *> fail "ops!")
+case_withRecovery_4a = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ string "bc") (char 'a' *> fail "ops!")
+        r = Right "bc"
+        s = "abc"
 
 case_withRecovery_4b :: Assertion
-case_withRecovery_4b = parse p "" s @?= posErr 3 s [uneEof, exCh 'f']
-  where p = withRecovery (const $ string "bc") h <* char 'f'
-        h = char 'a' *> char 'd' *> pure "foo"
+case_withRecovery_4b = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ string "bc")
+          (char 'a' *> char 'd' *> pure "foo") <* char 'f'
+        r = posErr 3 s [uneEof, exCh 'f']
         s = "abc"
 
 case_withRecovery_5 :: Assertion
-case_withRecovery_5 = parse p "" s @?= posErr 1 s [msg emsg]
-  where p :: Parser String
+case_withRecovery_5 = checkCase p r s
+  where p :: MonadParsec s m Char => m String
         p = withRecovery (\_ -> char 'b' *> fail emsg) (char 'a' *> fail emsg)
+        r = posErr 1 s [msg emsg]
         emsg = "ops!"
         s = "abc"
 
 case_withRecovery_6a :: Assertion
-case_withRecovery_6a = parse p "" "abc" @?= Right "abd"
-  where p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
+case_withRecovery_6a = checkCase p r s
+  where p :: MonadParsec s m Char => m String
+        p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
+        r = Right "abd"
+        s = "abc"
 
 case_withRecovery_6b :: Assertion
-case_withRecovery_6b = parse p "" "abc" @?= posErr 1 s r
-  where p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
-        r = [uneCh 'b', exCh 'd', exCh 'f']
+case_withRecovery_6b = checkCase p r s
+  where p :: MonadParsec s m Char => m Char
+        p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
+        r = posErr 1 s [uneCh 'b', exCh 'd', exCh 'f']
         s = "abc"
 
 case_withRecovery_7 :: Assertion
-case_withRecovery_7 = parse p "" s @?= posErr 1 s [uneCh 'b', exCh 'd']
-  where p = withRecovery (const $ fail "ops!") (char 'a' *> char 'd')
+case_withRecovery_7 = checkCase p r s
+  where p :: MonadParsec s m Char => m Char
+        p = withRecovery (const $ fail "ops!") (char 'a' *> char 'd')
+        r = posErr 1 s [uneCh 'b', exCh 'd']
         s = "abc"
 
 case_eof :: Assertion
-case_eof = parse eof "" "" @?= Right ()
+case_eof = checkCase eof (Right ()) ""
 
 prop_token :: String -> Property
-prop_token s = checkParser p r s
-  where p = token updatePosChar testChar
+prop_token s = checkParser' p r s
+  where p :: MonadParsec s m Char => m Char
+        p = token updatePosChar testChar
         testChar x = if isLetter x
-                     then Right x
-                     else Left . pure . Unexpected . showToken $ x
+          then Right x
+          else Left . pure . Unexpected . showToken $ x
         h = head s
         r | null s = posErr 0 s [uneEof]
           | isLetter h && length s == 1 = Right (head s)
@@ -570,14 +602,17 @@ prop_state_tab w = p /=\ w
   where p = setTabWidth w >> getTabWidth
 
 prop_state :: State String -> State String -> Property
-prop_state s1 s2 = runParser p "" "" === Right (f s2 s1)
-  where f (State s1' pos w) (State s2' _ _) = State (max s1' s2' ) pos w
+prop_state s1 s2 = checkParser' p r s
+  where p :: MonadParsec String m Char => m (State String)
         p = do
           st <- getParserState
-          guard (st == State "" (initialPos "") defaultTabWidth)
+          guard (st == State s (initialPos "") defaultTabWidth)
           setParserState s1
           updateParserState (f s2)
-          getParserState
+          liftM2 const getParserState (setInput "")
+        f (State s1' pos w) (State s2' _ _) = State (max s1' s2' ) pos w
+        r = Right (f s2 s1)
+        s = ""
 
 -- Running a parser
 
@@ -638,25 +673,6 @@ prop_stOnFail_3 s = runParser' p (stateFromInput s) === (i, r)
 
 stateFromInput :: Stream s t => s -> State s
 stateFromInput s = State s (initialPos "") defaultTabWidth
-
--- IdentityT instance of MonadParsec
-
-prop_IdentityT_try :: Char -> Char -> Char -> Property
-prop_IdentityT_try pre ch1 ch2 = checkParser (runIdentityT p) r s
-  where s1 = sequence [char pre, char ch1]
-        s2 = sequence [char pre, char ch2]
-        p = try s1 <|> s2
-        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
-        s = [pre]
-
-prop_IdentityT_notFollowedBy :: NonNegative Int -> NonNegative Int
-                             -> NonNegative Int -> Property
-prop_IdentityT_notFollowedBy a' b' c' = checkParser (runIdentityT p) r s
-  where [a,b,c] = getNonNegative <$> [a',b',c']
-        p = many (char 'a') <* notFollowedBy eof <* many anyChar
-        r | b > 0 || c > 0 = Right (replicate a 'a')
-          | otherwise      = posErr a s [uneEof, exCh 'a']
-        s = abcRow a b c
 
 -- ReaderT instance of MonadParsec
 
