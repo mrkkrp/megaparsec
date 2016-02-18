@@ -62,7 +62,8 @@ import qualified Text.Megaparsec.Char as C
 import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 #endif
 
--- White space and indentation
+----------------------------------------------------------------------------
+-- White space
 
 -- | @space spaceChar lineComment blockComment@ produces parser that can
 -- parse white space in general. It's expected that you create such a parser
@@ -162,6 +163,7 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
   where p = C.string start
         n = C.string end
 
+----------------------------------------------------------------------------
 -- Indentation
 
 -- | Return current indentation level.
@@ -279,6 +281,7 @@ indentedItems ref lvl sc p = go
 ii :: String
 ii = "incorrect indentation"
 
+----------------------------------------------------------------------------
 -- Character and string literals
 
 -- | The lexeme parser parses a single literal character without
@@ -304,6 +307,7 @@ charLiteral = label "literal character" $ do
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
     Nothing      -> unexpected (showToken x)
 
+----------------------------------------------------------------------------
 -- Numbers
 
 -- | This type class abstracts the concept of signed number in context of

@@ -14,7 +14,7 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 module Text.Megaparsec.Prim
-  ( -- * Used data-types
+  ( -- * Data types
     State (..)
   , Stream (..)
   , StorableStream (..)
@@ -74,6 +74,9 @@ import Text.Megaparsec.ShowToken
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), pure)
 #endif
+
+----------------------------------------------------------------------------
+-- Data types
 
 -- | This is Megaparsec state, it's parametrized over stream type @s@.
 
@@ -168,8 +171,13 @@ withHints (Hints xs) c e =
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
 
-accHints :: Hints -> (a -> State s -> Hints -> m b) ->
-            a -> State s -> Hints -> m b
+accHints
+  :: Hints             -- ^ 'Hints' to add
+  -> (a -> State s -> Hints -> m b) -- ^ An “OK” continuation to alter
+  -> a                 -- ^ First argument of resulting continuation
+  -> State s           -- ^ Second argument of resulting continuation
+  -> Hints             -- ^ Third argument of resulting continuation
+  -> m b
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 
 -- | Replace most recent group of hints (if any) with given string. Used in
@@ -184,6 +192,10 @@ refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
 -- determined by the stream.
 
 class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
+
+  -- | Get next token from the stream. If the stream is empty, return
+  -- 'Nothing'.
+
   uncons :: s -> Maybe (t, s)
 
 instance (ShowToken t, ShowToken [t]) => Stream [t] t where
@@ -239,9 +251,9 @@ instance StorableStream TL.Text Char where
 --     * State. It includes input stream, position in input stream and
 --     current value of tab width.
 --
---     * “Consumed-OK” continuation (cok). This is just a function that
---     takes three arguments: result of parsing, state after parsing, and
---     hints (see their description above). This continuation is called when
+--     * “Consumed-OK” continuation (cok). This is a function that takes
+--     three arguments: result of parsing, state after parsing, and hints
+--     (see their description above). This continuation is called when
 --     something has been consumed during parsing and result is OK (no error
 --     occurred).
 --
@@ -339,7 +351,7 @@ pFail msg = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
   eerr (newErrorMessage (Message msg) pos) s
 {-# INLINE pFail #-}
 
--- | Low-level creation of the ParsecT type.
+-- | Low-level creation of the 'ParsecT' type.
 
 mkPT :: Monad m => (State s -> m (Reply s a)) -> ParsecT s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
@@ -398,6 +410,7 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
 instance MonadTrans (ParsecT s) where
   lift amb = ParsecT $ \s _ _ eok _ -> amb >>= \a -> eok a s mempty
 
+----------------------------------------------------------------------------
 -- Primitive combinators
 
 -- | Type class describing parsers independent of input type.
@@ -488,6 +501,8 @@ class (A.Alternative m, Monad m, Stream s t)
   -- Note that if @r@ fails, original error message is reported as if
   -- without 'withRecovery'. In no way recovering parser @r@ can influence
   -- error messages.
+  --
+  -- @since 4.4.0
 
   withRecovery
     :: (ParseError -> m a) -- ^ How to recover from failure
@@ -704,6 +719,7 @@ unexpectedErr msg = newErrorMessage (Unexpected msg)
 eoi :: String
 eoi = "end of input"
 
+----------------------------------------------------------------------------
 -- Parser state combinators
 
 -- | Returns the current input.
@@ -746,6 +762,7 @@ setTabWidth w = updateParserState (\(State s pos _) -> State s pos w)
 setParserState :: MonadParsec s m t => State s -> m ()
 setParserState st = updateParserState (const st)
 
+----------------------------------------------------------------------------
 -- Running a parser
 
 -- | @parse p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
@@ -883,6 +900,7 @@ parseFromFile :: StorableStream s t
   -> IO (Either ParseError a)
 parseFromFile p filename = runParser p filename <$> fromFile filename
 
+----------------------------------------------------------------------------
 -- Instances of 'MonadParsec'
 
 instance (MonadPlus m, MonadParsec s m t) =>

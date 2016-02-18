@@ -82,6 +82,8 @@ count' m n p
       in f <$> optional p <*> count' 0 (pred n) p
 
 -- | Combine two alternatives.
+--
+-- @since 4.4.0
 
 eitherP :: Alternative m => m a -> m b -> m (Either a b)
 eitherP a b = (Left <$> a) <|> (Right <$> b)

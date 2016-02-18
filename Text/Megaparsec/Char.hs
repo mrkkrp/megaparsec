@@ -67,6 +67,9 @@ import Text.Megaparsec.ShowToken
 import Control.Applicative ((<$>), pure)
 #endif
 
+----------------------------------------------------------------------------
+-- Simple parsers
+
 -- | Parses a newline character.
 
 newline :: MonadParsec s m Char => m Char
@@ -97,6 +100,9 @@ tab = char '\t'
 
 space :: MonadParsec s m Char => m ()
 space = skipMany spaceChar
+
+----------------------------------------------------------------------------
+-- Categories of characters
 
 -- | Parses control characters, which are the non-printing characters of the
 -- Latin-1 subset of Unicode.
@@ -243,6 +249,9 @@ categoryName cat =
   , (PrivateUse          , "private-use Unicode character")
   , (NotAssigned         , "non-assigned Unicode character") ]
 
+----------------------------------------------------------------------------
+-- More general parsers
+
 -- | @char c@ parses a single character @c@.
 --
 -- > semicolon = char ';'
@@ -325,6 +334,9 @@ satisfy f = token updatePosChar testChar
   where testChar x = if f x
                      then Right x
                      else Left . pure . Unexpected . showToken $ x
+
+----------------------------------------------------------------------------
+-- Sequence of characters
 
 -- | @string s@ parses a sequence of characters given by @s@. Returns
 -- the parsed string (i.e. @s@).
