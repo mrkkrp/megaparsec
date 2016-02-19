@@ -34,11 +34,14 @@ module Text.Megaparsec.Error
 where
 
 import Control.Exception (Exception)
-import Data.Foldable (find)
+import Data.Foldable (find, concat)
 import Data.List (intercalate)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, fromJust)
 import Data.Semigroup (Semigroup((<>)))
 import Data.Typeable (Typeable)
+import Prelude hiding (concat)
+import qualified Data.List.NonEmpty as NE
 
 import Text.Megaparsec.Pos
 
@@ -203,24 +206,23 @@ showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
         f prefix m = (prefix ++) <$> m
         ns = ["\nunexpected ","\nexpecting ","\n"]
         rs = (renderMsgs orList <$> [unexpected, expected]) ++
-             [renderMsgs (intercalate "\n") messages]
+             [renderMsgs (concat . NE.intersperse "\n") messages]
 
 -- | Render collection of messages. If the collection is empty, return
 -- 'Nothing', otherwise return textual representation of the messages inside
 -- 'Just'.
 
 renderMsgs
-  :: ([String] -> String) -- ^ Function to combine results
+  :: (NonEmpty String -> String) -- ^ Function to combine results
   -> [Message]         -- ^ Collection of messages to render
   -> Maybe String      -- ^ Result, if any
-renderMsgs _ [] = Nothing
-renderMsgs f ms = Just . f $ messageString <$> ms
+-- renderMsgs _ [] = Nothing
+renderMsgs f ms = f . fmap messageString <$> NE.nonEmpty ms
 
 -- | Print a pretty list where items are separated with commas and the word
 -- “or” according to rules of English punctuation.
 
-orList :: [String] -> String
-orList []    = ""
-orList [x]   = x
-orList [x,y] = x ++ " or " ++ y
-orList xs    = intercalate ", " (init xs) ++ ", or " ++ last xs
+orList :: NonEmpty String -> String
+orList (x:|[])  = x
+orList (x:|[y]) = x ++ " or " ++ y
+orList xs       = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs

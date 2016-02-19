@@ -36,6 +36,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Text.Megaparsec.Char
+import Text.Megaparsec.Lexer (integer)
 import Text.Megaparsec.Perm
 
 import Util
@@ -43,7 +44,8 @@ import Util
 tests :: Test
 tests = testGroup "Permutation phrases parsers"
   [ testProperty "permutation parser pure" prop_pure
-  , testProperty "permutation test 0"      prop_perm_0 ]
+  , testProperty "permutation test 0"      prop_perm_0
+  , testProperty "combinator (<$$>)"       prop_ddcomb ]
 
 data CharRows = CharRows
   { getChars :: (Char, Char, Char)
@@ -92,3 +94,10 @@ prop_perm_0 a' c' v = checkParser (makePermParser p) r s
         cis  = elemIndices c s
         prec = take (cis !! 1) s
         s    = getInput v
+
+prop_ddcomb :: NonNegative Integer -> Property
+prop_ddcomb n' = checkParser (makePermParser p) r s
+  where p = succ <$$> integer
+        r = Right (succ n)
+        n = getNonNegative n'
+        s = show n

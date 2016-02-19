@@ -26,8 +26,12 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+{-# LANGUAGE Rank2Types #-}
+
 module Util
   ( checkParser
+  , checkParser'
+  , checkCase
   , simpleParse
   , checkChar
   , checkString
@@ -47,9 +51,16 @@ module Util
   , showToken )
 where
 
+import Control.Monad.Reader
+import Control.Monad.Trans.Identity
 import Data.Maybe (maybeToList)
+import qualified Control.Monad.State.Lazy    as L
+import qualified Control.Monad.State.Strict  as S
+import qualified Control.Monad.Writer.Lazy   as L
+import qualified Control.Monad.Writer.Strict as S
 
 import Test.QuickCheck
+import Test.HUnit (Assertion, (@?=))
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
@@ -66,8 +77,50 @@ import Control.Applicative ((<$>), (<*))
 -- it should match, otherwise the property doesn't hold and the test fails.
 
 checkParser :: (Eq a, Show a)
-            => Parser a -> Either ParseError a -> String -> Property
+  => Parser a          -- ^ Parser to test
+  -> Either ParseError a -- ^ Expected result of parsing
+  -> String            -- ^ Input for the parser
+  -> Property          -- ^ Resulting property
 checkParser p r s = simpleParse p s === r
+
+-- | A variant of 'checkParser' that runs given parser code with all
+-- standard instances of 'MonadParsec'. Useful when testing primitive
+-- combinators.
+
+checkParser' :: (Eq a, Show a)
+  => (forall m. MonadParsec String m Char => m a) -- ^ Parser to test
+  -> Either ParseError a -- ^ Expected result of parsing
+  -> String            -- ^ Input for the parser
+  -> Property          -- ^ Resulting property
+checkParser' p r s = conjoin
+  [ checkParser p                   r s
+  , checkParser (runIdentityT p)    r s
+  , checkParser (runReaderT   p ()) r s
+  , checkParser (L.evalStateT p ()) r s
+  , checkParser (S.evalStateT p ()) r s
+  , checkParser (evalWriterTL p)    r s
+  , checkParser (evalWriterTS p)    r s ]
+
+-- | Similar to 'checkParser', but produces HUnit's 'Assertion's instead.
+
+checkCase :: (Eq a, Show a)
+  => (forall m. MonadParsec String m Char => m a) -- ^ Parser to test
+  -> Either ParseError a -- ^ Expected result of parsing
+  -> String            -- ^ Input for the parser
+  -> Assertion         -- ^ Resulting assertion
+checkCase p r s = do
+  parse p                   "" s @?= r
+  parse (runIdentityT p)    "" s @?= r
+  parse (runReaderT   p ()) "" s @?= r
+  parse (L.evalStateT p ()) "" s @?= r
+  parse (S.evalStateT p ()) "" s @?= r
+  parse (evalWriterTL p)    "" s @?= r
+  parse (evalWriterTS p)    "" s @?= r
+
+evalWriterTL :: Monad m => L.WriterT [Int] m a -> m a
+evalWriterTL = liftM fst . L.runWriterT
+evalWriterTS :: Monad m => S.WriterT [Int] m a -> m a
+evalWriterTS = liftM fst . S.runWriterT
 
 -- | @simpleParse p s@ runs parser @p@ on input @s@ and returns corresponding
 -- result of type @Either ParseError a@, where @a@ is type of parsed

@@ -413,8 +413,8 @@ instance MonadTrans (ParsecT s) where
 
 -- | Type class describing parsers independent of input type.
 
-class (A.Alternative m, Monad m, Stream s t)
-      => MonadParsec s m t | m -> s t where
+class (A.Alternative m, MonadPlus m, Stream s t)
+  => MonadParsec s m t | m -> s t where
 
   -- | The most general way to stop parsing and report 'ParseError'.
   --
@@ -901,8 +901,7 @@ parseFromFile p filename = runParser p filename <$> fromFile filename
 ----------------------------------------------------------------------------
 -- Instances of 'MonadParsec'
 
-instance (MonadPlus m, MonadParsec s m t) =>
-         MonadParsec s (L.StateT e m) t where
+instance MonadParsec s m t => MonadParsec s (L.StateT e m) t where
   failure                    = lift . failure
   label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
@@ -918,8 +917,7 @@ instance (MonadPlus m, MonadParsec s m t) =>
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
-instance (MonadPlus m, MonadParsec s m t)
-         => MonadParsec s (S.StateT e m) t where
+instance MonadParsec s m t => MonadParsec s (S.StateT e m) t where
   failure                    = lift . failure
   label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
@@ -935,8 +933,7 @@ instance (MonadPlus m, MonadParsec s m t)
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
-instance (MonadPlus m, MonadParsec s m t)
-         => MonadParsec s (L.ReaderT e m) t where
+instance MonadParsec s m t => MonadParsec s (L.ReaderT e m) t where
   failure                     = lift . failure
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
@@ -950,8 +947,7 @@ instance (MonadPlus m, MonadParsec s m t)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (MonadPlus m, Monoid w, MonadParsec s m t)
-         => MonadParsec s (L.WriterT w m) t where
+instance (Monoid w, MonadParsec s m t) => MonadParsec s (L.WriterT w m) t where
   failure                     = lift . failure
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
@@ -967,8 +963,7 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (MonadPlus m, Monoid w, MonadParsec s m t)
-         => MonadParsec s (S.WriterT w m) t where
+instance (Monoid w, MonadParsec s m t) => MonadParsec s (S.WriterT w m) t where
   failure                     = lift . failure
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
@@ -984,8 +979,7 @@ instance (MonadPlus m, Monoid w, MonadParsec s m t)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
-instance (Monad m, MonadParsec s m t)
-         => MonadParsec s (IdentityT m) t where
+instance MonadParsec s m t => MonadParsec s (IdentityT m) t where
   failure                     = lift . failure
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
