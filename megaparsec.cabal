@@ -27,7 +27,7 @@
 -- POSSIBILITY OF SUCH DAMAGE.
 
 name:                 megaparsec
-version:              4.3.0
+version:              4.4.0
 cabal-version:        >= 1.10
 license:              BSD2
 license-file:         LICENSE.md
@@ -119,7 +119,7 @@ test-suite old-tests
                     , Util
   build-depends:      base                 >= 4.6 && < 5
                     , HUnit                >= 1.2 && < 1.4
-                    , megaparsec           >= 4.3
+                    , megaparsec           >= 4.4.0
                     , test-framework       >= 0.6 && < 1
                     , test-framework-hunit >= 0.2 && < 0.4
   default-extensions: CPP
@@ -146,7 +146,7 @@ test-suite tests
   build-depends:      base           >= 4.6 && < 5
                     , HUnit          >= 1.2 && < 1.4
                     , QuickCheck     >= 2.4 && < 3
-                    , megaparsec     >= 4.3
+                    , megaparsec     >= 4.4.0
                     , mtl            == 2.*
                     , test-framework >= 0.6 && < 1
                     , test-framework-hunit       >= 0.3 && < 0.4
@@ -168,9 +168,9 @@ benchmark benchmarks
   build-depends:      base       >= 4.6 && < 5
                     , bytestring >= 0.10 && < 2
                     , criterion  >= 0.6.2.1 && < 1.2
-                    , megaparsec >= 4.3
+                    , megaparsec >= 4.4.0
                     , text       >= 0.2
-  default-language:  Haskell2010
+  default-language:   Haskell2010
 
 source-repository head
   type:               git
