@@ -55,7 +55,7 @@
             <hr />
             <div class="content">
               
-<em>Last updated on October 15, 2015</em>
+<em>Last updated on February 18, 2016</em>
 <hr />
 
 
@@ -134,7 +134,8 @@
 <li><p>Now you can reliably test error messages, equality for them is now defined properly (in Parsec <code>Expect &quot;foo&quot;</code> is equal to <code>Expect &quot;bar&quot;</code>), collection of error messages is always sorted properly and duplicates cannot occur in message list as well as empty messages.</p></li>
 <li><p>To render error message in custom way, use <code>show</code> on error position and <code>showMessages</code> (lives in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Error.html"><code>Text.Megaparsec.Error</code></a>) on error messages.</p></li>
 <li><p><code>count' m n p</code> allows you to parse from <code>m</code> to <code>n</code> occurrences of <code>p</code>.</p></li>
-<li><p>Now you have <code>someTill</code> out of box.</p></li>
+<li><p>Now you have <code>someTill</code> and <code>eitherP</code> out of box.</p></li>
+<li><p><code>token</code>-based combinators like <code>string</code> and <code>string'</code> backtrack by default, so it’s not necessary to use <code>try</code> with them (beginning from <code>4.4.0</code>). This feature does not affect performance.</p></li>
 </ul>
 <h2 id="character-parsing">Character parsing</h2>
 <p>New character parsers in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html"><code>Text.Megaparsec.Char</code></a> may be useful if you work with Unicode:</p>
