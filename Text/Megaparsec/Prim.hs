@@ -413,7 +413,8 @@ instance MonadTrans (ParsecT s) where
 
 -- | Type class describing parsers independent of input type.
 
-class (MonadPlus m, Stream s t) => MonadParsec s m t | m -> s t where
+class (A.Alternative m, MonadPlus m, Stream s t)
+  => MonadParsec s m t | m -> s t where
 
   -- | The most general way to stop parsing and report 'ParseError'.
   --

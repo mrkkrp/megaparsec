@@ -32,9 +32,9 @@
 
 * Minor tweak in signature of `MonadParsec` type class. Collection of
   constraints changed from `Alternative m, Monad m, Stream s t` to
-  `MonadPlus m, Stream s t`. This is done to make it easier to write more
-  abstract code with older GHC where such primitives as `guard` are defined
-  for instances of `MonadPlus`, not `Alternative`.
+  `Alternative m, MonadPlus m, Stream s t`. This is done to make it easier
+  to write more abstract code with older GHC where such primitives as
+  `guard` are defined for instances of `MonadPlus`, not `Alternative`.
 
 ## Megaparsec 4.3.0
 
