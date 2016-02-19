@@ -452,14 +452,14 @@ case_notFollowedBy_3b = checkCase p r s
 case_notFollowedBy_4a :: Assertion
 case_notFollowedBy_4a = checkCase p r s
   where p :: MonadParsec s m Char => m ()
-        p = notFollowedBy (fail "ops!")
+        p = notFollowedBy mzero
         r = Right ()
         s = "ab"
 
 case_notFollowedBy_4b :: Assertion
 case_notFollowedBy_4b = checkCase p r s
   where p :: MonadParsec s m Char => m ()
-        p = notFollowedBy (fail "ops!") <* char 'c'
+        p = notFollowedBy mzero <* char 'c'
         r = posErr 0 s [uneCh 'a', exCh 'c']
         s = "ab"
 
@@ -498,7 +498,7 @@ case_withRecovery_1 = checkCase p r s
 case_withRecovery_2 :: Assertion
 case_withRecovery_2 = checkCase p r s
   where p :: MonadParsec s m Char => m String
-        p = withRecovery (\_ -> char 'a' *> fail "ops!") (string "cba")
+        p = withRecovery (\_ -> char 'a' *> mzero) (string "cba")
         r = posErr 0 s [uneCh 'a', exStr "cba"]
         s = "abc"
 
@@ -519,7 +519,7 @@ case_withRecovery_3b = checkCase p r s
 case_withRecovery_4a :: Assertion
 case_withRecovery_4a = checkCase p r s
   where p :: MonadParsec s m Char => m String
-        p = withRecovery (const $ string "bc") (char 'a' *> fail "ops!")
+        p = withRecovery (const $ string "bc") (char 'a' *> mzero)
         r = Right "bc"
         s = "abc"
 
@@ -542,7 +542,7 @@ case_withRecovery_5 = checkCase p r s
 case_withRecovery_6a :: Assertion
 case_withRecovery_6a = checkCase p r s
   where p :: MonadParsec s m Char => m String
-        p = withRecovery (const $ return "abd") (char 'a' *> fail "ops!")
+        p = withRecovery (const $ return "abd") (char 'a' *> mzero)
         r = Right "abd"
         s = "abc"
 
@@ -556,7 +556,7 @@ case_withRecovery_6b = checkCase p r s
 case_withRecovery_7 :: Assertion
 case_withRecovery_7 = checkCase p r s
   where p :: MonadParsec s m Char => m Char
-        p = withRecovery (const $ fail "ops!") (char 'a' *> char 'd')
+        p = withRecovery (const mzero) (char 'a' *> char 'd')
         r = posErr 1 s [uneCh 'b', exCh 'd']
         s = "abc"
 
