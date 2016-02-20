@@ -70,11 +70,14 @@ data Operator m a
 -- >         , [ binary  "+"  (+)
 -- >           , binary  "-"  (-)  ] ]
 -- >
--- > binary  name f = InfixL  (reservedOp name >> return f)
--- > prefix  name f = Prefix  (reservedOp name >> return f)
--- > postfix name f = Postfix (reservedOp name >> return f)
+-- > binary  name f = InfixL  (f <$ symbol name)
+-- > prefix  name f = Prefix  (f <$ symbol name)
+-- > postfix name f = Postfix (f <$ symbol name)
 
-makeExprParser :: MonadParsec s m t => m a -> [[Operator m a]] -> m a
+makeExprParser :: MonadParsec s m t
+  => m a               -- ^ Term parser
+  -> [[Operator m a]]  -- ^ Operator table, see 'Operator'
+  -> m a               -- ^ Resulting expression parser
 makeExprParser = foldl addPrecLevel
 
 -- | @addPrecLevel p ops@ adds ability to parse operators in table @ops@ to
