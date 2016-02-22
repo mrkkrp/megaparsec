@@ -49,7 +49,6 @@ module Text.Megaparsec
   , parse
   , parseMaybe
   , parseTest
-  , parseFromFile
     -- * Combinators
   , (A.<|>)
   -- $assocbo
@@ -136,7 +135,6 @@ module Text.Megaparsec
   , sourceColumn
     -- * Low-level operations
   , Stream (..)
-  , StorableStream (..)
   , State (..)
   , getInput
   , setInput

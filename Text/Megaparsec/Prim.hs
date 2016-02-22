@@ -17,7 +17,6 @@ module Text.Megaparsec.Prim
   ( -- * Data types
     State (..)
   , Stream (..)
-  , StorableStream (..)
   , Parsec
   , ParsecT
     -- * Primitive combinators
@@ -39,8 +38,7 @@ module Text.Megaparsec.Prim
   , runParserT'
   , parse
   , parseMaybe
-  , parseTest
-  , parseFromFile )
+  , parseTest )
 where
 
 import Control.Monad
@@ -63,9 +61,7 @@ import qualified Control.Monad.Trans.Writer.Strict as S
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.IO as TL
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
@@ -216,31 +212,6 @@ instance Stream T.Text Char where
 instance Stream TL.Text Char where
   uncons = TL.uncons
   {-# INLINE uncons #-}
-
--- | @StorableStream@ abstracts ability of some streams to be stored in a
--- file. This is used by the polymorphic function 'parseFromFile'.
-
-class Stream s t => StorableStream s t where
-
-  -- | @fromFile filename@ returns action that will try to read contents of
-  -- file named @filename@.
-
-  fromFile :: FilePath -> IO s
-
-instance StorableStream String Char where
-  fromFile = readFile
-
-instance StorableStream B.ByteString Char where
-  fromFile = B.readFile
-
-instance StorableStream BL.ByteString Char where
-  fromFile = BL.readFile
-
-instance StorableStream T.Text Char where
-  fromFile = T.readFile
-
-instance StorableStream TL.Text Char where
-  fromFile = TL.readFile
 
 -- If you're reading this, you may be interested in how Megaparsec works on
 -- lower level. That's quite simple. 'ParsecT' is a wrapper around function
@@ -881,22 +852,6 @@ runParsecT p s = unParser p s cok cerr eok eerr
         cerr err s' = return $ Reply s' Consumed (Error err)
         eok a s' _  = return $ Reply s' Virgin   (OK a)
         eerr err s' = return $ Reply s' Virgin   (Error err)
-
--- | @parseFromFile p filename@ runs parser @p@ on the input read from
--- @filename@. Returns either a 'ParseError' ('Left') or a value of type @a@
--- ('Right').
---
--- > main = do
--- >   result <- parseFromFile numbers "digits.txt"
--- >   case result of
--- >     Left err -> print err
--- >     Right xs -> print $ sum xs
-
-parseFromFile :: StorableStream s t
-  => Parsec s a -- ^ Parser to run
-  -> FilePath   -- ^ Name of file to parse
-  -> IO (Either ParseError a)
-parseFromFile p filename = runParser p filename <$> fromFile filename
 
 ----------------------------------------------------------------------------
 -- Instances of 'MonadParsec'

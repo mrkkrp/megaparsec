@@ -1,3 +1,12 @@
+## Megaparsec 5.0.0
+
+* Removed `parseFromFile` and `StorableStream` type-class that was necessary
+  for it. The reason for removal is that reading from file and then parsing
+  its contents is trivial for every instance of `Stream` and this function
+  provides no way to use newer methods for running a parser, such as
+  `runParser'`. So, simply put, it adds little value and was included in 4.x
+  versions for compatibility purposes.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment
