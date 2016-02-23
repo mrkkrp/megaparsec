@@ -73,7 +73,7 @@ x = 3 * (1 + y)
 
 result = x - 1 # answer is 32</code></pre>
 <p>Something like that. Here, it can only calculate arithmetic expressions, but if we were to design something more powerful, we could introduce more interesting operators to grab input from console, etc., but since our aim is to explore new parsing feature, this language will do.</p>
-<p>First, we will write parser that can parse entire program in this language as list of ASTs representing equations. Then we will make it failure-tolerant in a way, so when it cannot parse particular equation, it does not stop, but continues its work until all input has been analyzed.</p>
+<p>First, we will write parser that can parse entire program in this language as list of ASTs representing equations. Then we will make it failure-tolerant in a way, so when it cannot parse particular equation, it does not stop, but continues its work until all input is analyzed.</p>
 <h2 id="parser-without-recovery">Parser without recovery</h2>
 <p>The parser is very easy to write. We will need the following imports:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
@@ -170,7 +170,7 @@ prog <span class="fu">=</span> between scn eof (sepEndBy equation scn)</code></p
 <p>Our parser is really dandy, it has nice error messages and does its job really well. However, every expression is clearly separated from the others by a newline. This separation makes it possible to analyze many expressions independently, even if one of them is malformed, we have no reason to stop and not to check the others. In fact, that’s how some “serious” parsers work (parser of C++ language, although it depends on compiler I guess). Reporting multiple parse errors at once may be more efficient method of communication with programmer that needs to fix them than when he has to recompile the program every time to get to the next error. In this section we will make our parser failure-tolerant and able to report multiple error messages at once.</p>
 <p>Let’s add one more type synonym — <code>RawData</code>:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">RawData</span> <span class="fu">=</span> [<span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Equation</span>]</code></pre></div>
-<p>This will represent collection of equations, just like <code>Program</code>, but every one of them may have been malformed: in that case we get original error message in <code>Left</code>, otherwise we have properly parsed equation in <code>Right</code>.</p>
+<p>This will represent collection of equations, just like <code>Program</code>, but every one of them may be malformed: in that case we get original error message in <code>Left</code>, otherwise we have properly parsed equation in <code>Right</code>.</p>
 <p>You will be amazed just how easy it is to add recovering to existing parser:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rawData ::</span> <span class="dt">Parser</span> <span class="dt">RawData</span>
 rawData <span class="fu">=</span> between scn eof (sepEndBy e scn)
