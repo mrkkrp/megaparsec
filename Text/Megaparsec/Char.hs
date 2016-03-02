@@ -65,6 +65,8 @@ import Text.Megaparsec.ShowToken
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), pure)
+import Data.Foldable       (elem)
+import Data.Prelude hiding (elem)
 #endif
 
 ----------------------------------------------------------------------------
