@@ -65,6 +65,8 @@ import Text.Megaparsec.ShowToken
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), pure)
+import Data.Foldable       (elem)
+import Data.Prelude hiding (elem)
 #endif
 
 ----------------------------------------------------------------------------
@@ -270,17 +272,17 @@ char c = satisfy (== c) <?> showToken c
 -- expecting 'E' or 'e'
 
 char' :: MonadParsec s m Char => Char -> m Char
-char' = choice . fmap char . extendi . pure
+char' = choice . fmap char . extendi . (:[])
 
 -- | Extends given list of characters adding uppercase version of every
 -- lowercase characters and vice versa. Resulting list is guaranteed to have
 -- no duplicates.
 
-extendi :: String -> String
-extendi cs = nub (cs >>= f)
-  where f c | isLower c = [c, toUpper c]
-            | isUpper c = [c, toLower c]
-            | otherwise = [c]
+extendi :: Foldable f => f Char -> String
+extendi = nub . foldr f []
+  where f x xs | isLower x = x : toUpper x : xs
+               | isUpper x = x : toLower x : xs
+               | otherwise = x : xs
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
@@ -297,7 +299,7 @@ anyChar = satisfy (const True) <?> "character"
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
 
-oneOf :: MonadParsec s m Char => String -> m Char
+oneOf :: (Foldable f, MonadParsec s m Char) => f Char -> m Char
 oneOf cs = satisfy (`elem` cs)
 
 -- | The same as 'oneOf', but case-insensitive. Returns the parsed character
@@ -305,21 +307,21 @@ oneOf cs = satisfy (`elem` cs)
 --
 -- > vowel = oneOf' "aeiou" <?> "vowel"
 
-oneOf' :: MonadParsec s m Char => String -> m Char
+oneOf' :: (Foldable f, MonadParsec s m Char) => f Char -> m Char
 oneOf' = oneOf . extendi
 
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
 -- character /not/ in the supplied list of characters @cs@. Returns the
 -- parsed character.
 
-noneOf :: MonadParsec s m Char => String -> m Char
+noneOf :: (Foldable f, MonadParsec s m Char) => f Char -> m Char
 noneOf cs = satisfy (`notElem` cs)
 
 -- | The same as 'noneOf', but case-insensitive.
 --
 -- > consonant = noneOf' "aeiou" <?> "consonant"
 
-noneOf' :: MonadParsec s m Char => String -> m Char
+noneOf' :: (Foldable f, MonadParsec s m Char) => f Char -> m Char
 noneOf' = noneOf . extendi
 
 -- | The parser @satisfy f@ succeeds for any character for which the
