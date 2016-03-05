@@ -7,6 +7,9 @@
   `runParser'`. So, simply put, it adds little value and was included in 4.x
   versions for compatibility purposes.
 
+* Combinators `oneOf`, `oneOf'`, `noneOf`, and `noneOf'` now accept any
+  instance of `Foldable`, not only `String`.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment

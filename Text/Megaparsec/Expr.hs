@@ -144,7 +144,7 @@ type Batch m a =
 -- | A helper to separate various operators (binary, unary, and according to
 -- associativity) and return them in a tuple.
 
-splitOp :: MonadParsec s m t => Operator m a -> Batch m a -> Batch m a
+splitOp :: Operator m a -> Batch m a -> Batch m a
 splitOp (InfixR  op) (r, l, n, pre, post) = (op:r, l, n, pre, post)
 splitOp (InfixL  op) (r, l, n, pre, post) = (r, op:l, n, pre, post)
 splitOp (InfixN  op) (r, l, n, pre, post) = (r, l, op:n, pre, post)

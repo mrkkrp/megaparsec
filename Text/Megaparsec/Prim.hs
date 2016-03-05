@@ -592,8 +592,8 @@ pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
       eerr'  _ _ = eok () s mempty
   in unParser p s cok' cerr' eok' eerr'
 
-pWithRecovery :: Stream s t
-  => (ParseError -> ParsecT s m a)
+pWithRecovery
+  :: (ParseError -> ParsecT s m a)
   -> ParsecT s m a
   -> ParsecT s m a
 pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
@@ -747,8 +747,8 @@ setParserState st = updateParserState (const st)
 -- >
 -- > numbers = commaSep integer
 
-parse :: Stream s t
-  => Parsec s a -- ^ Parser to run
+parse
+  :: Parsec s a -- ^ Parser to run
   -> String     -- ^ Name of source file
   -> s          -- ^ Input for parser
   -> Either ParseError a
@@ -773,7 +773,7 @@ parseMaybe p s =
 -- | The expression @parseTest p input@ applies a parser @p@ against
 -- input @input@ and prints the result to stdout. Used for testing.
 
-parseTest :: (Stream s t, Show a) => Parsec s a -> s -> IO ()
+parseTest :: Show a => Parsec s a -> s -> IO ()
 parseTest p input =
   case parse p "" input of
     Left  e -> print e
@@ -786,8 +786,8 @@ parseTest p input =
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
 
-runParser :: Stream s t
-  => Parsec s a -- ^ Parser to run
+runParser
+  :: Parsec s a -- ^ Parser to run
   -> String     -- ^ Name of source file
   -> s          -- ^ Input for parser
   -> Either ParseError a
@@ -800,8 +800,8 @@ runParser p name s = snd $ runParser' p (initialState name s)
 --
 -- @since 4.2.0
 
-runParser' :: Stream s t
-  => Parsec s a -- ^ Parser to run
+runParser'
+  :: Parsec s a -- ^ Parser to run
   -> State s    -- ^ Initial state
   -> (State s, Either ParseError a)
 runParser' p = runIdentity . runParserT' p
@@ -812,7 +812,7 @@ runParser' p = runIdentity . runParserT' p
 -- underlying monad @m@ that returns either a 'ParseError' ('Left') or a
 -- value of type @a@ ('Right').
 
-runParserT :: (Monad m, Stream s t)
+runParserT :: Monad m
   => ParsecT s m a -- ^ Parser to run
   -> String        -- ^ Name of source file
   -> s             -- ^ Input for parser
@@ -825,7 +825,7 @@ runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 --
 -- @since 4.2.0
 
-runParserT' :: (Monad m, Stream s t)
+runParserT' :: Monad m
   => ParsecT s m a -- ^ Parser to run
   -> State s       -- ^ Initial state
   -> m (State s, Either ParseError a)
@@ -837,7 +837,7 @@ runParserT' p s = do
 
 -- | Given name of source file and input construct initial state for parser.
 
-initialState :: Stream s t => String -> s -> State s
+initialState :: String -> s -> State s
 initialState name s = State s (initialPos name) defaultTabWidth
 
 -- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'

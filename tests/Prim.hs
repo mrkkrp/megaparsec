@@ -671,7 +671,7 @@ prop_stOnFail_3 s = runParser' p (stateFromInput s) === (i, r)
         r = posErr 0 s [if null s then uneEof else uneCh (head s)]
         p = notFollowedBy (string s)
 
-stateFromInput :: Stream s t => s -> State s
+stateFromInput :: s -> State s
 stateFromInput s = State s (initialPos "") defaultTabWidth
 
 -- ReaderT instance of MonadParsec

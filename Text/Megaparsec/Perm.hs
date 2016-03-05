@@ -108,8 +108,7 @@ f <$?> xp = newperm f <|?> xp
        => PermParser s m (a -> b) -> (a, m a) -> PermParser s m b
 perm <|?> (x, p) = addopt perm x p
 
-newperm :: MonadParsec s m t
-        => (a -> b) -> PermParser s m (a -> b)
+newperm :: (a -> b) -> PermParser s m (a -> b)
 newperm f = Perm (Just f) []
 
 add :: MonadParsec s m t => PermParser s m (a -> b) -> m a -> PermParser s m b
