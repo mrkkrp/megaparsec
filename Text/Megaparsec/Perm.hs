@@ -108,11 +108,15 @@ f <$?> xp = newperm f <|?> xp
        => PermParser s m (a -> b) -> (a, m a) -> PermParser s m b
 perm <|?> (x, p) = addopt perm x p
 
-newperm :: MonadParsec s m t
-        => (a -> b) -> PermParser s m (a -> b)
+newperm ::
+#if !MIN_VERSION_base(4,9,0)
+  MonadParsec s m t =>
+#endif
+  (a -> b) -> PermParser s m (a -> b)
 newperm f = Perm (Just f) []
 
-add :: MonadParsec s m t => PermParser s m (a -> b) -> m a -> PermParser s m b
+add :: MonadParsec s m t
+    => PermParser s m (a -> b) -> m a -> PermParser s m b
 add perm@(Perm _mf fs) p = Perm Nothing (first : fmap insert fs)
   where first = Branch perm p
         insert (Branch perm' p') = Branch (add (mapPerms flip perm') p) p'
