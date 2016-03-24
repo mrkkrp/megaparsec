@@ -11,7 +11,9 @@
 --
 -- The primitive parser combinators.
 
-{-# OPTIONS_HADDOCK not-home #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_HADDOCK not-home     #-}
 
 module Text.Megaparsec.Prim
   ( -- * Data types
@@ -50,6 +52,8 @@ import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
+import Data.Foldable (foldl')
+import Data.Proxy
 import Data.Semigroup
 import qualified Control.Applicative as A
 import qualified Control.Monad.Trans.Reader as L
@@ -192,25 +196,55 @@ class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
 
   uncons :: s -> Maybe (t, s)
 
-instance (ShowToken t, ShowToken [t]) => Stream [t] t where
+  -- | Update position in stream given tab width, current position, and
+  -- current token. The result is a tuple where the first element will be
+  -- used to report parse errors for current token, while the second element
+  -- is the incremented position that will be stored in parser's state.
+  --
+  -- When you work with streams where elements do not contain information
+  -- about their position in input, result is usually consists of the third
+  -- argument unchanged and incremented position calculated with respect to
+  -- current token. This is how default instances of 'Stream' work (they use
+  -- 'defaultUpdatePos', which may be a good starting point for your own
+  -- position-advancing function).
+  --
+  -- When you wish to deal with stream of tokens where every token “knows”
+  -- its start and end position in input (for example, you have produced the
+  -- stream with happy\/alex), then the best strategy is to use the start
+  -- position as actual element position and provide the end position of the
+  -- token as incremented one.
+
+  updatePos
+    :: Proxy s         -- ^ Proxy clarifying stream type
+    -> Int             -- ^ Tab width
+    -> SourcePos       -- ^ Current position
+    -> t               -- ^ Current token
+    -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
+
+instance Stream String Char where
   uncons []     = Nothing
   uncons (t:ts) = Just (t, ts)
+  updatePos     = const defaultUpdatePos
   {-# INLINE uncons #-}
 
 instance Stream B.ByteString Char where
-  uncons = B.uncons
+  uncons    = B.uncons
+  updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
 
 instance Stream BL.ByteString Char where
-  uncons = BL.uncons
+  uncons    = BL.uncons
+  updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
 
 instance Stream T.Text Char where
-  uncons = T.uncons
+  uncons    = T.uncons
+  updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
 
 instance Stream TL.Text Char where
-  uncons = TL.uncons
+  uncons    = TL.uncons
+  updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
 
 -- If you're reading this, you may be interested in how Megaparsec works on
@@ -482,37 +516,32 @@ class (A.Alternative m, MonadPlus m, Stream s t)
 
   eof :: m ()
 
-  -- | The parser @token nextPos testTok@ accepts a token @t@ with result
-  -- @x@ when the function @testTok t@ returns @'Right' x@. The position of
-  -- the /next/ token should be returned when @nextPos@ is called with the
-  -- tab width, current source position, and the current token.
+  -- | The parser @token testTok@ accepts a token @t@ with result @x@ when
+  -- the function @testTok t@ returns @'Right' x@.
   --
   -- This is the most primitive combinator for accepting tokens. For
   -- example, the 'Text.Megaparsec.Char.char' parser could be implemented
   -- as:
   --
-  -- > char c = token updatePosChar testChar
-  -- >   where testChar x = if x == c
-  -- >                      then Right x
-  -- >                      else Left . pure . Unexpected . showToken $ x
+  -- > char c = token testChar
+  -- >   where testChar x =
+  -- >           if x == c
+  -- >             then Right x
+  -- >             else Left . pure . Unexpected . showToken $ x
 
   token
-    :: (Int -> SourcePos -> t -> SourcePos)
-       -- ^ Next position calculating function
-    -> (t -> Either [Message] a)
+    :: (t -> Either [Message] a)
        -- ^ Matching function for the token to parse
     -> m a
 
-  -- | The parser @tokens posFromTok test@ parses list of tokens and returns
-  -- it. @posFromTok@ is called with three arguments: tab width, initial
-  -- position, and collection of tokens to parse. The resulting parser will
-  -- use 'showToken' to pretty-print the collection of tokens in error
-  -- messages. Supplied predicate @test@ is used to check equality of given
-  -- and parsed tokens.
+  -- | The parser @tokens test@ parses list of tokens and returns it. The
+  -- resulting parser will use 'showToken' to pretty-print the collection of
+  -- tokens in error messages. Supplied predicate @test@ is used to check
+  -- equality of given and parsed tokens.
   --
   -- This can be used for example to write 'Text.Megaparsec.Char.string':
   --
-  -- > string = tokens updatePosString (==)
+  -- > string = tokens (==)
   --
   -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
   -- primitive, which means that if it fails, it never consumes any
@@ -531,9 +560,7 @@ class (A.Alternative m, MonadPlus m, Stream s t)
   -- performance in any way.
 
   tokens :: Eq t
-    => (Int -> SourcePos -> [t] -> SourcePos)
-       -- ^ Computes position of tokens
-    -> (t -> t -> Bool)
+    => (t -> t -> Bool)
        -- ^ Predicate to check equality of tokens
     -> [t]
        -- ^ List of tokens to parse
@@ -619,43 +646,46 @@ pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
     Just (x,_) -> eerr (unexpectedErr (showToken x) pos) s
 {-# INLINE pEof #-}
 
-pToken :: Stream s t
-  => (Int -> SourcePos -> t -> SourcePos)
-  -> (t -> Either [Message] a)
+pToken :: forall s m t a. Stream s t
+  => (t -> Either [Message] a)
   -> ParsecT s m a
-pToken nextpos test = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
-    case uncons input of
-      Nothing     -> eerr (unexpectedErr eoi pos) s
-      Just (c,cs) ->
-        case test c of
-          Left ms -> eerr (addErrorMessages ms (newErrorUnknown pos)) s
-          Right x -> let newpos   = nextpos w pos c
-                         newstate = State cs newpos w
-                     in seq newpos $ seq newstate $ cok x newstate mempty
+pToken test = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
+  case uncons input of
+    Nothing     -> eerr (unexpectedErr eoi pos) s
+    Just (c,cs) ->
+      let (!apos, !npos) = updatePos (Proxy :: Proxy s) w pos c
+      in case test c of
+        Left ms -> eerr (newErrorMessages ms apos) s
+        Right x ->
+          let !newstate = State cs npos w
+          in cok x newstate mempty
 {-# INLINE pToken #-}
 
-pTokens :: Stream s t
-  => (Int -> SourcePos -> [t] -> SourcePos)
-  -> (t -> t -> Bool)
+pTokens :: forall s m t. Stream s t
+  => (t -> t -> Bool)
   -> [t]
   -> ParsecT s m [t]
-pTokens _ _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens nextpos test tts = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
+pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
+pTokens test tts = ParsecT $ \s@(State input pos w) cok _ _ eerr ->
   let r = showToken . reverse
+      y = Proxy :: Proxy s
       errExpect x = setErrorMessage (Expected $ showToken tts)
         (newErrorMessage (Unexpected x) pos)
-      walk [] is rs =
-        let pos' = nextpos w pos tts
-            s'   = State rs pos' w
-        in cok (reverse is) s' mempty
-      walk (t:ts) is rs =
-        let what = if null is then eoi  else r is
+      go [] is rs =
+        let !npos     = foldl' (\p t -> snd $ updatePos y w p t) pos tts
+            !newstate = State rs npos w
+        in cok (reverse is) newstate mempty
+      go (t:ts) is rs =
+        let what = if null is then eoi else r is
         in case uncons rs of
              Nothing -> eerr (errExpect what) s
-             Just (x,xs)
-               | test t x  -> walk ts (x:is) xs
-               | otherwise -> eerr (errExpect $ r (x:is)) s
-  in walk tts [] input
+             Just (x,xs) ->
+               let !apos     = fst (updatePos y w pos t)
+                   !newstate = State input apos w
+               in if test t x
+                    then go ts (x:is) xs
+                    else eerr (errExpect $ r (x:is)) newstate
+  in go tts [] input
 {-# INLINE pTokens #-}
 
 pGetParserState :: ParsecT s m (State s)
@@ -867,8 +897,8 @@ instance MonadParsec s m t => MonadParsec s (L.StateT e m) t where
   withRecovery r (L.StateT m) = L.StateT $ \s ->
     withRecovery (\e -> L.runStateT (r e) s) (m s)
   eof                        = lift eof
-  token  f e                 = lift $ token  f e
-  tokens f e ts              = lift $ tokens f e ts
+  token                      = lift . token
+  tokens e ts                = lift $ tokens e ts
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
@@ -883,8 +913,8 @@ instance MonadParsec s m t => MonadParsec s (S.StateT e m) t where
   withRecovery r (S.StateT m) = S.StateT $ \s ->
     withRecovery (\e -> S.runStateT (r e) s) (m s)
   eof                        = lift eof
-  token  f e                 = lift $ token  f e
-  tokens f e ts              = lift $ tokens f e ts
+  token                      = lift . token
+  tokens e ts                = lift $ tokens e ts
   getParserState             = lift getParserState
   updateParserState f        = lift $ updateParserState f
 
@@ -897,8 +927,8 @@ instance MonadParsec s m t => MonadParsec s (L.ReaderT e m) t where
   withRecovery r (L.ReaderT m) = L.ReaderT $ \s ->
     withRecovery (\e -> L.runReaderT (r e) s) (m s)
   eof                         = lift eof
-  token  f e                  = lift $ token  f e
-  tokens f e ts               = lift $ tokens f e ts
+  token                       = lift . token
+  tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
@@ -913,8 +943,8 @@ instance (Monoid w, MonadParsec s m t) => MonadParsec s (L.WriterT w m) t where
   withRecovery r (L.WriterT m) = L.WriterT $
     withRecovery (L.runWriterT . r) m
   eof                         = lift eof
-  token  f e                  = lift $ token  f e
-  tokens f e ts               = lift $ tokens f e ts
+  token                       = lift . token
+  tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
@@ -929,8 +959,8 @@ instance (Monoid w, MonadParsec s m t) => MonadParsec s (S.WriterT w m) t where
   withRecovery r (S.WriterT m) = S.WriterT $
     withRecovery (S.runWriterT . r) m
   eof                         = lift eof
-  token  f e                  = lift $ token  f e
-  tokens f e ts               = lift $ tokens f e ts
+  token                       = lift . token
+  tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
@@ -943,7 +973,7 @@ instance MonadParsec s m t => MonadParsec s (IdentityT m) t where
   withRecovery r (IdentityT m) = IdentityT $
     withRecovery (runIdentityT . r) m
   eof                         = lift eof
-  token  f e                  = lift $ token  f e
-  tokens f e ts               = lift $ tokens f e ts
+  token                       = lift . token
+  tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f

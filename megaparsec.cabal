@@ -67,6 +67,9 @@ library
     build-depends:    fail         == 4.9.*
                     , semigroups   == 0.18.*
 
+  if !impl(ghc >= 7.8)
+    build-depends:    tagged       == 0.8.*
+
   default-extensions: CPP
                     , DeriveDataTypeable
                     , FlexibleContexts

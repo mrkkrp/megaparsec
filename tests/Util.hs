@@ -35,6 +35,7 @@ module Util
   , simpleParse
   , checkChar
   , checkString
+  , updatePosString
   , (/=\)
   , (!=!)
   , abcRow
@@ -53,6 +54,7 @@ where
 
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
+import Data.Foldable (foldl')
 import Data.Maybe (maybeToList)
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
@@ -161,6 +163,16 @@ checkString p a' test l s' = checkParser p (w a' 0 s') s'
           | test a s  = w as i' ss
           | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
             where i'  = succ i
+
+-- | A helper function that is used to advance 'SourcePos' given a 'String'.
+
+updatePosString
+  :: Int               -- ^ Tab width
+  -> SourcePos         -- ^ Initial position
+  -> String            -- ^ 'String' — collection of tokens to process
+  -> SourcePos         -- ^ Final position
+updatePosString w = foldl' f
+  where f p t = snd (defaultUpdatePos w p t)
 
 infix 4 /=\   -- preserve whitespace on automatic trim
 

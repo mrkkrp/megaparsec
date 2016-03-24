@@ -58,7 +58,6 @@ import Data.Maybe (fromJust)
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error (Message (..))
-import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.ShowToken
 
@@ -326,10 +325,11 @@ noneOf' cs = satisfy (`notElemi` cs)
 -- > oneOf cs  = satisfy (`elem` cs)
 
 satisfy :: MonadParsec s m Char => (Char -> Bool) -> m Char
-satisfy f = token updatePosChar testChar
-  where testChar x = if f x
-                     then Right x
-                     else Left . pure . Unexpected . showToken $ x
+satisfy f = token testChar
+  where testChar x =
+          if f x
+            then Right x
+            else Left . pure . Unexpected . showToken $ x
 
 ----------------------------------------------------------------------------
 -- Sequence of characters
@@ -340,7 +340,7 @@ satisfy f = token updatePosChar testChar
 -- > divOrMod = string "div" <|> string "mod"
 
 string :: MonadParsec s m Char => String -> m String
-string = tokens updatePosString (==)
+string = tokens (==)
 
 -- | The same as 'string', but case-insensitive. On success returns string
 -- cased as actually parsed input.
@@ -349,7 +349,7 @@ string = tokens updatePosString (==)
 -- "foObAr"
 
 string' :: MonadParsec s m Char => String -> m String
-string' = tokens updatePosString casei
+string' = tokens casei
 
 ----------------------------------------------------------------------------
 -- Helpers

@@ -566,7 +566,7 @@ case_eof = checkCase eof (Right ()) ""
 prop_token :: String -> Property
 prop_token s = checkParser' p r s
   where p :: MonadParsec s m Char => m Char
-        p = token updatePosChar testChar
+        p = token testChar
         testChar x = if isLetter x
           then Right x
           else Left . pure . Unexpected . showToken $ x
@@ -578,7 +578,7 @@ prop_token s = checkParser' p r s
 
 prop_tokens :: String -> String -> Property
 prop_tokens a = checkString p a (==) (showToken a)
-  where p = tokens updatePosString (==) a
+  where p = tokens (==) a
 
 -- Parser state combinators
 

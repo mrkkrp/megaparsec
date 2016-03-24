@@ -24,13 +24,11 @@ module Text.Megaparsec.Pos
   , setSourceName
   , setSourceLine
   , setSourceColumn
-  , updatePosChar
-  , updatePosString
+  , defaultUpdatePos
   , defaultTabWidth )
 where
 
 import Control.Exception (Exception, throw)
-import Data.List (foldl')
 import Data.Typeable (Typeable)
 
 -- | The abstract data type @SourcePos@ represents source positions. It
@@ -81,43 +79,50 @@ newPos :: String -- ^ File name
        -> SourcePos
 newPos n l c =
   if l < 1 || c < 1
-  then throw $ InvalidTextualPosition n l c
-  else SourcePos n l c
+    then throw $ InvalidTextualPosition n l c
+    else SourcePos n l c
+{-# INLINE newPos #-}
 
 -- | Create a new 'SourcePos' with the given source name, and line number
 -- and column number set to 1, the upper left.
 
 initialPos :: String -> SourcePos
 initialPos name = newPos name 1 1
+{-# INLINE initialPos #-}
 
 -- | Increment the line number of a source position. If resulting line
 -- number is not positive, 'InvalidTextualPosition' will be thrown.
 
-incSourceLine :: SourcePos -> Int -> SourcePos
-incSourceLine (SourcePos n l c) d = newPos n (l + d) c
+incSourceLine :: Int -> SourcePos -> SourcePos
+incSourceLine d (SourcePos n l c) = newPos n (l + d) c
+{-# INLINE incSourceLine #-}
 
 -- | Increment the column number of a source position. If resulting column
 -- number is not positive, 'InvalidTextualPosition' will be thrown.
 
-incSourceColumn :: SourcePos -> Int -> SourcePos
-incSourceColumn (SourcePos n l c) d = newPos n l (c + d)
+incSourceColumn :: Int -> SourcePos -> SourcePos
+incSourceColumn d (SourcePos n l c) = newPos n l (c + d)
+{-# INLINE incSourceColumn #-}
 
 -- | Set the name of the source.
 
-setSourceName :: SourcePos -> String -> SourcePos
-setSourceName (SourcePos _ l c) n = newPos n l c
+setSourceName :: String -> SourcePos -> SourcePos
+setSourceName n (SourcePos _ l c) = newPos n l c
+{-# INLINE setSourceName #-}
 
 -- | Set the line number of a source position. If the line number is not
 -- positive, 'InvalidTextualPosition' will be thrown.
 
-setSourceLine :: SourcePos -> Int -> SourcePos
-setSourceLine (SourcePos n _ c) l = newPos n l c
+setSourceLine :: Int -> SourcePos -> SourcePos
+setSourceLine l (SourcePos n _ c) = newPos n l c
+{-# INLINE setSourceLine #-}
 
 -- | Set the column number of a source position. If the line number is not
 -- positive, 'InvalidTextualPosition' will be thrown.
 
-setSourceColumn :: SourcePos -> Int -> SourcePos
-setSourceColumn (SourcePos n l _) = newPos n l
+setSourceColumn :: Int -> SourcePos -> SourcePos
+setSourceColumn c (SourcePos n l _) = newPos n l c
+{-# INLINE setSourceColumn #-}
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line
@@ -128,32 +133,23 @@ setSourceColumn (SourcePos n l _) = newPos n l
 --
 -- If given tab width is not positive, 'defaultTabWidth' will be used.
 
-updatePosChar :: Int       -- ^ Tab width
-              -> SourcePos -- ^ Initial position
-              -> Char      -- ^ Character at the position
-              -> SourcePos
-updatePosChar width (SourcePos n l c) ch =
-  case ch of
-    '\n' -> SourcePos n (l + 1) 1
-    '\t' -> let w = if width < 1 then defaultTabWidth else width
-            in SourcePos n l (c + w - ((c - 1) `rem` w))
-    _    -> SourcePos n l (c + 1)
+defaultUpdatePos
+  :: Int               -- ^ Tab width
+  -> SourcePos         -- ^ Current position
+  -> Char              -- ^ Current token
+  -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
+defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
+  where
+    npos =
+      case ch of
+        '\n' -> SourcePos n (l + 1) 1
+        '\t' -> let w = if width < 1 then defaultTabWidth else width
+                in SourcePos n l (c + w - ((c - 1) `rem` w))
+        _    -> SourcePos n l (c + 1)
 
--- | The expression @updatePosString pos s@ updates the source position
--- @pos@ by calling 'updatePosChar' on every character in @s@, i.e.
---
--- > updatePosString width = foldl (updatePosChar width)
-
-updatePosString :: Int       -- ^ Tab width
-                -> SourcePos -- ^ Initial position
-                -> String    -- ^ String to process
-                -> SourcePos
-updatePosString w = foldl' (updatePosChar w)
-
--- | Value of tab width used by default. This is used as fall-back by
--- 'updatePosChar' and possibly in other cases. Always prefer this constant
--- when you want to refer to default tab width because actual value /may/
--- change in future. Current value is @8@.
+-- | Value of tab width used by default. Always prefer this constant when
+-- you want to refer to default tab width because actual value /may/ change
+-- in future. Current value is @8@.
 
 defaultTabWidth :: Int
 defaultTabWidth = 8
