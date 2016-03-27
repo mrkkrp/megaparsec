@@ -149,6 +149,7 @@ toHints :: ParseError -> Hints
 toHints err = Hints hints
   where hints = if null msgs then [] else [messageString <$> msgs]
         msgs  = filter isExpected (errorMessages err)
+{-# INLINE toHints #-}
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
 --
@@ -165,6 +166,7 @@ withHints (Hints xs) c e =
   if all isMessage (errorMessages e)
     then c e
     else c (addErrorMessages (Expected <$> concat xs) e)
+{-# INLINE withHints #-}
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
 -- @hs@ to third argument of original continuation @c@.
@@ -177,6 +179,7 @@ accHints
   -> Hints             -- ^ Third argument of resulting continuation
   -> m b
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
+{-# INLINE accHints #-}
 
 -- | Replace most recent group of hints (if any) with given string. Used in
 -- 'label' combinator.
@@ -185,6 +188,7 @@ refreshLastHint :: Hints -> String -> Hints
 refreshLastHint (Hints [])     _  = Hints []
 refreshLastHint (Hints (_:xs)) "" = Hints xs
 refreshLastHint (Hints (_:xs)) l  = Hints ([l]:xs)
+{-# INLINE refreshLastHint #-}
 
 -- | An instance of @Stream s t@ has stream type @s@, and token type @t@
 -- determined by the stream.
@@ -226,26 +230,31 @@ instance Stream String Char where
   uncons (t:ts) = Just (t, ts)
   updatePos     = const defaultUpdatePos
   {-# INLINE uncons #-}
+  {-# INLINE updatePos #-}
 
 instance Stream B.ByteString Char where
   uncons    = B.uncons
   updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
+  {-# INLINE updatePos #-}
 
 instance Stream BL.ByteString Char where
   uncons    = BL.uncons
   updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
+  {-# INLINE updatePos #-}
 
 instance Stream T.Text Char where
   uncons    = T.uncons
   updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
+  {-# INLINE updatePos #-}
 
 instance Stream TL.Text Char where
   uncons    = TL.uncons
   updatePos = const defaultUpdatePos
   {-# INLINE uncons #-}
+  {-# INLINE updatePos #-}
 
 -- If you're reading this, you may be interested in how Megaparsec works on
 -- lower level. That's quite simple. 'ParsecT' is a wrapper around function
@@ -399,6 +408,7 @@ instance MonadPlus (ParsecT s m) where
 pZero :: ParsecT s m a
 pZero = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
   eerr (newErrorUnknown pos) s
+{-# INLINE pZero #-}
 
 pPlus :: ParsecT s m a -> ParsecT s m a -> ParsecT s m a
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
@@ -590,6 +600,7 @@ instance Stream s t => MonadParsec s (ParsecT s m) t where
 pFailure :: [Message] -> ParsecT s m a
 pFailure msgs = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
   eerr (newErrorMessages msgs pos) s
+{-# INLINE pFailure #-}
 
 pLabel :: String -> ParsecT s m a -> ParsecT s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
@@ -598,6 +609,7 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
       eok' x s' hs = eok x s' $ refreshLastHint hs l
       eerr'    err = eerr $ setErrorMessage (Expected l) err
   in unParser p s cok' cerr eok' eerr'
+{-# INLINE pLabel #-}
 
 pTry :: ParsecT s m a -> ParsecT s m a
 pTry p = ParsecT $ \s cok _ eok eerr ->
@@ -618,6 +630,7 @@ pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
       eok' _ _ _ = eerr (unexpectedErr l pos) s
       eerr'  _ _ = eok () s mempty
   in unParser p s cok' cerr' eok' eerr'
+{-# INLINE pNotFollowedBy #-}
 
 pWithRecovery
   :: (ParseError -> ParsecT s m a)

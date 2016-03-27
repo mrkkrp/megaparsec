@@ -66,6 +66,7 @@ data Message
 isUnexpected :: Message -> Bool
 isUnexpected (Unexpected _) = True
 isUnexpected _              = False
+{-# INLINE isUnexpected #-}
 
 -- | Check if given 'Message' is created with 'Expected' constructor.
 --
@@ -74,6 +75,7 @@ isUnexpected _              = False
 isExpected :: Message -> Bool
 isExpected (Expected _) = True
 isExpected _            = False
+{-# INLINE isExpected #-}
 
 -- | Check if given 'Message' is created with 'Message' constructor.
 --
@@ -82,6 +84,7 @@ isExpected _            = False
 isMessage :: Message -> Bool
 isMessage (Message _) = True
 isMessage _           = False
+{-# INLINE isMessage #-}
 
 -- | Extract the message string from an error message.
 
@@ -89,11 +92,13 @@ messageString :: Message -> String
 messageString (Unexpected s) = s
 messageString (Expected   s) = s
 messageString (Message    s) = s
+{-# INLINE messageString #-}
 
 -- | Test if message string is empty.
 
 badMessage :: Message -> Bool
 badMessage = null . messageString
+{-# INLINE badMessage #-}
 
 -- | The data type @ParseError@ represents parse errors. It provides the
 -- source position ('SourcePos') of the error and a list of error messages
@@ -137,7 +142,7 @@ newErrorMessage m = newErrorMessages [m]
 -- @since 4.2.0
 
 newErrorMessages :: [Message] -> SourcePos -> ParseError
-newErrorMessages ms pos = addErrorMessages ms $ newErrorUnknown pos
+newErrorMessages ms pos = addErrorMessages ms (newErrorUnknown pos)
 
 -- | @newErrorUnknown pos@ creates 'ParseError' without any associated
 -- message but with specified position @pos@.
@@ -154,6 +159,7 @@ addErrorMessage m (ParseError pos ms) =
   ParseError pos $ if badMessage m then ms else pre ++ [m] ++ post
   where pre  = filter (< m) ms
         post = filter (> m) ms
+{-# INLINE addErrorMessage #-}
 
 -- | @addErrorMessages ms err@ returns @err@ with messages @ms@ added. The
 -- function is defined in terms of 'addErrorMessage'.
@@ -162,6 +168,7 @@ addErrorMessage m (ParseError pos ms) =
 
 addErrorMessages :: [Message] -> ParseError -> ParseError
 addErrorMessages ms err = foldr addErrorMessage err ms
+{-# INLINE addErrorMessages #-}
 
 -- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
 -- function also deletes all existing error messages that were created with
