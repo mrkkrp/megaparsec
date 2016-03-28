@@ -217,6 +217,8 @@ class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
   -- stream with happy\/alex), then the best strategy is to use the start
   -- position as actual element position and provide the end position of the
   -- token as incremented one.
+  --
+  -- @since 5.0.0
 
   updatePos
     :: Proxy s         -- ^ Proxy clarifying stream type

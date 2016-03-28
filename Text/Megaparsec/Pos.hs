@@ -132,6 +132,8 @@ setSourceColumn c (SourcePos n l _) = newPos n l c
 -- incremented by 1.
 --
 -- If given tab width is not positive, 'defaultTabWidth' will be used.
+--
+-- @since 5.0.0
 
 defaultUpdatePos
   :: Int               -- ^ Tab width
