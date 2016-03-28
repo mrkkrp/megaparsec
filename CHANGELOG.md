@@ -10,6 +10,15 @@
 * Combinators `oneOf`, `oneOf'`, `noneOf`, and `noneOf'` now accept any
   instance of `Foldable`, not only `String`.
 
+* Moved position-advancing function from arguments of `token` and `tokens`
+  functions to `Stream` type class (named `updatePos`). The new function
+  allows to handle custom streams of tokens where every token contains
+  information about its position in stream better (for example when stream
+  of tokens is produced with happy/alex).
+
+* Changed order of arguments for a number of functions in
+  `Text.Megaparsec.Pos`, allowing for easier point-free composition.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment
