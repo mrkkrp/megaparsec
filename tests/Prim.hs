@@ -120,7 +120,8 @@ tests = testGroup "Primitive parser combinators"
   , testCase     "combinator withRecovery mcerr-reerr" case_withRecovery_7
   , testCase     "combinator eof return value"    case_eof
   , testProperty "combinator token"                    prop_token
-  , testProperty "combinator tokens"                   prop_tokens
+  , testProperty "combinator tokens"                   prop_tokens_0
+  , testProperty "combinator tokens (consumption)"     prop_tokens_1
   , testProperty "parser state position"               prop_state_pos
   , testProperty "parser state input"                  prop_state_input
   , testProperty "parser state tab width"              prop_state_tab
@@ -576,9 +577,18 @@ prop_token s = checkParser' p r s
           | isLetter h && length s > 1 = posErr 1 s [uneCh (s !! 1), exEof]
           | otherwise = posErr 0 s [uneCh h]
 
-prop_tokens :: String -> String -> Property
-prop_tokens a = checkString p a (==) (showToken a)
+prop_tokens_0 :: String -> String -> Property
+prop_tokens_0 a = checkString p a (==) (showToken a)
   where p = tokens (==) a
+
+prop_tokens_1 :: String -> String -> String -> Property
+prop_tokens_1 pre post post' =
+  not (post `isPrefixOf` post') ==>
+  (leftover === "" .||. leftover === s)
+  where p = tokens (==) (pre ++ post)
+        s = pre ++ post'
+        st = stateFromInput s
+        leftover = stateInput . fst $ runParser' p st
 
 -- Parser state combinators
 
