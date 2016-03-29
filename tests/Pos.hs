@@ -39,6 +39,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Text.Megaparsec.Pos
+import Util (updatePosString)
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>), pure)
@@ -104,7 +105,7 @@ prop_incSourceLine pos l' =
   d sourceLine   (+ l) pos incp &&
   d sourceColumn id    pos incp
   where l    = getNonNegative l'
-        incp = incSourceLine pos l
+        incp = incSourceLine l pos
 
 prop_incSourceColumn :: SourcePos -> NonNegative Int -> Bool
 prop_incSourceColumn pos c' =
@@ -112,14 +113,14 @@ prop_incSourceColumn pos c' =
   d sourceLine   id    pos incp &&
   d sourceColumn (+ c) pos incp
   where c    = getNonNegative c'
-        incp = incSourceColumn pos c
+        incp = incSourceColumn c pos
 
 prop_setSourceName :: SourcePos -> String -> Bool
 prop_setSourceName pos n =
   d sourceName   (const n) pos setp &&
   d sourceLine   id        pos setp &&
   d sourceColumn id        pos setp
-  where setp = setSourceName pos n
+  where setp = setSourceName n pos
 
 prop_setSourceLine :: SourcePos -> Positive Int -> Bool
 prop_setSourceLine pos l' =
@@ -127,7 +128,7 @@ prop_setSourceLine pos l' =
   d sourceLine   (const l) pos setp &&
   d sourceColumn id        pos setp
   where l    = getPositive l'
-        setp = setSourceLine pos l
+        setp = setSourceLine l pos
 
 prop_setSourceColumn :: SourcePos -> Positive Int -> Bool
 prop_setSourceColumn pos c' =
@@ -135,7 +136,7 @@ prop_setSourceColumn pos c' =
   d sourceLine   id        pos setp &&
   d sourceColumn (const c) pos setp
   where c    = getPositive c'
-        setp = setSourceColumn pos c
+        setp = setSourceColumn c pos
 
 prop_updating :: Int -> SourcePos -> String -> Bool
 prop_updating w pos "" = updatePosString w pos "" == pos
