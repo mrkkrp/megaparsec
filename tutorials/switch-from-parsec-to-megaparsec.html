@@ -181,7 +181,7 @@ lexeme <span class="fu">=</span> L.lexeme sc
 <span class="ot">symbol ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">String</span>
 symbol <span class="fu">=</span> L.symbol sc</code></pre></div>
 <h3 id="monad-transformers">Monad transformers</h3>
-<p>Note that all tools in Megparsec work with any instance of <code>MonadParsec</code>. All commonly useful monad transformers like <code>StateT</code> and <code>WriterT</code> are instances of <code>MonadParsec</code> out of box. For example, what if you want to collect contents of comments, (say, they are documentation strings of a sort), you may want to have backtracking user state were you put last encountered comment satisfying some criteria, and then when you parse function definition you can check the state and attach doc-string to your parsed function. It’s all possible and easy with Megaparsec:</p>
+<p>Note that all tools in Megaparsec work with any instance of <code>MonadParsec</code>. All commonly useful monad transformers like <code>StateT</code> and <code>WriterT</code> are instances of <code>MonadParsec</code> out of box. For example, what if you want to collect contents of comments, (say, they are documentation strings of a sort), you may want to have backtracking user state were you put last encountered comment satisfying some criteria, and then when you parse function definition you can check the state and attach doc-string to your parsed function. It’s all possible and easy with Megaparsec:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import </span><span class="dt">Control.Monad.State.Lazy</span>
 
 …
