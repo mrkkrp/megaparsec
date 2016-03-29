@@ -32,10 +32,11 @@
 module Prim (tests) where
 
 import Control.Applicative
-import Data.Char (isLetter, toUpper)
+import Data.Char (isLetter, toUpper, chr)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.Maybe (maybeToList)
+import Data.Word (Word8)
 
 import Control.Monad.Cont
 import Control.Monad.Except
@@ -45,6 +46,11 @@ import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
+
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 
 import Test.Framework
 import Test.Framework.Providers.HUnit (testCase)
@@ -65,7 +71,11 @@ import Util
 
 tests :: Test
 tests = testGroup "Primitive parser combinators"
-  [ testProperty "ParsecT functor"                     prop_functor
+  [ testProperty "Stream lazy byte string"             prop_byteStringL
+  , testProperty "Stream strict byte string"           prop_byteStringS
+  , testProperty "Stream lazy text"                    prop_textL
+  , testProperty "Stream strict text"                  prop_textS
+  , testProperty "ParsecT functor"                     prop_functor
   , testProperty "ParsecT applicative (<*>)"           prop_applicative_0
   , testProperty "ParsecT applicative (*>)"            prop_applicative_1
   , testProperty "ParsecT applicative (<*)"            prop_applicative_2
@@ -141,6 +151,29 @@ tests = testGroup "Primitive parser combinators"
 
 instance Arbitrary (State String) where
   arbitrary = State <$> arbitrary <*> arbitrary <*> choose (1, 20)
+
+-- Various instances of Stream
+
+prop_byteStringL :: Word8 -> NonNegative Int -> Property
+prop_byteStringL ch' n = parse (many (char ch)) "" (BL.pack s) === Right s
+  where s = replicate (getNonNegative n) ch
+        ch = byteToChar ch'
+
+prop_byteStringS :: Word8 -> NonNegative Int -> Property
+prop_byteStringS ch' n = parse (many (char ch)) "" (B.pack s) === Right s
+  where s = replicate (getNonNegative n) ch
+        ch = byteToChar ch'
+
+byteToChar :: Word8 -> Char
+byteToChar = chr . fromIntegral
+
+prop_textL :: Char -> NonNegative Int -> Property
+prop_textL ch n = parse (many (char ch)) "" (TL.pack s) === Right s
+  where s = replicate (getNonNegative n) ch
+
+prop_textS :: Char -> NonNegative Int -> Property
+prop_textS ch n = parse (many (char ch)) "" (T.pack s) === Right s
+  where s = replicate (getNonNegative n) ch
 
 -- Functor instance
 

@@ -149,11 +149,13 @@ test-suite tests
   build-depends:      base           >= 4.6 && < 5
                     , HUnit          >= 1.2 && < 1.4
                     , QuickCheck     >= 2.4 && < 3
+                    , bytestring
                     , megaparsec     >= 4.4.0
                     , mtl            == 2.*
                     , test-framework >= 0.6 && < 1
                     , test-framework-hunit       >= 0.3 && < 0.4
                     , test-framework-quickcheck2 >= 0.3 && < 0.4
+                    , text           >= 0.2
                     , transformers   >= 0.4 && < 0.6
   default-extensions: CPP
                     , FlexibleContexts
