@@ -19,6 +19,15 @@
 * Changed order of arguments for a number of functions in
   `Text.Megaparsec.Pos`, allowing for easier point-free composition.
 
+* Introduced `scientific` parser that can parse arbitrary big numbers
+  without error or memory overflow. `float` still returns `Double`, but it's
+  defined in terms of `scientific` now. Since `Scientific` type can reliably
+  represent integer values as well as floating point values, `number` now
+  returns `Scientific` instead of `Either Integer Double` (`Integer` or
+  `Double` can be extracted from `Scientific` value anyway). This in turn
+  makes `signed` parser more natural and general, because we do not need
+  ad-hoc `Signed` type class anymore.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment

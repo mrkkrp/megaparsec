@@ -35,11 +35,11 @@ module Text.Megaparsec.Lexer
     -- * Character and string literals
   , charLiteral
     -- * Numbers
-  , Signed (..)
   , integer
   , decimal
   , hexadecimal
   , octal
+  , scientific
   , float
   , number
   , signed )
@@ -49,8 +49,7 @@ import Control.Applicative ((<|>), some, optional)
 import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
-import Prelude hiding (negate)
-import qualified Prelude
+import Data.Scientific (Scientific, toRealFloat)
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Pos
@@ -310,26 +309,6 @@ charLiteral = label "literal character" $ do
 ----------------------------------------------------------------------------
 -- Numbers
 
--- | This type class abstracts the concept of signed number in context of
--- this module. This is especially useful when you want to compose 'signed'
--- and 'number'.
-
-class Signed a where
-
-  -- | Unary negation.
-
-  negate :: a -> a
-
-instance Signed Integer where
-  negate = Prelude.negate
-
-instance Signed Double where
-  negate = Prelude.negate
-
-instance (Signed l, Signed r) => Signed (Either l r) where
-  negate (Left  x) = Left  $ negate x
-  negate (Right x) = Right $ negate x
-
 -- | Parse an integer without sign in decimal representation (according to
 -- format of integer literals described in Haskell report).
 --
@@ -373,14 +352,28 @@ octal = nump "0o" C.octDigitChar <?> "octal integer"
 nump :: MonadParsec s m Char => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
--- | Parse a floating point value without sign. Representation of floating
--- point value is expected to be according to Haskell report.
+-- | Parse floating point value as 'Scientific' number. 'Scientific' is
+-- great for parsing of arbitrary precision numbers coming from an untrusted
+-- source. See documentation in "Data.Scientific" for more information.
+-- Representation of floating point value is expected to be according to
+-- Haskell report.
 --
--- If you need to parse signed floats, see 'signed'.
+-- This function does not parse sign, if you need to parse signed numbers,
+-- see 'signed'.
+--
+-- @since 5.0.0
+
+scientific :: MonadParsec s m Char => m Scientific
+scientific = label "floating point number" (read <$> f)
+  where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
+
+-- | Parse floating point number without sign. This is a simple shortcut
+-- defined as:
+--
+-- > float = toRealFloat <$> scientific
 
 float :: MonadParsec s m Char => m Double
-float = label "float" (read <$> f)
-  where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
+float = toRealFloat <$> scientific
 
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
@@ -402,10 +395,13 @@ fExp = do
   return (expChar : signStr ++ d)
 
 -- | Parse a number: either integer or floating point. The parser can handle
--- overlapping grammars graciously.
+-- overlapping grammars graciously. Use functions like
+-- 'Data.Scientific.floatingOrInteger' from "Data.Scientific" to test and
+-- extract integer or real values.
 
-number :: MonadParsec s m Char => m (Either Integer Double)
-number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
+number :: MonadParsec s m Char => m Scientific
+number = label "number" (read <$> f)
+  where f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
 
 -- | @signed space p@ parser parses optional sign, then if there is a sign
 -- it will consume optional white space (using @space@ parser), then it runs
@@ -418,11 +414,11 @@ number = (Right <$> try float) <|> (Left <$> integer) <?> "number"
 -- > integer       = lexeme L.integer
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec s m Char, Signed a) => m () -> m a -> m a
+signed :: (MonadParsec s m Char, Num a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
 
 -- | Parse a sign and return either 'id' or 'negate' according to parsed
 -- sign.
 
-sign :: (MonadParsec s m Char, Signed a) => m (a -> a)
+sign :: (MonadParsec s m Char, Num a) => m (a -> a)
 sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)

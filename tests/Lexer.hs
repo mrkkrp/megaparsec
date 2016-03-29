@@ -41,6 +41,7 @@ import Data.Char
   , toLower )
 import Data.List (findIndices, isInfixOf, find)
 import Data.Maybe
+import Data.Scientific (fromFloatDigits)
 import Numeric (showInt, showHex, showOct, showSigned)
 
 import Test.Framework
@@ -283,7 +284,7 @@ prop_float_0 n' = checkParser float r s
 
 prop_float_1 :: Maybe (NonNegative Integer) -> Property
 prop_float_1 n' = checkParser float r s
-  where r | isNothing n' = posErr 0 s [uneEof, exSpec "float"]
+  where r | isNothing n' = posErr 0 s [uneEof, exSpec "floating point number"]
           | otherwise    = posErr (length s) s [ uneEof, exCh '.', exCh 'E'
                                   , exCh 'e', exSpec "digit" ]
         s = maybe "" (show . getNonNegative) n'
@@ -291,8 +292,8 @@ prop_float_1 n' = checkParser float r s
 prop_number_0 :: Either (NonNegative Integer) (NonNegative Double) -> Property
 prop_number_0 n' = checkParser number r s
   where r = Right $ case n' of
-                      Left  x -> Left  $ getNonNegative x
-                      Right x -> Right $ getNonNegative x
+              Left  x -> fromIntegral . getNonNegative $ x
+              Right x -> fromFloatDigits . getNonNegative $ x
         s = either (show . getNonNegative) (show . getNonNegative) n'
 
 prop_number_1 :: Property
@@ -301,8 +302,11 @@ prop_number_1 = checkParser number r s
         s = ""
 
 prop_number_2 :: Either Integer Double -> Property
-prop_number_2 n = checkParser p (Right n) s
+prop_number_2 n = checkParser p r s
   where p = signed (hidden C.space) number
+        r = Right $ case n of
+              Left  x -> fromIntegral x
+              Right x -> fromFloatDigits x
         s = either show show n
 
 prop_signed :: Integer -> Int -> Bool -> Property
