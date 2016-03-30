@@ -45,7 +45,9 @@ import Data.Scientific (fromFloatDigits)
 import Numeric (showInt, showHex, showOct, showSigned)
 
 import Test.Framework
+import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.HUnit (Assertion)
 import Test.QuickCheck
 
 import Text.Megaparsec.Error
@@ -67,6 +69,7 @@ tests = testGroup "Lexer"
   [ testProperty "space combinator"       prop_space
   , testProperty "symbol combinator"      prop_symbol
   , testProperty "symbol' combinator"     prop_symbol'
+  , testCase     "skipBlockCommentNested" prop_skipBlockCommentNested
   , testProperty "indentLevel"            prop_indentLevel
   , testProperty "indentGuard combinator" prop_indentGuard
   , testProperty "nonIndented combinator" prop_nonIndented
@@ -153,6 +156,14 @@ parseSymbol p' f s' t = checkParser p r s
           | otherwise = posErr (length s - 1) s [uneCh (last s), exEof]
         g = takeWhile (not . isSpace) s
         s = s' ++ maybeToList t
+
+prop_skipBlockCommentNested :: Assertion
+prop_skipBlockCommentNested = checkCase p r s
+  where p :: MonadParsec s m Char => m ()
+        p = space (void C.spaceChar) empty
+              (skipBlockCommentNested "/*" "*/") <* eof
+        r = Right ()
+        s = " /* foo bar /* baz */ quux */ "
 
 -- Indentation
 

@@ -28,6 +28,9 @@
   makes `signed` parser more natural and general, because we do not need
   ad-hoc `Signed` type class anymore.
 
+* Added `skipBlockCommentNested` function that should help parse possibly
+  nested block comments.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment

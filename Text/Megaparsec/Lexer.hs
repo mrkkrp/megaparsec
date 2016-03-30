@@ -26,6 +26,7 @@ module Text.Megaparsec.Lexer
   , symbol'
   , skipLineComment
   , skipBlockComment
+  , skipBlockCommentNested
     -- * Indentation
   , indentLevel
   , indentGuard
@@ -160,6 +161,20 @@ skipBlockComment :: MonadParsec s m Char
   -> m ()
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
   where p = C.string start
+        n = C.string end
+
+-- | @skipBlockCommentNested start end@ skips possibly nested block comment
+-- starting with @start@ and ending with @end@.
+--
+-- @since 5.0.0
+
+skipBlockCommentNested :: MonadParsec s m Char
+  => String            -- ^ Start of block comment
+  -> String            -- ^ End of block comment
+  -> m ()
+skipBlockCommentNested start end = p >> void (manyTill e n)
+  where e = skipBlockCommentNested start end <|> void C.anyChar
+        p = C.string start
         n = C.string end
 
 ----------------------------------------------------------------------------
