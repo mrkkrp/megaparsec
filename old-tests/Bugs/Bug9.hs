@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Bugs.Bug9 (main) where
 
 import Control.Applicative (empty)

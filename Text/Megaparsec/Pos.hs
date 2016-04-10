@@ -11,6 +11,8 @@
 --
 -- Textual source position.
 
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Text.Megaparsec.Pos
   ( SourcePos
   , sourceName

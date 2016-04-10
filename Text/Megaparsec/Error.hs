@@ -11,6 +11,9 @@
 --
 -- Parse errors.
 
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Text.Megaparsec.Error
   ( Message (..)
   , isUnexpected

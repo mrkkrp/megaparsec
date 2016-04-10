@@ -26,7 +26,9 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes       #-}
 
 module Util
   ( checkParser

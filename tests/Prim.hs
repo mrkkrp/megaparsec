@@ -26,8 +26,10 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
-{-# LANGUAGE Rank2Types       #-}
-{-# OPTIONS -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Rank2Types        #-}
+{-# OPTIONS -fno-warn-orphans  #-}
 
 module Prim (tests) where
 

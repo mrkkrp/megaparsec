@@ -11,6 +11,9 @@
 --
 -- Commonly used character parsers.
 
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 module Text.Megaparsec.Char
   ( -- * Simple parsers
     newline

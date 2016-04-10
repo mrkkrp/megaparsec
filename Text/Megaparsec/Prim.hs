@@ -11,9 +11,18 @@
 --
 -- The primitive parser combinators.
 
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_HADDOCK not-home     #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE UndecidableInstances       #-}
+{-# OPTIONS_HADDOCK not-home            #-}
 
 module Text.Megaparsec.Prim
   ( -- * Data types
@@ -227,7 +236,7 @@ class (ShowToken t, ShowToken [t]) => Stream s t | s -> t where
     -> t               -- ^ Current token
     -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
 
-instance Stream String Char where
+instance Stream [Char] Char where
   uncons []     = Nothing
   uncons (t:ts) = Just (t, ts)
   updatePos     = const defaultUpdatePos

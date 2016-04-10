@@ -9,6 +9,8 @@
 --
 -- Pretty printing function and instances for use in error messages.
 
+{-# LANGUAGE FlexibleInstances #-}
+
 module Text.Megaparsec.ShowToken (ShowToken (..)) where
 
 -- | Typeclass 'ShowToken' defines single function 'showToken' that can be
@@ -40,7 +42,7 @@ prettyChar '\r' = "carriage return"
 prettyChar ' '  = "space"
 prettyChar x    = "'" ++ [x] ++ "'"
 
-instance ShowToken String where
+instance ShowToken [Char] where
   showToken = prettyString
 
 -- | @prettyString s@ returns pretty representation of string @s@. This is

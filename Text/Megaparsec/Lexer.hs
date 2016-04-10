@@ -18,6 +18,9 @@
 --
 -- > import qualified Text.Megaparsec.Lexer as L
 
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 module Text.Megaparsec.Lexer
   ( -- * White space
     space
