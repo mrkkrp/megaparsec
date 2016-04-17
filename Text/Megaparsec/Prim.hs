@@ -654,11 +654,13 @@ pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
   in unParser p s cok mcerr eok meerr
 {-# INLINE pWithRecovery #-}
 
-pEof :: Stream s t => ParsecT s m ()
-pEof = label eoi $ ParsecT $ \s@(State input pos _) _ _ eok eerr ->
+pEof :: forall s m t. Stream s t => ParsecT s m ()
+pEof = label eoi $ ParsecT $ \s@(State input pos w) _ _ eok eerr ->
   case uncons input of
     Nothing    -> eok () s mempty
-    Just (x,_) -> eerr (unexpectedErr (showToken x) pos) s
+    Just (x,_) ->
+      let !apos = fst (updatePos (Proxy :: Proxy s) w pos x)
+      in eerr (unexpectedErr (showToken c) apos) s
 {-# INLINE pEof #-}
 
 pToken :: forall s m t a. Stream s t
