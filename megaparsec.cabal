@@ -58,6 +58,8 @@ flag dev
 library
   build-depends:      base         >= 4.6 && < 5
                     , bytestring
+                    , containers   >= 0.5 && < 0.6
+                    , exceptions   >= 0.6 && < 0.9
                     , mtl          == 2.*
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2
@@ -82,7 +84,6 @@ library
                     , Text.Megaparsec.Perm
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Prim
-                    , Text.Megaparsec.ShowToken
                     , Text.Megaparsec.String
                     , Text.Megaparsec.Text
                     , Text.Megaparsec.Text.Lazy

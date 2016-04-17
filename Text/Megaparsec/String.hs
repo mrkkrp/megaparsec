@@ -19,4 +19,4 @@ import Text.Megaparsec.Prim
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for strings.
 
-type Parser = Parsec String
+type Parser = Parsec String String

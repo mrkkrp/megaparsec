@@ -120,19 +120,21 @@ module Text.Megaparsec
   , satisfy
   , string
   , string'
-    -- * Error messages
-  , Message (..)
-  , messageString
-  , badMessage
-  , ParseError
-  , errorPos
-  , errorMessages
-  , errorIsUnknown
     -- * Textual source position
-  , SourcePos
-  , sourceName
-  , sourceLine
-  , sourceColumn
+  , Pos
+  , mkPos
+  , unPos
+  , unsafePos
+  , InvalidPosException (..)
+  , SourcePos (..)
+  , initialPos
+  , sourcePosPretty
+    -- * Error messages
+  , MessageItem (..)
+  , ErrorComponent (..)
+  , ParseError (..)
+  , ShowToken (..)
+  , ShowErrorComponent (..)
     -- * Low-level operations
   , Stream (..)
   , State (..)

@@ -20,6 +20,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies     #-}
 
 module Text.Megaparsec.Lexer
   ( -- * White space
@@ -54,11 +55,12 @@ import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
+import qualified Data.List.NonEmpty as NE
 
 import Text.Megaparsec.Combinator
+import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
-import Text.Megaparsec.ShowToken
 import qualified Text.Megaparsec.Char as C
 
 #if !MIN_VERSION_base(4,8,0)
@@ -93,7 +95,7 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 -- to consume any white space before the first lexeme (i.e. at the beginning
 -- of the file).
 
-space :: MonadParsec s m Char
+space :: (MonadParsec e s m, Token s ~ Char)
   => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
   -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
@@ -107,7 +109,7 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
 
-lexeme :: MonadParsec s m Char
+lexeme :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume white space after lexeme
   -> m a               -- ^ How to parse actual lexeme
   -> m a
@@ -128,7 +130,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: MonadParsec s m Char
+symbol :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume white space after lexeme
   -> String            -- ^ String to parse
   -> m String
@@ -137,7 +139,7 @@ symbol spc = lexeme spc . C.string
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: MonadParsec s m Char
+symbol' :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume white space after lexeme
   -> String            -- ^ String to parse (case-insensitive)
   -> m String
@@ -148,7 +150,7 @@ symbol' spc = lexeme spc . C.string'
 -- consume the newline. Newline is either supposed to be consumed by 'space'
 -- parser or picked up manually.
 
-skipLineComment :: MonadParsec s m Char
+skipLineComment :: (MonadParsec e s m, Token s ~ Char)
   => String            -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix = p >> void (manyTill C.anyChar n)
@@ -158,7 +160,7 @@ skipLineComment prefix = p >> void (manyTill C.anyChar n)
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: MonadParsec s m Char
+skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
   => String            -- ^ Start of block comment
   -> String            -- ^ End of block comment
   -> m ()
@@ -171,7 +173,7 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 --
 -- @since 5.0.0
 
-skipBlockCommentNested :: MonadParsec s m Char
+skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
   => String            -- ^ Start of block comment
   -> String            -- ^ End of block comment
   -> m ()
@@ -191,8 +193,8 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 --
 -- @since 4.3.0
 
-indentLevel :: MonadParsec s m t => m Int
-indentLevel = sourceColumn <$> getPosition
+indentLevel :: MonadParsec e s m => m Pos
+indentLevel = sourceColumn . NE.head <$> getPosition
 
 -- | @indentGuard spaceConsumer test@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks column
@@ -205,10 +207,10 @@ indentLevel = sourceColumn <$> getPosition
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
-indentGuard :: MonadParsec s m Char
+indentGuard :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume indentation (white space)
-  -> (Int -> Bool)     -- ^ Predicate checking indentation level
-  -> m Int             -- ^ Current column (indentation level)
+  -> (Pos -> Bool)     -- ^ Predicate checking indentation level
+  -> m Pos             -- ^ Current column (indentation level)
 indentGuard spc p = do
   spc
   lvl <- indentLevel
@@ -222,11 +224,11 @@ indentGuard spc p = do
 --
 -- @since 4.3.0
 
-nonIndented :: MonadParsec s m Char
+nonIndented :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse actual data
   -> m a
-nonIndented sc p = indentGuard sc (== 1) *> p
+nonIndented sc p = indentGuard sc (== unsafePos 1) *> p
 
 -- | The data type represents available behaviors for parsing of indented
 -- tokens. This is used in 'indentBlock', which see.
@@ -236,12 +238,12 @@ nonIndented sc p = indentGuard sc (== 1) *> p
 data IndentOpt m a b
   = IndentNone a
     -- ^ Parse no indented tokens, just return the value
-  | IndentMany (Maybe Int) ([b] -> m a) (m b)
+  | IndentMany (Maybe Pos) ([b] -> m a) (m b)
     -- ^ Parse many indented tokens (possibly zero), use given indentation
     -- level (if 'Nothing', use level of the first indented token); the
     -- second argument tells how to get final result, and third argument
     -- describes how to parse indented token
-  | IndentSome (Maybe Int) ([b] -> m a) (m b)
+  | IndentSome (Maybe Pos) ([b] -> m a) (m b)
     -- ^ Just like 'ManyIndent', but requires at least one indented token to
     -- be present
 
@@ -256,7 +258,7 @@ data IndentOpt m a b
 --
 -- @since 4.3.0
 
-indentBlock :: MonadParsec s m Char
+indentBlock :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume indentation (white space)
   -> m (IndentOpt m a b) -- ^ How to parse “reference” token
   -> m a
@@ -277,9 +279,9 @@ indentBlock sc r = do
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of public API.
 
-indentedItems :: MonadParsec s m Char
-  => Int               -- ^ Reference indentation level
-  -> Int               -- ^ Level of the first indented item ('lookAhead'ed)
+indentedItems :: (MonadParsec e s m, Token s ~ Char)
+  => Pos               -- ^ Reference indentation level
+  -> Pos               -- ^ Level of the first indented item ('lookAhead'ed)
   -> m ()              -- ^ How to consume indentation (white space)
   -> m b               -- ^ How to parse indented tokens
   -> m [b]
@@ -315,14 +317,14 @@ ii = "incorrect indentation"
 --
 -- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
 
-charLiteral :: MonadParsec s m Char => m Char
+charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
   -- and we do know that r will be non-empty if count' succeeds.
   ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
   case listToMaybe (readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
-    Nothing      -> unexpected (showToken x)
+    Nothing      -> unexpected (Token x)
 
 ----------------------------------------------------------------------------
 -- Numbers
@@ -332,13 +334,13 @@ charLiteral = label "literal character" $ do
 --
 -- If you need to parse signed integers, see 'signed' combinator.
 
-integer :: MonadParsec s m Char => m Integer
+integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
 integer = decimal <?> "integer"
 
 -- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
 -- while this parser is labeled with “decimal integer”.
 
-decimal :: MonadParsec s m Char => m Integer
+decimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 decimal = nump "" C.digitChar <?> "decimal integer"
 
 -- | Parse an integer in hexadecimal representation. Representation of
@@ -351,7 +353,7 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 --
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
-hexadecimal :: MonadParsec s m Char => m Integer
+hexadecimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 
 -- | Parse an integer in octal representation. Representation of octal
@@ -360,14 +362,14 @@ hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 -- of the programmer to parse correct prefix before parsing the number
 -- itself.
 
-octal :: MonadParsec s m Char => m Integer
+octal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 octal = nump "0o" C.octDigitChar <?> "octal integer"
 
 -- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
 -- prepends @prefix@ to returned value and tries to interpret the result as
 -- an integer according to Haskell syntax.
 
-nump :: MonadParsec s m Char => String -> m Char -> m Integer
+nump :: (MonadParsec e s m, Token s ~ Char) => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 -- | Parse floating point value as 'Scientific' number. 'Scientific' is
@@ -381,7 +383,7 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 --
 -- @since 5.0.0
 
-scientific :: MonadParsec s m Char => m Scientific
+scientific :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 scientific = label "floating point number" (read <$> f)
   where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
 
@@ -390,13 +392,13 @@ scientific = label "floating point number" (read <$> f)
 --
 -- > float = toRealFloat <$> scientific
 
-float :: MonadParsec s m Char => m Double
+float :: (MonadParsec e s m, Token s ~ Char) => m Double
 float = toRealFloat <$> scientific
 
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
 
-fraction :: MonadParsec s m Char => m String
+fraction :: (MonadParsec e s m, Token s ~ Char) => m String
 fraction = do
   void (C.char '.')
   d <- some C.digitChar
@@ -405,7 +407,7 @@ fraction = do
 
 -- | This helper parses exponent of floating point numbers.
 
-fExp :: MonadParsec s m Char => m String
+fExp :: (MonadParsec e s m, Token s ~ Char) => m String
 fExp = do
   expChar <- C.char' 'e'
   signStr <- option "" (pure <$> choice (C.char <$> "+-"))
@@ -417,7 +419,7 @@ fExp = do
 -- 'Data.Scientific.floatingOrInteger' from "Data.Scientific" to test and
 -- extract integer or real values.
 
-number :: MonadParsec s m Char => m Scientific
+number :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 number = label "number" (read <$> f)
   where f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
 
@@ -432,11 +434,11 @@ number = label "number" (read <$> f)
 -- > integer       = lexeme L.integer
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec s m Char, Num a) => m () -> m a -> m a
+signed :: (MonadParsec e s m, Token s ~ Char, Num a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
 
 -- | Parse a sign and return either 'id' or 'negate' according to parsed
 -- sign.
 
-sign :: (MonadParsec s m Char, Num a) => m (a -> a)
+sign :: (MonadParsec e s m, Token s ~ Char, Num a) => m (a -> a)
 sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)

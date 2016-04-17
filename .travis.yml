@@ -43,7 +43,7 @@ script:
               --test-option=--maximum-generated-tests=1000
  - cabal sdist
  - if [ "$CABALVER" != "1.16" ]; then
-    cabal haddock | grep "100%" | wc -l | grep "15";
+    cabal haddock | grep "100%" | wc -l | grep "14";
    fi
 
 after_script:

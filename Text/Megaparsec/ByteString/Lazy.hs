@@ -20,4 +20,4 @@ import qualified Data.ByteString.Lazy as B
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for lazy byte-strings.
 
-type Parser = Parsec B.ByteString
+type Parser = Parsec String B.ByteString

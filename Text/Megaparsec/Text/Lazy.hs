@@ -20,4 +20,4 @@ import qualified Data.Text.Lazy as T
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for lazy text.
 
-type Parser = Parsec T.Text
+type Parser = Parsec String T.Text
