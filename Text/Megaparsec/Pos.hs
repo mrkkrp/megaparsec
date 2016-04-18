@@ -48,6 +48,8 @@ import Data.Word (Word)
 -- | Positive integer that is used to represent line number, column number,
 -- and similar things like indentation level. 'Semigroup' instance can be
 -- used to safely and purely add 'Pos'es together.
+--
+-- @since 5.0.0
 
 newtype Pos = Pos Word
   deriving (Show, Eq, Ord, Data, Typeable)
@@ -57,6 +59,8 @@ newtype Pos = Pos Word
 -- the function is polymorphic with respect to 'MonadThrow' @m@, so you can
 -- get result inside of 'Maybe' or use the function in the context of parser
 -- monad.
+--
+-- @since 5.0.0
 
 mkPos :: (Integral a, MonadThrow m) => a -> m Pos
 mkPos x =
@@ -67,6 +71,8 @@ mkPos x =
 
 -- | Dangerous construction of 'Pos'. Use when you know for sure that
 -- argument is positive.
+--
+-- @since 5.0.0
 
 unsafePos :: Word -> Pos
 unsafePos x =
@@ -76,6 +82,8 @@ unsafePos x =
 {-# INLINE unsafePos #-}
 
 -- | Extract 'Word' from 'Pos'.
+--
+-- @since 5.0.0
 
 unPos :: Pos -> Word
 unPos = unsafeCoerce
@@ -94,6 +102,8 @@ instance Read Pos where
 
 -- | The exception is thrown by 'mkPos' when its argument is not a positive
 -- number.
+--
+-- @since 5.0.0
 
 data InvalidPosException = InvalidPosException
   deriving (Eq, Show, Data, Typeable)
@@ -122,6 +132,8 @@ initialPos n = SourcePos n u u
   where u = unsafePos 1
 
 -- | Pretty-print a 'SourcePos'.
+--
+-- @since 5.0.0
 
 sourcePosPretty :: SourcePos -> String
 sourcePosPretty (SourcePos n l c)
@@ -137,6 +149,8 @@ sourcePosPretty (SourcePos n l c)
 -- number is incremented by 1. If the character is a tab (\'\\t\') the
 -- column number is incremented to the nearest tab position. In all other
 -- cases, the column is incremented by 1.
+--
+-- @since 5.0.0
 
 defaultUpdatePos
   :: Pos               -- ^ Tab width

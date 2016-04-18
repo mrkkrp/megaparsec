@@ -47,6 +47,8 @@ import Control.Applicative ((<$>))
 
 -- | Data type that represents default components of parse error message.
 -- The data type is parametrized over token type @t@.
+--
+-- @since 5.0.0
 
 data MessageItem t
   = Token t                  -- ^ Single token
@@ -58,6 +60,8 @@ data MessageItem t
 -- | The type class defines how to represent information about various
 -- exceptional situations. Data types that are used as custom data component
 -- in 'ParseError' must be instances of this type class.
+--
+-- @since 5.0.0
 
 class Ord e => ErrorComponent e where
 
@@ -177,6 +181,8 @@ stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
 
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
+--
+-- @since 5.0.0
 
 class Ord a => ShowErrorComponent a where
 
@@ -195,6 +201,8 @@ instance ShowErrorComponent String where
 
 -- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
 -- a newline.
+--
+-- @since 5.0.0
 
 parseErrorPretty :: ( ShowErrorComponent (MessageItem t)
                     , ShowErrorComponent e )
@@ -210,6 +218,8 @@ parseErrorPretty (ParseError pos us ps xs) =
       , unlines (showErrorComponent <$> E.toAscList xs) ]
 
 -- | Pretty-print stack of source positions.
+--
+-- @since 5.0.0
 
 sourcePosStackPretty :: NonEmpty SourcePos -> String
 sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
