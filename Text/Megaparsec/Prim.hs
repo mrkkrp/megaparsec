@@ -7,7 +7,7 @@
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
--- Portability :  non-portable (MPTC with FD)
+-- Portability :  non-portable
 --
 -- The primitive parser combinators.
 
@@ -97,7 +97,7 @@ import Control.Applicative ((<$>), (<*), pure)
 
 data State s = State
   { stateInput    :: s
-  , statePos      :: !(NonEmpty SourcePos)
+  , statePos      :: NonEmpty SourcePos
   , stateTabWidth :: Pos }
   deriving (Show, Eq)
 
@@ -118,7 +118,7 @@ longestMatch s1@(State _ pos1 _) s2@(State _ pos2 _) =
 --
 -- See also: 'Consumption', 'Result'.
 
-data Reply e s a = Reply !(State s) Consumption (Result (Token s) e a)
+data Reply e s a = Reply (State s) Consumption (Result (Token s) e a)
 
 -- | This data structure represents an aspect of result of parser's
 -- work.
@@ -138,9 +138,9 @@ data Result t e a
   = OK a                   -- ^ Parser succeeded
   | Error (ParseError t e) -- ^ Parser failed
 
--- | 'Hints' represent collection of strings to be included into 'ParserError'
--- as “expected” messages when a parser fails without consuming input right
--- after successful parser that produced the hints.
+-- | 'Hints' represent collection of strings to be included into
+-- 'ParserError' as “expected” message items when a parser fails without
+-- consuming input right after successful parser that produced the hints.
 --
 -- For example, without hints you could get:
 --
@@ -210,6 +210,8 @@ refreshLastHint (Hints (_:xs)) (Just m) = Hints (E.singleton m : xs)
 class Ord (Token s) => Stream s where
 
   -- | Type of token in stream.
+  --
+  -- @since 5.0.0
 
   type Token s
 
@@ -235,6 +237,8 @@ class Ord (Token s) => Stream s where
   -- stream with happy\/alex), then the best strategy is to use the start
   -- position as actual element position and provide the end position of the
   -- token as incremented one.
+  --
+  -- @since 5.0.0
 
   updatePos
     :: Proxy s         -- ^ Proxy clarifying stream type
@@ -243,7 +247,7 @@ class Ord (Token s) => Stream s where
     -> Token s         -- ^ Current token
     -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
 
-instance Stream [Char] where
+instance Stream String where
   type Token String = Char
   uncons [] = Nothing
   uncons (t:ts) = Just (t, ts)
@@ -474,14 +478,14 @@ instance MonadTrans (ParsecT e s) where
 
 -- | Type class describing parsers independent of input type.
 
-class (A.Alternative m, MonadPlus m, Stream s, ErrorComponent e)
+class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
   -- | The most general way to stop parsing and report 'ParseError'.
   --
-  -- 'unexpected' is defined in terms of the function:
+  -- 'unexpected' is defined in terms of this function:
   --
-  -- > unexpected = failure . pure . Unexpected
+  -- > unexpected item = failure (Set.singleton item) Set.empty Set.empty
   --
   -- @since 4.2.0
 
@@ -580,16 +584,15 @@ class (A.Alternative m, MonadPlus m, Stream s, ErrorComponent e)
   -- the function @testTok t@ returns @'Right' x@.
   --
   -- This is the most primitive combinator for accepting tokens. For
-  -- example, the 'Text.Megaparsec.Char.char' parser could be implemented
-  -- as:
+  -- example, the 'Text.Megaparsec.Char.satisfy' parser is implemented as:
   --
-  -- > char c = token testChar
+  -- > satisfy f = token testChar
   -- >   where testChar x =
-  -- >           if x == c
+  -- >           if f x
   -- >             then Right x
-  -- >             else Left . pure . Unexpected . showToken $ x
+  -- >             else Left (E.singleton (Token x), E.empty, E.empty)
 
-  token -- FIXME fix docs
+  token
     :: (Token s -> Either ( Set (MessageItem (Token s))
                           , Set (MessageItem (Token s))
                           , Set e ) a)
@@ -620,8 +623,8 @@ class (A.Alternative m, MonadPlus m, Stream s, ErrorComponent e)
   -- 'Text.Megaparsec.Char.string''. This new feature /does not/ affect
   -- performance in any way.
 
-  tokens :: Eq (Token s)
-    => (Token s -> Token s -> Bool)
+  tokens
+    :: (Token s -> Token s -> Bool)
        -- ^ Predicate to check equality of tokens
     -> [Token s]
        -- ^ List of tokens to parse
@@ -849,11 +852,11 @@ setParserState st = updateParserState (const st)
 -- 'ParseError' into the string representation of the error message. See
 -- "Text.Megaparsec.Error" if you need to do more advanced error analysis.
 --
--- > main = case (parse numbers "" "11, 2, 43") of
--- >          Left err -> print err
+-- > main = case (parse numbers "" "11,2,43") of
+-- >          Left err -> putStr (parseErrorPretty err)
 -- >          Right xs -> print (sum xs)
 -- >
--- > numbers = commaSep integer
+-- > numbers = integer `sepBy` char ','
 
 parse
   :: Parsec e s a -- ^ Parser to run
@@ -881,13 +884,15 @@ parseMaybe p s =
 -- | The expression @parseTest p input@ applies a parser @p@ against input
 -- @input@ and prints the result to stdout. Useful for testing.
 
-parseTest :: (ShowErrorComponent e, ShowToken (Token s), Show a)
+parseTest :: ( ShowErrorComponent e
+             , ShowErrorComponent (MessageItem (Token s))
+             , Show a )
   => Parsec e s a -- ^ Parser to run
   -> s            -- ^ Input for parser
   -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left  e -> putStrLn (parseErrorPretty e)
+    Left  e -> putStr (parseErrorPretty e)
     Right x -> print x
 
 -- | @runParser p file input@ runs parser @p@ on the input list of tokens
