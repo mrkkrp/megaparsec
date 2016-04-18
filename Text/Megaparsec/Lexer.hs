@@ -95,7 +95,7 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 -- to consume any white space before the first lexeme (i.e. at the beginning
 -- of the file).
 
-space :: (MonadParsec e s m, Token s ~ Char)
+space :: MonadParsec e s m
   => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
   -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
@@ -109,7 +109,7 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
 
-lexeme :: (MonadParsec e s m, Token s ~ Char)
+lexeme :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
   -> m a               -- ^ How to parse actual lexeme
   -> m a
@@ -207,7 +207,7 @@ indentLevel = sourceColumn . NE.head <$> getPosition
 -- indentation. Use returned value to check indentation on every subsequent
 -- line according to syntax of your language.
 
-indentGuard :: (MonadParsec e s m, Token s ~ Char)
+indentGuard :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
   -> (Pos -> Bool)     -- ^ Predicate checking indentation level
   -> m Pos             -- ^ Current column (indentation level)
@@ -224,7 +224,7 @@ indentGuard spc p = do
 --
 -- @since 4.3.0
 
-nonIndented :: (MonadParsec e s m, Token s ~ Char)
+nonIndented :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse actual data
   -> m a
@@ -279,7 +279,7 @@ indentBlock sc r = do
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of public API.
 
-indentedItems :: (MonadParsec e s m, Token s ~ Char)
+indentedItems :: MonadParsec e s m
   => Pos               -- ^ Reference indentation level
   -> Pos               -- ^ Level of the first indented item ('lookAhead'ed)
   -> m ()              -- ^ How to consume indentation (white space)
@@ -369,7 +369,7 @@ octal = nump "0o" C.octDigitChar <?> "octal integer"
 -- prepends @prefix@ to returned value and tries to interpret the result as
 -- an integer according to Haskell syntax.
 
-nump :: (MonadParsec e s m, Token s ~ Char) => String -> m Char -> m Integer
+nump :: MonadParsec e s m => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 -- | Parse floating point value as 'Scientific' number. 'Scientific' is
