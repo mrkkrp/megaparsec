@@ -135,6 +135,7 @@ module Text.Megaparsec
   , ParseError (..)
   , ShowToken (..)
   , ShowErrorComponent (..)
+  , parseErrorPretty
     -- * Low-level operations
   , Stream (..)
   , State (..)
