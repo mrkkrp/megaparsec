@@ -1,31 +1,34 @@
 -- |
 -- Module      :  Text.Megaparsec.Error
 -- Copyright   :  © 2015–2016 Megaparsec contributors
---                © 2007 Paolo Martini
---                © 1999–2001 Daan Leijen
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Parse errors.
+-- Parse errors. Current version of Megaparsec supports well-typed errors
+-- instead of 'String'-based ones. This gives a lot of flexibility in
+-- describing what exactly went wrong as well as a way to return arbitrary
+-- data in case of failure.
 
 {-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 
 module Text.Megaparsec.Error
-  ( MessageItem    (..)
+  ( MessageItem (..)
   , ErrorComponent (..)
-  , ParseError     (..)
-  , ShowToken      (..)
+  , ParseError (..)
+  , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
   , sourcePosStackPretty )
 where
 
 import Control.Monad.Catch
+import Data.Data (Data)
 import Data.Foldable (concat)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -40,23 +43,21 @@ import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
-import Data.Monoid (Monoid (..))
 #endif
 
 -- | Data type that represents default components of parse error message.
 -- The data type is parametrized over token type @t@.
 
 data MessageItem t
-  = Token t
-  | TokenStream (NonEmpty t)
-  | Label (NonEmpty Char)
-  | EndOfInput
-  deriving (Show, Read, Eq, Ord, Typeable)
+  = Token t                  -- ^ Single token
+  | TokenStream (NonEmpty t) -- ^ Non-empty stream of tokens
+  | Label (NonEmpty Char)    -- ^ Label (cannot be empty)
+  | EndOfInput               -- ^ End of input
+  deriving (Show, Read, Eq, Ord, Data, Typeable)
 
 -- | The type class defines how to represent information about various
--- exceptional situations in given data type. Data types that are used as
--- custom data component in 'ParseError' must be instances of this type
--- class.
+-- exceptional situations. Data types that are used as custom data component
+-- in 'ParseError' must be instances of this type class.
 
 class Ord e => ErrorComponent e where
 
@@ -64,7 +65,7 @@ class Ord e => ErrorComponent e where
 
   representFail :: String -> e
 
-  -- | Represent exception thrown in parser monad. (It implements
+  -- | Represent exception thrown in parser monad. (The monad implements
   -- 'Control.Monad.Catch.MonadThrow').
 
   representException :: Exception e' => e' -> e
@@ -76,12 +77,12 @@ class Ord e => ErrorComponent e where
     -> Pos             -- ^ Expected indentation level
     -> e
 
-instance ErrorComponent [Char] where
-  representFail = id
-  representException = ("exception: " ++) . show
-  representIndentation = undefined -- TODO
-
--- TODO More instances?
+instance ErrorComponent String where
+  representFail        = id
+  representException   = ("exception: " ++) . show
+  representIndentation actual expected =
+    "incorrect indentation level (got " ++ show (unPos actual) ++
+    ", but (at least) " ++ show (unPos expected) ++ " is expected"
 
 -- | The data type @ParseError@ represents parse errors. It provides the
 -- stack of source positions, set of expected and unexpected tokens as well
@@ -95,7 +96,7 @@ instance ErrorComponent [Char] where
 -- 'Semigroup' (or 'Monoid') instance of the data type allows to merge parse
 -- errors from different branches of parsing. When merging two
 -- 'ParseError's, longest match is preferred; if positions are the same,
--- collections of message items are combined.
+-- custom data sets and collections of message items are combined.
 
 data ParseError t e = ParseError
   { errorPos        :: NonEmpty SourcePos  -- ^ Stack of source positions
@@ -117,12 +118,14 @@ instance (Show t, Typeable t, Show e, Typeable e) => Exception (ParseError t e)
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring longest match. In other words, earlier error
--- message is discarded. This may seem counter-intuitive, but @mergeError@
+-- message is discarded. This may seem counter-intuitive, but 'mergeError'
 -- is only used to merge error messages of alternative branches of parsing
 -- and in this case longest match should be preferred.
 
 mergeError :: (Ord t, Ord e)
-  => ParseError t e -> ParseError t e -> ParseError t e
+  => ParseError t e
+  -> ParseError t e
+  -> ParseError t e
 mergeError e1@(ParseError pos1 u1 p1 x1) e2@(ParseError pos2 u2 p2 x2) =
   case pos1 `compare` pos2 of
     LT -> e2
@@ -175,13 +178,13 @@ stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
 
-class ShowErrorComponent a where
+class Ord a => ShowErrorComponent a where
 
   -- | Pretty-print custom data component of 'ParseError'.
 
   showErrorComponent :: a -> String
 
-instance ShowToken t => ShowErrorComponent (MessageItem t) where
+instance (Ord t, ShowToken t) => ShowErrorComponent (MessageItem t) where
   showErrorComponent (Token        t) = showToken t
   showErrorComponent (TokenStream ts) = showTokenStream ts
   showErrorComponent (Label    label) = NE.toList label
@@ -190,11 +193,11 @@ instance ShowToken t => ShowErrorComponent (MessageItem t) where
 instance ShowErrorComponent String where
   showErrorComponent = id
 
--- TODO Instances
+-- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
+-- a newline.
 
--- | Pretty-print 'ParseError'.
-
-parseErrorPretty :: (ShowToken t, ShowErrorComponent e)
+parseErrorPretty :: ( ShowErrorComponent (MessageItem t)
+                    , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
   -> String            -- ^ Result of rendering
 parseErrorPretty (ParseError pos us ps xs) =
@@ -217,9 +220,9 @@ sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
 -- | @messagesPretty ms@ transforms list of error messages @ms@ into
 -- their textual representation.
 
-messageItemsPretty :: ShowErrorComponent t
+messageItemsPretty :: ShowErrorComponent a
   => String            -- ^ Prefix to prepend
-  -> Set t             -- ^ Collection of messages
+  -> Set a             -- ^ Collection of messages
   -> String            -- ^ Result of rendering
 messageItemsPretty prefix ts
   | E.null ts = ""
