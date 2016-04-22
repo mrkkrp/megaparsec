@@ -1,4 +1,3 @@
-
 import Test.Framework
 
 import Bugs (bugs)

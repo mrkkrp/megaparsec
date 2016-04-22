@@ -1,4 +1,3 @@
-
 module Bugs (bugs) where
 
 import Test.Framework

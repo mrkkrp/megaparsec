@@ -1,7 +1,7 @@
-
 module Bugs.Bug35 (main) where
 
 import Text.Megaparsec
+import Text.Megaparsec.String
 import qualified Text.Megaparsec.Lexer as L
 
 import Test.Framework
@@ -28,7 +28,8 @@ trickyFloats =
 
 testBatch :: Assertion
 testBatch = mapM_ testFloat trickyFloats
-    where testFloat x = parse L.float "" x @?= Right (read x :: Double)
+  where testFloat x = parse (L.float :: Parser Double) "" x
+          @?= Right (read x :: Double)
 
 main :: Test
 main = testCase "Output of Text.Megaparsec.Lexer.float (#35)" testBatch
