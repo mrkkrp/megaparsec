@@ -54,7 +54,6 @@ module Text.Megaparsec.Prim
 where
 
 import Control.Monad
-import Control.Monad.Catch (Exception, MonadThrow (..))
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
 import Control.Monad.Identity
@@ -393,15 +392,6 @@ pFail msg = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
   eerr (ParseError pos E.empty E.empty d) s
   where d = E.singleton (representFail msg)
 {-# INLINE pFail #-}
-
-instance (ErrorComponent e, Stream s)
-    => MonadThrow (ParsecT e s m) where
-  throwM = pThrowM
-
-pThrowM :: (Exception e', ErrorComponent e) => e' -> ParsecT e s m a
-pThrowM e = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
-  eerr (ParseError pos E.empty E.empty d) s
-  where d = E.singleton (representException e)
 
 -- | Low-level creation of the 'ParsecT' type.
 

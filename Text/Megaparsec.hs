@@ -132,6 +132,7 @@ module Text.Megaparsec
     -- * Error messages
   , MessageItem (..)
   , ErrorComponent (..)
+  , Dec (..)
   , ParseError (..)
   , ShowToken (..)
   , ShowErrorComponent (..)

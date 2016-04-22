@@ -12,6 +12,7 @@
 
 module Text.Megaparsec.String (Parser) where
 
+import Text.Megaparsec.Error (Dec)
 import Text.Megaparsec.Prim
 
 -- | Different modules corresponding to various types of streams (@String@,
@@ -19,4 +20,4 @@ import Text.Megaparsec.Prim
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for strings.
 
-type Parser = Parsec String String
+type Parser = Parsec Dec String

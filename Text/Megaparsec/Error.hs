@@ -20,6 +20,7 @@
 module Text.Megaparsec.Error
   ( MessageItem (..)
   , ErrorComponent (..)
+  , Dec (..)
   , ParseError (..)
   , ShowToken (..)
   , ShowErrorComponent (..)
@@ -69,11 +70,6 @@ class Ord e => ErrorComponent e where
 
   representFail :: String -> e
 
-  -- | Represent exception thrown in parser monad. (The monad implements
-  -- 'Control.Monad.Catch.MonadThrow').
-
-  representException :: Exception e' => e' -> e
-
   -- | Represent information about incorrect indentation.
 
   representIndentation
@@ -81,12 +77,19 @@ class Ord e => ErrorComponent e where
     -> Pos             -- ^ Expected indentation level
     -> e
 
-instance ErrorComponent String where
-  representFail        = id
-  representException   = ("exception: " ++) . show
-  representIndentation actual expected =
-    "incorrect indentation level (got " ++ show (unPos actual) ++
-    ", but (at least) " ++ show (unPos expected) ++ " is expected"
+-- | “Default error component”. This in our instance of 'ErrorComponent'
+-- provided out-of-box.
+--
+-- @since 5.0.0
+
+data Dec
+  = DecFail String         -- ^ 'fail' has been used in parser monad
+  | DecIndentation Pos Pos -- ^ Incorrect indentation error
+  deriving (Show, Eq, Ord, Data, Typeable)
+
+instance ErrorComponent Dec where
+  representFail        = DecFail
+  representIndentation = DecIndentation
 
 -- | The data type @ParseError@ represents parse errors. It provides the
 -- stack of source positions, set of expected and unexpected tokens as well
@@ -196,8 +199,11 @@ instance (Ord t, ShowToken t) => ShowErrorComponent (MessageItem t) where
   showErrorComponent (Label    label) = NE.toList label
   showErrorComponent EndOfInput       = "end of input"
 
-instance ShowErrorComponent String where
-  showErrorComponent = id
+instance ShowErrorComponent Dec where
+  showErrorComponent (DecFail msg) = msg
+  showErrorComponent (DecIndentation actual expected) =
+    "incorrect indentation level (got " ++ show (unPos actual) ++
+    ", but (at least) " ++ show (unPos expected) ++ " is expected"
 
 -- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
 -- a newline.

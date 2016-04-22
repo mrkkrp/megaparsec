@@ -12,6 +12,7 @@
 
 module Text.Megaparsec.ByteString (Parser) where
 
+import Text.Megaparsec.Error (Dec)
 import Text.Megaparsec.Prim
 import qualified Data.ByteString as B
 
@@ -20,4 +21,4 @@ import qualified Data.ByteString as B
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for strict byte-strings.
 
-type Parser = Parsec String B.ByteString
+type Parser = Parsec Dec B.ByteString

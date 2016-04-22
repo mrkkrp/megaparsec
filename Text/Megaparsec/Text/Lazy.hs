@@ -12,6 +12,7 @@
 
 module Text.Megaparsec.Text.Lazy (Parser) where
 
+import Text.Megaparsec.Error (Dec)
 import Text.Megaparsec.Prim
 import qualified Data.Text.Lazy as T
 
@@ -20,4 +21,4 @@ import qualified Data.Text.Lazy as T
 -- @Parser@ type and easily change it by importing different “type
 -- modules”. This one is for lazy text.
 
-type Parser = Parsec String T.Text
+type Parser = Parsec Dec T.Text
