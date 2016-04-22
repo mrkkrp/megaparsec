@@ -160,7 +160,9 @@ newtype Hints t = Hints [Set (MessageItem t)] deriving (Semigroup, Monoid)
 -- | Convert 'ParseError' record into 'Hints'.
 
 toHints :: ParseError t e -> Hints t
-toHints = Hints . pure . errorExpected
+toHints err = Hints hints
+  where hints = if E.null msgs then [] else [msgs]
+        msgs  = errorExpected err
 {-# INLINE toHints #-}
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
