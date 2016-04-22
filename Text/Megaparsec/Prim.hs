@@ -578,16 +578,18 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   -- This is the most primitive combinator for accepting tokens. For
   -- example, the 'Text.Megaparsec.Char.satisfy' parser is implemented as:
   --
-  -- > satisfy f = token testChar
-  -- >   where testChar x =
-  -- >           if f x
-  -- >             then Right x
-  -- >             else Left (E.singleton (Token x), E.empty, E.empty)
+  -- > satisfy f = token testChar Nothing
+  -- >   where
+  -- >     testChar x =
+  -- >       if f x
+  -- >         then Right x
+  -- >         else Left (Set.singleton (Token x), Set.empty, Set.empty)
 
   token
     :: (Token s -> Either ( Set (MessageItem (Token s))
                           , Set (MessageItem (Token s))
                           , Set e ) a)
+    -> Maybe (Token s) -- ^ Token to report when input stream is empty
        -- ^ Matching function for the token to parse
     -> m a
 
@@ -721,12 +723,13 @@ pToken :: forall e s m a. Stream s
   => (Token s -> Either ( Set (MessageItem (Token s))
                         , Set (MessageItem (Token s))
                         , Set e ) a)
+  -> Maybe (Token s)
   -> ParsecT e s m a
-pToken test = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
+pToken test mtoken = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
   case uncons input of
     Nothing -> eerr (ParseError (pos:|z)
-                     E.empty
                      (E.singleton EndOfInput)
+                     (maybe E.empty (E.singleton . Token) mtoken)
                      E.empty) s
     Just (c,cs) ->
       let (!apos, !npos) = updatePos (Proxy :: Proxy s) w pos c
@@ -975,7 +978,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   withRecovery r (L.StateT m) = L.StateT $ \s ->
     withRecovery (\e -> L.runStateT (r e) s) (m s)
   eof                        = lift eof
-  token                      = lift . token
+  token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
@@ -991,7 +994,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   withRecovery r (S.StateT m) = S.StateT $ \s ->
     withRecovery (\e -> S.runStateT (r e) s) (m s)
   eof                        = lift eof
-  token                      = lift . token
+  token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
@@ -1005,7 +1008,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT st m) where
   withRecovery r (L.ReaderT m) = L.ReaderT $ \s ->
     withRecovery (\e -> L.runReaderT (r e) s) (m s)
   eof                         = lift eof
-  token                       = lift . token
+  token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1021,7 +1024,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   withRecovery r (L.WriterT m) = L.WriterT $
     withRecovery (L.runWriterT . r) m
   eof                         = lift eof
-  token                       = lift . token
+  token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1037,7 +1040,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   withRecovery r (S.WriterT m) = S.WriterT $
     withRecovery (S.runWriterT . r) m
   eof                         = lift eof
-  token                       = lift . token
+  token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1051,7 +1054,7 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   withRecovery r (IdentityT m) = IdentityT $
     withRecovery (runIdentityT . r) m
   eof                         = lift eof
-  token                       = lift . token
+  token test mt               = lift (token test mt)
   tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f

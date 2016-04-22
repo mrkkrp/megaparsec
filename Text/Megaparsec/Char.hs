@@ -261,7 +261,12 @@ categoryName cat =
 -- > semicolon = char ';'
 
 char :: (MonadParsec e s m, Token s ~ Char) => Char -> m Char
-char c = satisfy (== c) <?> showToken c
+char c = token testChar (Just c)
+  where
+    testChar x =
+      if x == c
+        then Right x
+        else Left (E.singleton (Token x), E.singleton (Token c), E.empty)
 
 -- | The same as 'char' but case-insensitive. This parser returns actually
 -- parsed character preserving its case.
@@ -329,11 +334,12 @@ noneOf' cs = satisfy (`notElemi` cs)
 -- > oneOf cs  = satisfy (`elem` cs)
 
 satisfy :: (MonadParsec e s m, Token s ~ Char) => (Char -> Bool) -> m Char
-satisfy f = token testChar
-  where testChar x =
-          if f x
-            then Right x
-            else Left (E.singleton (Token x), E.empty, E.empty)
+satisfy f = token testChar Nothing
+  where
+    testChar x =
+      if f x
+        then Right x
+        else Left (E.singleton (Token x), E.empty, E.empty)
 
 ----------------------------------------------------------------------------
 -- Sequence of characters
