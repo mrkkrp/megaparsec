@@ -49,6 +49,10 @@ import Control.Applicative ((<$>))
 -- | Data type that represents default components of parse error message.
 -- The data type is parametrized over token type @t@.
 --
+-- Although 'TokenStream' allows to store streams consisting of single
+-- token, the convention is to use 'Token' constructor in these cases, so
+-- the system could eliminate duplicated message items properly.
+
 -- @since 5.0.0
 
 data MessageItem t

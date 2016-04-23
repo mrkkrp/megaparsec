@@ -746,30 +746,33 @@ pTokens :: forall e s m. Stream s
   -> ParsecT e s m [Token s]
 pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
 pTokens test tts = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
-  let y = Proxy :: Proxy s
+  let updatePos' = updatePos (Proxy :: Proxy s) w
+      canonicalize (x :| []) = Token x
+      canonicalize xs        = TokenStream xs
       unexpect u = ParseError (pos:|z)
         (E.singleton u)
-        (E.singleton . TokenStream . NE.fromList $ tts)
+        (E.singleton . canonicalize . NE.fromList $ tts)
         E.empty
       go [] is rs =
-        let !npos     = foldl' (\p t -> snd $ updatePos y w p t) pos tts
+        let !npos     = foldl' (\p t -> snd (updatePos' p t)) pos tts
             !newstate = State rs (npos:|z) w
         in cok (reverse is) newstate mempty
       go (t:ts) is rs =
         let what = case NE.nonEmpty is of
               Nothing -> EndOfInput
-              Just xs -> TokenStream (NE.reverse xs)
+              Just xs -> canonicalize (NE.reverse xs)
         in case uncons rs of
              Nothing -> eerr (unexpect what) s
              Just (x,xs) ->
-               let !apos     = fst (updatePos y w pos t)
+               let !apos     = fst (updatePos' pos t)
                    !newstate = State input (apos:|z) w
                in if test t x
                     then go ts (x:is) xs
-                    else eerr (unexpect    .
-                               TokenStream .
-                               NE.fromList .
-                               reverse $ (x:is)) newstate
+                    else eerr (unexpect     .
+                               canonicalize .
+                               NE.fromList  .
+                               reverse $ (x:is))
+                              newstate
   in go tts [] input
 {-# INLINE pTokens #-}
 
