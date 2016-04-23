@@ -77,8 +77,9 @@ class Ord e => ErrorComponent e where
   -- | Represent information about incorrect indentation.
 
   representIndentation
-    :: Pos             -- ^ Actual indentation level
-    -> Pos             -- ^ Expected indentation level
+    :: Ordering -- ^ Desired ordering between reference level and actual level
+    -> Pos             -- ^ Reference indentation level
+    -> Pos             -- ^ Actual indentation level
     -> e
 
 -- | “Default error component”. This in our instance of 'ErrorComponent'
@@ -88,7 +89,7 @@ class Ord e => ErrorComponent e where
 
 data Dec
   = DecFail String         -- ^ 'fail' has been used in parser monad
-  | DecIndentation Pos Pos -- ^ Incorrect indentation error
+  | DecIndentation Ordering Pos Pos -- ^ Incorrect indentation error
   deriving (Show, Eq, Ord, Data, Typeable)
 
 instance ErrorComponent Dec where
@@ -205,9 +206,13 @@ instance (Ord t, ShowToken t) => ShowErrorComponent (MessageItem t) where
 
 instance ShowErrorComponent Dec where
   showErrorComponent (DecFail msg) = msg
-  showErrorComponent (DecIndentation actual expected) =
-    "incorrect indentation level (got " ++ show (unPos actual) ++
-    ", but (at least) " ++ show (unPos expected) ++ " is expected"
+  showErrorComponent (DecIndentation ord ref actual) =
+    "incorrect indentation (got " ++ show (unPos actual) ++
+    ", should be " ++ p ++ show (unPos ref) ++ ")"
+    where p = case ord of
+                LT -> "less than "
+                EQ -> "equal to "
+                GT -> "greater than "
 
 -- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
 -- a newline.

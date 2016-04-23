@@ -33,6 +33,7 @@ module Text.Megaparsec.Lexer
   , skipBlockCommentNested
     -- * Indentation
   , indentLevel
+  , incorrectIndent
   , indentGuard
   , nonIndented
   , IndentOpt (..)
@@ -56,6 +57,7 @@ import Data.Char (readLitChar)
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Set           as E
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
@@ -189,34 +191,53 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 --
 -- The function is a simple shortcut defined as:
 --
--- > indentLevel = sourceColumn <$> getPosition
+-- > indentLevel = sourceColumn . NonEmpty.head <$> getPosition
 --
 -- @since 4.3.0
 
 indentLevel :: MonadParsec e s m => m Pos
 indentLevel = sourceColumn . NE.head <$> getPosition
 
--- | @indentGuard spaceConsumer test@ first consumes all white space
+-- | Fail reporting incorrect indentation error. The error has attached
+-- information:
+--     * Desired ordering between reference level and actual level
+--     * Reference indentation level
+--     * Actual indentation level
+--
+-- @since 5.0.0
+
+incorrectIndent :: MonadParsec e s m
+  => Ordering  -- ^ Desired ordering between reference level and actual level
+  -> Pos               -- ^ Reference indentation level
+  -> Pos               -- ^ Actual indentation level
+  -> m a
+incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
+  where x = representIndentation ord ref actual
+
+-- | @indentGuard spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks column
--- position. It should satisfy supplied predicate @test@, otherwise the
--- parser fails with error message “incorrect indentation”. On success
--- current column position is returned.
+-- position. Ordering between current indentation level and reference
+-- indentation level @ref@ should be @ord@, otherwise the parser fails with
+-- error message “incorrect indentation”. On success current column position
+-- is returned.
 --
 -- When you want to parse block of indentation first run this parser with
--- predicate like @(> 1)@ — this will make sure you have some
--- indentation. Use returned value to check indentation on every subsequent
--- line according to syntax of your language.
+-- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@ — this will
+-- make sure you have some indentation. Use returned value to check
+-- indentation on every subsequent line according to syntax of your
+-- language.
 
 indentGuard :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
-  -> (Pos -> Bool)     -- ^ Predicate checking indentation level
+  -> Ordering -- ^ Desired ordering between reference level and actual level
+  -> Pos               -- ^ Reference indentation level
   -> m Pos             -- ^ Current column (indentation level)
-indentGuard spc p = do
-  spc
-  lvl <- indentLevel
-  if p lvl
-    then return lvl
-    else fail ii
+indentGuard sc ord ref = do
+  sc
+  actual <- indentLevel
+  if compare actual ref == ord
+    then return actual
+    else incorrectIndent ord ref actual
 
 -- | Parse non-indented construction. This ensures that there is no
 -- indentation before actual data. Useful, for example, as a wrapper for
@@ -228,7 +249,7 @@ nonIndented :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse actual data
   -> m a
-nonIndented sc p = indentGuard sc (== unsafePos 1) *> p
+nonIndented sc p = indentGuard sc EQ (unsafePos 1) *> p
 
 -- | The data type represents available behaviors for parsing of indented
 -- tokens. This is used in 'indentBlock', which see.
@@ -263,17 +284,18 @@ indentBlock :: (MonadParsec e s m, Token s ~ Char)
   -> m (IndentOpt m a b) -- ^ How to parse “reference” token
   -> m a
 indentBlock sc r = do
-  ref <- indentGuard sc (const True)
+  sc
+  ref <- indentLevel
   a   <- r
   case a of
     IndentNone x -> return x
     IndentMany indent f p -> do
-      mlvl <- optional . try $ C.eol *> indentGuard sc (> ref)
+      mlvl <- optional . try $ C.eol *> indentGuard sc GT ref
       case mlvl of
         Nothing  -> sc *> f []
         Just lvl -> indentedItems ref (fromMaybe lvl indent) sc p >>= f
     IndentSome indent f p -> do
-      lvl <- C.eol *> indentGuard sc (> ref)
+      lvl <- C.eol *> indentGuard sc GT ref
       indentedItems ref (fromMaybe lvl indent) sc p >>= f
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
@@ -295,10 +317,7 @@ indentedItems ref lvl sc p = go
           done <- isJust <$> optional eof
           if done
             then return []
-            else fail ii
-
-ii :: String
-ii = "incorrect indentation"
+            else incorrectIndent EQ lvl pos
 
 ----------------------------------------------------------------------------
 -- Character and string literals
