@@ -513,7 +513,7 @@ case_notFollowedBy_3b = checkCase p r s
 
 case_notFollowedBy_4a :: Assertion
 case_notFollowedBy_4a = checkCase p r s
-  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
+  where p :: MonadParsec e s m => m ()
         p = notFollowedBy mzero
         r = Right ()
         s = "ab"
@@ -556,7 +556,7 @@ prop_withRecovery_0 a' b' c' = checkParser' p r s
 
 case_withRecovery_1 :: Assertion
 case_withRecovery_1 = checkCase p r s
-  where p :: (MonadParsec e s m, Token s ~ Char) => m String
+  where p :: MonadParsec e s m => m String
         p = withRecovery (const $ return "bar") (return "foo")
         r = Right "foo"
         s = "abc"

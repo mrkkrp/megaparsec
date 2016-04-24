@@ -219,7 +219,8 @@ instance ShowErrorComponent Dec where
 --
 -- @since 5.0.0
 
-parseErrorPretty :: ( ShowErrorComponent (MessageItem t)
+parseErrorPretty :: ( Ord t
+                    , ShowToken t
                     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
   -> String            -- ^ Result of rendering

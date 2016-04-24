@@ -47,7 +47,9 @@ import Text.Megaparsec.Pos
 import Util ()
 
 #if !MIN_VERSION_base(4,8,0)
+import Data.Foldable (Foldable, all)
 import Data.Monoid (mempty)
+import Prelude hiding (all)
 #endif
 
 tests :: Test
@@ -113,7 +115,7 @@ prop_ppExpected = checkPresence errorExpected showErrorComponent
 prop_ppCustom :: PE -> Property
 prop_ppCustom = checkPresence errorData showErrorComponent
 
-checkPresence :: (Foldable t) => (PE -> t a) -> (a -> String) -> PE -> Property
+checkPresence :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
 checkPresence g r e = property (all f (g e))
   where rendered = parseErrorPretty e
         f x = r x `isInfixOf` rendered

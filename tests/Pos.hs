@@ -44,7 +44,7 @@ import Text.Megaparsec.Pos
 import Util (updatePosString)
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>), pure)
+import Data.Word (Word)
 #endif
 
 tests :: Test

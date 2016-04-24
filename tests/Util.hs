@@ -77,7 +77,7 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.String
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*))
+import Control.Applicative ((<$>), (<*>), (<*))
 #endif
 
 -- | @checkParser p r s@ tries to run parser @p@ on input @s@ to parse
@@ -237,13 +237,13 @@ instance Arbitrary Pos where
 
 instance Arbitrary SourcePos where
   arbitrary = SourcePos
-    <$> arbitrary
+    <$> shortString
     <*> (unsafePos <$> choose (1, 1000))
     <*> (unsafePos <$> choose (1,  100))
 
 instance Arbitrary Dec where
   arbitrary = oneof
-    [ DecFail <$> arbitrary
+    [ DecFail        <$> shortString
     , DecIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
@@ -253,6 +253,11 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
+
+shortString :: Gen String
+shortString = sized $ \n -> do
+  k <- choose (0, n `div` 2)
+  vectorOf k arbitrary
 
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before

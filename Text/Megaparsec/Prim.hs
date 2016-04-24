@@ -883,7 +883,8 @@ parseMaybe p s =
 -- @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
-             , ShowErrorComponent (MessageItem (Token s))
+             , Ord (Token s)
+             , ShowToken (Token s)
              , Show a )
   => Parsec e s a -- ^ Parser to run
   -> s            -- ^ Input for parser
