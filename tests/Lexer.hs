@@ -29,6 +29,7 @@
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE TypeFamilies     #-}
 
 module Lexer (tests) where
 
@@ -42,6 +43,7 @@ import Data.Char
   , isSpace
   , toLower )
 import Data.List (findIndices, isInfixOf, find)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe
 import Data.Scientific (fromFloatDigits)
 import Numeric (showInt, showHex, showOct, showSigned)
@@ -59,7 +61,6 @@ import Text.Megaparsec.Prim
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Char as C
 
-import Prim () -- 'Arbitrary' instance for 'SourcePos'
 import Util
 
 #if !MIN_VERSION_base(4,8,0)
@@ -73,6 +74,7 @@ tests = testGroup "Lexer"
   , testProperty "symbol' combinator"     prop_symbol'
   , testCase     "skipBlockCommentNested" prop_skipBlockCommentNested
   , testProperty "indentLevel"            prop_indentLevel
+  , testProperty "incorrectIndent"        prop_incorrectIndent
   , testProperty "indentGuard combinator" prop_indentGuard
   , testProperty "nonIndented combinator" prop_nonIndented
   , testProperty "indentBlock combinator" prop_indentBlock
@@ -155,13 +157,13 @@ parseSymbol
 parseSymbol p' f s' t = checkParser p r s
   where p = p' (f g)
         r | g == s || isSpace (last s) = Right g
-          | otherwise = posErr (length s - 1) s [uneCh (last s), exEof]
+          | otherwise = posErr (length s - 1) s [utok (last s), eeof]
         g = takeWhile (not . isSpace) s
         s = s' ++ maybeToList t
 
 prop_skipBlockCommentNested :: Assertion
 prop_skipBlockCommentNested = checkCase p r s
-  where p :: MonadParsec s m Char => m ()
+  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = space (void C.spaceChar) empty
               (skipBlockCommentNested "/*" "*/") <* eof
         r = Right ()
@@ -171,21 +173,29 @@ prop_skipBlockCommentNested = checkCase p r s
 
 prop_indentLevel :: SourcePos -> Property
 prop_indentLevel pos = p /=\ sourceColumn pos
-  where p = setPosition pos >> indentLevel
+  where p = setPosition (pos :| []) >> indentLevel
 
-prop_indentGuard :: NonNegative Int -> Property
+prop_incorrectIndent :: Ordering -> Pos -> Pos -> Property
+prop_incorrectIndent ord ref actual = checkParser p r s
+  where p = incorrectIndent ord ref actual :: Parser ()
+        r = posErr 0 s (ii ord ref actual)
+        s = ""
+
+prop_indentGuard :: NonNegative (Small Int) -> Property
 prop_indentGuard n =
   forAll ((,,) <$> mki <*> mki <*> mki) $ \(l0,l1,l2) ->
-    let r | getCol l0 <= 1         = posErr 0 s ii
-          | getCol l1 /= getCol l0 = posErr (getIndent l1 + g 1) s ii
-          | getCol l2 <= getCol l0 = posErr (getIndent l2 + g 2) s ii
-          | otherwise = Right ()
+    let r | col0 <= pos1 = posErr 0 s (ii GT pos1 col0)
+          | col1 /= col0 = posErr (getIndent l1 + g 1) s (ii EQ col0 col1)
+          | col2 <= col0 = posErr (getIndent l2 + g 2) s (ii GT col0 col2)
+          | otherwise    = Right ()
+        (col0, col1, col2) = (getCol l0, getCol l1, getCol l2)
         fragments = [l0,l1,l2]
         g x = sum (length <$> take x fragments)
         s = concat fragments
     in checkParser p r s
-  where mki = mkIndent sbla (getNonNegative n)
-        p  = ip (> 1) >>= \x -> sp >> ip (== x) >> sp >> ip (> x) >> sp >> sc
+  where mki = mkIndent sbla (getSmall $ getNonNegative n)
+        p  = ip GT pos1 >>=
+          \x -> sp >> ip EQ x >> sp >> ip GT x >> sp >> sc
         ip = indentGuard sc
         sp = void (symbol sc' sbla <* C.eol)
 
@@ -193,27 +203,31 @@ prop_nonIndented :: Property
 prop_nonIndented = forAll (mkIndent sbla 0) $ \s ->
   let i = getIndent s
       r | i == 0    = Right sbla
-        | otherwise = posErr i s ii
+        | otherwise = posErr i s (ii EQ pos1 (getCol s))
   in checkParser p r s
   where p = nonIndented sc (symbol sc sbla)
 
-prop_indentBlock :: Maybe (Positive Int) -> Property
-prop_indentBlock mn' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
-  let r | getCol l1 <= getCol l0 =
-          posErr (getIndent l1 + g 1) s [uneCh (head sblb), exEof]
-        | isJust mn && getCol l1 /= ib =
-          posErr (getIndent l1 + g 1) s ii
-        | getCol l2 <= getCol l1 =
-          posErr (getIndent l2 + g 2) s ii
-        | getCol l3 == getCol l2 =
-          posErr (getIndent l3 + g 3) s [uneCh (head sblb), exStr sblc]
-        | getCol l3 <= getCol l0 =
-          posErr (getIndent l3 + g 3) s [uneCh (head sblb), exEof]
-        | getCol l3 /= getCol l1 =
-          posErr (getIndent l3 + g 3) s ii
-        | getCol l4 <= getCol l3 =
-          posErr (getIndent l4 + g 4) s ii
+prop_indentBlock :: Maybe (Positive (Small Int)) -> Property
+prop_indentBlock mn'' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
+  let r | col1 <= col0 =
+          posErr (getIndent l1 + g 1) s [utok (head sblb), eeof]
+        | isJust mn && col1 /= ib' =
+          posErr (getIndent l1 + g 1) s (ii EQ ib' col1)
+        | col2 <= col1 =
+          posErr (getIndent l2 + g 2) s (ii GT col1 col2)
+        | col3 == col2 =
+          posErr (getIndent l3 + g 3) s [utok (head sblb), etoks sblc]
+        | col3 <= col0 =
+          posErr (getIndent l3 + g 3) s [utok (head sblb), eeof]
+        | col3 < col1 =
+          posErr (getIndent l3 + g 3) s (ii EQ col1 col3)
+        | col3 > col1 =
+          posErr (getIndent l3 + g 3) s (ii EQ col2 col3)
+        | col4 <= col3 =
+          posErr (getIndent l4 + g 4) s (ii GT col3 col4)
         | otherwise = Right (sbla, [(sblb, [sblc]), (sblb, [sblc])])
+      (col0, col1, col2, col3, col4) =
+        (getCol l0, getCol l1, getCol l2, getCol l3, getCol l4)
       fragments = [l0,l1,l2,l3,l4]
       g x = sum (length <$> take x fragments)
       s = concat fragments
@@ -231,8 +245,10 @@ prop_indentBlock mn' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
         lvlc = indentBlock sc $ IndentNone                  sblc <$ b sblc
         b    = symbol sc'
         l x  = return . (x,)
-        mn   = getPositive <$> mn'
-        ib   = fromMaybe 2 mn
+        mn'  = getSmall . getPositive <$> mn''
+        mn   = unsafePos . fromIntegral <$> mn'
+        ib   = fromMaybe 2 mn'
+        ib'  = unsafePos (fromIntegral ib)
 
 prop_indentMany :: Property
 prop_indentMany = forAll (mkIndent sbla 0) (checkParser p r)
@@ -246,17 +262,20 @@ prop_indentMany = forAll (mkIndent sbla 0) (checkParser p r)
 getIndent :: String -> Int
 getIndent = length . takeWhile isSpace
 
-getCol :: String -> Int
-getCol x = sourceColumn $
+getCol :: String -> Pos
+getCol x = sourceColumn .
   updatePosString defaultTabWidth (initialPos "") $ take (getIndent x) x
 
 sbla, sblb, sblc :: String
-sbla = "xxx"
-sblb = "yyy"
-sblc = "zzz"
+sbla = "aaa"
+sblb = "bbb"
+sblc = "ccc"
 
-ii :: [Message]
-ii = [msg "incorrect indentation"]
+ii :: Ordering -> Pos -> Pos -> [EC]
+ii ord ref actual = [cstm (DecIndentation ord ref actual)]
+
+pos1 :: Pos
+pos1 = unsafePos 1
 
 -- Character and string literals
 
@@ -264,10 +283,10 @@ prop_charLiteral :: String -> Bool -> Property
 prop_charLiteral t i = checkParser charLiteral r s
   where b = listToMaybe $ readLitChar s
         (h, g) = fromJust b
-        r | isNothing b = posErr 0 s $ exSpec "literal character" :
-                          [ if null s then uneEof else uneCh (head s) ]
+        r | isNothing b = posErr 0 s $ elabel "literal character" :
+            [ if null s then ueof else utok (head s) ]
           | null g      = Right h
-          | otherwise   = posErr l s [uneCh (head g), exEof]
+          | otherwise   = posErr l s [utok (head g), eeof]
         l = length s - length g
         s = if null t || i then t else showLitChar (head t) (tail t)
 
@@ -297,9 +316,9 @@ prop_float_0 n' = checkParser float r s
 
 prop_float_1 :: Maybe (NonNegative Integer) -> Property
 prop_float_1 n' = checkParser float r s
-  where r | isNothing n' = posErr 0 s [uneEof, exSpec "floating point number"]
-          | otherwise    = posErr (length s) s [ uneEof, exCh '.', exCh 'E'
-                                  , exCh 'e', exSpec "digit" ]
+  where r | isNothing n' = posErr 0 s [ueof, elabel "floating point number"]
+          | otherwise    = posErr (length s) s
+            [ueof, etok '.', etok 'E', etok 'e', elabel "digit"]
         s = maybe "" (show . getNonNegative) n'
 
 prop_number_0 :: Either (NonNegative Integer) (NonNegative Double) -> Property
@@ -311,7 +330,7 @@ prop_number_0 n' = checkParser number r s
 
 prop_number_1 :: Property
 prop_number_1 = checkParser number r s
-  where r = posErr 0 s [uneEof, exSpec "number"]
+  where r = posErr 0 s [ueof, elabel "number"]
         s = ""
 
 prop_number_2 :: Either Integer Double -> Property
@@ -326,26 +345,29 @@ prop_signed :: Integer -> Int -> Bool -> Property
 prop_signed n i plus = checkParser p r s
   where p = signed (hidden C.space) integer
         r | i > length z = Right n
-          | otherwise = posErr i s $ uneCh '?' :
-            (if i <= 0 then [exCh '+', exCh '-'] else []) ++
-            [exSpec $ if isNothing . find isDigit $ take i s
-                      then "integer"
-                      else "rest of integer"] ++
-            [exEof | i > head (findIndices isDigit s)]
+          | otherwise = posErr i s $ utok '?' :
+            (if i <= 0 then [etok '+', etok '-'] else []) ++
+            [elabel $ if isNothing . find isDigit $ take i s
+                        then "integer"
+                        else "rest of integer"] ++
+            [eeof | i > head (findIndices isDigit s)]
         z = let bar = showSigned showInt 0 n ""
             in if n < 0 || plus then bar else '+' : bar
         s = if i <= length z then take i z ++ "?" ++ drop i z else z
 
-quasiCorrupted :: NonNegative Integer -> Int
-  -> (Integer -> String -> String) -> String
-  -> (Either ParseError Integer, String)
+quasiCorrupted
+  :: NonNegative Integer
+  -> Int
+  -> (Integer -> String -> String)
+  -> String
+  -> (Either (ParseError Char Dec) Integer, String)
 quasiCorrupted n' i shower l = (r, s)
   where n = getNonNegative n'
         r | i > length z = Right n
-          | otherwise    = posErr i s $ uneCh '?' :
-            [ exEof | i > 0 ] ++
+          | otherwise    = posErr i s $ utok '?' :
+            [ eeof | i > 0 ] ++
             [if i <= 0 || null l
-             then exSpec l
-             else exSpec $ "rest of " ++ l]
+               then elabel l
+               else elabel $ "rest of " ++ l]
         z = shower n ""
         s = if i <= length z then take i z ++ "?" ++ drop i z else z
