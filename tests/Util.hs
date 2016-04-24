@@ -29,6 +29,7 @@
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
+{-# OPTIONS -fno-warn-orphans #-}
 
 module Util
   ( checkParser
@@ -41,27 +42,31 @@ module Util
   , (/=\)
   , (!=!)
   , abcRow
+  , EC (..)
   , posErr
-  , uneCh
-  , uneStr
-  , uneSpec
-  , uneEof
-  , exCh
-  , exStr
-  , exSpec
-  , exEof
-  , msg
-  , showToken )
+  , posErr'
+  , utok
+  , utoks
+  , ulabel
+  , ueof
+  , etok
+  , etoks
+  , elabel
+  , eeof
+  , cstm )
 where
 
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 import Data.Foldable (foldl')
-import Data.Maybe (maybeToList)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (mapMaybe, maybeToList)
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
+import qualified Data.List.NonEmpty          as NE
+import qualified Data.Set                    as E
 
 import Test.QuickCheck
 import Test.HUnit (Assertion, (@?=))
@@ -69,7 +74,6 @@ import Test.HUnit (Assertion, (@?=))
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
-import Text.Megaparsec.ShowToken
 import Text.Megaparsec.String
 
 #if !MIN_VERSION_base(4,8,0)
@@ -82,7 +86,7 @@ import Control.Applicative ((<$>), (<*))
 
 checkParser :: (Eq a, Show a)
   => Parser a          -- ^ Parser to test
-  -> Either ParseError a -- ^ Expected result of parsing
+  -> Either (ParseError Char Dec) a -- ^ Expected result of parsing
   -> String            -- ^ Input for the parser
   -> Property          -- ^ Resulting property
 checkParser p r s = simpleParse p s === r
@@ -92,8 +96,8 @@ checkParser p r s = simpleParse p s === r
 -- combinators.
 
 checkParser' :: (Eq a, Show a)
-  => (forall m. MonadParsec String m Char => m a) -- ^ Parser to test
-  -> Either ParseError a -- ^ Expected result of parsing
+  => (forall m. MonadParsec Dec String m => m a) -- ^ Parser to test
+  -> Either (ParseError Char Dec) a -- ^ Expected result of parsing
   -> String            -- ^ Input for the parser
   -> Property          -- ^ Resulting property
 checkParser' p r s = conjoin
@@ -108,8 +112,8 @@ checkParser' p r s = conjoin
 -- | Similar to 'checkParser', but produces HUnit's 'Assertion's instead.
 
 checkCase :: (Eq a, Show a)
-  => (forall m. MonadParsec String m Char => m a) -- ^ Parser to test
-  -> Either ParseError a -- ^ Expected result of parsing
+  => (forall m. MonadParsec Dec String m => m a) -- ^ Parser to test
+  -> Either (ParseError Char Dec) a -- ^ Expected result of parsing
   -> String            -- ^ Input for the parser
   -> Assertion         -- ^ Resulting assertion
 checkCase p r s = do
@@ -131,7 +135,7 @@ evalWriterTS = liftM fst . S.runWriterT
 -- value. This parser tries to parser end of file too and name of input file
 -- is always empty string.
 
-simpleParse :: Parser a -> String -> Either ParseError a
+simpleParse :: Parser a -> String -> Either (ParseError Char Dec) a
 simpleParse p = parse (p <* eof) ""
 
 -- | @checkChar p test label s@ runs parser @p@ on input @s@ and checks if
@@ -139,37 +143,45 @@ simpleParse p = parse (p <* eof) ""
 -- character may be labelled, in this case @label@ is used to check quality
 -- of error messages.
 
-checkChar :: Parser Char -> (Char -> Bool)
-          -> Maybe String -> String -> Property
-checkChar p f l' s = checkParser p r s
+checkChar
+  :: Parser Char       -- ^ Parser to run
+  -> (Char -> Bool)    -- ^ Predicate to test parsed char
+  -> Maybe (MessageItem Char) -- ^ Representation to use in error messages
+  -> String            -- ^ Input stream
+  -> Property
+checkChar p f rep' s = checkParser p r s
   where h = head s
-        l = exSpec <$> maybeToList l'
-        r | null s = posErr 0 s (uneEof : l)
+        rep = Expected <$> maybeToList rep'
+        r | null s = posErr 0 s (ueof : rep)
           | length s == 1 && f h = Right h
-          | not (f h) = posErr 0 s (uneCh h : l)
-          | otherwise = posErr 1 s [uneCh (s !! 1), exEof]
+          | not (f h) = posErr 0 s (utok h : rep)
+          | otherwise = posErr 1 s [utok (s !! 1), eeof]
 
 -- | @checkString p a test label s@ runs parser @p@ on input @s@ and checks if
 -- the result is equal to @a@ and also quality of error messages. @test@ is
 -- used to compare tokens. @label@ is used as expected representation of
 -- parser's result in error messages.
 
-checkString :: Parser String -> String -> (Char -> Char -> Bool)
-            -> String -> String -> Property
-checkString p a' test l s' = checkParser p (w a' 0 s') s'
+checkString
+  :: Parser String     -- ^ Parser to run
+  -> String            -- ^ Expected result
+  -> (Char -> Char -> Bool) -- ^ Function used to compare tokens
+  -> String            -- ^ Input stream
+  -> Property
+checkString p a' test s' = checkParser p (w a' 0 s') s'
   where w [] _ []    = Right s'
-        w [] i (s:_) = posErr i s' [uneCh s, exEof]
-        w _  0 []    = posErr 0 s' [uneEof, exSpec l]
-        w _  i []    = posErr 0 s' [uneStr (take i s'), exSpec l]
+        w [] i (s:_) = posErr i s' [utok s, eeof]
+        w _  0 []    = posErr 0 s' [ueof, etoks a']
+        w _  i []    = posErr 0 s' [utoks (take i s'), etoks a']
         w (a:as) i (s:ss)
           | test a s  = w as i' ss
-          | otherwise = posErr 0 s' [uneStr (take i' s'), exSpec l]
+          | otherwise = posErr 0 s' [utoks (take i' s'), etoks a']
             where i'  = succ i
 
 -- | A helper function that is used to advance 'SourcePos' given a 'String'.
 
 updatePosString
-  :: Int               -- ^ Tab width
+  :: Pos               -- ^ Tab width
   -> SourcePos         -- ^ Initial position
   -> String            -- ^ 'String' — collection of tokens to process
   -> SourcePos         -- ^ Final position
@@ -202,67 +214,135 @@ abcRow :: Enum a => a -> a -> a -> String
 abcRow a b c = f a 'a' ++ f b 'b' ++ f c 'c'
   where f x = replicate (fromEnum x)
 
+-- | A component of parse error, useful for fast and dirty construction of
+-- parse errors with 'posErr' and other helpers.
+
+data EC
+  = Unexpected (MessageItem Char)
+  | Expected   (MessageItem Char)
+  | Custom     Dec
+
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+  arbitrary = NE.fromList . getNonEmpty <$> arbitrary
+
+instance Arbitrary t => Arbitrary (MessageItem t) where
+  arbitrary = oneof
+    [ Token       <$> arbitrary
+    , TokenStream <$> arbitrary
+    , Label       <$> arbitrary
+    , return EndOfInput ]
+
+instance Arbitrary Pos where
+  arbitrary = unsafePos . getPositive <$> arbitrary
+
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos
+    <$> arbitrary
+    <*> (unsafePos <$> choose (1, 1000))
+    <*> (unsafePos <$> choose (1,  100))
+
+instance Arbitrary Dec where
+  arbitrary = oneof
+    [ DecFail <$> arbitrary
+    , DecIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
+
+instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
+    => Arbitrary (ParseError t e) where
+  arbitrary = ParseError
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
 -- | @posErr pos s ms@ is an easy way to model result of parser that
 -- fails. @pos@ is how many tokens (characters) has been consumed before
 -- failure. @s@ is input of the parser. @ms@ is a list, collection of
 -- 'Message's. See 'uneStr', 'uneCh', 'uneSpec', 'exStr', 'exCh', and
 -- 'exSpec' for easy ways to create error messages.
 
-posErr :: Int -> String -> [Message] -> Either ParseError a
-posErr pos s = Left . foldr addErrorMessage (newErrorUnknown errPos)
-  where errPos = updatePosString defaultTabWidth (initialPos "") (take pos s)
+posErr
+  :: Int               -- ^ How many tokens to drop from beginning of steam
+  -> String            -- ^ The input stream (just a 'String' here)
+  -> [EC]              -- ^ Collection of error components
+  -> Either (ParseError Char Dec) a -- ^ 'ParseError' inside of 'Left'
+posErr i s = posErr' (pos :| [])
+  where pos = updatePosString defaultTabWidth (initialPos "") (take i s)
 
--- | @uneCh s@ returns message created with 'Unexpected' constructor that
--- tells the system that char @s@ is unexpected.
+-- | The same as 'posErr', but 'SourcePos' should be provided directly.
 
-uneCh :: Char -> Message
-uneCh s = Unexpected $ showToken s
+posErr'
+  :: NonEmpty SourcePos -- ^ Position of the error
+  -> [EC]              -- ^ Collection of error components
+  -> Either (ParseError Char Dec) a -- ^ 'ParseError' inside of 'Left'
+posErr' pos ecs = Left ParseError
+  { errorPos        = pos
+  , errorUnexpected = E.fromList (mapMaybe getUnexpected ecs)
+  , errorExpected   = E.fromList (mapMaybe getExpected   ecs)
+  , errorData       = E.fromList (mapMaybe getCustom     ecs) }
+  where
+    getUnexpected (Unexpected x) = Just x
+    getUnexpected _              = Nothing
+    getExpected   (Expected   x) = Just x
+    getExpected   _              = Nothing
+    getCustom     (Custom     x) = Just x
+    getCustom     _              = Nothing
 
--- | @uneStr s@ returns message created with 'Unexpected' constructor that
--- tells the system that string @s@ is unexpected.
+-- | Construct “unexpected token” error component.
 
-uneStr :: String -> Message
-uneStr s = Unexpected $ showToken s
+utok :: Char -> EC
+utok = Unexpected . Token
 
--- | @uneSpec s@ returns message created with 'Unexpected' constructor that
--- tells the system that @s@ is unexpected. This is different from 'uneStr'
--- in that it doesn't use 'showToken' but rather pass its argument unaltered
--- allowing for “special” labels.
+-- | Construct “unexpected steam” error component. This function respects
+-- some conventions described in 'canonicalizeStream'.
 
-uneSpec :: String -> Message
-uneSpec = Unexpected
+utoks :: String -> EC
+utoks = Unexpected . canonicalizeStream
 
--- | @uneEof@ represents message “unexpected end of input”.
+-- | Construct “unexpected label” error component. Do not use with empty
+-- strings.
 
-uneEof :: Message
-uneEof = Unexpected "end of input"
+ulabel :: String -> EC
+ulabel = Unexpected . Label . NE.fromList
 
--- | @exCh s@ returns message created with 'Expected' constructor that tells
--- the system that character @s@ is expected.
+-- | Construct “unexpected end of input” error component.
 
-exCh :: Char -> Message
-exCh s = Expected $ showToken s
+ueof :: EC
+ueof = Unexpected EndOfInput
 
--- | @exStr s@ returns message created with 'Expected' constructor that tells
--- the system that string @s@ is expected.
+-- | Construct “expecting token” error component.
 
-exStr :: String -> Message
-exStr s = Expected $ showToken s
+etok :: Char -> EC
+etok = Expected . Token
 
--- | @exSpec s@ returns message created with 'Expected' constructor that tells
--- the system that @s@ is expected. This is different from 'exStr' in that
--- it doesn't use 'showToken' but rather pass its argument unaltered
--- allowing for “special” labels.
+-- | Construct “expecting stream” error component. This function respects
+-- some conventions described in 'canonicalizeStream'.
 
-exSpec :: String -> Message
-exSpec = Expected
+etoks :: String -> EC
+etoks = Expected . canonicalizeStream
 
--- | @exEof@ represents message “expecting end of input”.
+-- | Construct “expecting label” error component. Do not use with empty
+-- strings.
 
-exEof :: Message
-exEof = Expected "end of input"
+elabel :: String -> EC
+elabel = Expected . Label . NE.fromList
 
--- | @msg s@ return message created with 'Message' constructor.
+-- | Construct “expecting end of input” component.
 
-msg :: String -> Message
-msg = Message
+eeof :: EC
+eeof = Expected EndOfInput
+
+-- | Construct error component consisting of custom data.
+
+cstm :: Dec -> EC
+cstm = Custom
+
+-- | Construct appropriate 'MessageItem' representation for given token
+-- stream. Empty string produces 'EndOfInput', single token — a 'Token', and
+-- in other cases the 'TokenStream' constructor is used.
+
+canonicalizeStream :: String -> MessageItem Char
+canonicalizeStream stream =
+  case NE.nonEmpty stream of
+    Nothing      -> EndOfInput
+    Just (x:|[]) -> Token x
+    Just xs      -> TokenStream xs
