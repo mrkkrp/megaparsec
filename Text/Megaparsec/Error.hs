@@ -90,7 +90,7 @@ class Ord e => ErrorComponent e where
 data Dec
   = DecFail String         -- ^ 'fail' has been used in parser monad
   | DecIndentation Ordering Pos Pos -- ^ Incorrect indentation error
-  deriving (Show, Eq, Ord, Data, Typeable)
+  deriving (Show, Read, Eq, Ord, Data, Typeable)
 
 instance ErrorComponent Dec where
   representFail        = DecFail
