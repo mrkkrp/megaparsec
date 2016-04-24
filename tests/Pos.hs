@@ -31,9 +31,10 @@
 
 module Pos (tests) where
 
-import Control.Exception (try, evaluate)
-import Data.Char (isAlphaNum)
-import Data.List (intercalate, isInfixOf, elemIndices)
+import Control.Monad.Catch
+import Data.Function (on)
+import Data.List (isInfixOf, elemIndices)
+import Data.Semigroup ((<>))
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -48,112 +49,73 @@ import Control.Applicative ((<$>), (<*>), pure)
 
 tests :: Test
 tests = testGroup "Textual source positions"
-  [ testProperty "components"                         prop_components
-  , testProperty "exception on invalid position"      prop_exception
-  , testProperty "show file name in source positions" prop_showFileName
-  , testProperty "show line in source positions"      prop_showLine
-  , testProperty "show column in source positions"    prop_showColumn
-  , testProperty "initial position"                   prop_initialPos
-  , testProperty "increment source line"              prop_incSourceLine
-  , testProperty "increment source column"            prop_incSourceColumn
-  , testProperty "set source name"                    prop_setSourceName
-  , testProperty "set source line"                    prop_setSourceLine
-  , testProperty "set source column"                  prop_setSourceColumn
-  , testProperty "position updating"                  prop_updating ]
+  [ testProperty "creation of Pos (mkPos)"              prop_mkPos
+  , testProperty "creation of Pos (unsafePos)"          prop_unsafePos
+  , testProperty "consistency of Show/Read for Pos"     prop_showReadPos
+  , testProperty "Ord instance of Pos"                  prop_ordPos
+  , testProperty "Semigroup instance of Pos"            prop_semigroupPos
+  , testProperty "construction of initial position"     prop_initialPos
+  , testProperty "consistency of Show/Read for SourcePos" prop_showReadSourcePos
+  , testProperty "pretty-printing: visible file path"   prop_ppFilePath
+  , testProperty "pretty-printing: visible line"        prop_ppLine
+  , testProperty "pretty-printing: visible column"      prop_ppColumn
+  , testProperty "default updating of source position"  prop_defaultUpdatePos ]
 
-instance Arbitrary SourcePos where
-  arbitrary = newPos <$> fileName <*> choose (1, 1000) <*> choose (1, 100)
+prop_mkPos :: Word -> Property
+prop_mkPos x' = case mkPos x' of
+  Left  e -> fromException e === Just InvalidPosException
+  Right x -> unPos x === x'
 
-fileName :: Gen String
-fileName = do
-  delimiter <- pure <$> elements "/\\"
-  dirs      <- listOf1 simpleName
-  extension <- simpleName
-  frequency [ (1, return [])
-            , (7, return $ intercalate delimiter dirs ++ "." ++ extension)]
-  where simpleName = listOf1 (arbitrary `suchThat` isAlphaNum)
+prop_unsafePos :: Positive Word -> Property
+prop_unsafePos x' = unPos (unsafePos x) === x
+  where x = getPositive x'
 
-prop_components :: SourcePos -> Bool
-prop_components pos = pos == copy
-  where copy = newPos (sourceName pos) (sourceLine pos) (sourceColumn pos)
+prop_showReadPos :: Pos -> Property
+prop_showReadPos x = read (show x) === x
 
-prop_exception :: String -> Int -> Int -> Property
-prop_exception file l c = ioProperty $ do
-  result <- try . evaluate $ newPos file l c
-  return $ r === result
-  where r | l < 1 || c < 1 = Left  $ InvalidTextualPosition file l c
-          | otherwise      = Right $ newPos file l c
+prop_ordPos :: Pos -> Pos -> Property
+prop_ordPos x y = compare x y === (compare `on` unPos) x y
 
-prop_showFileName :: SourcePos -> Bool
-prop_showFileName pos = sourceName pos `isInfixOf` show pos
+prop_semigroupPos :: Pos -> Pos -> Property
+prop_semigroupPos x y =
+  x <> y === unsafePos (unPos x + unPos y) .&&.
+  unPos (x <> y) === unPos x + unPos y
 
-prop_showLine :: SourcePos -> Bool
-prop_showLine pos = show (sourceLine pos) `isInfixOf` show pos
+prop_initialPos :: String -> Property
+prop_initialPos fp =
+  sourceName   x === fp          .&&.
+  sourceLine   x === unsafePos 1 .&&.
+  sourceColumn x === unsafePos 1
+  where x = initialPos fp
 
-prop_showColumn :: SourcePos -> Bool
-prop_showColumn pos = show (sourceColumn pos) `isInfixOf` show pos
+prop_showReadSourcePos :: SourcePos -> Property
+prop_showReadSourcePos x = read (show x) === x
 
-prop_initialPos :: String -> Bool
-prop_initialPos n =
-  sourceName   ipos == n &&
-  sourceLine   ipos == 1 &&
-  sourceColumn ipos == 1
-  where ipos = initialPos n
+prop_ppFilePath :: SourcePos -> Property
+prop_ppFilePath x = property $
+  sourceName x `isInfixOf` sourcePosPretty x
 
-prop_incSourceLine :: SourcePos -> NonNegative Int -> Bool
-prop_incSourceLine pos l' =
-  d sourceName   id    pos incp &&
-  d sourceLine   (+ l) pos incp &&
-  d sourceColumn id    pos incp
-  where l    = getNonNegative l'
-        incp = incSourceLine l pos
+prop_ppLine :: SourcePos -> Property
+prop_ppLine x = property $
+  (show . unPos . sourceLine) x `isInfixOf` sourcePosPretty x
 
-prop_incSourceColumn :: SourcePos -> NonNegative Int -> Bool
-prop_incSourceColumn pos c' =
-  d sourceName   id    pos incp &&
-  d sourceLine   id    pos incp &&
-  d sourceColumn (+ c) pos incp
-  where c    = getNonNegative c'
-        incp = incSourceColumn c pos
+prop_ppColumn :: SourcePos -> Property
+prop_ppColumn x = property $
+  (show . unPos . sourceColumn) x `isInfixOf` sourcePosPretty x
 
-prop_setSourceName :: SourcePos -> String -> Bool
-prop_setSourceName pos n =
-  d sourceName   (const n) pos setp &&
-  d sourceLine   id        pos setp &&
-  d sourceColumn id        pos setp
-  where setp = setSourceName n pos
-
-prop_setSourceLine :: SourcePos -> Positive Int -> Bool
-prop_setSourceLine pos l' =
-  d sourceName   id        pos setp &&
-  d sourceLine   (const l) pos setp &&
-  d sourceColumn id        pos setp
-  where l    = getPositive l'
-        setp = setSourceLine l pos
-
-prop_setSourceColumn :: SourcePos -> Positive Int -> Bool
-prop_setSourceColumn pos c' =
-  d sourceName   id        pos setp &&
-  d sourceLine   id        pos setp &&
-  d sourceColumn (const c) pos setp
-  where c    = getPositive c'
-        setp = setSourceColumn c pos
-
-prop_updating :: Int -> SourcePos -> String -> Bool
-prop_updating w pos "" = updatePosString w pos "" == pos
-prop_updating w' pos s =
-  d sourceName id           pos updated &&
-  d sourceLine (+ inclines) pos updated &&
-  cols >= mincols && ((last s /= '\t') || ((cols - 1) `rem` w == 0))
-  where w        = if w' < 1 then defaultTabWidth else w'
-        updated  = updatePosString w' pos s
-        cols     = sourceColumn updated
-        newlines = elemIndices '\n' s
-        inclines = length newlines
-        total    = length s
-        mincols  = if null newlines
-                   then total + sourceColumn pos
-                   else total - maximum newlines
-
-d :: Eq b => (a -> b) -> (b -> b) -> a -> a -> Bool
-d f g x y = g (f x) == f y
+prop_defaultUpdatePos :: Pos -> SourcePos -> String -> Property
+prop_defaultUpdatePos w pos "" = updatePosString w pos "" === pos
+prop_defaultUpdatePos w pos s =
+  sourceName updated === sourceName pos .&&.
+  unPos (sourceLine updated) === unPos (sourceLine pos) + inclines .&&.
+  cols >= mincols && ((last s /= '\t') || ((cols - 1) `rem` unPos w == 0))
+  where
+    updated  = updatePosString w pos s
+    cols     = unPos (sourceColumn updated)
+    newlines = elemIndices '\n' s
+    inclines = fromIntegral (length newlines)
+    total    = fromIntegral (length s)
+    mincols  =
+      if null newlines
+        then total + unPos (sourceColumn pos)
+        else total - fromIntegral (maximum newlines)
