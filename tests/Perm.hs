@@ -76,16 +76,16 @@ prop_perm_0 a' c' v = checkParser (makePermParser p) r s
                  <||> char b
                  <|?> (c', char c)
         r | length bis > 1 && (length cis <= 1 || head bis < head cis) =
-              posErr (bis !! 1) s $ [uneCh b, exEof] ++
-              [exCh a | a `notElem` preb] ++
-              [exCh c | c `notElem` preb]
+              posErr (bis !! 1) s $ [utok b, eeof] ++
+              [etok a | a `notElem` preb] ++
+              [etok c | c `notElem` preb]
           | length cis > 1 =
-            posErr (cis !! 1) s $ [uneCh c] ++
-            [exCh a | a `notElem` prec] ++
-            [if b `elem` prec then exEof else exCh b]
-          | b `notElem` s = posErr (length s) s $ [uneEof, exCh b] ++
-                            [exCh a | a `notElem` s || last s == a] ++
-                            [exCh c | c `notElem` s]
+            posErr (cis !! 1) s $ [utok c] ++
+            [etok a | a `notElem` prec] ++
+            [if b `elem` prec then eeof else etok b]
+          | b `notElem` s = posErr (length s) s $ [ueof, etok b] ++
+                            [etok a | a `notElem` s || last s == a] ++
+                            [etok c | c `notElem` s]
           | otherwise = Right ( if a `elem` s then filter (== a) s else a'
                               , b
                               , if c `elem` s then c else c' )
