@@ -28,6 +28,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies     #-}
 
 module Expr (tests) where
 
@@ -130,16 +131,16 @@ arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
 -- Some helpers are put here since we don't want to depend on
 -- "Text.Megaparsec.Lexer".
 
-lexeme :: MonadParsec s m Char => m a -> m a
+lexeme :: (MonadParsec e s m, Token s ~ Char) => m a -> m a
 lexeme p = p <* hidden space
 
-symbol :: MonadParsec s m Char => String -> m String
+symbol :: (MonadParsec e s m, Token s ~ Char) => String -> m String
 symbol = lexeme . string
 
-parens :: MonadParsec s m Char => m a -> m a
+parens :: (MonadParsec e s m, Token s ~ Char) => m a -> m a
 parens = between (symbol "(") (symbol ")")
 
-integer :: MonadParsec s m Char => m Integer
+integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
 integer = lexeme (read <$> some digitChar <?> "integer")
 
 -- Here we use table of operators that makes use of all features of
@@ -147,13 +148,13 @@ integer = lexeme (read <$> some digitChar <?> "integer")
 -- but valid expressions and render them to get their textual
 -- representation.
 
-expr :: MonadParsec s m Char => m Node
+expr :: (MonadParsec e s m, Token s ~ Char) => m Node
 expr = makeExprParser term table
 
-term :: MonadParsec s m Char => m Node
+term :: (MonadParsec e s m, Token s ~ Char) => m Node
 term = parens expr <|> (Val <$> integer) <?> "term"
 
-table :: MonadParsec s m Char => [[Operator m Node]]
+table :: (MonadParsec e s m, Token s ~ Char) => [[Operator m Node]]
 table = [ [ Prefix  (symbol "-" *> pure Neg)
           , Postfix (symbol "!" *> pure Fac)
           , InfixN  (symbol "%" *> pure Mod) ]
@@ -168,14 +169,14 @@ prop_correctness node = checkParser expr (Right node) (showNode node)
 
 prop_empty_error :: Property
 prop_empty_error = checkParser expr r s
-  where r = posErr 0 s [uneEof, exSpec "term"]
+  where r = posErr 0 s [ueof, elabel "term"]
         s = ""
 
 prop_missing_term :: Char -> Property
 prop_missing_term c = checkParser expr r s
-  where r | c `elem` "-(" = posErr 1 s [uneEof, exSpec "term"]
+  where r | c `elem` "-(" = posErr 1 s [ueof, elabel "term"]
           | isDigit c     = Right . Val . fromIntegral . digitToInt $ c
-          | otherwise     = posErr 0 s [uneCh c, exSpec "term"]
+          | otherwise     = posErr 0 s [utok c, elabel "term"]
         s = pure c
 
 prop_missing_op :: Node -> Node -> Property
@@ -184,5 +185,5 @@ prop_missing_op a b = checkParser expr r s
         c = s !! n
         n = succ $ length a'
         r | c == '-'  = Right $ Sub a b
-          | otherwise = posErr n s [uneCh c, exEof, exSpec "operator"]
+          | otherwise = posErr n s [utok c, eeof, elabel "operator"]
         s = a' ++ " " ++ inParens b
