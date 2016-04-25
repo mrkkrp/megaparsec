@@ -18,7 +18,7 @@
 {-# LANGUAGE FlexibleInstances  #-}
 
 module Text.Megaparsec.Error
-  ( MessageItem (..)
+  ( ErrorItem (..)
   , ErrorComponent (..)
   , Dec (..)
   , ParseError (..)
@@ -46,18 +46,13 @@ import Text.Megaparsec.Pos
 import Control.Applicative ((<$>))
 #endif
 
--- | Data type that represents default components of parse error message.
--- The data type is parametrized over token type @t@.
+-- | Data type that is used to represent “unexpected\/expected” items in
+-- parse error. The data type is parametrized over token type @t@.
 --
--- Although 'TokenStream' allows to store streams consisting of single
--- token, the convention is to use 'Token' constructor in these cases, so
--- the system could eliminate duplicated message items properly.
-
 -- @since 5.0.0
 
-data MessageItem t
-  = Token t                  -- ^ Single token
-  | TokenStream (NonEmpty t) -- ^ Non-empty stream of tokens
+data ErrorItem t
+  = Tokens (NonEmpty t)      -- ^ Non-empty stream of tokens
   | Label (NonEmpty Char)    -- ^ Label (cannot be empty)
   | EndOfInput               -- ^ End of input
   deriving (Show, Read, Eq, Ord, Data, Typeable)
@@ -71,10 +66,14 @@ data MessageItem t
 class Ord e => ErrorComponent e where
 
   -- | Represent message passed to 'fail' in parser monad.
+  --
+  -- @since 5.0.0
 
   representFail :: String -> e
 
   -- | Represent information about incorrect indentation.
+  --
+  -- @since 5.0.0
 
   representIndentation
     :: Ordering -- ^ Desired ordering between reference level and actual level
@@ -111,10 +110,10 @@ instance ErrorComponent Dec where
 -- custom data sets and collections of message items are combined.
 
 data ParseError t e = ParseError
-  { errorPos        :: NonEmpty SourcePos  -- ^ Stack of source positions
-  , errorUnexpected :: Set (MessageItem t) -- ^ Unexpected items
-  , errorExpected   :: Set (MessageItem t) -- ^ Expected items
-  , errorData       :: Set e               -- ^ Associated data, if any
+  { errorPos        :: NonEmpty SourcePos -- ^ Stack of source positions
+  , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
+  , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
+  , errorCustom     :: Set e              -- ^ Associated data, if any
   } deriving (Show, Read, Eq, Typeable)
 
 instance (Ord t, Ord e) => Semigroup (ParseError t e) where
@@ -151,18 +150,23 @@ mergeError e1@(ParseError pos1 u1 p1 x1) e2@(ParseError pos2 u2 p2 x2) =
 
 class ShowToken a where
 
-  -- | Pretty-print given token. This is used to get token representation
-  -- to use in error messages.
+  -- | Pretty-print non-empty stream of tokens. This function is also used
+  -- to print single tokens (represented as list with length 1).
+  --
+  -- @since 5.0.0
 
-  showToken :: a -> String
-
-  -- | Pretty-print non-empty stream of tokens.
-
-  showTokenStream :: NonEmpty a -> String
+  showTokens :: NonEmpty a -> String
 
 instance ShowToken Char where
-  showToken       = charPretty
-  showTokenStream = stringPretty
+  showTokens = stringPretty
+
+-- | @stringPretty s@ returns pretty representation of string @s@. This is
+-- used when printing string tokens in error messages.
+
+stringPretty :: NonEmpty Char -> String
+stringPretty (x:|[])      = charPretty x
+stringPretty ('\r':|"\n") = "crlf newline"
+stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
 
 -- | @charPretty ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages.
@@ -179,14 +183,6 @@ charPretty '\r' = "carriage return"
 charPretty ' '  = "space"
 charPretty x    = "'" ++ [x] ++ "'"
 
--- | @stringPretty s@ returns pretty representation of string @s@. This is
--- used when printing string tokens in error messages.
-
-stringPretty :: NonEmpty Char -> String
-stringPretty (x:|[])      = charPretty x
-stringPretty ('\r':|"\n") = "crlf newline"
-stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
-
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
 --
@@ -198,11 +194,10 @@ class Ord a => ShowErrorComponent a where
 
   showErrorComponent :: a -> String
 
-instance (Ord t, ShowToken t) => ShowErrorComponent (MessageItem t) where
-  showErrorComponent (Token        t) = showToken t
-  showErrorComponent (TokenStream ts) = showTokenStream ts
-  showErrorComponent (Label    label) = NE.toList label
-  showErrorComponent EndOfInput       = "end of input"
+instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
+  showErrorComponent (Tokens   ts) = showTokens ts
+  showErrorComponent (Label label) = NE.toList label
+  showErrorComponent EndOfInput    = "end of input"
 
 instance ShowErrorComponent Dec where
   showErrorComponent (DecFail msg) = msg
@@ -241,10 +236,9 @@ sourcePosStackPretty :: NonEmpty SourcePos -> String
 sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
   where (pos :| rest') = ms
         rest           = reverse rest'
-        f p = "in file included from " ++ sourcePosPretty p ++ "\n"
+        f p = "in file included from " ++ sourcePosPretty p ++ ",\n"
 
--- | @messagesPretty ms@ transforms list of error messages @ms@ into
--- their textual representation.
+-- | Transforms list of error messages into their textual representation.
 
 messageItemsPretty :: ShowErrorComponent a
   => String            -- ^ Prefix to prepend

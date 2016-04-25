@@ -146,9 +146,9 @@ simpleParse p = parse (p <* eof) ""
 checkChar
   :: Parser Char       -- ^ Parser to run
   -> (Char -> Bool)    -- ^ Predicate to test parsed char
-  -> Maybe (MessageItem Char) -- ^ Representation to use in error messages
+  -> Maybe (ErrorItem Char) -- ^ Representation to use in error messages
   -> String            -- ^ Input stream
-  -> Property
+  -> Property          -- ^ Resulting property
 checkChar p f rep' s = checkParser p r s
   where h = head s
         rep = Expected <$> maybeToList rep'
@@ -218,18 +218,17 @@ abcRow a b c = f a 'a' ++ f b 'b' ++ f c 'c'
 -- parse errors with 'posErr' and other helpers.
 
 data EC
-  = Unexpected (MessageItem Char)
-  | Expected   (MessageItem Char)
+  = Unexpected (ErrorItem Char)
+  | Expected   (ErrorItem Char)
   | Custom     Dec
 
 instance Arbitrary a => Arbitrary (NonEmpty a) where
   arbitrary = NE.fromList . getNonEmpty <$> arbitrary
 
-instance Arbitrary t => Arbitrary (MessageItem t) where
+instance Arbitrary t => Arbitrary (ErrorItem t) where
   arbitrary = oneof
-    [ Token       <$> arbitrary
-    , TokenStream <$> arbitrary
-    , Label       <$> arbitrary
+    [ Tokens <$> arbitrary
+    , Label  <$> arbitrary
     , return EndOfInput ]
 
 instance Arbitrary Pos where
@@ -259,11 +258,11 @@ shortString = sized $ \n -> do
   k <- choose (0, n `div` 2)
   vectorOf k arbitrary
 
--- | @posErr pos s ms@ is an easy way to model result of parser that
--- fails. @pos@ is how many tokens (characters) has been consumed before
--- failure. @s@ is input of the parser. @ms@ is a list, collection of
--- 'Message's. See 'uneStr', 'uneCh', 'uneSpec', 'exStr', 'exCh', and
--- 'exSpec' for easy ways to create error messages.
+-- | @posErr pos s ms@ is an easy way to model result of parser that fails.
+-- @pos@ is how many tokens (characters) has been consumed before failure.
+-- @s@ is input of the parser. @ms@ is a list, collection of 'Message's. See
+-- 'utok', 'utoks', 'ulabel', 'ueof', 'etok', 'etoks', 'elabel', and 'eeof'
+-- for easy ways to create error messages.
 
 posErr
   :: Int               -- ^ How many tokens to drop from beginning of steam
@@ -283,7 +282,7 @@ posErr' pos ecs = Left ParseError
   { errorPos        = pos
   , errorUnexpected = E.fromList (mapMaybe getUnexpected ecs)
   , errorExpected   = E.fromList (mapMaybe getExpected   ecs)
-  , errorData       = E.fromList (mapMaybe getCustom     ecs) }
+  , errorCustom     = E.fromList (mapMaybe getCustom     ecs) }
   where
     getUnexpected (Unexpected x) = Just x
     getUnexpected _              = Nothing
@@ -295,7 +294,7 @@ posErr' pos ecs = Left ParseError
 -- | Construct “unexpected token” error component.
 
 utok :: Char -> EC
-utok = Unexpected . Token
+utok = Unexpected . Tokens . nes
 
 -- | Construct “unexpected steam” error component. This function respects
 -- some conventions described in 'canonicalizeStream'.
@@ -317,7 +316,7 @@ ueof = Unexpected EndOfInput
 -- | Construct “expecting token” error component.
 
 etok :: Char -> EC
-etok = Expected . Token
+etok = Expected . Tokens . nes
 
 -- | Construct “expecting stream” error component. This function respects
 -- some conventions described in 'canonicalizeStream'.
@@ -345,9 +344,14 @@ cstm = Custom
 -- stream. Empty string produces 'EndOfInput', single token — a 'Token', and
 -- in other cases the 'TokenStream' constructor is used.
 
-canonicalizeStream :: String -> MessageItem Char
+canonicalizeStream :: String -> ErrorItem Char
 canonicalizeStream stream =
   case NE.nonEmpty stream of
     Nothing      -> EndOfInput
-    Just (x:|[]) -> Token x
-    Just xs      -> TokenStream xs
+    Just xs      -> Tokens xs
+
+-- | Make a singleton non-empty list from a value.
+
+nes :: a -> NonEmpty a
+nes x = x :| []
+{-# INLINE nes #-}

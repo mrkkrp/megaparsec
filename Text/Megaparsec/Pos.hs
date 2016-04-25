@@ -8,8 +8,8 @@
 -- Portability :  portable
 --
 -- Textual source position. The position includes name of file, line number,
--- and column number. Stack of such positions can be used to support include
--- files.
+-- and column number. List of such positions can be used to model stack of
+-- include files.
 
 {-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -43,7 +43,7 @@ import Data.Word (Word)
 #endif
 
 ----------------------------------------------------------------------------
--- Pos
+-- Abstract position
 
 -- | Positive integer that is used to represent line number, column number,
 -- and similar things like indentation level. 'Semigroup' instance can be
@@ -57,8 +57,7 @@ newtype Pos = Pos Word
 -- | Construction of 'Pos' from an instance of 'Integral'. The function
 -- throws 'InvalidPosException' when given non-positive argument. Note that
 -- the function is polymorphic with respect to 'MonadThrow' @m@, so you can
--- get result inside of 'Maybe' or use the function in the context of parser
--- monad.
+-- get result inside of 'Maybe', for example.
 --
 -- @since 5.0.0
 
@@ -142,7 +141,7 @@ sourcePosPretty (SourcePos n l c)
   where showLC = show (unPos l) ++ ":" ++ show (unPos c)
 
 ----------------------------------------------------------------------------
--- Helpers implementing default behavior
+-- Helpers implementing default behaviors
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line

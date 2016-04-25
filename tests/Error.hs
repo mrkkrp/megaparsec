@@ -94,7 +94,7 @@ prop_mergeErrorExpected :: PE -> PE -> Property
 prop_mergeErrorExpected = checkMergedItems errorExpected
 
 prop_mergeErrorCustom :: PE -> PE -> Property
-prop_mergeErrorCustom = checkMergedItems errorData
+prop_mergeErrorCustom = checkMergedItems errorCustom
 
 checkMergedItems :: (Ord a, Show a) => (PE -> Set a) -> PE -> PE -> Property
 checkMergedItems f e1 e2 = f (e1 <> e2) === r
@@ -113,7 +113,7 @@ prop_ppExpected :: PE -> Property
 prop_ppExpected = checkPresence errorExpected showErrorComponent
 
 prop_ppCustom :: PE -> Property
-prop_ppCustom = checkPresence errorData showErrorComponent
+prop_ppCustom = checkPresence errorCustom showErrorComponent
 
 checkPresence :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
 checkPresence g r e = property (all f (g e))

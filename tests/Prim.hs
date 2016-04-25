@@ -352,7 +352,7 @@ prop_monad_error_catch a b =
 
 -- Primitive combinators
 
-prop_unexpected :: MessageItem Char -> Property
+prop_unexpected :: ErrorItem Char -> Property
 prop_unexpected item = checkParser' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = unexpected item
@@ -360,8 +360,8 @@ prop_unexpected item = checkParser' p r s
         s = ""
 
 prop_failure
-  :: Set (MessageItem Char)
-  -> Set (MessageItem Char)
+  :: Set (ErrorItem Char)
+  -> Set (ErrorItem Char)
   -> Set Dec
   -> Property
 prop_failure us ps xs = checkParser' p r s
@@ -371,7 +371,7 @@ prop_failure us ps xs = checkParser' p r s
           { errorPos        = initialPos "" :| []
           , errorUnexpected = us
           , errorExpected   = ps
-          , errorData       = xs }
+          , errorCustom     = xs }
         s = ""
 
 prop_label :: NonNegative Int -> NonNegative Int
@@ -635,7 +635,7 @@ prop_token mtok s = checkParser' p r s
         p = token testChar mtok
         testChar x = if isLetter x
           then Right x
-          else Left (E.singleton (Token x), E.empty, E.empty)
+          else Left (E.singleton (Tokens (x:|[])), E.empty, E.empty)
         h = head s
         r | null s = posErr 0 s $ ueof : maybeToList (etok <$> mtok)
           | isLetter h && length s == 1 = Right (head s)

@@ -33,6 +33,7 @@ module Char (tests) where
 
 import Data.Char
 import Data.List (findIndex, isPrefixOf)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 
 import Test.Framework
@@ -238,8 +239,8 @@ elemi c = any (casei c)
 notElemi :: Char -> String -> Bool
 notElemi c = not . elemi c
 
-tkn :: Char -> Maybe (MessageItem Char)
-tkn = Just . Token
+tkn :: Char -> Maybe (ErrorItem Char)
+tkn = Just . Tokens . (:|[])
 
-lbl :: String -> Maybe (MessageItem Char)
+lbl :: String -> Maybe (ErrorItem Char)
 lbl = Just . Label . NE.fromList

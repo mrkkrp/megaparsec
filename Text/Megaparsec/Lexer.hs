@@ -54,6 +54,7 @@ where
 import Control.Applicative ((<|>), some, optional)
 import Control.Monad (void)
 import Data.Char (readLitChar)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
 import qualified Data.List.NonEmpty as NE
@@ -343,7 +344,7 @@ charLiteral = label "literal character" $ do
   ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
   case listToMaybe (readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
-    Nothing      -> unexpected (Token x)
+    Nothing      -> unexpected (Tokens (x:|[]))
 
 ----------------------------------------------------------------------------
 -- Numbers

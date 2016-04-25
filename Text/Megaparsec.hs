@@ -130,7 +130,7 @@ module Text.Megaparsec
   , initialPos
   , sourcePosPretty
     -- * Error messages
-  , MessageItem (..)
+  , ErrorItem (..)
   , ErrorComponent (..)
   , Dec (..)
   , ParseError (..)

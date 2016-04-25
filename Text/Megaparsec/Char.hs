@@ -58,6 +58,7 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Char
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
 import qualified Data.Set as E
 
@@ -79,14 +80,14 @@ import Prelude hiding (any, elem, notElem)
 newline :: (MonadParsec e s m, Token s ~ Char) => m Char
 newline = char '\n'
 
--- | Parses a carriage return character followed by a newline
--- character. Returns sequence of characters parsed.
+-- | Parses a carriage return character followed by a newline character.
+-- Returns sequence of characters parsed.
 
 crlf :: (MonadParsec e s m, Token s ~ Char) => m String
 crlf = string "\r\n"
 
--- | Parses a CRLF (see 'crlf') or LF (see 'newline') end of line.
--- Returns the sequence of characters parsed.
+-- | Parses a CRLF (see 'crlf') or LF (see 'newline') end of line. Returns
+-- the sequence of characters parsed.
 --
 -- > eol = (pure <$> newline) <|> crlf
 
@@ -263,10 +264,11 @@ categoryName cat =
 char :: (MonadParsec e s m, Token s ~ Char) => Char -> m Char
 char c = token testChar (Just c)
   where
+    f x = E.singleton (Tokens (x:|[]))
     testChar x =
       if x == c
         then Right x
-        else Left (E.singleton (Token x), E.singleton (Token c), E.empty)
+        else Left (f x, f c, E.empty)
 
 -- | The same as 'char' but case-insensitive. This parser returns actually
 -- parsed character preserving its case.
@@ -339,7 +341,7 @@ satisfy f = token testChar Nothing
     testChar x =
       if f x
         then Right x
-        else Left (E.singleton (Token x), E.empty, E.empty)
+        else Left (E.singleton (Tokens (x:|[])), E.empty, E.empty)
 
 ----------------------------------------------------------------------------
 -- Sequence of characters

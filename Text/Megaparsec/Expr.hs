@@ -9,8 +9,8 @@
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
--- A helper module to parse expressions. Builds a parser given a table of
--- operators.
+-- A helper module to parse expressions. It can build a parser given a table
+-- of operators.
 
 module Text.Megaparsec.Expr
   ( Operator (..)
