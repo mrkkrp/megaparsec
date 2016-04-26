@@ -40,6 +40,8 @@ module Text.Megaparsec.Prim
   , setInput
   , getPosition
   , setPosition
+  , pushPosition
+  , popPosition
   , getTabWidth
   , setTabWidth
   , setParserState
@@ -823,18 +825,44 @@ setInput s = updateParserState (\(State _ pos w) -> State s pos w)
 
 -- | Return the current source position.
 --
--- See also: 'SourcePos'.
+-- See also: 'setPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
 
 getPosition :: MonadParsec e s m => m SourcePos
 getPosition = NE.head . statePos <$> getParserState
 
 -- | @setPosition pos@ sets the current source position to @pos@.
 --
--- See also: 'SourcePos'.
+-- See also: 'getPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
 
 setPosition :: MonadParsec e s m => SourcePos -> m ()
 setPosition pos = updateParserState $ \(State s (_:|z) w) ->
   State s (pos:|z) w
+
+-- | Push given position into stack of positions and continue parsing
+-- working with this position. Useful for working with include files and the
+-- like.
+--
+-- See also: 'getPosition', 'setPosition', 'popPosition', and 'SourcePos'.
+--
+-- @since 5.0.0
+
+pushPosition :: MonadParsec e s m => SourcePos -> m ()
+pushPosition pos = updateParserState $ \(State s z w) ->
+  State s (NE.cons pos z) w
+
+-- | Pop a position from stack of positions unless it only contains one
+-- element (in that case stack of positions remains the same). This is how
+-- to return to previous source file after using of 'pushPosition'.
+--
+-- See also: 'getPosition', 'setPosition', 'pushPosition', and 'SourcePos'.
+--
+-- @since 5.0.0
+
+popPosition :: MonadParsec e s m => m ()
+popPosition = updateParserState $ \(State s z w) ->
+  case snd (NE.uncons z) of
+    Nothing -> State s z w
+    Just z' -> State s z' w
 
 -- | Return tab width. Default tab width is equal to 'defaultTabWidth'. You
 -- can set different tab width with help of 'setTabWidth'.

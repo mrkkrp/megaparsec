@@ -144,6 +144,8 @@ module Text.Megaparsec
   , setInput
   , getPosition
   , setPosition
+  , pushPosition
+  , popPosition
   , getTabWidth
   , setTabWidth
   , getParserState

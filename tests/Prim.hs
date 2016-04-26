@@ -43,7 +43,7 @@ import Data.Char (isLetter, toUpper, chr)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromMaybe)
 import Data.Set (Set)
 import Data.Word (Word8)
 import qualified Control.Monad.State.Lazy    as L
@@ -52,6 +52,7 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 import qualified Data.ByteString.Char8       as B
 import qualified Data.ByteString.Lazy.Char8  as BL
+import qualified Data.List.NonEmpty          as NE
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
@@ -137,6 +138,8 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "combinator tokens"                   prop_tokens_0
   , testProperty "combinator tokens (consumption)"     prop_tokens_1
   , testProperty "parser state position"               prop_state_pos
+  , testProperty "parser state position (push)"        prop_state_pushPosition
+  , testProperty "parser state position (pop)"         prop_state_popPosition
   , testProperty "parser state input"                  prop_state_input
   , testProperty "parser state tab width"              prop_state_tab
   , testProperty "parser state general"                prop_state
@@ -660,6 +663,23 @@ prop_tokens_1 pre post post' =
 prop_state_pos :: SourcePos -> Property
 prop_state_pos pos = p /=\ pos
   where p = setPosition pos >> getPosition
+
+prop_state_pushPosition :: NonEmpty SourcePos -> SourcePos -> Property
+prop_state_pushPosition z pos = p /=\ NE.cons pos z
+  where p = withPositionStack z (pushPosition pos)
+
+prop_state_popPosition :: NonEmpty SourcePos -> Property
+prop_state_popPosition z = p /=\ fromMaybe z (snd (NE.uncons z))
+  where p = withPositionStack z popPosition
+
+withPositionStack :: MonadParsec e s m
+  => NonEmpty SourcePos -- ^ Position stack to use
+  -> m ()               -- ^ An action to execute
+  -> m (NonEmpty SourcePos) -- ^ Position stack after execution
+withPositionStack z action = do
+  updateParserState $ \(State s _ w) -> State s z w
+  action
+  statePos <$> getParserState
 
 prop_state_input :: String -> Property
 prop_state_input s = p /=\ s
