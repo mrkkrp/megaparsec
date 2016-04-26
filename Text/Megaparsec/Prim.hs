@@ -825,13 +825,16 @@ setInput s = updateParserState (\(State _ pos w) -> State s pos w)
 --
 -- See also: 'SourcePos'.
 
-getPosition :: MonadParsec e s m => m (NonEmpty SourcePos)
-getPosition = statePos <$> getParserState
+getPosition :: MonadParsec e s m => m SourcePos
+getPosition = NE.head . statePos <$> getParserState
 
 -- | @setPosition pos@ sets the current source position to @pos@.
+--
+-- See also: 'SourcePos'.
 
-setPosition :: MonadParsec e s m => NonEmpty SourcePos -> m ()
-setPosition pos = updateParserState (\(State s _ w) -> State s pos w)
+setPosition :: MonadParsec e s m => SourcePos -> m ()
+setPosition pos = updateParserState $ \(State s (_:|z) w) ->
+  State s (pos:|z) w
 
 -- | Return tab width. Default tab width is equal to 'defaultTabWidth'. You
 -- can set different tab width with help of 'setTabWidth'.

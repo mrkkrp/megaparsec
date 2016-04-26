@@ -43,7 +43,6 @@ import Data.Char
   , isSpace
   , toLower )
 import Data.List (findIndices, isInfixOf, find)
-import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe
 import Data.Scientific (fromFloatDigits)
 import Numeric (showInt, showHex, showOct, showSigned)
@@ -173,7 +172,7 @@ prop_skipBlockCommentNested = checkCase p r s
 
 prop_indentLevel :: SourcePos -> Property
 prop_indentLevel pos = p /=\ sourceColumn pos
-  where p = setPosition (pos :| []) >> indentLevel
+  where p = setPosition pos >> indentLevel
 
 prop_incorrectIndent :: Ordering -> Pos -> Pos -> Property
 prop_incorrectIndent ord ref actual = checkParser p r s

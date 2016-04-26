@@ -57,8 +57,7 @@ import Data.Char (readLitChar)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set           as E
+import qualified Data.Set as E
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
@@ -197,7 +196,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- @since 4.3.0
 
 indentLevel :: MonadParsec e s m => m Pos
-indentLevel = sourceColumn . NE.head <$> getPosition
+indentLevel = sourceColumn <$> getPosition
 
 -- | Fail reporting incorrect indentation error. The error has attached
 -- information:

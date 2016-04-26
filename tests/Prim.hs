@@ -657,7 +657,7 @@ prop_tokens_1 pre post post' =
 
 -- Parser state combinators
 
-prop_state_pos :: NonEmpty SourcePos -> Property
+prop_state_pos :: SourcePos -> Property
 prop_state_pos pos = p /=\ pos
   where p = setPosition pos >> getPosition
 
