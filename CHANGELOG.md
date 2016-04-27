@@ -1,14 +1,13 @@
 ## Megaparsec 5.0.0
 
+### General changes
+
 * Removed `parseFromFile` and `StorableStream` type-class that was necessary
   for it. The reason for removal is that reading from file and then parsing
   its contents is trivial for every instance of `Stream` and this function
   provides no way to use newer methods for running a parser, such as
   `runParser'`. So, simply put, it adds little value and was included in 4.x
-  versions for compatibility purposes.
-
-* Combinators `oneOf`, `oneOf'`, `noneOf`, and `noneOf'` now accept any
-  instance of `Foldable`, not only `String`.
+  versions for compatibility reasons.
 
 * Moved position-advancing function from arguments of `token` and `tokens`
   functions to `Stream` type class (named `updatePos`). The new function
@@ -16,8 +15,79 @@
   information about its position in stream better (for example when stream
   of tokens is produced with happy/alex).
 
-* Changed order of arguments for a number of functions in
-  `Text.Megaparsec.Pos`, allowing for easier point-free composition.
+* Support for include files (stack of positions instead of flat position)
+  added. The new functions `pushPosition` and `popPosition` can be used to
+  move “vertically” in the stack of positions. `getPosition` and
+  `setPosition` still work on top (“current file”) level, but user can get
+  full stack via `getParserState` if necessary. Note that `ParseError` and
+  pretty-printing for it also support the new feature.
+
+* Added type function `Token` associated with `Stream` type class. The
+  function returns type of token corresponding to specific token stream.
+
+* Type `ParsecT` (and also type synonym `Parsec`) are now parametrized over
+  type of custom component in parse errors.
+
+* Parameters of `MonadParsec` type class are: `e` — type of custom component
+  in parse errors, `s` — type of input stream, and `m` — type of underlying
+  monad.
+
+* Type of `failure` primitive combinator was changed, now it accepts three
+  arguments: set of unexpected items, set of expected items, and set of
+  custom data.
+
+* Type of `token` primitive combinator was changed, now in case of failure a
+  triple-tuple is returned with elements corresponding to arguments of
+  `failure` primitive. The `token` primitive can also be optionally given an
+  argument of token type to use in error messages (as expected item) in case
+  of end of input.
+
+* `unexpected` combinator now accepts argument of type `ErrorItem` instead
+  of plain `String`.
+
+### Error messages
+
+* The module `Text.Megaparsec.Pos` was completely rewritten. The new module
+  uses `Pos` data type with smart constructors to ensure that things like
+  line and column number can be only positive. `SourcePos` on the other hand
+  does not require smart constructors anymore and its constructors are
+  exported. `Show` and `Read` instances of `SourcePos` are derived and
+  pretty-printing is done with help of `sourcePosPretty` function.
+
+* The module `Text.Megaparsec.Error` was completely rewritten. A number of
+  new types and type-classes are introduced: `ErrorItem`, `Dec`,
+  `ErrorComponent`, and `ShowErrorComponent`. `ParseError` does not need
+  smart constructors anymore and its constructor and field selectors are
+  exported. It uses sets (from the `containers` package) instead of sorted
+  lists to enumerate unexpected and expected items. The new definition is
+  also parametrized over token type and custom data type which can be passed
+  around as part of parse error. Default “custom data” component is `Dec`,
+  which see. All in all, we have completely well-typed and extensible error
+  messages now. `Show` and `Read` instances of `ParseError` are derived and
+  pretty-printing is done with help of `parseErrorPretty`.
+
+* The module `Text.Megaparsec.ShowToken` was eliminated and type class
+  `ShowToken` was moved to `Text.Megaparsec.Error`. The only method of that
+  class in now named `showTokens` and it works on streams of tokens, where
+  single tokes are represented by `NonEmpty` list with single element.
+
+### Built-in combinators
+
+* Combinators `oneOf`, `oneOf'`, `noneOf`, and `noneOf'` now accept any
+  instance of `Foldable`, not only `String`.
+
+### Lexer
+
+* Error messages about incorrect indentation levels were greatly improved.
+  Now every such message contains information about desired ordering between
+  “reference” indentation level and actual indentation level as well as
+  values of these levels. The information is stored in `ParseError` in
+  well-typed form and can be pretty-printed when necessary. As part of this
+  improvement, type of `indentGuard` was changed.
+
+* `incorrectIndent` combinator is introduced in `Text.Megaparsec.Lexer`
+  module. It allows to fail with detailed information regarding incorrect
+  indentation.
 
 * Introduced `scientific` parser that can parse arbitrary big numbers
   without error or memory overflow. `float` still returns `Double`, but it's
