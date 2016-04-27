@@ -9,8 +9,8 @@
 -- Stability   :  experimental
 -- Portability :  non-portable
 --
--- A helper module to parse expressions. Builds a parser given a table of
--- operators.
+-- A helper module to parse expressions. It can build a parser given a table
+-- of operators.
 
 module Text.Megaparsec.Expr
   ( Operator (..)
@@ -74,7 +74,7 @@ data Operator m a
 -- > prefix  name f = Prefix  (f <$ symbol name)
 -- > postfix name f = Postfix (f <$ symbol name)
 
-makeExprParser :: MonadParsec s m t
+makeExprParser :: MonadParsec e s m
   => m a               -- ^ Term parser
   -> [[Operator m a]]  -- ^ Operator table, see 'Operator'
   -> m a               -- ^ Resulting expression parser
@@ -83,7 +83,7 @@ makeExprParser = foldl addPrecLevel
 -- | @addPrecLevel p ops@ adds ability to parse operators in table @ops@ to
 -- parser @p@.
 
-addPrecLevel :: MonadParsec s m t => m a -> [Operator m a] -> m a
+addPrecLevel :: MonadParsec e s m => m a -> [Operator m a] -> m a
 addPrecLevel term ops =
   term' >>= \x -> choice [ras' x, las' x, nas' x, return x] <?> "operator"
   where (ras, las, nas, prefix, postfix) = foldr splitOp ([],[],[],[],[]) ops
@@ -96,7 +96,7 @@ addPrecLevel term ops =
 -- optional prefix and postfix unary operators. Parsers @prefix@ and
 -- @postfix@ are allowed to fail, in this case 'id' is used.
 
-pTerm :: MonadParsec s m t => m (a -> a) -> m a -> m (a -> a) -> m a
+pTerm :: MonadParsec e s m => m (a -> a) -> m a -> m (a -> a) -> m a
 pTerm prefix term postfix = do
   pre  <- option id (hidden prefix)
   x    <- term
@@ -107,7 +107,7 @@ pTerm prefix term postfix = do
 -- with parser @p@, then returns result of the operator application on @x@
 -- and the term.
 
-pInfixN :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
+pInfixN :: MonadParsec e s m => m (a -> a -> a) -> m a -> a -> m a
 pInfixN op p x = do
   f <- op
   y <- p
@@ -117,7 +117,7 @@ pInfixN op p x = do
 -- with parser @p@, then returns result of the operator application on @x@
 -- and the term.
 
-pInfixL :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
+pInfixL :: MonadParsec e s m => m (a -> a -> a) -> m a -> a -> m a
 pInfixL op p x = do
   f <- op
   y <- p
@@ -128,7 +128,7 @@ pInfixL op p x = do
 -- term with parser @p@, then returns result of the operator application on
 -- @x@ and the term.
 
-pInfixR :: MonadParsec s m t => m (a -> a -> a) -> m a -> a -> m a
+pInfixR :: MonadParsec e s m => m (a -> a -> a) -> m a -> a -> m a
 pInfixR op p x = do
   f <- op
   y <- p >>= \r -> pInfixR op p r <|> return r

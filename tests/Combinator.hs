@@ -66,10 +66,10 @@ prop_between pre c n' post = checkParser p r s
   where p = between (string pre) (string post) (many (char c))
         n = getNonNegative n'
         b = length $ takeWhile (== c) post
-        r | b > 0 = posErr (length pre + n + b) s $ exStr post :
-                    if length post == b
-                    then [uneEof, exCh c]
-                    else [uneCh (post !! b), exCh c]
+        r | b > 0 = posErr (length pre + n + b) s $ etoks post : etok c :
+            [if length post == b
+              then ueof
+              else utoks [post !! b]]
           | otherwise = Right z
         z = replicate n c
         s = pre ++ z ++ post
@@ -79,7 +79,7 @@ prop_choice cs' s' = checkParser p r s
   where cs = getNonEmpty cs'
         p = choice $ char <$> cs
         r | s' `elem` cs = Right s'
-          | otherwise    = posErr 0 s $ uneCh s' : (exCh <$> cs)
+          | otherwise    = posErr 0 s $ utok s' : (etok <$> cs)
         s = [s']
 
 prop_count :: Int -> NonNegative Int -> Property
@@ -95,11 +95,11 @@ prop_count' m n x' = checkParser p r s
         p = count' m n (char 'x')
         r | n <= 0 || m > n  =
               if x == 0
-              then Right ""
-              else posErr 0 s [uneCh 'x', exEof]
+                then Right ""
+                else posErr 0 s [utok 'x', eeof]
           | m <= x && x <= n = Right s
-          | x < m            = posErr x s [uneEof, exCh 'x']
-          | otherwise        = posErr n s [uneCh 'x', exEof]
+          | x < m            = posErr x s [ueof, etok 'x']
+          | otherwise        = posErr n s [utok 'x', eeof]
         s = replicate x 'x'
 
 prop_eitherP :: Char -> Property
@@ -107,19 +107,19 @@ prop_eitherP ch = checkParser p r s
   where p = eitherP letterChar digitChar
         r | isLetter ch = Right (Left  ch)
           | isDigit  ch = Right (Right ch)
-          | otherwise   = posErr 0 s [uneCh ch, exSpec "letter", exSpec "digit"]
+          | otherwise   = posErr 0 s [utok ch, elabel "letter", elabel "digit"]
         s = pure ch
 
 prop_endBy :: NonNegative Int -> Char -> Property
 prop_endBy n' c = checkParser p r s
   where n = getNonNegative n'
         p = endBy (char 'a') (char '-')
-        r | c == 'a' && n == 0 = posErr 1 s [uneEof, exCh '-']
-          | c == 'a'           = posErr (g n) s [uneCh 'a', exCh '-']
-          | c == '-' && n == 0 = posErr 0 s [uneCh '-', exCh 'a', exEof]
-          | c /= '-'           = posErr (g n) s $ uneCh c :
-                                 (if n > 0 then exCh '-' else exEof) :
-                                 [exCh 'a' | n == 0]
+        r | c == 'a' && n == 0 = posErr 1 s [ueof, etok '-']
+          | c == 'a'           = posErr (g n) s [utok 'a', etok '-']
+          | c == '-' && n == 0 = posErr 0 s [utok '-', etok 'a', eeof]
+          | c /= '-'           = posErr (g n) s $ utok c :
+            (if n > 0 then etok '-' else eeof) :
+            [etok 'a' | n == 0]
           | otherwise = Right (replicate n 'a')
         s = intersperse '-' (replicate n 'a') ++ [c]
 
@@ -127,12 +127,11 @@ prop_endBy1 :: NonNegative Int -> Char -> Property
 prop_endBy1 n' c = checkParser p r s
   where n = getNonNegative n'
         p = endBy1 (char 'a') (char '-')
-        r | c == 'a' && n == 0 = posErr 1 s [uneEof, exCh '-']
-          | c == 'a'           = posErr (g n) s [uneCh 'a', exCh '-']
-          | c == '-' && n == 0 = posErr 0 s [uneCh '-', exCh 'a']
-          | c /= '-'           = posErr (g n) s $ uneCh c :
-                                 [exCh '-' | n > 0] ++
-                                 [exCh 'a' | n == 0]
+        r | c == 'a' && n == 0 = posErr 1 s [ueof, etok '-']
+          | c == 'a'           = posErr (g n) s [utok 'a', etok '-']
+          | c == '-' && n == 0 = posErr 0 s [utok '-', etok 'a']
+          | c /= '-'           = posErr (g n) s $ utok c :
+            [etok '-' | n > 0] ++ [etok 'a' | n == 0]
           | otherwise = Right (replicate n 'a')
         s = intersperse '-' (replicate n 'a') ++ [c]
 
@@ -141,7 +140,7 @@ prop_manyTill :: NonNegative Int -> NonNegative Int
 prop_manyTill a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (,) <$> manyTill letterChar (char 'c') <*> many letterChar
-        r | c == 0    = posErr (a + b) s [uneEof, exCh 'c', exSpec "letter"]
+        r | c == 0    = posErr (a + b) s [ueof, etok 'c', elabel "letter"]
           | otherwise = let (pre, post) = break (== 'c') s
                         in Right (pre, drop 1 post)
         s = abcRow a b c
@@ -151,9 +150,9 @@ prop_someTill :: NonNegative Int -> NonNegative Int
 prop_someTill a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (,) <$> someTill letterChar (char 'c') <*> many letterChar
-        r | null s    = posErr 0 s [uneEof, exSpec "letter"]
-          | c == 0    = posErr (a + b) s [uneEof, exCh 'c', exSpec "letter"]
-          | s == "c"  = posErr 1 s [uneEof, exCh 'c', exSpec "letter"]
+        r | null s    = posErr 0 s [ueof, elabel "letter"]
+          | c == 0    = posErr (a + b) s [ueof, etok 'c', elabel "letter"]
+          | s == "c"  = posErr 1 s [ueof, etok 'c', elabel "letter"]
           | head s == 'c' = Right ("c", drop 2 s)
           | otherwise = let (pre, post) = break (== 'c') s
                         in Right (pre, drop 1 post)
@@ -171,9 +170,9 @@ prop_sepBy n' c' = checkParser p r s
         p = sepBy (char 'a') (char '-')
         r | isNothing c' = Right (replicate n 'a')
           | c == 'a' && n == 0 = Right "a"
-          | n == 0    = posErr 0 s [uneCh c, exCh 'a', exEof]
-          | c == '-'  = posErr (length s) s [uneEof, exCh 'a']
-          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+          | n == 0    = posErr 0 s [utok c, etok 'a', eeof]
+          | c == '-'  = posErr (length s) s [ueof, etok 'a']
+          | otherwise = posErr (g n) s [utok c, etok '-', eeof]
         s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
 prop_sepBy1 :: NonNegative Int -> Maybe Char -> Property
@@ -182,11 +181,11 @@ prop_sepBy1 n' c' = checkParser p r s
         c = fromJust c'
         p = sepBy1 (char 'a') (char '-')
         r | isNothing c' && n >= 1 = Right (replicate n 'a')
-          | isNothing c' = posErr 0 s [uneEof, exCh 'a']
+          | isNothing c' = posErr 0 s [ueof, etok 'a']
           | c == 'a' && n == 0 = Right "a"
-          | n == 0    = posErr 0 s [uneCh c, exCh 'a']
-          | c == '-'  = posErr (length s) s [uneEof, exCh 'a']
-          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+          | n == 0    = posErr 0 s [utok c, etok 'a']
+          | c == '-'  = posErr (length s) s [ueof, etok 'a']
+          | otherwise = posErr (g n) s [utok c, etok '-', eeof]
         s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
 prop_sepEndBy :: NonNegative Int -> Maybe Char -> Property
@@ -197,9 +196,9 @@ prop_sepEndBy n' c' = checkParser p r s
         a = Right $ replicate n 'a'
         r | isNothing c' = a
           | c == 'a' && n == 0 = Right "a"
-          | n == 0    = posErr 0 s [uneCh c, exCh 'a', exEof]
+          | n == 0    = posErr 0 s [utok c, etok 'a', eeof]
           | c == '-'  = a
-          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+          | otherwise = posErr (g n) s [utok c, etok '-', eeof]
         s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
 prop_sepEndBy1 :: NonNegative Int -> Maybe Char -> Property
@@ -209,11 +208,11 @@ prop_sepEndBy1 n' c' = checkParser p r s
         p = sepEndBy1 (char 'a') (char '-')
         a = Right $ replicate n 'a'
         r | isNothing c' && n >= 1 = a
-          | isNothing c' = posErr 0 s [uneEof, exCh 'a']
+          | isNothing c' = posErr 0 s [ueof, etok 'a']
           | c == 'a' && n == 0 = Right "a"
-          | n == 0    = posErr 0 s [uneCh c, exCh 'a']
+          | n == 0    = posErr 0 s [utok c, etok 'a']
           | c == '-'  = a
-          | otherwise = posErr (g n) s [uneCh c, exCh '-', exEof]
+          | otherwise = posErr (g n) s [utok c, etok '-', eeof]
         s = intersperse '-' (replicate n 'a') ++ maybeToList c'
 
 prop_skipMany :: Char -> NonNegative Int -> String -> Property

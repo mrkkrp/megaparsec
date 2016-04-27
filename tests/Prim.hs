@@ -26,31 +26,36 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
-{-# LANGUAGE Rank2Types       #-}
-{-# OPTIONS -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Rank2Types        #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# OPTIONS -fno-warn-orphans  #-}
 
 module Prim (tests) where
 
 import Control.Applicative
-import Data.Char (isLetter, toUpper, chr)
-import Data.Foldable (asum)
-import Data.List (isPrefixOf)
-import Data.Maybe (maybeToList)
-import Data.Word (Word8)
-
 import Control.Monad.Cont
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
+import Data.Char (isLetter, toUpper, chr)
+import Data.Foldable (asum)
+import Data.List (isPrefixOf)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (maybeToList, fromMaybe)
+import Data.Set (Set)
+import Data.Word (Word8)
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
-
-import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as BL
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
+import qualified Data.ByteString.Char8       as B
+import qualified Data.ByteString.Lazy.Char8  as BL
+import qualified Data.List.NonEmpty          as NE
+import qualified Data.Set                    as E
+import qualified Data.Text                   as T
+import qualified Data.Text.Lazy              as TL
 
 import Test.Framework
 import Test.Framework.Providers.HUnit (testCase)
@@ -133,6 +138,8 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "combinator tokens"                   prop_tokens_0
   , testProperty "combinator tokens (consumption)"     prop_tokens_1
   , testProperty "parser state position"               prop_state_pos
+  , testProperty "parser state position (push)"        prop_state_pushPosition
+  , testProperty "parser state position (pop)"         prop_state_popPosition
   , testProperty "parser state input"                  prop_state_input
   , testProperty "parser state tab width"              prop_state_tab
   , testProperty "parser state general"                prop_state
@@ -150,30 +157,37 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "WriterT"                  prop_WriterT ]
 
 instance Arbitrary (State String) where
-  arbitrary = State <$> arbitrary <*> arbitrary <*> choose (1, 20)
+  arbitrary = State
+    <$> arbitrary
+    <*> arbitrary
+    <*> (unsafePos <$> choose (1, 20))
 
 -- Various instances of Stream
 
 prop_byteStringL :: Word8 -> NonNegative Int -> Property
-prop_byteStringL ch' n = parse (many (char ch)) "" (BL.pack s) === Right s
-  where s = replicate (getNonNegative n) ch
+prop_byteStringL ch' n = parse p "" (BL.pack s) === Right s
+  where p  = many (char ch) :: Parsec Dec BL.ByteString String
+        s  = replicate (getNonNegative n) ch
         ch = byteToChar ch'
 
 prop_byteStringS :: Word8 -> NonNegative Int -> Property
-prop_byteStringS ch' n = parse (many (char ch)) "" (B.pack s) === Right s
-  where s = replicate (getNonNegative n) ch
+prop_byteStringS ch' n = parse p "" (B.pack s) === Right s
+  where p  = many (char ch) :: Parsec Dec B.ByteString String
+        s  = replicate (getNonNegative n) ch
         ch = byteToChar ch'
 
 byteToChar :: Word8 -> Char
 byteToChar = chr . fromIntegral
 
 prop_textL :: Char -> NonNegative Int -> Property
-prop_textL ch n = parse (many (char ch)) "" (TL.pack s) === Right s
-  where s = replicate (getNonNegative n) ch
+prop_textL ch n = parse p "" (TL.pack s) === Right s
+  where p = many (char ch) :: Parsec Dec TL.Text String
+        s = replicate (getNonNegative n) ch
 
 prop_textS :: Char -> NonNegative Int -> Property
-prop_textS ch n = parse (many (char ch)) "" (T.pack s) === Right s
-  where s = replicate (getNonNegative n) ch
+prop_textS ch n = parse p "" (T.pack s) === Right s
+  where p = many (char ch) :: Parsec Dec T.Text String
+        s = replicate (getNonNegative n) ch
 
 -- Functor instance
 
@@ -200,9 +214,9 @@ prop_alternative_0 n = (empty <|> return n) /=\ n
 prop_alternative_1 :: String -> String -> Property
 prop_alternative_1 s0 s1
   | s0 == s1 = checkParser p (Right s0) s1
-  | null s0  = checkParser p (posErr 0 s1 [uneCh (head s1), exEof]) s1
+  | null s0  = checkParser p (posErr 0 s1 [utok (head s1), eeof]) s1
   | s0 `isPrefixOf` s1 =
-      checkParser p (posErr s0l s1 [uneCh (s1 !! s0l), exEof]) s1
+      checkParser p (posErr s0l s1 [utok (s1 !! s0l), eeof]) s1
   | otherwise = checkParser p (Right s0) s0 .&&. checkParser p (Right s1) s1
     where p   = string s0 <|> string s1
           s0l = length s0
@@ -211,9 +225,9 @@ prop_alternative_2 :: Char -> Char -> Char -> Bool -> Property
 prop_alternative_2 a b c l = checkParser p r s
   where p = char a <|> (char b >> char a)
         r | l         = Right a
-          | a == b    = posErr 1 s [uneCh c, exEof]
+          | a == b    = posErr 1 s [utok c, eeof]
           | a == c    = Right a
-          | otherwise = posErr 1 s [uneCh c, exCh a]
+          | otherwise = posErr 1 s [utok c, etok a]
         s = if l then [a] else [b,c]
 
 prop_alternative_3 :: Property
@@ -230,8 +244,8 @@ prop_alternative_4 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> many (char 'a') <*> many (char 'b')
         r | null s = Right s
-          | c > 0  = posErr (a + b) s $ [uneCh 'c', exCh 'b', exEof]
-                     ++ [exCh 'a' | b == 0]
+          | c > 0  = posErr (a + b) s $ [utok 'c', etok 'b', eeof]
+                     ++ [etok 'a' | b == 0]
           | otherwise = Right s
         s = abcRow a b c
 
@@ -240,11 +254,11 @@ prop_alternative_5 :: NonNegative Int -> NonNegative Int
 prop_alternative_5 a' b' c' = checkParser p r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = (++) <$> some (char 'a') <*> some (char 'b')
-        r | null s = posErr 0 s [uneEof, exCh 'a']
-          | a == 0 = posErr 0 s [uneCh (head s), exCh 'a']
-          | b == 0 = posErr a s $ [exCh 'a', exCh 'b'] ++
-                     if c > 0 then [uneCh 'c'] else [uneEof]
-          | c > 0 = posErr (a + b) s [uneCh 'c', exCh 'b', exEof]
+        r | null s = posErr 0 s [ueof, etok 'a']
+          | a == 0 = posErr 0 s [utok (head s), etok 'a']
+          | b == 0 = posErr a s $ [etok 'a', etok 'b'] ++
+                     if c > 0 then [utok 'c'] else [ueof]
+          | c > 0 = posErr (a + b) s [utok 'c', etok 'b', eeof]
           | otherwise = Right s
         s = abcRow a b c
 
@@ -252,8 +266,8 @@ prop_alternative_6 :: Bool -> Bool -> Bool -> Property
 prop_alternative_6 a b c = checkParser p r s
   where p = f <$> optional (char 'a') <*> optional (char 'b')
         f x y = maybe "" (:[]) x ++ maybe "" (:[]) y
-        r | c = posErr ab s $ [uneCh 'c', exEof] ++
-                [exCh 'a' | not a && not b] ++ [exCh 'b' | not b]
+        r | c = posErr ab s $ [utok 'c', eeof] ++
+                [etok 'a' | not a && not b] ++ [etok 'b' | not b]
           | otherwise = Right s
         s = abcRow a b c
         ab = fromEnum a + fromEnum b
@@ -276,10 +290,9 @@ prop_monad_2 a b c = checkParser p r s
         s = a : b : maybeToList c
 
 prop_monad_3 :: String -> Property
-prop_monad_3 m = checkParser p r s
-  where p = fail m :: Parser ()
-        r | null m    = posErr 0 s []
-          | otherwise = posErr 0 s [msg m]
+prop_monad_3 msg = checkParser p r s
+  where p = fail msg :: Parser ()
+        r = posErr 0 s [cstm (DecFail msg)]
         s = ""
 
 prop_monad_left_id :: Integer -> Integer -> Property
@@ -299,67 +312,84 @@ prop_monad_assoc a b c = ((m >>= f) >>= g) !=! (m >>= (\x -> f x >>= g))
 -- MonadReader instance
 
 prop_monad_reader_ask :: Integer -> Property
-prop_monad_reader_ask a = runReader (runParserT ask "" "") a === Right a
+prop_monad_reader_ask a = runReader (runParserT p "" "") a === Right a
+  where p = ask :: ParsecT Dec String (Reader Integer) Integer
 
 prop_monad_reader_local :: Integer -> Integer -> Property
-prop_monad_reader_local a b = runReader (runParserT p "" "") a === Right (a + b)
-  where p = local (+ b) ask
+prop_monad_reader_local a b =
+  runReader (runParserT p "" "") a === Right (a + b)
+  where p = local (+ b) ask :: ParsecT Dec String (Reader Integer) Integer
 
 -- MonadState instance
 
 prop_monad_state_get :: Integer -> Property
-prop_monad_state_get a = L.evalState (runParserT L.get "" "") a === Right a
+prop_monad_state_get a = L.evalState (runParserT p "" "") a === Right a
+  where p = L.get :: ParsecT Dec String (L.State Integer) Integer
 
 prop_monad_state_put :: Integer -> Integer -> Property
-prop_monad_state_put a b = L.execState (runParserT (L.put b) "" "") a === b
+prop_monad_state_put a b = L.execState (runParserT p "" "") a === b
+  where p = L.put b :: ParsecT Dec String (L.State Integer) ()
 
 -- MonadCont instance
 
 prop_monad_cont :: Integer -> Integer -> Property
 prop_monad_cont a b = runCont (runParserT p "" "") id === Right (max a b)
-  where p = do x <- callCC $ \e -> when (a > b) (e a) >> return b
+  where p :: ParsecT Dec String
+             (Cont (Either (ParseError Char Dec) Integer)) Integer
+        p = do x <- callCC $ \e -> when (a > b) (e a) >> return b
                return x
 
 -- MonadError instance
 
 prop_monad_error_throw :: Integer -> Integer -> Property
 prop_monad_error_throw a b = runExcept (runParserT p "" "") === Left a
-  where p = throwError a >> return b
+  where p :: ParsecT Dec String (Except Integer) Integer
+        p = throwError a >> return b
 
 prop_monad_error_catch :: Integer -> Integer -> Property
 prop_monad_error_catch a b =
   runExcept (runParserT p "" "") === Right (Right $ a + b)
-  where p = (throwError a >> return b) `catchError` handler
-        handler e = return $ e + b
+  where p :: ParsecT Dec String (Except Integer) Integer
+        p = (throwError a >> return b) `catchError` handler
+        handler e = return (e + b)
 
 -- Primitive combinators
 
-prop_unexpected :: String -> Property
-prop_unexpected m = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
-        p = unexpected m
-        r = posErr 0 s $ if null m then [] else [uneSpec m]
+prop_unexpected :: ErrorItem Char -> Property
+prop_unexpected item = checkParser' p r s
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
+        p = unexpected item
+        r = posErr 0 s [Unexpected item]
         s = ""
 
-prop_failure :: [Message] -> Property
-prop_failure msgs = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
-        p = failure msgs
-        r | null msgs = posErr 0 s []
-          | otherwise = Left $ newErrorMessages msgs (initialPos "")
+prop_failure
+  :: Set (ErrorItem Char)
+  -> Set (ErrorItem Char)
+  -> Set Dec
+  -> Property
+prop_failure us ps xs = checkParser' p r s
+  where p :: (MonadParsec Dec s m, Token s ~ Char) => m String
+        p = failure us ps xs
+        r = Left ParseError
+          { errorPos        = initialPos "" :| []
+          , errorUnexpected = us
+          , errorExpected   = ps
+          , errorCustom     = xs }
         s = ""
 
 prop_label :: NonNegative Int -> NonNegative Int
            -> NonNegative Int -> String -> Property
 prop_label a' b' c' l = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = (++) <$> many (char 'a') <*> (many (char 'b') <?> l)
         r | null s = Right s
-          | c > 0 = posErr (a + b) s $ [uneCh 'c', exEof]
-                    ++ [exCh 'a' | b == 0]
-                    ++ [if b == 0 || null l
-                        then exSpec l
-                        else exSpec $ "rest of " ++ l]
+          | c > 0 = posErr (a + b) s $ [utok 'c', eeof]
+            ++ [etok 'a' | b == 0]
+            ++ (if null l
+                  then []
+                  else [if b == 0
+                         then elabel l
+                         else elabel ("rest of " ++ l)])
           | otherwise = Right s
         s = abcRow a b c
         [a,b,c] = getNonNegative <$> [a',b',c']
@@ -367,81 +397,82 @@ prop_label a' b' c' l = checkParser' p r s
 prop_hidden_0 :: NonNegative Int -> NonNegative Int
               -> NonNegative Int -> Property
 prop_hidden_0 a' b' c' = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = (++) <$> many (char 'a') <*> hidden (many (char 'b'))
         r | null s = Right s
-          | c > 0  = posErr (a + b) s $ [uneCh 'c', exEof]
-                     ++ [exCh 'a' | b == 0]
+          | c > 0  = posErr (a + b) s $ [utok 'c', eeof]
+                     ++ [etok 'a' | b == 0]
           | otherwise = Right s
         s = abcRow a b c
         [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_hidden_1 :: NonEmptyList Char -> String -> Property
 prop_hidden_1 c' s = checkParser' p r s
-  where p :: MonadParsec s m Char => m (Maybe String)
+  where p :: (MonadParsec e s m, Token s ~ Char) => m (Maybe String)
         p = optional (hidden $ string c)
         r | null s           = Right Nothing
           | c == s           = Right (Just s)
-          | c `isPrefixOf` s = posErr cn s [uneCh (s !! cn), exEof]
-          | otherwise        = posErr 0 s [uneCh (head s), exEof]
+          | c `isPrefixOf` s = posErr cn s [utok (s !! cn), eeof]
+          | otherwise        = posErr 0 s [utok (head s), eeof]
         c = getNonEmpty c'
         cn = length c
 
 prop_try :: Char -> Char -> Char -> Property
 prop_try pre ch1 ch2 = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = try (sequence [char pre, char ch1])
           <|> sequence [char pre, char ch2]
-        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        r = posErr 1 s [ueof, etok ch1, etok ch2]
         s = [pre]
 
 prop_lookAhead_0 :: Bool -> Bool -> Bool -> Property
 prop_lookAhead_0 a b c = checkParser' p r s
-  where p :: MonadParsec s m Char => m Char
+  where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = do
           l <- lookAhead (oneOf "ab" <?> "label")
           guard (l == h)
           char 'a'
         h = head s
-        r | null s = posErr 0 s [uneEof, exSpec "label"]
+        r | null s = posErr 0 s [ueof, elabel "label"]
           | s == "a" = Right 'a'
-          | h == 'b' = posErr 0 s [uneCh 'b', exCh 'a']
-          | h == 'c' = posErr 0 s [uneCh 'c', exSpec "label"]
-          | otherwise  = posErr 1 s [uneCh (s !! 1), exEof]
+          | h == 'b' = posErr 0 s [utok 'b', etok 'a']
+          | h == 'c' = posErr 0 s [utok 'c', elabel "label"]
+          | otherwise  = posErr 1 s [utok (s !! 1), eeof]
         s = abcRow a b c
 
 prop_lookAhead_1 :: String -> Property
 prop_lookAhead_1 s = checkParser' p r s
-  where p :: MonadParsec s m Char => m ()
-        p = lookAhead (some letterChar) >> fail "failed"
+  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
+        p = lookAhead (some letterChar) >> fail emsg
         h = head s
-        r | null s     = posErr 0 s [uneEof, exSpec "letter"]
-          | isLetter h = posErr 0 s [msg "failed"]
-          | otherwise  = posErr 0 s [uneCh h, exSpec "letter"]
+        r | null s     = posErr 0 s [ueof, elabel "letter"]
+          | isLetter h = posErr 0 s [cstm (DecFail emsg)]
+          | otherwise  = posErr 0 s [utok h, elabel "letter"]
+        emsg = "ops!"
 
 prop_lookAhead_2 :: Bool -> Bool -> Bool -> Property
 prop_lookAhead_2 a b c = checkParser' p r s
-  where p :: MonadParsec s m Char => m Char
+  where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = lookAhead (some (char 'a')) >> char 'b'
-        r | null s    = posErr 0 s [uneEof, exCh 'a']
-          | a         = posErr 0 s [uneCh 'a', exCh 'b']
-          | otherwise = posErr 0 s [uneCh (head s), exCh 'a']
+        r | null s    = posErr 0 s [ueof, etok 'a']
+          | a         = posErr 0 s [utok 'a', etok 'b']
+          | otherwise = posErr 0 s [utok (head s), etok 'a']
         s = abcRow a b c
 
 case_lookAhead_3 :: Assertion
 case_lookAhead_3 = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = lookAhead (char 'a' *> fail emsg)
-        r = posErr 1 s [msg emsg]
+        r = posErr 1 s [cstm (DecFail emsg)]
         emsg = "ops!"
         s = "abc"
 
 prop_notFollowedBy_0 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
 prop_notFollowedBy_0 a' b' c' = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = many (char 'a') <* notFollowedBy (char 'b') <* many (char 'c')
-        r | b > 0     = posErr a s [uneCh 'b', exCh 'a']
+        r | b > 0     = posErr a s [utok 'b', etok 'a']
           | otherwise = Right (replicate a 'a')
         s = abcRow a b c
         [a,b,c] = getNonNegative <$> [a',b',c']
@@ -449,176 +480,180 @@ prop_notFollowedBy_0 a' b' c' = checkParser' p r s
 prop_notFollowedBy_1 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
 prop_notFollowedBy_1 a' b' c' = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = many (char 'a')
           <* (notFollowedBy . notFollowedBy) (char 'c')
           <* many (char 'c')
         r | b == 0 && c > 0 = Right (replicate a 'a')
-          | b > 0           = posErr a s [uneCh 'b', exCh 'a']
-          | otherwise       = posErr a s [uneEof, exCh 'a']
+          | b > 0           = posErr a s [utok 'b', etok 'a']
+          | otherwise       = posErr a s [ueof, etok 'a']
         s = abcRow a b c
         [a,b,c] = getNonNegative <$> [a',b',c']
 
 prop_notFollowedBy_2 :: NonNegative Int -> NonNegative Int
                      -> NonNegative Int -> Property
 prop_notFollowedBy_2 a' b' c' = checkParser' p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = many (char 'a') <* notFollowedBy eof <* many anyChar
         r | b > 0 || c > 0 = Right (replicate a 'a')
-          | otherwise      = posErr a s [uneEof, exCh 'a']
+          | otherwise      = posErr a s [ueof, etok 'a']
         s = abcRow a b c
         [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_notFollowedBy_3a :: Assertion
 case_notFollowedBy_3a = checkCase p r s
-  where p :: MonadParsec s m Char => m ()
+  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy (char 'a' *> char 'c')
         r = Right ()
         s = "ab"
 
 case_notFollowedBy_3b :: Assertion
 case_notFollowedBy_3b = checkCase p r s
-  where p :: MonadParsec s m Char => m ()
+  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
-        r = posErr 0 s [uneCh 'a', exCh 'c']
+        r = posErr 0 s [utok 'a', etok 'c']
         s = "ab"
 
 case_notFollowedBy_4a :: Assertion
 case_notFollowedBy_4a = checkCase p r s
-  where p :: MonadParsec s m Char => m ()
+  where p :: MonadParsec e s m => m ()
         p = notFollowedBy mzero
         r = Right ()
         s = "ab"
 
 case_notFollowedBy_4b :: Assertion
 case_notFollowedBy_4b = checkCase p r s
-  where p :: MonadParsec s m Char => m ()
+  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy mzero <* char 'c'
-        r = posErr 0 s [uneCh 'a', exCh 'c']
+        r = posErr 0 s [utok 'a', etok 'c']
         s = "ab"
 
-prop_withRecovery_0 :: NonNegative Int -> NonNegative Int
-                    -> NonNegative Int -> Property
+prop_withRecovery_0
+  :: NonNegative Int
+  -> NonNegative Int
+  -> NonNegative Int
+  -> Property
 prop_withRecovery_0 a' b' c' = checkParser' p r s
   where
-    p :: MonadParsec s m Char => m (Either ParseError String)
+    p :: (MonadParsec Dec s m, Token s ~ Char)
+      => m (Either (ParseError Char Dec) String)
     p = let g = count' 1 3 . char in v <$>
       withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
     v (Right x) y = Right (x ++ y)
     v (Left  m) _ = Left m
-    r | a == 0 && b == 0 && c == 0 = posErr 0 s [uneEof, exCh 'a']
-      | a == 0 && b == 0 && c >  3 = posErr 0 s [uneCh 'c', exCh 'a']
-      | a == 0 && b == 0           = posErr 0 s [uneCh 'c', exCh 'a']
-      | a == 0 && b >  3           = posErr 3 s [uneCh 'b', exCh 'a', exCh 'c']
-      | a == 0 &&           c == 0 = posErr b s [uneEof, exCh 'a', exCh 'c']
-      | a == 0 &&           c >  3 = posErr (b + 3) s [uneCh 'c', exEof]
-      | a == 0                     = Right (posErr 0 s [uneCh 'b', exCh 'a'])
-      | a >  3                     = posErr 3 s [uneCh 'a', exCh 'c']
-      |           b == 0 && c == 0 = posErr a s $ [uneEof, exCh 'c'] ++ ma
-      |           b == 0 && c >  3 = posErr (a + 3) s [uneCh 'c', exEof]
+    r | a == 0 && b == 0 && c == 0 = posErr 0 s [ueof, etok 'a']
+      | a == 0 && b == 0 && c >  3 = posErr 0 s [utok 'c', etok 'a']
+      | a == 0 && b == 0           = posErr 0 s [utok 'c', etok 'a']
+      | a == 0 && b >  3           = posErr 3 s [utok 'b', etok 'a', etok 'c']
+      | a == 0 &&           c == 0 = posErr b s [ueof, etok 'a', etok 'c']
+      | a == 0 &&           c >  3 = posErr (b + 3) s [utok 'c', eeof]
+      | a == 0                     = Right (posErr 0 s [utok 'b', etok 'a'])
+      | a >  3                     = posErr 3 s [utok 'a', etok 'c']
+      |           b == 0 && c == 0 = posErr a s $ [ueof, etok 'c'] ++ ma
+      |           b == 0 && c >  3 = posErr (a + 3) s [utok 'c', eeof]
       |           b == 0           = Right (Right s)
-      | otherwise                  = posErr a s $ [uneCh 'b', exCh 'c'] ++ ma
-    ma = [exCh 'a' | a < 3]
+      | otherwise                  = posErr a s $ [utok 'b', etok 'c'] ++ ma
+    ma = [etok 'a' | a < 3]
     s = abcRow a b c
     [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_withRecovery_1 :: Assertion
 case_withRecovery_1 = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: MonadParsec e s m => m String
         p = withRecovery (const $ return "bar") (return "foo")
         r = Right "foo"
         s = "abc"
 
 case_withRecovery_2 :: Assertion
 case_withRecovery_2 = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (\_ -> char 'a' *> mzero) (string "cba")
-        r = posErr 0 s [uneCh 'a', exStr "cba"]
+        r = posErr 0 s [utoks "a", etoks "cba"]
         s = "abc"
 
 case_withRecovery_3a :: Assertion
 case_withRecovery_3a = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (string "cba")
         r = Right "abd"
         s = "abc"
 
 case_withRecovery_3b :: Assertion
 case_withRecovery_3b = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
-        r = posErr 0 s [uneCh 'a', exStr "cba", exCh 'd']
+        r = posErr 0 s [utok 'a', etoks "cba", etok 'd']
         s = "abc"
 
 case_withRecovery_4a :: Assertion
 case_withRecovery_4a = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ string "bc") (char 'a' *> mzero)
         r = Right "bc"
         s = "abc"
 
 case_withRecovery_4b :: Assertion
 case_withRecovery_4b = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ string "bc")
           (char 'a' *> char 'd' *> pure "foo") <* char 'f'
-        r = posErr 3 s [uneEof, exCh 'f']
+        r = posErr 3 s [ueof, etok 'f']
         s = "abc"
 
 case_withRecovery_5 :: Assertion
 case_withRecovery_5 = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (\_ -> char 'b' *> fail emsg) (char 'a' *> fail emsg)
-        r = posErr 1 s [msg emsg]
+        r = posErr 1 s [cstm (DecFail emsg)]
         emsg = "ops!"
         s = "abc"
 
 case_withRecovery_6a :: Assertion
 case_withRecovery_6a = checkCase p r s
-  where p :: MonadParsec s m Char => m String
+  where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (char 'a' *> mzero)
         r = Right "abd"
         s = "abc"
 
 case_withRecovery_6b :: Assertion
 case_withRecovery_6b = checkCase p r s
-  where p :: MonadParsec s m Char => m Char
+  where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
-        r = posErr 1 s [uneCh 'b', exCh 'd', exCh 'f']
+        r = posErr 1 s [utok 'b', etok 'd', etok 'f']
         s = "abc"
 
 case_withRecovery_7 :: Assertion
 case_withRecovery_7 = checkCase p r s
-  where p :: MonadParsec s m Char => m Char
+  where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = withRecovery (const mzero) (char 'a' *> char 'd')
-        r = posErr 1 s [uneCh 'b', exCh 'd']
+        r = posErr 1 s [utok 'b', etok 'd']
         s = "abc"
 
 case_eof :: Assertion
 case_eof = checkCase eof (Right ()) ""
 
-prop_token :: String -> Property
-prop_token s = checkParser' p r s
-  where p :: MonadParsec s m Char => m Char
-        p = token testChar
+prop_token :: Maybe Char -> String -> Property
+prop_token mtok s = checkParser' p r s
+  where p :: (MonadParsec e s m, Token s ~ Char) => m Char
+        p = token testChar mtok
         testChar x = if isLetter x
           then Right x
-          else Left . pure . Unexpected . showToken $ x
+          else Left (E.singleton (Tokens (x:|[])), E.empty, E.empty)
         h = head s
-        r | null s = posErr 0 s [uneEof]
+        r | null s = posErr 0 s $ ueof : maybeToList (etok <$> mtok)
           | isLetter h && length s == 1 = Right (head s)
-          | isLetter h && length s > 1 = posErr 1 s [uneCh (s !! 1), exEof]
-          | otherwise = posErr 0 s [uneCh h]
+          | isLetter h && length s > 1 = posErr 1 s [utok (s !! 1), eeof]
+          | otherwise = posErr 0 s [utok h]
 
 prop_tokens_0 :: String -> String -> Property
-prop_tokens_0 a = checkString p a (==) (showToken a)
-  where p = tokens (==) a
+prop_tokens_0 a = checkString (tokens (==) a) a (==)
 
 prop_tokens_1 :: String -> String -> String -> Property
 prop_tokens_1 pre post post' =
   not (post `isPrefixOf` post') ==>
   (leftover === "" .||. leftover === s)
-  where p = tokens (==) (pre ++ post)
+  where p :: Parser String
+        p = tokens (==) (pre ++ post)
         s = pre ++ post'
         st = stateFromInput s
         leftover = stateInput . fst $ runParser' p st
@@ -628,6 +663,23 @@ prop_tokens_1 pre post post' =
 prop_state_pos :: SourcePos -> Property
 prop_state_pos pos = p /=\ pos
   where p = setPosition pos >> getPosition
+
+prop_state_pushPosition :: NonEmpty SourcePos -> SourcePos -> Property
+prop_state_pushPosition z pos = p /=\ NE.cons pos z
+  where p = withPositionStack z (pushPosition pos)
+
+prop_state_popPosition :: NonEmpty SourcePos -> Property
+prop_state_popPosition z = p /=\ fromMaybe z (snd (NE.uncons z))
+  where p = withPositionStack z popPosition
+
+withPositionStack :: MonadParsec e s m
+  => NonEmpty SourcePos -- ^ Position stack to use
+  -> m ()               -- ^ An action to execute
+  -> m (NonEmpty SourcePos) -- ^ Position stack after execution
+withPositionStack z action = do
+  updateParserState $ \(State s _ w) -> State s z w
+  action
+  statePos <$> getParserState
 
 prop_state_input :: String -> Property
 prop_state_input s = p /=\ s
@@ -640,16 +692,16 @@ prop_state_input s = p /=\ s
           guard (null st1)
           return result
 
-prop_state_tab :: Int -> Property
+prop_state_tab :: Pos -> Property
 prop_state_tab w = p /=\ w
   where p = setTabWidth w >> getTabWidth
 
 prop_state :: State String -> State String -> Property
 prop_state s1 s2 = checkParser' p r s
-  where p :: MonadParsec String m Char => m (State String)
+  where p :: MonadParsec Dec String m => m (State String)
         p = do
           st <- getParserState
-          guard (st == State s (initialPos "") defaultTabWidth)
+          guard (st == State s (initialPos "" :| []) defaultTabWidth)
           setParserState s1
           updateParserState (f s2)
           liftM2 const getParserState (setInput "")
@@ -669,15 +721,15 @@ prop_runParserT' st s = runIdentity (runParserT' p st) === r
   where p = string s
         r = emulateStrParsing st s
 
-emulateStrParsing :: State String
-                  -> String
-                  -> (State String, Either ParseError String)
-emulateStrParsing st@(State i pos t) s =
+emulateStrParsing
+  :: State String
+  -> String
+  -> (State String, Either (ParseError Char Dec) String)
+emulateStrParsing st@(State i (pos:|z) t) s =
   if l == length s
-  then (State (drop l i) (updatePosString t pos s) t, Right s)
-  else let uneStuff = if null i then uneEof else uneStr (take (l + 1) i)
-       in (st, Left $ newErrorMessages (exStr s : [uneStuff]) pos)
-  where l = length $ takeWhile id $ zipWith (==) s i
+    then (State (drop l i) (updatePosString t pos s :| z) t, Right s)
+    else (st, posErr' (pos:|z) (etoks s : [utoks (take (l + 1) i)]))
+  where l = length (takeWhile id $ zipWith (==) s i)
 
 -- Additional tests to check returned state on failure
 
@@ -688,34 +740,33 @@ prop_stOnFail_0 na' nb' = runParser' p (stateFromInput s) === (i, r)
         nb = getPositive nb'
         p = try (many (char 'a') <* many (char 'b') <* char 'c')
           <|> (many (char 'a') <* char 'c')
-        r = posErr (na + nb) s [exCh 'b', exCh 'c', uneEof]
+        r = posErr (na + nb) s [etok 'b', etok 'c', ueof]
         s = replicate na 'a' ++ replicate nb 'b'
 
-prop_stOnFail_1 :: Positive Int -> Positive Int -> Property
-prop_stOnFail_1 na' t' = runParser' p (stateFromInput s) === (i, r)
+prop_stOnFail_1 :: Positive Int -> Pos -> Property
+prop_stOnFail_1 na' t = runParser' p (stateFromInput s) === (i, r)
   where i = let (Left x) = r in State "" (errorPos x) t
         na = getPositive na'
-        t = getPositive t'
-        p = many (char 'a') <* setTabWidth t <* fail myMsg
-        r = posErr na s [msg myMsg]
+        p = many (char 'a') <* setTabWidth t <* fail emsg
+        r = posErr na s [cstm (DecFail emsg)]
         s = replicate na 'a'
-        myMsg = "failing now!"
+        emsg = "failing now!"
 
 prop_stOnFail_2 :: String -> Char -> Property
 prop_stOnFail_2 s' ch = runParser' p (stateFromInput s) === (i, r)
   where i = let (Left x) = r in State [ch] (errorPos x) defaultTabWidth
-        r = posErr (length s') s [uneCh ch, exEof]
+        r = posErr (length s') s [utok ch, eeof]
         p = string s' <* eof
         s = s' ++ [ch]
 
 prop_stOnFail_3 :: String -> Property
 prop_stOnFail_3 s = runParser' p (stateFromInput s) === (i, r)
   where i = let (Left x) = r in State s (errorPos x) defaultTabWidth
-        r = posErr 0 s [if null s then uneEof else uneCh (head s)]
+        r = posErr 0 s [if null s then ueof else utok (head s)]
         p = notFollowedBy (string s)
 
 stateFromInput :: s -> State s
-stateFromInput s = State s (initialPos "") defaultTabWidth
+stateFromInput s = State s (initialPos "" :| []) defaultTabWidth
 
 -- ReaderT instance of MonadParsec
 
@@ -727,7 +778,7 @@ prop_ReaderT_try pre ch1 ch2 = checkParser (runReaderT p (s1, s2)) r s
         getS2 = asks snd
         p = try (g =<< getS1) <|> (g =<< getS2)
         g = sequence . fmap char
-        r = posErr 1 s [uneEof, exCh ch1, exCh ch2]
+        r = posErr 1 s [ueof, etok ch1, etok ch2]
         s = [pre]
 
 prop_ReaderT_notFollowedBy :: NonNegative Int -> NonNegative Int
@@ -736,7 +787,7 @@ prop_ReaderT_notFollowedBy a' b' c' = checkParser (runReaderT p 'a') r s
   where [a,b,c] = getNonNegative <$> [a',b',c']
         p = many (char =<< ask) <* notFollowedBy eof <* many anyChar
         r | b > 0 || c > 0 = Right (replicate a 'a')
-          | otherwise      = posErr a s [uneEof, exCh 'a']
+          | otherwise      = posErr a s [ueof, etok 'a']
         s = abcRow a b c
 
 -- StateT instance of MonadParsec

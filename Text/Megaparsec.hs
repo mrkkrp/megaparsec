@@ -120,19 +120,23 @@ module Text.Megaparsec
   , satisfy
   , string
   , string'
-    -- * Error messages
-  , Message (..)
-  , messageString
-  , badMessage
-  , ParseError
-  , errorPos
-  , errorMessages
-  , errorIsUnknown
     -- * Textual source position
-  , SourcePos
-  , sourceName
-  , sourceLine
-  , sourceColumn
+  , Pos
+  , mkPos
+  , unPos
+  , unsafePos
+  , InvalidPosException (..)
+  , SourcePos (..)
+  , initialPos
+  , sourcePosPretty
+    -- * Error messages
+  , ErrorItem (..)
+  , ErrorComponent (..)
+  , Dec (..)
+  , ParseError (..)
+  , ShowToken (..)
+  , ShowErrorComponent (..)
+  , parseErrorPretty
     -- * Low-level operations
   , Stream (..)
   , State (..)
@@ -140,6 +144,8 @@ module Text.Megaparsec
   , setInput
   , getPosition
   , setPosition
+  , pushPosition
+  , popPosition
   , getTabWidth
   , setTabWidth
   , getParserState

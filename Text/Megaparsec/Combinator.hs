@@ -12,6 +12,8 @@
 -- Commonly used generic combinators. Note that all combinators works with
 -- any 'Alternative' instances.
 
+{-# LANGUAGE CPP #-}
+
 module Text.Megaparsec.Combinator
   ( between
   , choice

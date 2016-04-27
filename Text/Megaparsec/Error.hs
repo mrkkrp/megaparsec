@@ -1,230 +1,254 @@
 -- |
 -- Module      :  Text.Megaparsec.Error
 -- Copyright   :  © 2015–2016 Megaparsec contributors
---                © 2007 Paolo Martini
---                © 1999–2001 Daan Leijen
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Parse errors.
+-- Parse errors. Current version of Megaparsec supports well-typed errors
+-- instead of 'String'-based ones. This gives a lot of flexibility in
+-- describing what exactly went wrong as well as a way to return arbitrary
+-- data in case of failure.
+
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
 
 module Text.Megaparsec.Error
-  ( Message (..)
-  , isUnexpected
-  , isExpected
-  , isMessage
-  , messageString
-  , badMessage
-  , ParseError
-  , errorPos
-  , errorMessages
-  , errorIsUnknown
-  , newErrorMessage
-  , newErrorMessages
-  , newErrorUnknown
-  , addErrorMessage
-  , addErrorMessages
-  , setErrorMessage
-  , setErrorPos
-  , mergeError
-  , showMessages )
+  ( ErrorItem (..)
+  , ErrorComponent (..)
+  , Dec (..)
+  , ParseError (..)
+  , ShowToken (..)
+  , ShowErrorComponent (..)
+  , parseErrorPretty
+  , sourcePosStackPretty )
 where
 
-import Control.Exception (Exception)
-import Data.Foldable (find, concat)
+import Control.Monad.Catch
+import Data.Data (Data)
+import Data.Foldable (concat)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe, fromJust)
-import Data.Semigroup (Semigroup((<>)))
+import Data.Semigroup
+import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Prelude hiding (concat)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Set           as E
 
 import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
-import Data.Foldable (foldMap)
-import Data.Monoid (Monoid(..))
 #endif
 
--- | This data type represents parse error messages.
-
-data Message
-  = Unexpected !String -- ^ Parser ran into an unexpected token
-  | Expected   !String -- ^ What is expected instead
-  | Message    !String -- ^ General-purpose error message component
-  deriving (Show, Eq, Ord)
-
--- | Check if given 'Message' is created with 'Unexpected' constructor.
+-- | Data type that is used to represent “unexpected\/expected” items in
+-- parse error. The data type is parametrized over token type @t@.
 --
--- @since 4.4.0
+-- @since 5.0.0
 
-isUnexpected :: Message -> Bool
-isUnexpected (Unexpected _) = True
-isUnexpected _              = False
-{-# INLINE isUnexpected #-}
+data ErrorItem t
+  = Tokens (NonEmpty t)      -- ^ Non-empty stream of tokens
+  | Label (NonEmpty Char)    -- ^ Label (cannot be empty)
+  | EndOfInput               -- ^ End of input
+  deriving (Show, Read, Eq, Ord, Data, Typeable)
 
--- | Check if given 'Message' is created with 'Expected' constructor.
+-- | The type class defines how to represent information about various
+-- exceptional situations. Data types that are used as custom data component
+-- in 'ParseError' must be instances of this type class.
 --
--- @since 4.4.0
+-- @since 5.0.0
 
-isExpected :: Message -> Bool
-isExpected (Expected _) = True
-isExpected _            = False
-{-# INLINE isExpected #-}
+class Ord e => ErrorComponent e where
 
--- | Check if given 'Message' is created with 'Message' constructor.
+  -- | Represent message passed to 'fail' in parser monad.
+  --
+  -- @since 5.0.0
+
+  representFail :: String -> e
+
+  -- | Represent information about incorrect indentation.
+  --
+  -- @since 5.0.0
+
+  representIndentation
+    :: Ordering -- ^ Desired ordering between reference level and actual level
+    -> Pos             -- ^ Reference indentation level
+    -> Pos             -- ^ Actual indentation level
+    -> e
+
+-- | “Default error component”. This in our instance of 'ErrorComponent'
+-- provided out-of-box.
 --
--- @since 4.4.0
+-- @since 5.0.0
 
-isMessage :: Message -> Bool
-isMessage (Message _) = True
-isMessage _           = False
-{-# INLINE isMessage #-}
+data Dec
+  = DecFail String         -- ^ 'fail' has been used in parser monad
+  | DecIndentation Ordering Pos Pos -- ^ Incorrect indentation error
+  deriving (Show, Read, Eq, Ord, Data, Typeable)
 
--- | Extract the message string from an error message.
-
-messageString :: Message -> String
-messageString (Unexpected s) = s
-messageString (Expected   s) = s
-messageString (Message    s) = s
-{-# INLINE messageString #-}
-
--- | Test if message string is empty.
-
-badMessage :: Message -> Bool
-badMessage = null . messageString
-{-# INLINE badMessage #-}
+instance ErrorComponent Dec where
+  representFail        = DecFail
+  representIndentation = DecIndentation
 
 -- | The data type @ParseError@ represents parse errors. It provides the
--- source position ('SourcePos') of the error and a list of error messages
--- ('Message').
+-- stack of source positions, set of expected and unexpected tokens as well
+-- as set of custom associated data. The data type is parametrized over
+-- token type @t@ and custom data @e@.
+--
+-- Note that stack of source positions contains current position as its
+-- head, and the rest of positions allows to track full sequence of include
+-- files with topmost source file at the end of the list.
+--
+-- 'Semigroup' (or 'Monoid') instance of the data type allows to merge parse
+-- errors from different branches of parsing. When merging two
+-- 'ParseError's, longest match is preferred; if positions are the same,
+-- custom data sets and collections of message items are combined.
 
-data ParseError = ParseError
-  { -- | Extract the source position from 'ParseError'.
-    errorPos :: !SourcePos
-    -- | Extract the list of error messages from 'ParseError'.
-  , errorMessages :: [Message] }
-  deriving (Eq, Typeable)
+data ParseError t e = ParseError
+  { errorPos        :: NonEmpty SourcePos -- ^ Stack of source positions
+  , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
+  , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
+  , errorCustom     :: Set e              -- ^ Associated data, if any
+  } deriving (Show, Read, Eq, Typeable)
 
-instance Show ParseError where
-  show e = show (errorPos e) ++ ":\n" ++ showMessages (errorMessages e)
-
-instance Monoid ParseError where
-  mempty  = newErrorUnknown (initialPos "")
-  mappend = (<>)
-
-instance Semigroup ParseError where
+instance (Ord t, Ord e) => Semigroup (ParseError t e) where
   (<>) = mergeError
+  {-# INLINE (<>) #-}
 
-instance Exception ParseError
+instance (Ord t, Ord e) => Monoid (ParseError t e) where
+  mempty  = ParseError (initialPos "" :| []) E.empty E.empty E.empty
+  mappend = (<>)
+  {-# INLINE mappend #-}
 
--- | Test whether given 'ParseError' has associated collection of error
--- messages. Return @True@ if it has none and @False@ otherwise.
-
-errorIsUnknown :: ParseError -> Bool
-errorIsUnknown (ParseError _ ms) = null ms
-
--- | @newErrorMessage m pos@ creates 'ParseError' with message @m@ and
--- associated position @pos@. If message @m@ has empty message string, it
--- won't be included.
-
-newErrorMessage :: Message -> SourcePos -> ParseError
-newErrorMessage m = newErrorMessages [m]
-
--- | @newErrorMessages ms pos@ creates 'ParseError' with messages @ms@ and
--- associated position @pos@.
---
--- @since 4.2.0
-
-newErrorMessages :: [Message] -> SourcePos -> ParseError
-newErrorMessages ms pos = addErrorMessages ms (newErrorUnknown pos)
-
--- | @newErrorUnknown pos@ creates 'ParseError' without any associated
--- message but with specified position @pos@.
-
-newErrorUnknown :: SourcePos -> ParseError
-newErrorUnknown pos = ParseError pos []
-
--- | @addErrorMessage m err@ returns @err@ with message @m@ added. This
--- function makes sure that list of messages is always sorted and doesn't
--- contain duplicates or messages with empty message strings.
-
-addErrorMessage :: Message -> ParseError -> ParseError
-addErrorMessage m (ParseError pos ms) =
-  ParseError pos $ if badMessage m then ms else pre ++ [m] ++ post
-  where pre  = filter (< m) ms
-        post = filter (> m) ms
-{-# INLINE addErrorMessage #-}
-
--- | @addErrorMessages ms err@ returns @err@ with messages @ms@ added. The
--- function is defined in terms of 'addErrorMessage'.
---
--- @since 4.2.0
-
-addErrorMessages :: [Message] -> ParseError -> ParseError
-addErrorMessages ms err = foldr addErrorMessage err ms
-{-# INLINE addErrorMessages #-}
-
--- | @setErrorMessage m err@ returns @err@ with message @m@ added. This
--- function also deletes all existing error messages that were created with
--- the same constructor as @m@. If message @m@ has empty message string, the
--- function does not add the message to the result (it still deletes all
--- messages of the same type, though).
-
-setErrorMessage :: Message -> ParseError -> ParseError
-setErrorMessage m (ParseError pos ms) =
-  if badMessage m then err else addErrorMessage m err
-  where err = ParseError pos (filter (not . f) ms)
-        f   = fromJust $ find ($ m) [isUnexpected, isExpected, isMessage]
-
--- | @setErrorPos pos err@ returns 'ParseError' identical to @err@, but with
--- position @pos@.
-
-setErrorPos :: SourcePos -> ParseError -> ParseError
-setErrorPos pos (ParseError _ ms) = ParseError pos ms
+instance (Show t, Typeable t, Show e, Typeable e) => Exception (ParseError t e)
 
 -- | Merge two error data structures into one joining their collections of
--- messages and preferring longest match. In other words, earlier error
--- message is discarded. This may seem counter-intuitive, but @mergeError@
+-- message items and preferring longest match. In other words, earlier error
+-- message is discarded. This may seem counter-intuitive, but 'mergeError'
 -- is only used to merge error messages of alternative branches of parsing
 -- and in this case longest match should be preferred.
 
-mergeError :: ParseError -> ParseError -> ParseError
-mergeError e1@(ParseError pos1 _) e2@(ParseError pos2 ms2) =
+mergeError :: (Ord t, Ord e)
+  => ParseError t e
+  -> ParseError t e
+  -> ParseError t e
+mergeError e1@(ParseError pos1 u1 p1 x1) e2@(ParseError pos2 u2 p2 x2) =
   case pos1 `compare` pos2 of
     LT -> e2
-    EQ -> addErrorMessages ms2 e1
+    EQ -> ParseError pos1 (E.union u1 u2) (E.union p1 p2) (E.union x1 x2)
     GT -> e1
 {-# INLINE mergeError #-}
 
--- | @showMessages ms@ transforms list of error messages @ms@ into
--- their textual representation.
+-- | Type class 'ShowToken' includes methods that allow to pretty-print
+-- single token as well as stream of tokens. This is used for rendering of
+-- error messages.
 
-showMessages :: [Message] -> String
-showMessages [] = "unknown parse error"
-showMessages ms = tail $ foldMap (fromMaybe "") (zipWith f ns rs)
-  where (unexpected,    ms') = span isUnexpected ms
-        (expected, messages) = span isExpected   ms'
-        f prefix m = (prefix ++) <$> m
-        ns = ["\nunexpected ","\nexpecting ","\n"]
-        rs = (renderMsgs orList <$> [unexpected, expected]) ++
-             [renderMsgs (concat . NE.intersperse "\n") messages]
+class ShowToken a where
 
--- | Render collection of messages. If the collection is empty, return
--- 'Nothing', otherwise return textual representation of the messages inside
--- 'Just'.
+  -- | Pretty-print non-empty stream of tokens. This function is also used
+  -- to print single tokens (represented as list with length 1).
+  --
+  -- @since 5.0.0
 
-renderMsgs
-  :: (NonEmpty String -> String) -- ^ Function to combine results
-  -> [Message]         -- ^ Collection of messages to render
-  -> Maybe String      -- ^ Result, if any
--- renderMsgs _ [] = Nothing
-renderMsgs f ms = f . fmap messageString <$> NE.nonEmpty ms
+  showTokens :: NonEmpty a -> String
+
+instance ShowToken Char where
+  showTokens = stringPretty
+
+-- | @stringPretty s@ returns pretty representation of string @s@. This is
+-- used when printing string tokens in error messages.
+
+stringPretty :: NonEmpty Char -> String
+stringPretty (x:|[])      = charPretty x
+stringPretty ('\r':|"\n") = "crlf newline"
+stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
+
+-- | @charPretty ch@ returns user-friendly string representation of given
+-- character @ch@, suitable for using in error messages.
+
+charPretty :: Char -> String
+charPretty '\0' = "null"
+charPretty '\a' = "bell"
+charPretty '\b' = "backspace"
+charPretty '\t' = "tab"
+charPretty '\n' = "newline"
+charPretty '\v' = "vertical tab"
+charPretty '\f' = "form feed"
+charPretty '\r' = "carriage return"
+charPretty ' '  = "space"
+charPretty x    = "'" ++ [x] ++ "'"
+
+-- | The type class defines how to print custom data component of
+-- 'ParseError'.
+--
+-- @since 5.0.0
+
+class Ord a => ShowErrorComponent a where
+
+  -- | Pretty-print custom data component of 'ParseError'.
+
+  showErrorComponent :: a -> String
+
+instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
+  showErrorComponent (Tokens   ts) = showTokens ts
+  showErrorComponent (Label label) = NE.toList label
+  showErrorComponent EndOfInput    = "end of input"
+
+instance ShowErrorComponent Dec where
+  showErrorComponent (DecFail msg) = msg
+  showErrorComponent (DecIndentation ord ref actual) =
+    "incorrect indentation (got " ++ show (unPos actual) ++
+    ", should be " ++ p ++ show (unPos ref) ++ ")"
+    where p = case ord of
+                LT -> "less than "
+                EQ -> "equal to "
+                GT -> "greater than "
+
+-- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
+-- a newline.
+--
+-- @since 5.0.0
+
+parseErrorPretty :: ( Ord t
+                    , ShowToken t
+                    , ShowErrorComponent e )
+  => ParseError t e    -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+parseErrorPretty (ParseError pos us ps xs) =
+  sourcePosStackPretty pos ++ ":\n" ++
+  if E.null us && E.null ps && E.null xs
+    then "unknown parse error\n"
+    else concat
+      [ messageItemsPretty "unexpected " us
+      , messageItemsPretty "expecting "  ps
+      , unlines (showErrorComponent <$> E.toAscList xs) ]
+
+-- | Pretty-print stack of source positions.
+--
+-- @since 5.0.0
+
+sourcePosStackPretty :: NonEmpty SourcePos -> String
+sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
+  where (pos :| rest') = ms
+        rest           = reverse rest'
+        f p = "in file included from " ++ sourcePosPretty p ++ ",\n"
+
+-- | Transforms list of error messages into their textual representation.
+
+messageItemsPretty :: ShowErrorComponent a
+  => String            -- ^ Prefix to prepend
+  -> Set a             -- ^ Collection of messages
+  -> String            -- ^ Result of rendering
+messageItemsPretty prefix ts
+  | E.null ts = ""
+  | otherwise =
+    let f = orList . NE.fromList . E.toAscList . E.map showErrorComponent
+    in prefix ++ f ts ++ "\n"
 
 -- | Print a pretty list where items are separated with commas and the word
 -- “or” according to rules of English punctuation.

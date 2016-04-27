@@ -26,18 +26,22 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+{-# LANGUAGE CPP              #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Char (tests) where
 
 import Data.Char
 import Data.List (findIndex, isPrefixOf)
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Text.Megaparsec.Char
+import Text.Megaparsec.Error
 
 import Util
 
@@ -82,59 +86,29 @@ tests = testGroup "Character parsers"
   , testProperty "string' (case)"  prop_string'_1 ]
 
 instance Arbitrary GeneralCategory where
-  arbitrary = elements
-              [ UppercaseLetter
-              , LowercaseLetter
-              , TitlecaseLetter
-              , ModifierLetter
-              , OtherLetter
-              , NonSpacingMark
-              , SpacingCombiningMark
-              , EnclosingMark
-              , DecimalNumber
-              , LetterNumber
-              , OtherNumber
-              , ConnectorPunctuation
-              , DashPunctuation
-              , OpenPunctuation
-              , ClosePunctuation
-              , InitialQuote
-              , FinalQuote
-              , OtherPunctuation
-              , MathSymbol
-              , CurrencySymbol
-              , ModifierSymbol
-              , OtherSymbol
-              , Space
-              , LineSeparator
-              , ParagraphSeparator
-              , Control
-              , Format
-              , Surrogate
-              , PrivateUse
-              , NotAssigned ]
+  arbitrary = elements [minBound..maxBound]
 
 prop_newline :: String -> Property
-prop_newline = checkChar newline (== '\n') (Just "newline")
+prop_newline = checkChar newline (== '\n') (tkn '\n')
 
 prop_crlf :: String -> Property
-prop_crlf = checkString crlf "\r\n" (==) "crlf newline"
+prop_crlf = checkString crlf "\r\n" (==)
 
 prop_eol :: String -> Property
 prop_eol s = checkParser eol r s
   where h = head s
         r | s == "\n"   = Right "\n"
           | s == "\r\n" = Right "\r\n"
-          | null s      = posErr 0 s [uneEof, exSpec "end of line"]
-          | h == '\n'   = posErr 1 s [uneCh (s !! 1), exEof]
-          | h /= '\r'   = posErr 0 s [uneCh h, exSpec "end of line"]
-          | "\r\n" `isPrefixOf` s = posErr 2 s [uneCh (s !! 2), exEof]
-          | otherwise   = posErr 0 s [ uneStr (take 2 s)
-                                     , uneCh '\r'
-                                     , exSpec "end of line" ]
+          | null s      = posErr 0 s [ueof, elabel "end of line"]
+          | h == '\n'   = posErr 1 s [utok (s !! 1), eeof]
+          | h /= '\r'   = posErr 0 s [utok h, elabel "end of line"]
+          | "\r\n" `isPrefixOf` s = posErr 2 s [utok (s !! 2), eeof]
+          | otherwise   = posErr 0 s [ utoks (take 2 s)
+                                     , utok '\r'
+                                     , elabel "end of line" ]
 
 prop_tab :: String -> Property
-prop_tab = checkChar tab (== '\t') (Just "tab")
+prop_tab = checkChar tab (== '\t') (tkn '\t')
 
 prop_space :: String -> Property
 prop_space s = checkParser space r s
@@ -142,71 +116,70 @@ prop_space s = checkParser space r s
               Just x  ->
                   let ch = s !! x
                   in posErr x s
-                     [ uneCh ch
-                     , uneCh ch
-                     , exSpec "white space"
-                     , exEof ]
+                     [ utok ch
+                     , utok ch
+                     , elabel "white space"
+                     , eeof ]
               Nothing -> Right ()
 
 prop_controlChar :: String -> Property
-prop_controlChar = checkChar controlChar isControl (Just "control character")
+prop_controlChar = checkChar controlChar isControl (lbl "control character")
 
 prop_spaceChar :: String -> Property
-prop_spaceChar = checkChar spaceChar isSpace (Just "white space")
+prop_spaceChar = checkChar spaceChar isSpace (lbl "white space")
 
 prop_upperChar :: String -> Property
-prop_upperChar = checkChar upperChar isUpper (Just "uppercase letter")
+prop_upperChar = checkChar upperChar isUpper (lbl "uppercase letter")
 
 prop_lowerChar :: String -> Property
-prop_lowerChar = checkChar lowerChar isLower (Just "lowercase letter")
+prop_lowerChar = checkChar lowerChar isLower (lbl "lowercase letter")
 
 prop_letterChar :: String -> Property
-prop_letterChar = checkChar letterChar isAlpha (Just "letter")
+prop_letterChar = checkChar letterChar isAlpha (lbl "letter")
 
 prop_alphaNumChar :: String -> Property
-prop_alphaNumChar =
-  checkChar alphaNumChar isAlphaNum (Just "alphanumeric character")
+prop_alphaNumChar = checkChar alphaNumChar isAlphaNum
+  (lbl "alphanumeric character")
 
 prop_printChar :: String -> Property
-prop_printChar = checkChar printChar isPrint (Just "printable character")
+prop_printChar = checkChar printChar isPrint (lbl "printable character")
 
 prop_digitChar :: String -> Property
-prop_digitChar = checkChar digitChar isDigit (Just "digit")
+prop_digitChar = checkChar digitChar isDigit (lbl "digit")
 
 prop_octDigitChar :: String -> Property
-prop_octDigitChar = checkChar octDigitChar isOctDigit (Just "octal digit")
+prop_octDigitChar = checkChar octDigitChar isOctDigit (lbl "octal digit")
 
 prop_hexDigitChar :: String -> Property
-prop_hexDigitChar = checkChar hexDigitChar isHexDigit (Just "hexadecimal digit")
+prop_hexDigitChar = checkChar hexDigitChar isHexDigit (lbl "hexadecimal digit")
 
 prop_markChar :: String -> Property
-prop_markChar = checkChar markChar isMark (Just "mark character")
+prop_markChar = checkChar markChar isMark (lbl "mark character")
 
 prop_numberChar :: String -> Property
-prop_numberChar = checkChar numberChar isNumber (Just "numeric character")
+prop_numberChar = checkChar numberChar isNumber (lbl "numeric character")
 
 prop_punctuationChar :: String -> Property
-prop_punctuationChar =
-  checkChar punctuationChar isPunctuation (Just "punctuation")
+prop_punctuationChar = checkChar punctuationChar isPunctuation (lbl "punctuation")
 
 prop_symbolChar :: String -> Property
-prop_symbolChar = checkChar symbolChar isSymbol (Just "symbol")
+prop_symbolChar = checkChar symbolChar isSymbol (lbl "symbol")
 
 prop_separatorChar :: String -> Property
-prop_separatorChar = checkChar separatorChar isSeparator (Just "separator")
+prop_separatorChar = checkChar separatorChar isSeparator (lbl "separator")
 
 prop_asciiChar :: String -> Property
-prop_asciiChar = checkChar asciiChar isAscii (Just "ASCII character")
+prop_asciiChar = checkChar asciiChar isAscii (lbl "ASCII character")
 
 prop_latin1Char :: String -> Property
-prop_latin1Char = checkChar latin1Char isLatin1 (Just "Latin-1 character")
+prop_latin1Char = checkChar latin1Char isLatin1 (lbl "Latin-1 character")
 
 prop_charCategory :: GeneralCategory -> String -> Property
-prop_charCategory cat = checkChar (charCategory cat) p (Just $ categoryName cat)
+prop_charCategory cat = checkChar (charCategory cat) p (lbl $ categoryName cat)
   where p c = generalCategory c == cat
 
 prop_char :: Char -> String -> Property
-prop_char c = checkChar (char c) (== c) (Just $ showToken c)
+prop_char c = checkChar (char c) (== c) (tkn c)
 
 prop_char' :: Char -> String -> Property
 prop_char' c s = checkParser (char' c) r s
@@ -214,13 +187,13 @@ prop_char' c s = checkParser (char' c) r s
         l | isLower c = [c, toUpper c]
           | isUpper c = [c, toLower c]
           | otherwise = [c]
-        r | null s         = posErr 0 s $ uneEof : (exCh <$> l)
+        r | null s         = posErr 0 s $ ueof : (etok <$> l)
           | length s == 1 && (h `elemi` l) = Right h
-          | h `notElemi` l = posErr 0 s $ uneCh h : (exCh <$> l)
-          | otherwise      = posErr 1 s [uneCh (s !! 1), exEof]
+          | h `notElemi` l = posErr 0 s $ utok h : (etok <$> l)
+          | otherwise      = posErr 1 s [utok (s !! 1), eeof]
 
 prop_anyChar :: String -> Property
-prop_anyChar = checkChar anyChar (const True) (Just "character")
+prop_anyChar = checkChar anyChar (const True) (lbl "character")
 
 prop_oneOf :: String -> String -> Property
 prop_oneOf a = checkChar (oneOf a) (`elem` a) Nothing
@@ -235,10 +208,10 @@ prop_noneOf' :: String -> String -> Property
 prop_noneOf' a = checkChar (noneOf' a) (`notElemi` a) Nothing
 
 prop_string :: String -> String -> Property
-prop_string a = checkString (string a) a (==) (showToken a)
+prop_string a = checkString (string a) a (==)
 
 prop_string'_0 :: String -> String -> Property
-prop_string'_0 a = checkString (string' a) a casei (showToken a)
+prop_string'_0 a = checkString (string' a) a casei
 
 -- | Randomly change the case in the given string.
 
@@ -249,7 +222,7 @@ fuzzyCase s = zipWith f s <$> vector (length s)
 
 prop_string'_1 :: String -> Property
 prop_string'_1 a = forAll (fuzzyCase a) $ \s ->
-  checkString (string' a) a casei (showToken a) s
+  checkString (string' a) a casei s
 
 -- | Case-insensitive equality test for characters.
 
@@ -265,3 +238,9 @@ elemi c = any (casei c)
 
 notElemi :: Char -> String -> Bool
 notElemi c = not . elemi c
+
+tkn :: Char -> Maybe (ErrorItem Char)
+tkn = Just . Tokens . (:|[])
+
+lbl :: String -> Maybe (ErrorItem Char)
+lbl = Just . Label . NE.fromList

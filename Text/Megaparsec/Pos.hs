@@ -1,157 +1,175 @@
 -- |
 -- Module      :  Text.Megaparsec.Pos
 -- Copyright   :  © 2015–2016 Megaparsec contributors
---                © 2007 Paolo Martini
---                © 1999–2001 Daan Leijen
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Textual source position.
+-- Textual source position. The position includes name of file, line number,
+-- and column number. List of such positions can be used to model stack of
+-- include files.
+
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TupleSections      #-}
 
 module Text.Megaparsec.Pos
-  ( SourcePos
-  , sourceName
-  , sourceLine
-  , sourceColumn
-  , InvalidTextualPosition (..)
-  , newPos
+  ( -- * Abstract position
+    Pos
+  , mkPos
+  , unPos
+  , unsafePos
+  , InvalidPosException (..)
+    -- * Source position
+  , SourcePos (..)
   , initialPos
-  , incSourceLine
-  , incSourceColumn
-  , setSourceName
-  , setSourceLine
-  , setSourceColumn
+  , sourcePosPretty
+    -- * Helpers implementing default behaviors
   , defaultUpdatePos
   , defaultTabWidth )
 where
 
-import Control.Exception (Exception, throw)
+import Control.Monad.Catch
+import Data.Data (Data)
+import Data.Semigroup
 import Data.Typeable (Typeable)
+import Unsafe.Coerce
 
--- | The abstract data type @SourcePos@ represents source positions. It
--- contains the name of the source (i.e. file name), a line number and a
--- column number. @SourcePos@ is an instance of the 'Show', 'Eq' and 'Ord'
--- class.
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+import Data.Word (Word)
+#endif
+
+----------------------------------------------------------------------------
+-- Abstract position
+
+-- | Positive integer that is used to represent line number, column number,
+-- and similar things like indentation level. 'Semigroup' instance can be
+-- used to safely and purely add 'Pos'es together.
+--
+-- @since 5.0.0
+
+newtype Pos = Pos Word
+  deriving (Show, Eq, Ord, Data, Typeable)
+
+-- | Construction of 'Pos' from an instance of 'Integral'. The function
+-- throws 'InvalidPosException' when given non-positive argument. Note that
+-- the function is polymorphic with respect to 'MonadThrow' @m@, so you can
+-- get result inside of 'Maybe', for example.
+--
+-- @since 5.0.0
+
+mkPos :: (Integral a, MonadThrow m) => a -> m Pos
+mkPos x =
+  if x < 1
+    then throwM InvalidPosException
+    else (return . Pos . fromIntegral) x
+{-# INLINE mkPos #-}
+
+-- | Dangerous construction of 'Pos'. Use when you know for sure that
+-- argument is positive.
+--
+-- @since 5.0.0
+
+unsafePos :: Word -> Pos
+unsafePos x =
+  if x < 1
+    then error "Text.Megaparsec.Pos.unsafePos"
+    else Pos x
+{-# INLINE unsafePos #-}
+
+-- | Extract 'Word' from 'Pos'.
+--
+-- @since 5.0.0
+
+unPos :: Pos -> Word
+unPos = unsafeCoerce
+{-# INLINE unPos #-}
+
+instance Semigroup Pos where
+  (Pos x) <> (Pos y) = Pos (x + y)
+  {-# INLINE (<>) #-}
+
+instance Read Pos where
+  readsPrec d =
+    readParen (d > 10) $ \r1 -> do
+      ("Pos", r2) <- lex r1
+      (x,     r3) <- readsPrec 11 r2
+      (,r3) <$> mkPos (x :: Integer)
+
+-- | The exception is thrown by 'mkPos' when its argument is not a positive
+-- number.
+--
+-- @since 5.0.0
+
+data InvalidPosException = InvalidPosException
+  deriving (Eq, Show, Data, Typeable)
+
+instance Exception InvalidPosException
+
+----------------------------------------------------------------------------
+-- Source position
+
+-- | The data type @SourcePos@ represents source positions. It contains the
+-- name of the source file, a line number, and a column number. Source line
+-- and column positions change intensively during parsing, so we need to
+-- make them strict to avoid memory leaks.
 
 data SourcePos = SourcePos
-  { -- | Extract the name of the source from a source position.
-    sourceName   :: !String
-    -- | Extract the line number from a source position.
-  , sourceLine   :: !Int
-    -- | Extract the column number from a source position.
-  , sourceColumn :: !Int }
-  deriving (Eq, Ord)
+  { sourceName   :: FilePath -- ^ Name of source file
+  , sourceLine   :: !Pos     -- ^ Line number
+  , sourceColumn :: !Pos     -- ^ Column number
+  } deriving (Show, Read, Eq, Ord)
 
-instance Show SourcePos where
-  show (SourcePos n l c)
-    | null n    = showLC
-    | otherwise = n ++ ":" ++ showLC
-      where showLC = show l ++ ":" ++ show c
-
--- | This exception is thrown when some action on 'SourcePos' is performed
--- that would make column number or line number inside this data structure
--- non-positive.
---
--- The 'InvalidTextualPosition' structure includes in order:
---
---     * name of file
---     * line number (possibly non-positive value)
---     * column number (possibly non-positive value)
-
-data InvalidTextualPosition =
-  InvalidTextualPosition String Int Int
-  deriving (Eq, Show, Typeable)
-
-instance Exception InvalidTextualPosition
-
--- | Create a new 'SourcePos' with the given source name, line number and
--- column number.
---
--- If line number of column number is not positive, 'InvalidTextualPosition'
--- will be thrown.
-
-newPos :: String -- ^ File name
-       -> Int    -- ^ Line number, minimum is 1
-       -> Int    -- ^ Column number, minimum is 1
-       -> SourcePos
-newPos n l c =
-  if l < 1 || c < 1
-    then throw $ InvalidTextualPosition n l c
-    else SourcePos n l c
-{-# INLINE newPos #-}
-
--- | Create a new 'SourcePos' with the given source name, and line number
--- and column number set to 1, the upper left.
+-- | Construct initial position (line 1, column 1) given name of source
+-- file.
 
 initialPos :: String -> SourcePos
-initialPos name = newPos name 1 1
-{-# INLINE initialPos #-}
+initialPos n = SourcePos n u u
+  where u = unsafePos 1
 
--- | Increment the line number of a source position. If resulting line
--- number is not positive, 'InvalidTextualPosition' will be thrown.
+-- | Pretty-print a 'SourcePos'.
+--
+-- @since 5.0.0
 
-incSourceLine :: Int -> SourcePos -> SourcePos
-incSourceLine d (SourcePos n l c) = newPos n (l + d) c
-{-# INLINE incSourceLine #-}
+sourcePosPretty :: SourcePos -> String
+sourcePosPretty (SourcePos n l c)
+  | null n    = showLC
+  | otherwise = n ++ ":" ++ showLC
+  where showLC = show (unPos l) ++ ":" ++ show (unPos c)
 
--- | Increment the column number of a source position. If resulting column
--- number is not positive, 'InvalidTextualPosition' will be thrown.
-
-incSourceColumn :: Int -> SourcePos -> SourcePos
-incSourceColumn d (SourcePos n l c) = newPos n l (c + d)
-{-# INLINE incSourceColumn #-}
-
--- | Set the name of the source.
-
-setSourceName :: String -> SourcePos -> SourcePos
-setSourceName n (SourcePos _ l c) = newPos n l c
-{-# INLINE setSourceName #-}
-
--- | Set the line number of a source position. If the line number is not
--- positive, 'InvalidTextualPosition' will be thrown.
-
-setSourceLine :: Int -> SourcePos -> SourcePos
-setSourceLine l (SourcePos n _ c) = newPos n l c
-{-# INLINE setSourceLine #-}
-
--- | Set the column number of a source position. If the line number is not
--- positive, 'InvalidTextualPosition' will be thrown.
-
-setSourceColumn :: Int -> SourcePos -> SourcePos
-setSourceColumn c (SourcePos n l _) = newPos n l c
-{-# INLINE setSourceColumn #-}
+----------------------------------------------------------------------------
+-- Helpers implementing default behaviors
 
 -- | Update a source position given a character. The first argument
 -- specifies tab width. If the character is a newline (\'\\n\') the line
 -- number is incremented by 1. If the character is a tab (\'\\t\') the
--- column number is incremented to the nearest tab position, i.e. @column +
--- width - ((column - 1) \`rem\` width)@. In all other cases, the column is
--- incremented by 1.
---
--- If given tab width is not positive, 'defaultTabWidth' will be used.
+-- column number is incremented to the nearest tab position. In all other
+-- cases, the column is incremented by 1.
 --
 -- @since 5.0.0
 
 defaultUpdatePos
-  :: Int               -- ^ Tab width
+  :: Pos               -- ^ Tab width
   -> SourcePos         -- ^ Current position
   -> Char              -- ^ Current token
   -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
 defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
   where
+    u = unsafePos 1
+    w = unPos width
+    c' = unPos c
     npos =
       case ch of
-        '\n' -> SourcePos n (l + 1) 1
-        '\t' -> let w = if width < 1 then defaultTabWidth else width
-                in SourcePos n l (c + w - ((c - 1) `rem` w))
-        _    -> SourcePos n l (c + 1)
+        '\n' -> SourcePos n (l <> u) u
+        '\t' -> SourcePos n l (unsafePos $ c' + w - ((c' - 1) `rem` w))
+        _    -> SourcePos n l (c <> u)
 
 -- | Value of tab width used by default. Always prefer this constant when
 -- you want to refer to default tab width because actual value /may/ change
 -- in future. Current value is @8@.
 
-defaultTabWidth :: Int
-defaultTabWidth = 8
+defaultTabWidth :: Pos
+defaultTabWidth = unsafePos 8

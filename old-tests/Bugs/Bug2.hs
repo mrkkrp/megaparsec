@@ -1,4 +1,3 @@
-
 module Bugs.Bug2 (main) where
 
 import Control.Applicative (empty)

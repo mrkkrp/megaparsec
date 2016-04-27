@@ -1,4 +1,3 @@
-
 module Bugs.Bug6 (main) where
 
 import Text.Megaparsec
@@ -17,7 +16,7 @@ main =
 
 variable :: Parser String
 variable = do
-      x <- lookAhead (some letterChar)
-      if x == "return"
-      then fail "'return' is a reserved keyword"
-      else string x
+  x <- lookAhead (some letterChar)
+  if x == "return"
+    then fail "'return' is a reserved keyword"
+    else string x

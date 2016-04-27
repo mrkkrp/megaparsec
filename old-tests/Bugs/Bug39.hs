@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 module Bugs.Bug39 (main) where
 

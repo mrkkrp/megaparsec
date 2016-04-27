@@ -26,130 +26,96 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+{-# LANGUAGE CPP              #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Error (tests) where
 
-import Data.Foldable (find)
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (fromJust)
+import Data.Function (on)
+import Data.List (isInfixOf)
 import Data.Monoid ((<>))
+import Data.Set (Set)
+import qualified Data.Set as E
 
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
-import Pos ()
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 
+import Util ()
+
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
+import Data.Foldable (Foldable, all)
 import Data.Monoid (mempty)
+import Prelude hiding (all)
 #endif
 
 tests :: Test
 tests = testGroup "Parse errors"
-  [ testProperty "monoid left identity"            prop_monoid_left_id
-  , testProperty "monoid right identity"           prop_monoid_right_id
-  , testProperty "monoid associativity"            prop_monoid_assoc
-  , testProperty "extraction of message string"    prop_messageString
-  , testProperty "creation of new error messages"  prop_newErrorMessage
-  , testProperty "messages are always well-formed" prop_wellFormedMessages
-  , testProperty "copying of error positions"      prop_parseErrorCopy
-  , testProperty "setting of error position"       prop_setErrorPos
-  , testProperty "addition of error message"       prop_addErrorMessage
-  , testProperty "setting of error message"        prop_setErrorMessage
-  , testProperty "position of merged error"        prop_mergeErrorPos
-  , testProperty "messages of merged error"        prop_mergeErrorMsgs
-  , testProperty "position of error is visible"    prop_visiblePos
-  , testProperty "message components are visible"  prop_visibleMsgs ]
+  [ testProperty "monoid left identity"               prop_monoid_left_id
+  , testProperty "monoid right identity"              prop_monoid_right_id
+  , testProperty "monoid associativity"               prop_monoid_assoc
+  , testProperty "consistency of Show/Read"           prop_showReadConsistency
+  , testProperty "position of merged error"           prop_mergeErrorPos
+  , testProperty "unexpected items in merged error"   prop_mergeErrorUnexpected
+  , testProperty "expected items in merged error"     prop_mergeErrorExpected
+  , testProperty "custom items in merged error"       prop_mergeErrorCustom
+  , testProperty "source position in rendered error"  prop_ppSourcePos
+  , testProperty "unexpected items in rendered error" prop_ppUnexpected
+  , testProperty "expected items in rendered error"   prop_ppExpected
+  , testProperty "custom data in rendered error"      prop_ppCustom ]
 
-instance Arbitrary Message where
-  arbitrary = ($) <$> elements constructors <*> arbitrary
-    where constructors = [Unexpected, Expected, Message]
+type PE = ParseError Char Dec
 
-instance Arbitrary ParseError where
-  arbitrary = do
-    ms  <- listOf arbitrary
-    err <- oneof [ newErrorUnknown <$> arbitrary
-                 , newErrorMessage <$> arbitrary <*> arbitrary ]
-    return $ addErrorMessages ms err
+prop_monoid_left_id :: PE -> Property
+prop_monoid_left_id x = mempty <> x === x .&&.
+  mempty { errorPos = errorPos x } <> x === x
 
-prop_monoid_left_id :: ParseError -> Bool
-prop_monoid_left_id x = mempty <> x == x
+prop_monoid_right_id :: PE -> Property
+prop_monoid_right_id x = x <> mempty === x .&&.
+  mempty { errorPos = errorPos x } <> x === x
 
-prop_monoid_right_id :: ParseError -> Bool
-prop_monoid_right_id x = x <> mempty == x
+prop_monoid_assoc :: PE -> PE -> PE -> Property
+prop_monoid_assoc x y z = (x <> y) <> z === x <> (y <> z)
 
-prop_monoid_assoc :: ParseError -> ParseError -> ParseError -> Bool
-prop_monoid_assoc x y z = (x <> y) <> z == x <> (y <> z)
+prop_showReadConsistency :: PE -> Property
+prop_showReadConsistency x = read (show x) === x
 
-prop_messageString :: Message -> Bool
-prop_messageString m@(Unexpected s) = s == messageString m
-prop_messageString m@(Expected   s) = s == messageString m
-prop_messageString m@(Message    s) = s == messageString m
+prop_mergeErrorPos :: PE -> PE -> Property
+prop_mergeErrorPos e1 e2 =
+  errorPos (e1 <> e2) === max (errorPos e1) (errorPos e2)
 
-prop_newErrorMessage :: Message -> SourcePos -> Bool
-prop_newErrorMessage msg pos = added && errorPos new == pos
-  where new   = newErrorMessage msg pos
-        added = errorMessages new == if badMessage msg then [] else [msg]
+prop_mergeErrorUnexpected :: PE -> PE -> Property
+prop_mergeErrorUnexpected = checkMergedItems errorUnexpected
 
-prop_wellFormedMessages :: ParseError -> Bool
-prop_wellFormedMessages = wellFormed . errorMessages
+prop_mergeErrorExpected :: PE -> PE -> Property
+prop_mergeErrorExpected = checkMergedItems errorExpected
 
-prop_parseErrorCopy :: ParseError -> Bool
-prop_parseErrorCopy err =
-  foldr addErrorMessage (newErrorUnknown pos) msgs == err
-  where pos  = errorPos err
-        msgs = errorMessages err
+prop_mergeErrorCustom :: PE -> PE -> Property
+prop_mergeErrorCustom = checkMergedItems errorCustom
 
-prop_setErrorPos :: SourcePos -> ParseError -> Bool
-prop_setErrorPos pos err =
-  errorPos new == pos && errorMessages new == errorMessages err
-  where new = setErrorPos pos err
+checkMergedItems :: (Ord a, Show a) => (PE -> Set a) -> PE -> PE -> Property
+checkMergedItems f e1 e2 = f (e1 <> e2) === r
+  where r = case (compare `on` errorPos) e1 e2 of
+              LT -> f e2
+              EQ -> (E.union `on` f) e1 e2
+              GT -> f e1
 
-prop_addErrorMessage :: Message -> ParseError -> Bool
-prop_addErrorMessage msg err =
-  wellFormed msgs && (badMessage msg || added)
-  where new   = addErrorMessage msg err
-        msgs  = errorMessages new
-        added = msg `elem` msgs && not (errorIsUnknown new)
+prop_ppSourcePos :: PE -> Property
+prop_ppSourcePos = checkPresence errorPos sourcePosPretty
 
-prop_setErrorMessage :: Message -> ParseError -> Bool
-prop_setErrorMessage msg err =
-  wellFormed msgs && (badMessage msg || (added && unique))
-  where new    = setErrorMessage msg err
-        msgs   = errorMessages new
-        added  = msg `elem` msgs && not (errorIsUnknown new)
-        unique = length (filter f msgs) == 1
-        f      = fromJust $ find ($ msg) [isUnexpected, isExpected, isMessage]
+prop_ppUnexpected :: PE -> Property
+prop_ppUnexpected = checkPresence errorUnexpected showErrorComponent
 
-prop_mergeErrorPos :: ParseError -> ParseError -> Bool
-prop_mergeErrorPos e1 e2 = errorPos (mergeError e1 e2) == max pos1 pos2
-  where pos1 = errorPos e1
-        pos2 = errorPos e2
+prop_ppExpected :: PE -> Property
+prop_ppExpected = checkPresence errorExpected showErrorComponent
 
-prop_mergeErrorMsgs :: ParseError -> ParseError -> Bool
-prop_mergeErrorMsgs e1 e2' = errorPos e1 /= errorPos e2 || wellFormed msgsm
-  where e2    = setErrorPos (errorPos e1) e2'
-        msgsm = errorMessages $ mergeError e1 e2
+prop_ppCustom :: PE -> Property
+prop_ppCustom = checkPresence errorCustom showErrorComponent
 
-prop_visiblePos :: ParseError -> Bool
-prop_visiblePos err = show (errorPos err) `isPrefixOf` show err
-
-prop_visibleMsgs :: ParseError -> Bool
-prop_visibleMsgs err = if null msgs
-                       then "unknown" `isInfixOf` shown
-                       else all (`isInfixOf` shown) (msgs >>= f)
-  where shown = show err
-        msgs  = errorMessages err
-        f (Unexpected s) = ["unexpected", s]
-        f (Expected   s) = ["expecting",  s]
-        f (Message    s) = [s]
-
--- | @wellFormed xs@ checks that list @xs@ is sorted and contains no
--- duplicates and no empty messages.
-
-wellFormed :: [Message] -> Bool
-wellFormed xs = and (zipWith (<) xs (tail xs)) && not (any badMessage xs)
+checkPresence :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
+checkPresence g r e = property (all f (g e))
+  where rendered = parseErrorPretty e
+        f x = r x `isInfixOf` rendered
