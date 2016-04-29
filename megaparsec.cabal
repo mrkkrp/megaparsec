@@ -138,7 +138,7 @@ test-suite tests
                     , Util
   build-depends:      base           >= 4.6 && < 5
                     , HUnit          >= 1.2 && < 1.4
-                    , QuickCheck     >= 2.4 && < 3
+                    , QuickCheck     >= 2.8.2 && < 3
                     , bytestring
                     , containers     >= 0.5 && < 0.6
                     , exceptions     >= 0.6 && < 0.9
