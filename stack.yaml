@@ -1,3 +1,5 @@
-resolver: nightly-2016-02-08
+resolver: lts-5.14
 packages:
 - '.'
+extra-deps:
+- QuickCheck-2.8.2
