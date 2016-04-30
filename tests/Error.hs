@@ -33,12 +33,16 @@ module Error (tests) where
 
 import Data.Function (on)
 import Data.List (isInfixOf)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid ((<>))
 import Data.Set (Set)
-import qualified Data.Set as E
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Set           as E
 
 import Test.Framework
+import Test.Framework.Providers.HUnit (testCase)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.HUnit (Assertion, (@?=))
 import Test.QuickCheck
 
 import Text.Megaparsec.Error
@@ -62,6 +66,8 @@ tests = testGroup "Parse errors"
   , testProperty "unexpected items in merged error"   prop_mergeErrorUnexpected
   , testProperty "expected items in merged error"     prop_mergeErrorExpected
   , testProperty "custom items in merged error"       prop_mergeErrorCustom
+  , testCase     "showTokens (String instance)"       case_showTokens
+  , testCase     "rendering of unknown parse error"   case_ppUnknownError
   , testProperty "source position in rendered error"  prop_ppSourcePos
   , testProperty "unexpected items in rendered error" prop_ppUnexpected
   , testProperty "expected items in rendered error"   prop_ppExpected
@@ -102,6 +108,31 @@ checkMergedItems f e1 e2 = f (e1 <> e2) === r
               LT -> f e2
               EQ -> (E.union `on` f) e1 e2
               GT -> f e1
+
+case_showTokens :: Assertion
+case_showTokens = mapM_ (\(x,y) -> showTokens (NE.fromList x) @?= y)
+  [ ("\r\n", "crlf newline")
+  , ("\0",   "null")
+  , ("\a",   "bell")
+  , ("\b",   "backspace")
+  , ("\t",   "tab")
+  , ("\n",   "newline")
+  , ("\v",   "vertical tab")
+  , ("\f",   "form feed")
+  , ("\r",   "carriage return")
+  , (" ",    "space")
+  , ("a",    "'a'")
+  , ("foo",  "\"foo\"") ]
+
+case_ppUnknownError :: Assertion
+case_ppUnknownError =
+  parseErrorPretty (err :: PE) @?= "1:1:\nunknown parse error\n"
+  where
+    err = ParseError
+      { errorPos        = initialPos "" :| []
+      , errorUnexpected = E.empty
+      , errorExpected   = E.empty
+      , errorCustom     = E.empty }
 
 prop_ppSourcePos :: PE -> Property
 prop_ppSourcePos = checkPresence errorPos sourcePosPretty
