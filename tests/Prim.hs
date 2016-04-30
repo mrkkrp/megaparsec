@@ -103,6 +103,7 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "ParsecT monad laws: left identity"   prop_monad_left_id
   , testProperty "ParsecT monad laws: right identity"  prop_monad_right_id
   , testProperty "ParsecT monad laws: associativity"   prop_monad_assoc
+  , testProperty "ParsecT monad io (liftIO)"           prop_monad_io
   , testProperty "ParsecT monad reader ask"   prop_monad_reader_ask
   , testProperty "ParsecT monad reader local" prop_monad_reader_local
   , testProperty "ParsecT monad state get"    prop_monad_state_get
@@ -333,6 +334,12 @@ prop_monad_assoc a b c = ((m >>= f) >>= g) !=! (m >>= (\x -> f x >>= g))
   where m = return a
         f x = return $ x + b
         g x = return $ x + c
+
+-- MonadIO instance
+
+prop_monad_io :: Integer -> Property
+prop_monad_io n = ioProperty (liftM (=== Right n) (runParserT p "" ""))
+  where p = liftIO (return n) :: ParsecT Dec String IO Integer
 
 -- MonadReader instance
 
