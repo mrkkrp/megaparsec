@@ -149,6 +149,7 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "parser state input"                  prop_state_input
   , testProperty "parser state tab width"              prop_state_tab
   , testProperty "parser state general"                prop_state
+  , testProperty "parseMaybe"                          prop_parseMaybe
   , testProperty "custom state parsing"                prop_runParser'
   , testProperty "custom state parsing (transformer)"  prop_runParserT'
   , testProperty "state on failure (mplus)"         prop_stOnFail_0
@@ -742,6 +743,11 @@ prop_state s1 s2 = checkParser' p r s
         s = ""
 
 -- Running a parser
+
+prop_parseMaybe :: String -> String -> Property
+prop_parseMaybe s s' = parseMaybe p s === r
+  where p = string s' :: Parser String
+        r = if s == s' then Just s else Nothing
 
 prop_runParser' :: State String -> String -> Property
 prop_runParser' st s = runParser' p st === r
