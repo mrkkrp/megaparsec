@@ -44,6 +44,7 @@ import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (maybeToList, fromMaybe)
+import Data.Proxy
 import Data.Set (Set)
 import Data.Word (Word8)
 import qualified Control.Monad.State.Lazy    as L
@@ -77,9 +78,13 @@ import Util
 tests :: Test
 tests = testGroup "Primitive parser combinators"
   [ testProperty "Stream lazy byte string"             prop_byteStringL
+  , testProperty "Stream lazy byte string (pos)"       prop_byteStringL_pos
   , testProperty "Stream strict byte string"           prop_byteStringS
+  , testProperty "Stream strict byte string (pos)"     prop_byteStringS_pos
   , testProperty "Stream lazy text"                    prop_textL
+  , testProperty "Stream lazy text (pos)"              prop_textL_pos
   , testProperty "Stream strict text"                  prop_textS
+  , testProperty "Stream strict text (pos)"            prop_textS_pos
   , testProperty "ParsecT functor"                     prop_functor
   , testProperty "ParsecT applicative (<*>)"           prop_applicative_0
   , testProperty "ParsecT applicative (*>)"            prop_applicative_1
@@ -170,11 +175,21 @@ prop_byteStringL ch' n = parse p "" (BL.pack s) === Right s
         s  = replicate (getNonNegative n) ch
         ch = byteToChar ch'
 
+prop_byteStringL_pos :: Pos -> SourcePos -> Char -> Property
+prop_byteStringL_pos w pos ch =
+  updatePos (Proxy :: Proxy String) w pos ch ===
+  updatePos (Proxy :: Proxy BL.ByteString) w pos ch
+
 prop_byteStringS :: Word8 -> NonNegative Int -> Property
 prop_byteStringS ch' n = parse p "" (B.pack s) === Right s
   where p  = many (char ch) :: Parsec Dec B.ByteString String
         s  = replicate (getNonNegative n) ch
         ch = byteToChar ch'
+
+prop_byteStringS_pos :: Pos -> SourcePos -> Char -> Property
+prop_byteStringS_pos w pos ch =
+  updatePos (Proxy :: Proxy String) w pos ch ===
+  updatePos (Proxy :: Proxy B.ByteString) w pos ch
 
 byteToChar :: Word8 -> Char
 byteToChar = chr . fromIntegral
@@ -184,10 +199,20 @@ prop_textL ch n = parse p "" (TL.pack s) === Right s
   where p = many (char ch) :: Parsec Dec TL.Text String
         s = replicate (getNonNegative n) ch
 
+prop_textL_pos :: Pos -> SourcePos -> Char -> Property
+prop_textL_pos w pos ch =
+  updatePos (Proxy :: Proxy String) w pos ch ===
+  updatePos (Proxy :: Proxy TL.Text) w pos ch
+
 prop_textS :: Char -> NonNegative Int -> Property
 prop_textS ch n = parse p "" (T.pack s) === Right s
   where p = many (char ch) :: Parsec Dec T.Text String
         s = replicate (getNonNegative n) ch
+
+prop_textS_pos :: Pos -> SourcePos -> Char -> Property
+prop_textS_pos w pos ch =
+  updatePos (Proxy :: Proxy String) w pos ch ===
+  updatePos (Proxy :: Proxy T.Text) w pos ch
 
 -- Functor instance
 
