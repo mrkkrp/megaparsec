@@ -739,12 +739,13 @@ pToken test mtoken = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
                      (maybe E.empty (E.singleton . Tokens . nes) mtoken)
                      E.empty) s
     Just (c,cs) ->
-      let (!apos, !npos) = updatePos (Proxy :: Proxy s) w pos c
+      let (apos, npos) = updatePos (Proxy :: Proxy s) w pos c
       in case test c of
-        Left (us, ps, xs) -> eerr (ParseError (apos:|z) us ps xs) s
+        Left (us, ps, xs) ->
+          apos `seq` eerr (ParseError (apos:|z) us ps xs) s
         Right x ->
-          let !newstate = State cs (npos:|z) w
-          in cok x newstate mempty
+          let newstate = State cs (npos:|z) w
+          in npos `seq` cok x newstate mempty
 {-# INLINE pToken #-}
 
 pTokens :: forall e s m. Stream s
