@@ -332,9 +332,21 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
 
 instance (ErrorComponent e, Stream s) => A.Applicative (ParsecT e s m) where
   pure     = pPure
-  (<*>)    = ap
+  (<*>)    = pAp
   p1 *> p2 = p1 `pBind` const p2
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
+
+pAp :: Stream s
+  => ParsecT e s m (a -> b)
+  -> ParsecT e s m a
+  -> ParsecT e s m b
+pAp m k = ParsecT $ \s cok cerr eok eerr ->
+  let mcok x s' hs = unParser k s' (cok . x) cerr
+        (accHints hs (cok . x)) (withHints hs cerr)
+      meok x s' hs = unParser k s' (cok . x) cerr
+        (accHints hs (eok . x)) (withHints hs eerr)
+  in unParser m s mcok cerr meok eerr
+{-# INLINE pAp #-}
 
 instance (ErrorComponent e, Stream s) => A.Alternative (ParsecT e s m) where
   empty  = mzero
