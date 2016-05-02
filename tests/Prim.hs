@@ -87,8 +87,9 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "Stream strict text (pos)"            prop_textS_pos
   , testProperty "ParsecT functor"                     prop_functor
   , testProperty "ParsecT applicative (<*>)"           prop_applicative_0
-  , testProperty "ParsecT applicative (*>)"            prop_applicative_1
-  , testProperty "ParsecT applicative (<*)"            prop_applicative_2
+  , testProperty "ParsecT applicative (<*>) meok-cerr" prop_applicative_1
+  , testProperty "ParsecT applicative (*>)"            prop_applicative_2
+  , testProperty "ParsecT applicative (<*)"            prop_applicative_3
   , testProperty "ParsecT alternative empty and (<|>)" prop_alternative_0
   , testProperty "ParsecT alternative (<|>)"           prop_alternative_1
   , testProperty "ParsecT alternative (<|>) pos"       prop_alternative_2
@@ -227,11 +228,18 @@ prop_functor n m =
 prop_applicative_0 :: Integer -> Integer -> Property
 prop_applicative_0 n m = ((+) <$> pure n <*> pure m) /=\ n + m
 
-prop_applicative_1 :: Integer -> Integer -> Property
-prop_applicative_1 n m = (pure n *> pure m) /=\ m
+prop_applicative_1 :: Char -> Char -> Property
+prop_applicative_1 a b = a /= b ==> checkParser p r s
+  where
+    p = pure toUpper <*> (char a >> char a)
+    r = posErr 1 s [utok b, etok a]
+    s = [a,b]
 
 prop_applicative_2 :: Integer -> Integer -> Property
-prop_applicative_2 n m = (pure n <* pure m) /=\ n
+prop_applicative_2 n m = (pure n *> pure m) /=\ m
+
+prop_applicative_3 :: Integer -> Integer -> Property
+prop_applicative_3 n m = (pure n <* pure m) /=\ n
 
 -- Alternative instance
 
@@ -693,26 +701,22 @@ prop_tokens_1 pre post post' =
 
 -- Parser state combinators
 
-prop_state_pos :: SourcePos -> Property
-prop_state_pos pos = p /=\ pos
-  where p = setPosition pos >> getPosition
+prop_state_pos :: State String -> SourcePos -> Property
+prop_state_pos st pos = runParser' p st === r
+  where p = (setPosition pos >> getPosition) :: Parser SourcePos
+        r = (f st pos, Right pos)
+        f (State s (_:|xs) w) y = State s (y:|xs) w
 
-prop_state_pushPosition :: NonEmpty SourcePos -> SourcePos -> Property
-prop_state_pushPosition z pos = p /=\ NE.cons pos z
-  where p = withPositionStack z (pushPosition pos)
+prop_state_pushPosition :: State String -> SourcePos -> Property
+prop_state_pushPosition st pos = fst (runParser' p st) === r
+  where p = pushPosition pos :: Parser ()
+        r = st { statePos = NE.cons pos (statePos st) }
 
-prop_state_popPosition :: NonEmpty SourcePos -> Property
-prop_state_popPosition z = p /=\ fromMaybe z (snd (NE.uncons z))
-  where p = withPositionStack z popPosition
-
-withPositionStack :: MonadParsec e s m
-  => NonEmpty SourcePos -- ^ Position stack to use
-  -> m ()               -- ^ An action to execute
-  -> m (NonEmpty SourcePos) -- ^ Position stack after execution
-withPositionStack z action = do
-  updateParserState $ \(State s _ w) -> State s z w
-  action
-  statePos <$> getParserState
+prop_state_popPosition :: State String -> Property
+prop_state_popPosition st = fst (runParser' p st) === r
+  where p = popPosition :: Parser ()
+        r = st { statePos = fromMaybe pos (snd (NE.uncons pos)) }
+        pos = statePos st
 
 prop_state_input :: String -> Property
 prop_state_input s = p /=\ s
