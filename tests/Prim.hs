@@ -29,6 +29,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE Rank2Types        #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# OPTIONS -fno-warn-orphans  #-}
 
@@ -41,12 +42,13 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Char (isLetter, toUpper, chr)
 import Data.Foldable (asum)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (maybeToList, fromMaybe)
 import Data.Proxy
 import Data.Set (Set)
 import Data.Word (Word8)
+import Prelude hiding (span)
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
@@ -85,6 +87,9 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "Stream lazy text (pos)"              prop_textL_pos
   , testProperty "Stream strict text"                  prop_textS
   , testProperty "Stream strict text (pos)"            prop_textS_pos
+  , testProperty "position in custom stream, eof"      prop_cst_eof
+  , testProperty "position in custom stream, token"    prop_cst_token
+  , testProperty "position in custom stream, tokens"   prop_cst_tokens
   , testProperty "ParsecT functor"                     prop_functor
   , testProperty "ParsecT applicative (<*>)"           prop_applicative_0
   , testProperty "ParsecT applicative (<*>) meok-cerr" prop_applicative_1
@@ -164,7 +169,7 @@ tests = testGroup "Primitive parser combinators"
   , testProperty "StateT notFollowedBy"     prop_StateT_notFollowedBy
   , testProperty "WriterT"                  prop_WriterT ]
 
-instance Arbitrary (State String) where
+instance Arbitrary a => Arbitrary (State a) where
   arbitrary = State
     <$> arbitrary
     <*> arbitrary
@@ -216,6 +221,124 @@ prop_textS_pos :: Pos -> SourcePos -> Char -> Property
 prop_textS_pos w pos ch =
   updatePos (Proxy :: Proxy String) w pos ch ===
   updatePos (Proxy :: Proxy T.Text) w pos ch
+
+-- Custom stream of tokens and position advancing
+
+-- | This data type will represent tokens in input stream for the purposes
+-- of next several tests.
+
+data Span = Span
+  { spanStart :: SourcePos
+  , spanEnd   :: SourcePos
+  , spanBody  :: NonEmpty Char
+  } deriving (Eq, Ord, Show)
+
+instance Stream [Span] where
+  type Token [Span] = Span
+  uncons [] = Nothing
+  uncons (t:ts) = Just (t, ts)
+  updatePos _ _ _ (Span start end _) = (start, end)
+
+instance Arbitrary Span where
+  arbitrary = do
+    start <- arbitrary
+    end   <- arbitrary `suchThat` (> start)
+    Span start end <$> arbitrary
+
+type CustomParser = Parsec Dec [Span]
+
+prop_cst_eof :: State [Span] -> Property
+prop_cst_eof st =
+  (not . null . stateInput) st ==> (runParser' p st === r)
+  where
+    p = eof :: CustomParser ()
+    h = head (stateInput st)
+    apos = let (_:|z) = statePos st in spanStart h :| z
+    r = (st { statePos = apos }, Left ParseError
+      { errorPos        = apos
+      , errorUnexpected = E.singleton (Tokens (nes h))
+      , errorExpected   = E.singleton EndOfInput
+      , errorCustom     = E.empty })
+
+prop_cst_token :: State [Span] -> Span -> Property
+prop_cst_token st@State {..} span = runParser' p st === r
+  where
+    p = pSpan span
+    h = head stateInput
+    (apos, npos) =
+      let z = NE.tail statePos
+      in (spanStart h :| z, spanEnd h :| z)
+    r | null stateInput =
+        ( st
+        , Left ParseError
+          { errorPos        = statePos
+          , errorUnexpected = E.singleton EndOfInput
+          , errorExpected   = E.singleton (Tokens $ nes span)
+          , errorCustom     = E.empty } )
+      | spanBody h == spanBody span =
+          ( st { statePos = npos
+               , stateInput = tail stateInput }
+          , Right span )
+      | otherwise =
+          ( st { statePos = apos }
+          , Left ParseError
+            { errorPos        = apos
+            , errorUnexpected = E.singleton (Tokens $ nes h)
+            , errorExpected   = E.singleton (Tokens $ nes span)
+            , errorCustom     = E.empty } )
+
+pSpan :: Span -> CustomParser Span
+pSpan span = token testToken (Just span)
+  where
+    f = E.singleton . Tokens . nes
+    testToken x =
+      if spanBody x == spanBody span
+        then Right span
+        else Left (f x, f span , E.empty)
+
+prop_cst_tokens :: State [Span] -> [Span] -> Property
+prop_cst_tokens st' ts =
+  forAll (incCoincidence st' ts) $ \st@State {..} ->
+  let
+    p = tokens compareTokens ts :: CustomParser [Span]
+    compareTokens x y = spanBody x == spanBody y
+    updatePos' = updatePos (Proxy :: Proxy [Span]) stateTabWidth
+    ts' = NE.fromList ts
+    il = length . takeWhile id $ zipWith compareTokens stateInput ts
+    tl = length ts
+    consumed = take il stateInput
+    (apos, npos) =
+      let (pos:|z) = statePos
+      in ( spanStart (head stateInput) :| z
+         , foldl' (\q t -> snd (updatePos' q t)) pos consumed :| z )
+    r | null ts = (st, Right [])
+      | null stateInput =
+        ( st
+        , Left ParseError
+          { errorPos        = statePos
+          , errorUnexpected = E.singleton EndOfInput
+          , errorExpected   = E.singleton (Tokens ts')
+          , errorCustom     = E.empty } )
+      | il == tl =
+        ( st { statePos   = npos
+             , stateInput = drop (length ts) stateInput }
+        , Right consumed )
+      | otherwise =
+        ( st { statePos = apos }
+        , Left ParseError
+          { errorPos        = apos
+          , errorUnexpected = E.singleton
+            (Tokens . NE.fromList $ take (il + 1) stateInput)
+          , errorExpected   = E.singleton (Tokens ts')
+          , errorCustom     = E.empty } )
+  in runParser' p st === r
+
+incCoincidence :: State [Span] -> [Span] -> Gen (State [Span])
+incCoincidence st ts = do
+  n <- getSmall <$> arbitrary
+  let (pre, post) = splitAt n (stateInput st)
+      pre' = zipWith (\x t -> x { spanBody = spanBody t }) pre ts
+  return st { stateInput = pre' ++ post }
 
 -- Functor instance
 
@@ -412,7 +535,7 @@ prop_failure us ps xs = checkParser' p r s
   where p :: (MonadParsec Dec s m, Token s ~ Char) => m String
         p = failure us ps xs
         r = Left ParseError
-          { errorPos        = initialPos "" :| []
+          { errorPos        = nes (initialPos "")
           , errorUnexpected = us
           , errorExpected   = ps
           , errorCustom     = xs }
@@ -679,7 +802,7 @@ prop_token mtok s = checkParser' p r s
         p = token testChar mtok
         testChar x = if isLetter x
           then Right x
-          else Left (E.singleton (Tokens (x:|[])), E.empty, E.empty)
+          else Left (E.singleton (Tokens $ nes x), E.empty, E.empty)
         h = head s
         r | null s = posErr 0 s $ ueof : maybeToList (etok <$> mtok)
           | isLetter h && length s == 1 = Right (head s)
@@ -738,7 +861,7 @@ prop_state s1 s2 = checkParser' p r s
   where p :: MonadParsec Dec String m => m (State String)
         p = do
           st <- getParserState
-          guard (st == State s (initialPos "" :| []) defaultTabWidth)
+          guard (st == State s (nes $ initialPos "") defaultTabWidth)
           setParserState s1
           updateParserState (f s2)
           liftM2 const getParserState (setInput "")
@@ -808,7 +931,7 @@ prop_stOnFail_3 s = runParser' p (stateFromInput s) === (i, r)
         p = notFollowedBy (string s)
 
 stateFromInput :: s -> State s
-stateFromInput s = State s (initialPos "" :| []) defaultTabWidth
+stateFromInput s = State s (nes $ initialPos "") defaultTabWidth
 
 -- ReaderT instance of MonadParsec
 
@@ -888,3 +1011,7 @@ prop_WriterT pre post =
           void logged_letter'
           return cs
         r = Right ("ab", pre ++ "AB" ++ post ++ "x")
+
+nes :: a -> NonEmpty a
+nes x = x :| []
+{-# INLINE nes #-}
