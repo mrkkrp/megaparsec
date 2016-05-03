@@ -732,10 +732,12 @@ pEof = ParsecT $ \s@(State input (pos:|z) w) _ _ eok eerr ->
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let !apos = fst (updatePos (Proxy :: Proxy s) w pos x)
-      in eerr (ParseError (apos:|z)
-               (E.singleton . Tokens . nes $ x)
-               (E.singleton EndOfInput)
-               E.empty) s
+      in eerr ParseError
+          { errorPos        = apos:|z
+          , errorUnexpected = (E.singleton . Tokens . nes) x
+          , errorExpected   = E.singleton EndOfInput
+          , errorCustom     = E.empty }
+          (State input (apos:|z) w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
@@ -746,15 +748,18 @@ pToken :: forall e s m a. Stream s
   -> ParsecT e s m a
 pToken test mtoken = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
   case uncons input of
-    Nothing -> eerr (ParseError (pos:|z)
-                     (E.singleton EndOfInput)
-                     (maybe E.empty (E.singleton . Tokens . nes) mtoken)
-                     E.empty) s
+    Nothing -> eerr ParseError
+      { errorPos        = pos:|z
+      , errorUnexpected = E.singleton EndOfInput
+      , errorExpected   = maybe E.empty (E.singleton . Tokens . nes) mtoken
+      , errorCustom     = E.empty } s
     Just (c,cs) ->
       let (apos, npos) = updatePos (Proxy :: Proxy s) w pos c
       in case test c of
         Left (us, ps, xs) ->
-          apos `seq` eerr (ParseError (apos:|z) us ps xs) s
+          apos `seq` eerr
+            (ParseError (apos:|z) us ps xs)
+            (State input (apos:|z) w)
         Right x ->
           let newstate = State cs (npos:|z) w
           in npos `seq` cok x newstate mempty
@@ -767,31 +772,39 @@ pTokens :: forall e s m. Stream s
 pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
 pTokens test tts = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
   let updatePos' = updatePos (Proxy :: Proxy s) w
-      unexpect u = ParseError (pos:|z)
-        (E.singleton u)
-        (E.singleton . Tokens . NE.fromList $ tts)
-        E.empty
-      go [] is rs =
-        let !npos     = foldl' (\p t -> snd (updatePos' p t)) pos tts
-            !newstate = State rs (npos:|z) w
-        in cok (reverse is) newstate mempty
-      go (t:ts) is rs =
-        let what = case NE.nonEmpty is of
-              Nothing -> EndOfInput
-              Just xs -> Tokens (NE.reverse xs)
-        in case uncons rs of
-             Nothing -> eerr (unexpect what) s
-             Just (x,xs) ->
-               let !apos     = fst (updatePos' pos t)
-                   !newstate = State input (apos:|z) w
-               in if test t x
-                    then go ts (x:is) xs
-                    else eerr (unexpect    .
-                               Tokens      .
-                               NE.fromList .
-                               reverse $ (x:is))
-                              newstate
-  in go tts [] input
+      toTokens   = Tokens . NE.fromList . reverse
+      unexpect pos' u = ParseError
+        { errorPos        = pos'
+        , errorUnexpected = E.singleton u
+        , errorExpected   = (E.singleton . Tokens . NE.fromList) tts
+        , errorCustom     = E.empty }
+      go _ [] is rs =
+        let ris   = reverse is
+            !npos = foldl' (\p t -> snd (updatePos' p t)) pos ris
+        in cok ris (State rs (npos:|z) w) mempty
+      go apos (t:ts) is rs =
+        case uncons rs of
+          Nothing ->
+            apos `seq` eerr
+              (unexpect (apos:|z) (toTokens is))
+              (State input (apos:|z) w)
+          Just (x,xs) ->
+            if test t x
+              then go apos ts (x:is) xs
+              else apos `seq` eerr
+                     (unexpect (apos:|z) . toTokens $ x:is)
+                     (State input (apos:|z) w)
+  in case uncons input of
+       Nothing ->
+         eerr (unexpect (pos:|z) EndOfInput) s
+       Just (x,xs) ->
+         let t:ts = tts
+             apos = fst (updatePos' pos x)
+         in if test t x
+              then go apos ts [x] xs
+              else apos `seq` eerr
+                     (unexpect (apos:|z) $ Tokens (nes x))
+                     (State input (apos:|z) w)
 {-# INLINE pTokens #-}
 
 pGetParserState :: ParsecT e s m (State s)
