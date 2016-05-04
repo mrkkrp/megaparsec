@@ -265,7 +265,7 @@ data IndentOpt m a b
     -- second argument tells how to get final result, and third argument
     -- describes how to parse indented token
   | IndentSome (Maybe Pos) ([b] -> m a) (m b)
-    -- ^ Just like 'ManyIndent', but requires at least one indented token to
+    -- ^ Just like 'IndentMany', but requires at least one indented token to
     -- be present
 
 -- | Parse a “reference” token and a number of other tokens that have
