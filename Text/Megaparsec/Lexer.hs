@@ -38,6 +38,7 @@ module Text.Megaparsec.Lexer
   , nonIndented
   , IndentOpt (..)
   , indentBlock
+  , lineFold
     -- * Character and string literals
   , charLiteral
     -- * Numbers
@@ -318,6 +319,32 @@ indentedItems ref lvl sc p = go
           if done
             then return []
             else incorrectIndent EQ lvl pos
+
+-- | Create a parser that supports line-folding. The first argument is used
+-- to consume white space between components of line fold, thus it /must/
+-- consume newlines in order to work properly. The second argument is a
+-- callback that receives custom space-consuming parser as argument. This
+-- parser should be used after separate components of line fold that can be
+-- put on different lines.
+--
+-- An example should clarify the usage pattern:
+--
+-- > sc = L.space (void spaceChar) empty empty
+-- >
+-- > myFold = L.lineFold sc $ \sc' -> do
+-- >   let symbol' = L.symbol sc'
+-- >   symbol' "foo"
+-- >   symbol' "bar"
+-- >   L.symbol sc "baz" -- for last component use normal space consumer
+--
+-- @since 5.0.0
+
+lineFold :: MonadParsec e s m
+  => m ()              -- ^ How to consume indentation (white space)
+  -> (m () -> m a)     -- ^ Callback that uses provided space-consumer
+  -> m a
+lineFold sc action =
+  sc >> indentLevel >>= action . void . indentGuard sc GT
 
 ----------------------------------------------------------------------------
 -- Character and string literals
