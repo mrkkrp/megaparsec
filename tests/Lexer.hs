@@ -71,13 +71,14 @@ tests = testGroup "Lexer"
   [ testProperty "space combinator"       prop_space
   , testProperty "symbol combinator"      prop_symbol
   , testProperty "symbol' combinator"     prop_symbol'
-  , testCase     "skipBlockCommentNested" prop_skipBlockCommentNested
+  , testCase     "skipBlockCommentNested" case_skipBlockCommentNested
   , testProperty "indentLevel"            prop_indentLevel
   , testProperty "incorrectIndent"        prop_incorrectIndent
   , testProperty "indentGuard combinator" prop_indentGuard
   , testProperty "nonIndented combinator" prop_nonIndented
   , testProperty "indentBlock combinator" prop_indentBlock
   , testProperty "indentBlock (many)"     prop_indentMany
+  , testProperty "lineFold"               prop_lineFold
   , testProperty "charLiteral"            prop_charLiteral
   , testProperty "integer"                prop_integer
   , testProperty "decimal"                prop_decimal
@@ -98,6 +99,10 @@ mkWhiteSpace = concat <$> listOf whiteUnit
 
 mkSymbol :: Gen String
 mkSymbol = (++) <$> symbolName <*> whiteChars
+
+mkInterspace :: String -> Int -> Gen String
+mkInterspace x n = oneof [si, mkIndent x n]
+  where si = (++ x) <$> listOf (elements " \t")
 
 mkIndent :: String -> Int -> Gen String
 mkIndent x n = (++) <$> mkIndent' x n <*> eol
@@ -127,25 +132,25 @@ symbolName :: Gen String
 symbolName = listOf $ arbitrary `suchThat` isAlphaNum
 
 sc :: Parser ()
-sc = space (void C.spaceChar) l b
+sc = space (void $ C.oneOf " \t") empty empty
+
+scn :: Parser ()
+scn = space (void C.spaceChar) l b
   where l = skipLineComment "//"
         b = skipBlockComment "/*" "*/"
 
-sc' :: Parser ()
-sc' = space (void $ C.oneOf " \t") empty empty
-
 prop_space :: Property
 prop_space = forAll mkWhiteSpace (checkParser p r)
-  where p = sc
+  where p = scn
         r = Right ()
 
 prop_symbol :: Maybe Char -> Property
 prop_symbol t = forAll mkSymbol $ \s ->
-  parseSymbol (symbol sc) id s t
+  parseSymbol (symbol scn) id s t
 
 prop_symbol' :: Maybe Char -> Property
 prop_symbol' t = forAll mkSymbol $ \s ->
-  parseSymbol (symbol' sc) (fmap toLower) s t
+  parseSymbol (symbol' scn) (fmap toLower) s t
 
 parseSymbol
   :: (String -> Parser String)
@@ -160,10 +165,9 @@ parseSymbol p' f s' t = checkParser p r s
         g = takeWhile (not . isSpace) s
         s = s' ++ maybeToList t
 
-prop_skipBlockCommentNested :: Assertion
-prop_skipBlockCommentNested = checkCase p r s
-  where p :: (MonadParsec e s m, Token s ~ Char) => m ()
-        p = space (void C.spaceChar) empty
+case_skipBlockCommentNested :: Assertion
+case_skipBlockCommentNested = checkCase p r s
+  where p = space (void C.spaceChar) empty
               (skipBlockCommentNested "/*" "*/") <* eof
         r = Right ()
         s = " /* foo bar /* baz */ quux */ "
@@ -194,9 +198,9 @@ prop_indentGuard n =
     in checkParser p r s
   where mki = mkIndent sbla (getSmall $ getNonNegative n)
         p  = ip GT pos1 >>=
-          \x -> sp >> ip EQ x >> sp >> ip GT x >> sp >> sc
-        ip = indentGuard sc
-        sp = void (symbol sc' sbla <* C.eol)
+          \x -> sp >> ip EQ x >> sp >> ip GT x >> sp >> scn
+        ip = indentGuard scn
+        sp = void (symbol sc sbla <* C.eol)
 
 prop_nonIndented :: Property
 prop_nonIndented = forAll (mkIndent sbla 0) $ \s ->
@@ -204,7 +208,7 @@ prop_nonIndented = forAll (mkIndent sbla 0) $ \s ->
       r | i == 0    = Right sbla
         | otherwise = posErr i s (ii EQ pos1 (getCol s))
   in checkParser p r s
-  where p = nonIndented sc (symbol sc sbla)
+  where p = nonIndented scn (symbol scn sbla)
 
 prop_indentBlock :: Maybe (Positive (Small Int)) -> Property
 prop_indentBlock mn'' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
@@ -239,10 +243,10 @@ prop_indentBlock mn'' = forAll mkBlock $ \(l0,l1,l2,l3,l4) ->
           l4 <- mkIndent' sblc (ib + 2)
           return (l0,l1,l2,l3,l4)
         p = lvla
-        lvla = indentBlock sc $ IndentMany mn      (l sbla) lvlb <$ b sbla
-        lvlb = indentBlock sc $ IndentSome Nothing (l sblb) lvlc <$ b sblb
-        lvlc = indentBlock sc $ IndentNone                  sblc <$ b sblc
-        b    = symbol sc'
+        lvla = indentBlock scn $ IndentMany mn      (l sbla) lvlb <$ b sbla
+        lvlb = indentBlock scn $ IndentSome Nothing (l sblb) lvlc <$ b sblb
+        lvlc = indentBlock scn $ IndentNone                  sblc <$ b sblc
+        b    = symbol sc
         l x  = return . (x,)
         mn'  = getSmall . getPositive <$> mn''
         mn   = unsafePos . fromIntegral <$> mn'
@@ -253,10 +257,36 @@ prop_indentMany :: Property
 prop_indentMany = forAll (mkIndent sbla 0) (checkParser p r)
   where r = Right (sbla, [])
         p = lvla
-        lvla = indentBlock sc $ IndentMany Nothing (l sbla) lvlb <$ b sbla
+        lvla = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
         lvlb = b sblb
-        b    = symbol sc'
+        b    = symbol sc
         l x  = return . (x,)
+
+prop_lineFold :: Property
+prop_lineFold = forAll mkFold $ \(l0,l1,l2) ->
+  let r | end0 && col1 <= col0 =
+          posErr (getIndent l1 + g 1) s (ii GT col0 col1)
+        | end1 && col2 <= col0 =
+          posErr (getIndent l2 + g 2) s (ii GT col0 col2)
+        | otherwise = Right (sbla, sblb, sblc)
+      (col0, col1, col2) = (getCol l0, getCol l1, getCol l2)
+      (end0, end1)       = (getEnd l0, getEnd l1)
+      fragments = [l0,l1,l2]
+      g x = sum (length <$> take x fragments)
+      s = concat fragments
+  in checkParser p r s
+  where
+    mkFold = do
+      l0 <- mkInterspace sbla 0
+      l1 <- mkInterspace sblb 1
+      l2 <- mkInterspace sblc 1
+      return (l0,l1,l2)
+    p = lineFold scn $ \sc' -> do
+          a <- symbol sc' sbla
+          b <- symbol sc' sblb
+          c <- symbol scn sblc
+          return (a, b, c)
+    getEnd x = last x == '\n'
 
 getIndent :: String -> Int
 getIndent = length . takeWhile isSpace
