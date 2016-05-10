@@ -101,6 +101,8 @@
 * Added `skipBlockCommentNested` function that should help parse possibly
   nested block comments.
 
+* Added `lineFold` function that helps parse line folds.
+
 ## Megaparsec 4.4.0
 
 * Now state returned on failure is the exact state of parser at the moment
