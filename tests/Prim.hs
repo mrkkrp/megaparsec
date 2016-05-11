@@ -624,7 +624,7 @@ prop_lookAhead_2 a b c = checkParser' p r s
         s = abcRow a b c
 
 case_lookAhead_3 :: Assertion
-case_lookAhead_3 = checkCase p r s
+case_lookAhead_3 = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = lookAhead (char 'a' *> fail emsg)
         r = posErr 1 s [cstm (DecFail emsg)]
@@ -665,28 +665,28 @@ prop_notFollowedBy_2 a' b' c' = checkParser' p r s
         [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_notFollowedBy_3a :: Assertion
-case_notFollowedBy_3a = checkCase p r s
+case_notFollowedBy_3a = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy (char 'a' *> char 'c')
         r = Right ()
         s = "ab"
 
 case_notFollowedBy_3b :: Assertion
-case_notFollowedBy_3b = checkCase p r s
+case_notFollowedBy_3b = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy (char 'a' *> char 'd') <* char 'c'
         r = posErr 0 s [utok 'a', etok 'c']
         s = "ab"
 
 case_notFollowedBy_4a :: Assertion
-case_notFollowedBy_4a = checkCase p r s
+case_notFollowedBy_4a = checkCase' p r s
   where p :: MonadParsec e s m => m ()
         p = notFollowedBy mzero
         r = Right ()
         s = "ab"
 
 case_notFollowedBy_4b :: Assertion
-case_notFollowedBy_4b = checkCase p r s
+case_notFollowedBy_4b = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m ()
         p = notFollowedBy mzero <* char 'c'
         r = posErr 0 s [utok 'a', etok 'c']
@@ -722,42 +722,42 @@ prop_withRecovery_0 a' b' c' = checkParser' p r s
     [a,b,c] = getNonNegative <$> [a',b',c']
 
 case_withRecovery_1 :: Assertion
-case_withRecovery_1 = checkCase p r s
+case_withRecovery_1 = checkCase' p r s
   where p :: MonadParsec e s m => m String
         p = withRecovery (const $ return "bar") (return "foo")
         r = Right "foo"
         s = "abc"
 
 case_withRecovery_2 :: Assertion
-case_withRecovery_2 = checkCase p r s
+case_withRecovery_2 = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (\_ -> char 'a' *> mzero) (string "cba")
         r = posErr 0 s [utoks "a", etoks "cba"]
         s = "abc"
 
 case_withRecovery_3a :: Assertion
-case_withRecovery_3a = checkCase p r s
+case_withRecovery_3a = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (string "cba")
         r = Right "abd"
         s = "abc"
 
 case_withRecovery_3b :: Assertion
-case_withRecovery_3b = checkCase p r s
+case_withRecovery_3b = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (string "cba") <* char 'd'
         r = posErr 0 s [utok 'a', etoks "cba", etok 'd']
         s = "abc"
 
 case_withRecovery_4a :: Assertion
-case_withRecovery_4a = checkCase p r s
+case_withRecovery_4a = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ string "bc") (char 'a' *> mzero)
         r = Right "bc"
         s = "abc"
 
 case_withRecovery_4b :: Assertion
-case_withRecovery_4b = checkCase p r s
+case_withRecovery_4b = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ string "bc")
           (char 'a' *> char 'd' *> pure "foo") <* char 'f'
@@ -765,7 +765,7 @@ case_withRecovery_4b = checkCase p r s
         s = "abc"
 
 case_withRecovery_5 :: Assertion
-case_withRecovery_5 = checkCase p r s
+case_withRecovery_5 = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (\_ -> char 'b' *> fail emsg) (char 'a' *> fail emsg)
         r = posErr 1 s [cstm (DecFail emsg)]
@@ -773,28 +773,28 @@ case_withRecovery_5 = checkCase p r s
         s = "abc"
 
 case_withRecovery_6a :: Assertion
-case_withRecovery_6a = checkCase p r s
+case_withRecovery_6a = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m String
         p = withRecovery (const $ return "abd") (char 'a' *> mzero)
         r = Right "abd"
         s = "abc"
 
 case_withRecovery_6b :: Assertion
-case_withRecovery_6b = checkCase p r s
+case_withRecovery_6b = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = withRecovery (const $ return 'g') (char 'a' *> char 'd') <* char 'f'
         r = posErr 1 s [utok 'b', etok 'd', etok 'f']
         s = "abc"
 
 case_withRecovery_7 :: Assertion
-case_withRecovery_7 = checkCase p r s
+case_withRecovery_7 = checkCase' p r s
   where p :: (MonadParsec e s m, Token s ~ Char) => m Char
         p = withRecovery (const mzero) (char 'a' *> char 'd')
         r = posErr 1 s [utok 'b', etok 'd']
         s = "abc"
 
 case_eof :: Assertion
-case_eof = checkCase eof (Right ()) ""
+case_eof = checkCase' eof (Right ()) ""
 
 prop_token :: Maybe Char -> String -> Property
 prop_token mtok s = checkParser' p r s

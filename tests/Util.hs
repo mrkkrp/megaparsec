@@ -35,6 +35,7 @@ module Util
   ( checkParser
   , checkParser'
   , checkCase
+  , checkCase'
   , simpleParse
   , checkChar
   , checkString
@@ -112,11 +113,20 @@ checkParser' p r s = conjoin
 -- | Similar to 'checkParser', but produces HUnit's 'Assertion's instead.
 
 checkCase :: (Eq a, Show a)
+  => Parser a          -- ^ Parser to test
+  -> Either (ParseError Char Dec) a -- ^ Expected result of parsing
+  -> String            -- ^ Input for the parser
+  -> Assertion         -- ^ Resulting assertion
+checkCase p r s = simpleParse p s @?= r
+
+-- | Similar to 'checkParser'', but produces HUnit's 'Assertion's instead.
+
+checkCase' :: (Eq a, Show a)
   => (forall m. MonadParsec Dec String m => m a) -- ^ Parser to test
   -> Either (ParseError Char Dec) a -- ^ Expected result of parsing
   -> String            -- ^ Input for the parser
   -> Assertion         -- ^ Resulting assertion
-checkCase p r s = do
+checkCase' p r s = do
   parse p                   "" s @?= r
   parse (runIdentityT p)    "" s @?= r
   parse (runReaderT   p ()) "" s @?= r
