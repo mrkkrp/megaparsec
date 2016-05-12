@@ -9,12 +9,15 @@
 
 * [Features](#features)
     * [Core features](#core-features)
+    * [Error messages](#error-messages)
+    * [Alex/Happy support](#alex/happy-support)
     * [Character parsing](#character-parsing)
     * [Permutation parsing](#permutation-parsing)
     * [Expression parsing](#expression-parsing)
     * [Lexer](#lexer)
 * [Documentation](#documentation)
 * [Tutorials](#tutorials)
+* [Performance](#performance)
 * [Comparison with other solutions](#comparison-with-other-solutions)
     * [Megaparsec and Attoparsec](#megaparsec-and-attoparsec)
     * [Megaparsec and Parsec](#megaparsec-and-parsec)
@@ -91,9 +94,10 @@ via combination of these primitives:
 * `updateParserState` applies given function on parser state.
 
 This list of core functions is longer than in some other libraries. Our goal
-was easy and readable implementation of functionality provided by every such
-primitive, not minimal number of them. You can read the comprehensive
-description of every primitive function in [Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
+was efficient and readable implementation of functionality provided by every
+such primitive, not minimal number of them. You can read the comprehensive
+description of every primitive function in
+[Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
 
 Megaparsec can currently work with the following types of input stream:
 
@@ -102,6 +106,29 @@ Megaparsec can currently work with the following types of input stream:
 * `ByteString` (strict and lazy)
 
 * `Text` (strict and lazy)
+
+### Error messages
+
+Megaparsec 5.0.0 introduces well-typed error messages and ability to use
+custom data types to adjust the library to your domain of interest. No need
+to keep your info as shapeless bunch of strings anymore.
+
+The default error component (`Dec`) has constructors corresponding to `fail`
+function and indentation-related error messages. It is a decent option that
+should work out-of-box for most parsing needs, while you are free to use
+your own custom error component when necessary with little effort.
+
+This new design allowed Megaparsec 5.0 to have much more helpful error
+messages for indentation-sensitive parsing instead of plain “incorrect
+indentation” phrase.
+
+### Alex/Happy support
+
+Megaparsec works well with streams of tokens produced by tools like
+Alex/Happy. Megaparsec 5.0.0 adds `updatePos` method to `Stream` type class
+that gives you full control over textual positions that are used to report
+token positions in error messages. You can update current position on per
+character basis or extract it from token — all cases are covered.
 
 ### Character parsing
 
@@ -161,6 +188,9 @@ and indentation.
 The design of the module allows you quickly solve simple tasks and doesn't
 get in your way when you want to implement something less standard.
 
+Since Megaparsec 5.0.0, all tools for indentation-sensitive parsing are
+available — no third party packages required.
+
 ## Documentation
 
 Megaparsec is well-documented. All functions and data-types are thoroughly
@@ -174,6 +204,14 @@ You can visit [site of the project](https://mrkkrp.github.io/megaparsec/)
 which has [several tutorials](https://mrkkrp.github.io/megaparsec/tutorials.html) that
 should help you to start with your parsing tasks. The site also has
 instructions and tips for Parsec users who decide to switch.
+
+## Performance
+
+Despite being quite flexible, Megaparsec is also faster than Parsec. The
+repository includes benchmarks that can be easily used to compare Megaparsec
+and Parsec. In most cases Megaparsec is faster, sometimes dramatically
+faster. If you happen to have some other benchmarks, I would appreciate if
+you add Megaparsec to them and let me know how it performs.
 
 ## Comparison with other solutions
 
@@ -226,6 +264,13 @@ differences between the two libraries:
 
 * Megaparsec's code is clearer and doesn't contain “magic” found in original
   Parsec.
+
+* Megaparsec has well-typed error messages and custom error messages.
+
+* Megaparsec can recover from parse errors “on the fly” and continue
+  parsing.
+
+* Megaparsec is faster.
 
 If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
 
