@@ -10,7 +10,7 @@
 * [Features](#features)
     * [Core features](#core-features)
     * [Error messages](#error-messages)
-    * [Alex/Happy support](#alex/happy-support)
+    * [Alex and Happy support](#alex-and-happy-support)
     * [Character parsing](#character-parsing)
     * [Permutation parsing](#permutation-parsing)
     * [Expression parsing](#expression-parsing)
@@ -122,7 +122,7 @@ This new design allowed Megaparsec 5 to have much more helpful error
 messages for indentation-sensitive parsing instead of plain “incorrect
 indentation” phrase.
 
-### Alex/Happy support
+### Alex and Happy support
 
 Megaparsec works well with streams of tokens produced by tools like
 Alex/Happy. Megaparsec 5 adds `updatePos` method to `Stream` type class that
