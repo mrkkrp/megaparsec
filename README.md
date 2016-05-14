@@ -109,25 +109,25 @@ Megaparsec can currently work with the following types of input stream:
 
 ### Error messages
 
-Megaparsec 5.0.0 introduces well-typed error messages and ability to use
-custom data types to adjust the library to your domain of interest. No need
-to keep your info as shapeless bunch of strings anymore.
+Megaparsec 5 introduces well-typed error messages and ability to use custom
+data types to adjust the library to your domain of interest. No need to keep
+your info as shapeless bunch of strings anymore.
 
 The default error component (`Dec`) has constructors corresponding to `fail`
 function and indentation-related error messages. It is a decent option that
 should work out-of-box for most parsing needs, while you are free to use
 your own custom error component when necessary with little effort.
 
-This new design allowed Megaparsec 5.0 to have much more helpful error
+This new design allowed Megaparsec 5 to have much more helpful error
 messages for indentation-sensitive parsing instead of plain “incorrect
 indentation” phrase.
 
 ### Alex/Happy support
 
 Megaparsec works well with streams of tokens produced by tools like
-Alex/Happy. Megaparsec 5.0.0 adds `updatePos` method to `Stream` type class
-that gives you full control over textual positions that are used to report
-token positions in error messages. You can update current position on per
+Alex/Happy. Megaparsec 5 adds `updatePos` method to `Stream` type class that
+gives you full control over textual positions that are used to report token
+positions in error messages. You can update current position on per
 character basis or extract it from token — all cases are covered.
 
 ### Character parsing
@@ -188,8 +188,9 @@ and indentation.
 The design of the module allows you quickly solve simple tasks and doesn't
 get in your way when you want to implement something less standard.
 
-Since Megaparsec 5.0.0, all tools for indentation-sensitive parsing are
-available — no third party packages required.
+Since Megaparsec 5, all tools for indentation-sensitive parsing are
+available in `Text.Megaparsec.Lexer` module — no third party packages
+required.
 
 ## Documentation
 

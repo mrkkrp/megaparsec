@@ -192,7 +192,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 --
 -- The function is a simple shortcut defined as:
 --
--- > indentLevel = sourceColumn . NonEmpty.head <$> getPosition
+-- > indentLevel = sourceColumn <$> getPosition
 --
 -- @since 4.3.0
 
@@ -201,6 +201,7 @@ indentLevel = sourceColumn <$> getPosition
 
 -- | Fail reporting incorrect indentation error. The error has attached
 -- information:
+--
 --     * Desired ordering between reference level and actual level
 --     * Reference indentation level
 --     * Actual indentation level
@@ -218,9 +219,8 @@ incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
 -- | @indentGuard spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks column
 -- position. Ordering between current indentation level and reference
--- indentation level @ref@ should be @ord@, otherwise the parser fails with
--- error message “incorrect indentation”. On success current column position
--- is returned.
+-- indentation level @ref@ should be @ord@, otherwise the parser fails. On
+-- success current column position is returned.
 --
 -- When you want to parse block of indentation first run this parser with
 -- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@ — this will
@@ -332,10 +332,9 @@ indentedItems ref lvl sc p = go
 -- > sc = L.space (void spaceChar) empty empty
 -- >
 -- > myFold = L.lineFold sc $ \sc' -> do
--- >   let symbol' = L.symbol sc'
--- >   symbol' "foo"
--- >   symbol' "bar"
--- >   L.symbol sc "baz" -- for last component use normal space consumer
+-- >   L.symbol sc' "foo"
+-- >   L.symbol sc' "bar"
+-- >   L.symbol sc  "baz" -- for the last symbol we use normal space consumer
 --
 -- @since 5.0.0
 

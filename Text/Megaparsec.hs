@@ -10,6 +10,8 @@
 -- Portability :  portable
 --
 -- This module includes everything you need to get started writing a parser.
+-- If you are new to Megaparsec and don't know where to begin, take a look
+-- at our tutorials <https://mrkkrp.github.io/megaparsec/tutorials.html>.
 --
 -- By default this module is set up to parse character data. If you'd like to
 -- parse the result of your own tokenizer you should start with the following
@@ -34,9 +36,10 @@
 -- input stream. It just defines useful type-synonym @Parser@.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
--- you can parse permutation phrases with "Text.Megaparsec.Perm" and even
--- entire languages with "Text.Megaparsec.Lexer". These modules should be
--- imported explicitly along with the two modules mentioned above.
+-- you can parse permutation phrases with "Text.Megaparsec.Perm",
+-- expressions with "Text.Megaparsec.Expr", and even entire languages with
+-- "Text.Megaparsec.Lexer". These modules should be imported explicitly
+-- along with the two modules mentioned above.
 
 module Text.Megaparsec
   ( -- * Running parser

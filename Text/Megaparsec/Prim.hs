@@ -226,7 +226,7 @@ class Ord (Token s) => Stream s where
   --
   -- When you wish to deal with stream of tokens where every token “knows”
   -- its start and end position in input (for example, you have produced the
-  -- stream with happy\/alex), then the best strategy is to use the start
+  -- stream with Happy\/Alex), then the best strategy is to use the start
   -- position as actual element position and provide the end position of the
   -- token as incremented one.
   --
@@ -608,8 +608,10 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     :: (Token s -> Either ( Set (ErrorItem (Token s))
                           , Set (ErrorItem (Token s))
                           , Set e ) a)
+       -- ^ Matching function for the token to parse, it allows to construct
+       -- arbitrary error message on failure as well; sets in three-tuple
+       -- are: unexpected items, expected items, and custom data pieces
     -> Maybe (Token s) -- ^ Token to report when input stream is empty
-       -- ^ Matching function for the token to parse
     -> m a
 
   -- | The parser @tokens test@ parses list of tokens and returns it.
@@ -844,7 +846,7 @@ getInput :: MonadParsec e s m => m s
 getInput = stateInput <$> getParserState
 
 -- | @setInput input@ continues parsing with @input@. The 'getInput' and
--- @setInput@ functions can for example be used to deal with include files.
+-- 'setInput' functions can for example be used to deal with include files.
 
 setInput :: MonadParsec e s m => s -> m ()
 setInput s = updateParserState (\(State _ pos w) -> State s pos w)
@@ -878,7 +880,7 @@ pushPosition pos = updateParserState $ \(State s z w) ->
 
 -- | Pop a position from stack of positions unless it only contains one
 -- element (in that case stack of positions remains the same). This is how
--- to return to previous source file after using of 'pushPosition'.
+-- to return to previous source file after 'pushPosition'.
 --
 -- See also: 'getPosition', 'setPosition', 'pushPosition', and 'SourcePos'.
 --

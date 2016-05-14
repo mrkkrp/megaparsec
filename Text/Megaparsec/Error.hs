@@ -151,7 +151,7 @@ mergeError e1@(ParseError pos1 u1 p1 x1) e2@(ParseError pos2 u2 p2 x2) =
 class ShowToken a where
 
   -- | Pretty-print non-empty stream of tokens. This function is also used
-  -- to print single tokens (represented as list with length 1).
+  -- to print single tokens (represented as singleton lists).
   --
   -- @since 5.0.0
 
