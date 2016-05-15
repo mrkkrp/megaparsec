@@ -55,7 +55,7 @@
             <hr />
             <div class="content">
               
-<em>Last updated on October 13, 2015</em>
+<em>Last updated on May 14, 2015</em>
 <hr />
 
 
@@ -133,17 +133,17 @@ lexeme <span class="fu">=</span> L.lexeme sc</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">symbol ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">String</span>
 symbol <span class="fu">=</span> L.symbol sc</code></pre></div>
 <p>With these tools we can create other useful parsers:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- ‘parens’ parses something between parenthesis</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | 'parens' parses something between parenthesis.</span>
 
 <span class="ot">parens ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
 parens <span class="fu">=</span> between (symbol <span class="st">&quot;(&quot;</span>) (symbol <span class="st">&quot;)&quot;</span>)
 
-<span class="co">-- ‘integer’ parses an integer</span>
+<span class="co">-- | 'integer' parses an integer.</span>
 
 <span class="ot">integer ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
 integer <span class="fu">=</span> lexeme L.integer
 
-<span class="co">-- ‘semi’ parses a semicolon</span>
+<span class="co">-- | 'semi' parses a semicolon.</span>
 
 <span class="ot">semi ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
 semi <span class="fu">=</span> symbol <span class="st">&quot;;&quot;</span></code></pre></div>
@@ -161,10 +161,11 @@ rws <span class="fu">=</span> [<span class="st">&quot;if&quot;</span>,<span clas
 
 <span class="ot">identifier ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
 identifier <span class="fu">=</span> lexeme (p <span class="fu">&gt;&gt;=</span> check)
-  <span class="kw">where</span> p       <span class="fu">=</span> (<span class="fu">:</span>) <span class="fu">&lt;$&gt;</span> letterChar <span class="fu">&lt;*&gt;</span> many alphaNumChar
-        check x <span class="fu">=</span> <span class="kw">if</span> x <span class="ot">`elem`</span> rws
-                  <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
-                  <span class="kw">else</span> return x</code></pre></div>
+  <span class="kw">where</span>
+    p       <span class="fu">=</span> (<span class="fu">:</span>) <span class="fu">&lt;$&gt;</span> letterChar <span class="fu">&lt;*&gt;</span> many alphaNumChar
+    check x <span class="fu">=</span> <span class="kw">if</span> x <span class="ot">`elem`</span> rws
+                <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
+                <span class="kw">else</span> return x</code></pre></div>
 <p><code>identifier</code> may seem complex, but it’s really simple. We just parse sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
 <p>And that’s it, we have just written lexer for our language, now we can start writing parser.</p>
 <h2 id="parser">Parser</h2>

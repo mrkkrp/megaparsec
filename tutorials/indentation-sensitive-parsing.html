@@ -55,33 +55,34 @@
             <hr />
             <div class="content">
               
-<em>Last updated on January 12, 2016</em>
+<em>Last updated on May 14, 2016</em>
 <hr />
 
 
-<p>Megaparsec 4.3.0 introduces new combinators that should be of some use when you want to parse indentation-sensitive input. The combinators do not yet cover all possible use-cases, but certain class of problems should be trivial to solve now. This tutorial shows how these new tools work, compose, and hopefully, <em>feel natural</em> — something we cannot say about ad-hoc solutions to this problem that exist as separate packages to work on top of Parsec, for example.</p>
+<p>Megaparsec 4.3.0 introduces new combinators that should be of some use when you want to parse indentation-sensitive input. Megaparsec 5.0.0 adds support for line-folds completing support for indentation-sensitive parsing. This tutorial shows how these new tools work, compose, and hopefully, <em>feel natural</em> — something we cannot say about ad-hoc solutions to this problem that exist as separate packages to work on top of Parsec, for example.</p>
 <ol style="list-style-type: decimal">
 <li><a href="#combinator-overview">Combinator overview</a></li>
 <li><a href="#parsing-simple-indented-list">Parsing simple indented list</a></li>
 <li><a href="#nested-indented-list">Nested indented list</a></li>
+<li><a href="#adding-line-folds">Adding line folds</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 </ol>
 <h2 id="combinator-overview">Combinator overview</h2>
 <p>From the first release of Megaparsec, there has been <code>indentGuard</code> thing, which is a great shortcut, but kind of pain to use for complex tasks. So, we won’t cover it here, instead we will talk about new combinators built upon it and available beginning from Megaparsec 4.3.0.</p>
 <p>First, we have <code>indentLevel</code>, which is defined just as:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">indentLevel ::</span> <span class="dt">MonadParsec</span> s m t <span class="ot">=&gt;</span> m <span class="dt">Int</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">indentLevel ::</span> <span class="dt">MonadParsec</span> e s m <span class="ot">=&gt;</span> m <span class="dt">Pos</span>
 indentLevel <span class="fu">=</span> sourceColumn <span class="fu">&lt;$&gt;</span> getPosition</code></pre></div>
 <p>That’s right, it’s just a shortcut, but I found myself using this idiom so often, so I defined this.</p>
 <p>Second, we have <code>nonIndented</code>. This allows to make sure that some input is not indented, just wrap parser for that input in <code>nonIndented</code> and you’re done.</p>
 <p><code>nonIndented</code> is trivial to write as well:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">nonIndented ::</span> <span class="dt">MonadParsec</span> s m <span class="dt">Char</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">nonIndented ::</span> <span class="dt">MonadParsec</span> e s m
   <span class="ot">=&gt;</span> m ()              <span class="co">-- ^ How to consume indentation (white space)</span>
   <span class="ot">-&gt;</span> m a               <span class="co">-- ^ How to parse actual data</span>
   <span class="ot">-&gt;</span> m a
-nonIndented sc p <span class="fu">=</span> indentGuard sc (<span class="fu">==</span> <span class="dv">1</span>) <span class="fu">*&gt;</span> p</code></pre></div>
+nonIndented sc p <span class="fu">=</span> indentGuard sc <span class="dt">EQ</span> (unsafePos <span class="dv">1</span>) <span class="fu">*&gt;</span> p</code></pre></div>
 <p>However, it’s a part of implementation of logical model behind high-level parsing of indentation-sensitive input. What is this model? We state that there are top-level items that are not indented (<code>nonIndented</code> helps to define parsers for them), and all indented tokens are directly or indirectly are “children” of those top-level definitions. In Megaparsec, we don’t need any additional state to express this. Since all indentation is always relative, our idea is to explicitly tie parsers for “reference” tokens and indented tokens, thus defining indentation-sensitive grammar via pure combination of parsers, just like all the other tools in Megaparsec work. This is different from old solutions built on top of Parsec, where you had to deal with ad-hoc state. It’s also more robust and safer, because the less state you have, the better.</p>
 <p>So, how do you define indented block? <code>indentBlock</code> should handle this easily. Let’s take a look at its signature:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">indentBlock ::</span> <span class="dt">MonadParsec</span> s m <span class="dt">Char</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">indentBlock ::</span> (<span class="dt">MonadParsec</span> e s m, <span class="dt">Token</span> s <span class="fu">~</span> <span class="dt">Char</span>)
   <span class="ot">=&gt;</span> m ()              <span class="co">-- ^ How to consume indentation (white space)</span>
   <span class="ot">-&gt;</span> m (<span class="dt">IndentOpt</span> m a b) <span class="co">-- ^ How to parse “reference” token</span>
   <span class="ot">-&gt;</span> m a</code></pre></div>
@@ -96,15 +97,14 @@ nonIndented sc p <span class="fu">=</span> indentGuard sc (<span class="fu">==</
     <span class="co">-- second argument tells how to get final result, and third argument</span>
     <span class="co">-- describes how to parse indented token</span>
   <span class="fu">|</span> <span class="dt">IndentSome</span> (<span class="dt">Maybe</span> <span class="dt">Int</span>) ([b] <span class="ot">-&gt;</span> m a) (m b)
-    <span class="co">-- ^ Just like 'ManyIndent', but requires at least one indented token to</span>
+    <span class="co">-- ^ Just like 'IndentMany', but requires at least one indented token to</span>
     <span class="co">-- be present</span></code></pre></div>
 <p>We can change our mind and parse no indented tokens, we can parse <em>many</em> (that is, possibly zero) indented tokens or require <em>at least one</em> such token. We can either allow <code>indentBlock</code> detect indentation level of first indented token and use that, or manually specify indentation level. This should be flexible enough.</p>
-<p>Experienced reader will notice that one topic is not covered here: line folding. This is not yet implemented functionality, but in future it will be. If you care, you can propose your solution and open a pull request.</p>
 <h2 id="parsing-simple-indented-list">Parsing simple indented list</h2>
 <p>Now it’s time to put our new tools into practice. In this section, we will parse simple indented list of some items. Let’s begin with import section:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE TupleSections #-}</span>
 
-<span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
+<span class="kw">module</span> <span class="dt">Main</span> (main) <span class="kw">where</span>
 
 <span class="kw">import </span><span class="dt">Control.Applicative</span> (empty)
 <span class="kw">import </span><span class="dt">Control.Monad</span> (void)
@@ -115,14 +115,14 @@ nonIndented sc p <span class="fu">=</span> indentGuard sc (<span class="fu">==</
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">lineComment ::</span> <span class="dt">Parser</span> ()
 lineComment <span class="fu">=</span> L.skipLineComment <span class="st">&quot;#&quot;</span>
 
-<span class="ot">sc ::</span> <span class="dt">Parser</span> ()
-sc <span class="fu">=</span> L.space (void spaceChar) lineComment empty
+<span class="ot">scn ::</span> <span class="dt">Parser</span> ()
+scn <span class="fu">=</span> L.space (void spaceChar) lineComment empty
 
-<span class="ot">sc' ::</span> <span class="dt">Parser</span> ()
-sc' <span class="fu">=</span> L.space (void <span class="fu">$</span> oneOf <span class="st">&quot; \t&quot;</span>) lineComment empty
+<span class="ot">sc ::</span> <span class="dt">Parser</span> ()
+sc <span class="fu">=</span> L.space (void <span class="fu">$</span> oneOf <span class="st">&quot; \t&quot;</span>) lineComment empty
 
 <span class="ot">lexeme ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
-lexeme <span class="fu">=</span> L.lexeme sc'</code></pre></div>
+lexeme <span class="fu">=</span> L.lexeme sc</code></pre></div>
 <p>Just for fun, we will allow line comments that start with <code>#</code> as well.</p>
 <p>Assuming <code>pItemList</code> parses entire list, we can define high-level parser as:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">parser ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
@@ -130,10 +130,11 @@ parser <span class="fu">=</span> pItemList <span class="fu">&lt;*</span> eof</co
 <p>This will make it consume all input.</p>
 <p><code>pItemList</code> is a top-level form that itself is a combination of “reference” token (header of list) and indented tokens (list items), so:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pItemList ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>]) <span class="co">-- header and list items</span>
-pItemList <span class="fu">=</span> L.nonIndented sc (L.indentBlock sc p)
-  <span class="kw">where</span> p <span class="fu">=</span> <span class="kw">do</span>
-          header <span class="ot">&lt;-</span> pItem
-          return (<span class="dt">L.IndentMany</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
+pItemList <span class="fu">=</span> L.nonIndented scn (L.indentBlock scn p)
+  <span class="kw">where</span>
+    p <span class="fu">=</span> <span class="kw">do</span>
+      header <span class="ot">&lt;-</span> pItem
+      return (<span class="dt">L.IndentMany</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
 <p>For our purposes, an item is a sequence of alpha-numeric characters and dashes:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pItem ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
 pItem <span class="fu">=</span> lexeme <span class="fu">$</span> some (alphaNumChar <span class="fu">&lt;|&gt;</span> char <span class="ch">'-'</span>)</code></pre></div>
@@ -146,7 +147,7 @@ expecting <span class="ch">'-'</span> or alphanumeric character
 (<span class="st">&quot;something&quot;</span>,[])
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;  something&quot;</span>
 <span class="dv">1</span><span class="fu">:</span><span class="dv">3</span><span class="fu">:</span>
-incorrect indentation
+incorrect indentation (got <span class="dv">3</span>, should be equal to <span class="dv">1</span>)
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\none\ntwo\nthree&quot;</span>
 <span class="dv">2</span><span class="fu">:</span><span class="dv">1</span><span class="fu">:</span>
 unexpected <span class="ch">'o'</span>
@@ -155,25 +156,26 @@ expecting end <span class="kw">of</span> input</code></pre></div>
 <p>Let’s continue:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n  one\n    two\n  three&quot;</span>
 <span class="dv">3</span><span class="fu">:</span><span class="dv">5</span><span class="fu">:</span>
-incorrect indentation
+incorrect indentation (got <span class="dv">5</span>, should be equal to <span class="dv">3</span>)
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n  one\n  two\n three&quot;</span>
 <span class="dv">4</span><span class="fu">:</span><span class="dv">2</span><span class="fu">:</span>
-incorrect indentation
+incorrect indentation (got <span class="dv">2</span>, should be equal to <span class="dv">3</span>)
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n  one\n  two\n  three&quot;</span>
 (<span class="st">&quot;something&quot;</span>,[<span class="st">&quot;one&quot;</span>,<span class="st">&quot;two&quot;</span>,<span class="st">&quot;three&quot;</span>])</code></pre></div>
 <p>This definitely seems to work. Let’s replace <code>IndentMany</code> with <code>IndentSome</code> and <code>Nothing</code> with <code>Just 5</code> (indentation levels are counted from 1, so it will require 4 spaces before indented items):</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pItemList ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
-pItemList <span class="fu">=</span> L.nonIndented sc (L.indentBlock sc p)
-  <span class="kw">where</span> p <span class="fu">=</span> <span class="kw">do</span>
-          header <span class="ot">&lt;-</span> pItem
-          return (<span class="dt">L.IndentSome</span> (<span class="dt">Just</span> <span class="dv">5</span>) (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
+pItemList <span class="fu">=</span> L.nonIndented scn (L.indentBlock scn p)
+  <span class="kw">where</span>
+    p <span class="fu">=</span> <span class="kw">do</span>
+      header <span class="ot">&lt;-</span> pItem
+      return (<span class="dt">L.IndentSome</span> (<span class="dt">Just</span> (unsafePos <span class="dv">5</span>)) (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
 <p>Now:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n&quot;</span>
 <span class="dv">2</span><span class="fu">:</span><span class="dv">1</span><span class="fu">:</span>
-incorrect indentation
+incorrect indentation (got <span class="dv">1</span>, should be greater than <span class="dv">1</span>)
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n  one&quot;</span>
 <span class="dv">2</span><span class="fu">:</span><span class="dv">3</span><span class="fu">:</span>
-incorrect indentation
+incorrect indentation (got <span class="dv">3</span>, should be equal to <span class="dv">5</span>)
 λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n    one&quot;</span>
 (<span class="st">&quot;something&quot;</span>,[<span class="st">&quot;one&quot;</span>])</code></pre></div>
 <p>First message may be a bit surprising, but Megaparsec knows that there must be at least one item in the list, so it checks indentation level and it’s 1, which is incorrect, so it reports it. I find current behavior satisfactory, but it may be changed in the future.</p>
@@ -182,18 +184,20 @@ incorrect indentation
 <p>Let’s allow list items to have sub-items. For this we will need one new parser, <code>pComplexItem</code> (looks familiar…):</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pComplexItem ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
 pComplexItem <span class="fu">=</span> L.indentBlock sc p
-  <span class="kw">where</span> p <span class="fu">=</span> <span class="kw">do</span>
-          header <span class="ot">&lt;-</span> pItem
-          return (<span class="dt">L.IndentMany</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
+  <span class="kw">where</span>
+    p <span class="fu">=</span> <span class="kw">do</span>
+      header <span class="ot">&lt;-</span> pItem
+      return (<span class="dt">L.IndentMany</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pItem)</code></pre></div>
 <p>A couple of edits to <code>pItemList</code> (we’re now parsing more complex stuff, so we need to reflect this in the type signatures):</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">parser ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [(<span class="dt">String</span>, [<span class="dt">String</span>])])
 parser <span class="fu">=</span> pItemList <span class="fu">&lt;*</span> eof
 
 <span class="ot">pItemList ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [(<span class="dt">String</span>, [<span class="dt">String</span>])])
-pItemList <span class="fu">=</span> L.nonIndented sc (L.indentBlock sc p)
-  <span class="kw">where</span> p <span class="fu">=</span> <span class="kw">do</span>
-          header <span class="ot">&lt;-</span> pItem
-          return (<span class="dt">L.IndentSome</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pComplexItem)</code></pre></div>
+pItemList <span class="fu">=</span> L.nonIndented scn (L.indentBlock scn p)
+  <span class="kw">where</span>
+    p <span class="fu">=</span> <span class="kw">do</span>
+      header <span class="ot">&lt;-</span> pItem
+      return (<span class="dt">L.IndentSome</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pComplexItem)</code></pre></div>
 <p>If I feed something like this:</p>
 <pre><code>first-chapter
   paragraph-one
@@ -210,6 +214,22 @@ pItemList <span class="fu">=</span> L.nonIndented sc (L.indentBlock sc p)
     , (<span class="st">&quot;paragraph-two&quot;</span>,   [<span class="st">&quot;note-1&quot;</span>,<span class="st">&quot;note-2&quot;</span>])
     , (<span class="st">&quot;paragraph-three&quot;</span>, []) ] )</code></pre></div>
 <p>And this looks like it works!</p>
+<h2 id="adding-line-folds">Adding line folds</h2>
+<p><code>lineFold</code> helper is introduced in Megaparsec 5.0.0. Line fold consists of several elements that can be put on one line or on several lines as long as indentation level of subsequent items is greater than indentation level of first item.</p>
+<p>Let’s make use of <code>lineFold</code> and add line folds to our program.</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pComplexItem ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
+pComplexItem <span class="fu">=</span> L.indentBlock scn p
+  <span class="kw">where</span>
+    p <span class="fu">=</span> <span class="kw">do</span>
+      header <span class="ot">&lt;-</span> pItem
+      return (<span class="dt">L.IndentMany</span> <span class="dt">Nothing</span> (return <span class="fu">.</span> (header, )) pLineFold)
+
+<span class="ot">pLineFold ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
+pLineFold <span class="fu">=</span> L.lineFold scn <span class="fu">$</span> \sc' <span class="ot">-&gt;</span>
+  <span class="kw">let</span> ps <span class="fu">=</span> some (alphaNumChar <span class="fu">&lt;|&gt;</span> char <span class="ch">'-'</span>) <span class="ot">`sepBy1`</span> try sc'
+  <span class="kw">in</span> unwords <span class="fu">&lt;$&gt;</span> ps <span class="fu">&lt;*</span> scn</code></pre></div>
+<p><code>lineFold</code> works like this: you give it space consumer that accepts newlines and it gives you special space consumer that you can use in callback to consume space between elements of line fold. Important thing here is that you should use normal space consumer at the end of line fold or your fold will have no end.</p>
+<p>Playing with the final version of our parser is left as an exercise for the reader — you can create “items” that consist of multiple words and as long as they are “line-folded” they will be parsed and concatenated with single space between them.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>Note that every sub-list behaves independently — you will see that if you try to feed the parser with various variants of malformed data (that’s kind of exercise for the reader). And this is no surprise, since no state is shared between different parts of the structure — it’s just assembled purely from simpler parts — sufficiently elegant solution in the spirit of the rest of the library.</p>
 

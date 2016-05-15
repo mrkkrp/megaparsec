@@ -55,7 +55,7 @@
             <hr />
             <div class="content">
               
-<em>Last updated on February 19, 2016</em>
+<em>Last updated on May 14, 2016</em>
 <hr />
 
 
@@ -77,11 +77,13 @@ result = x - 1 # answer is 32</code></pre>
 <h2 id="parser-without-recovery">Parser without recovery</h2>
 <p>The parser is very easy to write. We will need the following imports:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="ot">{-# LANGUAGE TypeFamilies     #-}</span>
 
 <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
 
 <span class="kw">import </span><span class="dt">Control.Applicative</span> (empty)
 <span class="kw">import </span><span class="dt">Control.Monad</span> (void)
+<span class="kw">import </span><span class="dt">Data.Scientific</span> (toRealFloat)
 <span class="kw">import </span><span class="dt">Text.Megaparsec</span>
 <span class="kw">import </span><span class="dt">Text.Megaparsec.String</span>
 <span class="kw">import </span><span class="dt">Text.Megaparsec.Expr</span>
@@ -144,9 +146,7 @@ table <span class="fu">=</span>
   ]
 
 <span class="ot">number ::</span> <span class="dt">Parser</span> <span class="dt">Double</span>
-number <span class="fu">=</span> f <span class="fu">&lt;$&gt;</span> lexeme L.number
-  <span class="kw">where</span> f (<span class="dt">Left</span>  x) <span class="fu">=</span> fromIntegral x
-        f (<span class="dt">Right</span> x) <span class="fu">=</span> x
+number <span class="fu">=</span> toRealFloat <span class="fu">&lt;$&gt;</span> lexeme L.number
 
 <span class="ot">parens ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
 parens <span class="fu">=</span> between (symbol <span class="st">&quot;(&quot;</span>) (symbol <span class="st">&quot;)&quot;</span>)</code></pre></div>
@@ -169,10 +169,10 @@ prog <span class="fu">=</span> between scn eof (sepEndBy equation scn)</code></p
 <h2 id="making-use-of-the-recovery-feature">Making use of the recovery feature</h2>
 <p>Our parser is really dandy, it has nice error messages and does its job really well. However, every expression is clearly separated from the others by a newline. This separation makes it possible to analyze many expressions independently, even if one of them is malformed, we have no reason to stop and not to check the others. In fact, that’s how some “serious” parsers work (parser of C++ language, although it depends on compiler I guess). Reporting multiple parse errors at once may be more efficient method of communication with programmer that needs to fix them than when he has to recompile the program every time to get to the next error. In this section we will make our parser failure-tolerant and able to report multiple error messages at once.</p>
 <p>Let’s add one more type synonym — <code>RawData</code>:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">RawData</span> <span class="fu">=</span> [<span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Equation</span>]</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">RawData</span> t e <span class="fu">=</span> [<span class="dt">Either</span> (<span class="dt">ParseError</span> t e) <span class="dt">Equation</span>]</code></pre></div>
 <p>This will represent collection of equations, just like <code>Program</code>, but every one of them may be malformed: in that case we get original error message in <code>Left</code>, otherwise we have properly parsed equation in <code>Right</code>.</p>
 <p>You will be amazed just how easy it is to add recovering to existing parser:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rawData ::</span> <span class="dt">Parser</span> <span class="dt">RawData</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rawData ::</span> <span class="dt">Parser</span> (<span class="dt">RawData</span> <span class="dt">Char</span> <span class="dt">Dec</span>)
 rawData <span class="fu">=</span> between scn eof (sepEndBy e scn)
   <span class="kw">where</span> e <span class="fu">=</span> withRecovery recover (<span class="dt">Right</span> <span class="fu">&lt;$&gt;</span> equation)
         recover err <span class="fu">=</span> <span class="dt">Left</span> err <span class="fu">&lt;$</span> manyTill anyChar eol</code></pre></div>
@@ -180,10 +180,18 @@ rawData <span class="fu">=</span> between scn eof (sepEndBy e scn)
 <pre><code>foo = (x $ y) * 5 + 7.2 * z
 bar = 15</code></pre>
 <p>Result:</p>
-<pre><code>[Left 1:10:
-unexpected '$'
-expecting ')', operator, or rest of expression,
-Right (Equation &quot;bar&quot; (Value 15.0))]</code></pre>
+<pre><code>[ Left
+   (ParseError
+     { errorPos = SourcePos
+       { sourceName = &quot;&quot;, sourceLine = Pos 1
+       , sourceColumn = Pos 10} :| []
+       , errorUnexpected = fromList [Tokens ('$' :| &quot;&quot;)]
+       , errorExpected = fromList
+         [ Tokens (')' :| &quot;&quot;)
+         , Label ('o' :| &quot;perator&quot;)
+         , Label ('r' :| &quot;est of expression&quot;) ]
+       , errorCustom = fromList [] })
+, Right (Equation &quot;bar&quot; (Value 15.0)) ]</code></pre>
 <p>How does it work? <code>withRecovery r p</code> primitive runs parser <code>p</code> as usual, but if it fails, it just takes its <code>ParseError</code> and provides it as argument of <code>r</code>. In <code>r</code> you start right were <code>p</code> failed — no backtracking happens, because it would make it harder to find position from where to start normal parsing again. Here you have a chance to consume some input to advance parser’s textual position. In our case it’s as simple as eating all input up to the next newline, but it might be trickier.</p>
 <p>You probably want to know now what happens when recovering parser <code>r</code> fails as well. The answer is: your parser fails as usual, as if no <code>withRecovery</code> primitive was used. It’s by design that recovering parser cannot influence error messages in any way, or it would lead to quite confusing error messages in some cases, depending on logic of recovering parser.</p>
 <p>Now it’s up to you what to do with <code>RawData</code>. You can either take all error messages and print them one by one, or ignore altogether and filter only valid equations to work with.</p>
