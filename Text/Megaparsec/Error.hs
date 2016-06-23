@@ -114,7 +114,7 @@ data ParseError t e = ParseError
   , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
   , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
   , errorCustom     :: Set e              -- ^ Associated data, if any
-  } deriving (Show, Read, Eq, Typeable)
+  } deriving (Show, Read, Eq, Data, Typeable)
 
 instance (Ord t, Ord e) => Semigroup (ParseError t e) where
   (<>) = mergeError

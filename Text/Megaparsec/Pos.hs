@@ -121,7 +121,7 @@ data SourcePos = SourcePos
   { sourceName   :: FilePath -- ^ Name of source file
   , sourceLine   :: !Pos     -- ^ Line number
   , sourceColumn :: !Pos     -- ^ Column number
-  } deriving (Show, Read, Eq, Ord)
+  } deriving (Show, Read, Eq, Ord, Data, Typeable)
 
 -- | Construct initial position (line 1, column 1) given name of source
 -- file.

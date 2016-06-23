@@ -1,3 +1,8 @@
+## Megaparsec 5.1.0
+
+* Derived `Data` instance for `ParseError`, `Data` and `Typeable` instances
+  for `SourcePos`.
+
 ## Megaparsec 5.0.0
 
 ### General changes
