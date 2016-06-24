@@ -81,7 +81,7 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 --
 -- @spaceChar@ is used to parse trivial space characters. You can use
 -- 'C.spaceChar' from "Text.Megaparsec.Char" for this purpose as well as
--- your own parser (if you don't want automatically consume newlines, for
+-- your own parser (if you don't want to automatically consume newlines, for
 -- example).
 --
 -- @lineComment@ is used to parse line comments. You can use
