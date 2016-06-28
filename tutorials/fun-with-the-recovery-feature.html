@@ -154,7 +154,7 @@ parens <span class="fu">=</span> between (symbol <span class="st">&quot;(&quot;<
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">λ<span class="fu">&gt;</span> parseTest expr <span class="st">&quot;5&quot;</span>
 <span class="dt">Value</span> <span class="fl">5.0</span>
 λ<span class="fu">&gt;</span> parseTest expr <span class="st">&quot;5 + foo&quot;</span>
-<span class="dt">Multiplication</span> (<span class="dt">Value</span> <span class="fl">5.0</span>) (<span class="dt">Reference</span> <span class="st">&quot;foo&quot;</span>)
+<span class="dt">Sum</span> (<span class="dt">Value</span> <span class="fl">5.0</span>) (<span class="dt">Reference</span> <span class="st">&quot;foo&quot;</span>)
 λ<span class="fu">&gt;</span> parseTest expr <span class="st">&quot;(x + y) * 5 + 7 * z&quot;</span>
 <span class="dt">Sum</span>
   (<span class="dt">Multiplication</span> (<span class="dt">Sum</span> (<span class="dt">Reference</span> <span class="st">&quot;x&quot;</span>) (<span class="dt">Reference</span> <span class="st">&quot;y&quot;</span>)) (<span class="dt">Value</span> <span class="fl">5.0</span>))
