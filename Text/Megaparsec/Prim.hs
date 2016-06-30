@@ -510,6 +510,11 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
 
   label :: String -> m a -> m a
 
+  -- | @label name p@ labels the expected tokens with @name@.
+  --
+  -- @since 5.1.0
+  labelTokens :: String -> m a -> m a
+
   -- | @hidden p@ behaves just like parser @p@, but it doesn't show any
   -- “expected” tokens in error message when @p@ fails.
 
@@ -656,6 +661,7 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
 instance (ErrorComponent e, Stream s) => MonadParsec e s (ParsecT e s m) where
   failure           = pFailure
   label             = pLabel
+  labelTokens       = pLabelTokens
   try               = pTry
   lookAhead         = pLookAhead
   notFollowedBy     = pNotFollowedBy
@@ -685,6 +691,21 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
         { errorExpected = maybe E.empty E.singleton el }
   in unParser p s cok' cerr eok' eerr'
 {-# INLINE pLabel #-}
+
+pLabelTokens :: Stream s => String -> ParsecT e s m a -> ParsecT e s m a
+pLabelTokens lbl p = ParsecT $ \s cok cerr eok eerr ->
+  let el = Label <$> lbl'
+      cl = Label . (NE.fromList "rest of " <>) <$> lbl'
+      cok' x s' hs = cok x s' (refreshLastHint hs cl)
+      eok' x s' hs = eok x s' (refreshLastHint hs el)
+  in unParser p s cok' (cerr . annotateAll) eok' (eerr . annotateAll)
+  where
+    lbl' = NE.nonEmpty lbl
+    annotateAll err = err
+      { errorExpected =
+        maybe id (E.map . addErrorLabel) lbl' (errorExpected err)
+      }
+{-# INLINE pLabelTokens #-}
 
 pTry :: ParsecT e s m a -> ParsecT e s m a
 pTry p = ParsecT $ \s cok _ eok eerr ->
@@ -1043,6 +1064,7 @@ runParsecT p s = unParser p s cok cerr eok eerr
 instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   failure us ps xs           = lift (failure us ps xs)
   label n       (L.StateT m) = L.StateT $ label n . m
+  labelTokens l (L.StateT m) = L.StateT $ labelTokens l . m
   try           (L.StateT m) = L.StateT $ try . m
   lookAhead     (L.StateT m) = L.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
@@ -1059,6 +1081,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
 instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   failure us ps xs           = lift (failure us ps xs)
   label n       (S.StateT m) = S.StateT $ label n . m
+  labelTokens n (S.StateT m) = S.StateT $ labelTokens n . m
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
@@ -1075,6 +1098,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
 instance MonadParsec e s m => MonadParsec e s (L.ReaderT st m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
+  labelTokens n (L.ReaderT m) = L.ReaderT $ labelTokens n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
@@ -1089,6 +1113,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT st m) where
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (L.WriterT m) = L.WriterT $ label n m
+  labelTokens n (L.WriterT m) = L.WriterT $ labelTokens n m
   try           (L.WriterT m) = L.WriterT $ try m
   lookAhead     (L.WriterT m) = L.WriterT $
     (,mempty) . fst <$> lookAhead m
@@ -1105,6 +1130,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (S.WriterT m) = S.WriterT $ label n m
+  labelTokens n (S.WriterT m) = S.WriterT $ labelTokens n m
   try           (S.WriterT m) = S.WriterT $ try m
   lookAhead     (S.WriterT m) = S.WriterT $
     (,mempty) . fst <$> lookAhead m
@@ -1121,6 +1147,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (IdentityT m) = IdentityT $ label n m
+  labelTokens n (IdentityT m) = IdentityT $ labelTokens n m
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m
   notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
