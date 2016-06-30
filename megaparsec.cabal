@@ -27,7 +27,7 @@
 -- POSSIBILITY OF SUCH DAMAGE.
 
 name:                 megaparsec
-version:              5.0.0
+version:              5.1.0
 cabal-version:        >= 1.10
 license:              BSD2
 license-file:         LICENSE.md
