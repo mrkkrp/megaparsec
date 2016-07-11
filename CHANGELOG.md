@@ -50,6 +50,9 @@
 * `unexpected` combinator now accepts argument of type `ErrorItem` instead
   of plain `String`.
 
+* General performance improvements and improvements in speed of some
+  combinators, `manyTill` in particular.
+
 ### Error messages
 
 * The module `Text.Megaparsec.Pos` was completely rewritten. The new module
