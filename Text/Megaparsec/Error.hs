@@ -14,6 +14,7 @@
 
 {-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 
@@ -28,6 +29,7 @@ module Text.Megaparsec.Error
   , sourcePosStackPretty )
 where
 
+import Control.DeepSeq
 import Control.Monad.Catch
 import Data.Data (Data)
 import Data.Foldable (concat)
@@ -36,6 +38,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
+import GHC.Generics
 import Prelude hiding (concat)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
@@ -55,7 +58,9 @@ data ErrorItem t
   = Tokens (NonEmpty t)      -- ^ Non-empty stream of tokens
   | Label (NonEmpty Char)    -- ^ Label (cannot be empty)
   | EndOfInput               -- ^ End of input
-  deriving (Show, Read, Eq, Ord, Data, Typeable)
+  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance NFData t => NFData (ErrorItem t)
 
 -- | The type class defines how to represent information about various
 -- exceptional situations. Data types that are used as custom data component
@@ -88,8 +93,15 @@ class Ord e => ErrorComponent e where
 
 data Dec
   = DecFail String         -- ^ 'fail' has been used in parser monad
-  | DecIndentation Ordering Pos Pos -- ^ Incorrect indentation error
+  | DecIndentation Ordering Pos Pos
+    -- ^ Incorrect indentation error: desired ordering between reference
+    -- level and actual level, reference indentation level, actual
+    -- indentation level
   deriving (Show, Read, Eq, Ord, Data, Typeable)
+
+instance NFData Dec where
+  rnf (DecFail str) = rnf str
+  rnf (DecIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
 
 instance ErrorComponent Dec where
   representFail        = DecFail
@@ -114,7 +126,9 @@ data ParseError t e = ParseError
   , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
   , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
   , errorCustom     :: Set e              -- ^ Associated data, if any
-  } deriving (Show, Read, Eq, Data, Typeable)
+  } deriving (Show, Read, Eq, Data, Typeable, Generic)
+
+instance (NFData t, NFData e) => NFData (ParseError t e)
 
 instance (Ord t, Ord e) => Semigroup (ParseError t e) where
   (<>) = mergeError

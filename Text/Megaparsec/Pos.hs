@@ -11,9 +11,11 @@
 -- and column number. List of such positions can be used to model stack of
 -- include files.
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections              #-}
 
 module Text.Megaparsec.Pos
   ( -- * Abstract position
@@ -31,10 +33,12 @@ module Text.Megaparsec.Pos
   , defaultTabWidth )
 where
 
+import Control.DeepSeq
 import Control.Monad.Catch
 import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
+import GHC.Generics
 import Unsafe.Coerce
 
 #if !MIN_VERSION_base(4,8,0)
@@ -52,7 +56,7 @@ import Data.Word (Word)
 -- @since 5.0.0
 
 newtype Pos = Pos Word
-  deriving (Show, Eq, Ord, Data, Typeable)
+  deriving (Show, Eq, Ord, Data, Typeable, NFData)
 
 -- | Construction of 'Pos' from an instance of 'Integral'. The function
 -- throws 'InvalidPosException' when given non-positive argument. Note that
@@ -105,9 +109,10 @@ instance Read Pos where
 -- @since 5.0.0
 
 data InvalidPosException = InvalidPosException
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Generic)
 
 instance Exception InvalidPosException
+instance NFData    InvalidPosException
 
 ----------------------------------------------------------------------------
 -- Source position
@@ -121,7 +126,9 @@ data SourcePos = SourcePos
   { sourceName   :: FilePath -- ^ Name of source file
   , sourceLine   :: !Pos     -- ^ Line number
   , sourceColumn :: !Pos     -- ^ Column number
-  } deriving (Show, Read, Eq, Ord, Data, Typeable)
+  } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+
+instance NFData SourcePos
 
 -- | Construct initial position (line 1, column 1) given name of source
 -- file.
