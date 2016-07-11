@@ -13,6 +13,8 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
@@ -55,6 +57,7 @@ module Text.Megaparsec.Prim
   , parseTest )
 where
 
+import Control.DeepSeq
 import Control.Monad
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
@@ -63,12 +66,15 @@ import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
+import Data.Data (Data)
 import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid hiding ((<>))
 import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
+import Data.Typeable (Typeable)
+import GHC.Generics
 import Prelude hiding (all)
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
@@ -100,7 +106,9 @@ data State s = State
   { stateInput    :: s
   , statePos      :: NonEmpty SourcePos
   , stateTabWidth :: Pos }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Data, Typeable, Generic)
+
+instance NFData s => NFData (State s)
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with returned value) or failure (with parse error), and
