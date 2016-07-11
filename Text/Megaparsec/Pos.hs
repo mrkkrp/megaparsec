@@ -136,6 +136,7 @@ instance NFData SourcePos
 initialPos :: String -> SourcePos
 initialPos n = SourcePos n u u
   where u = unsafePos 1
+{-# INLINE initialPos #-}
 
 -- | Pretty-print a 'SourcePos'.
 --
