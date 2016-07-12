@@ -267,6 +267,9 @@ The following packages are designed to be used with Megaparsec:
 * [`hspec-megaparsec`](https://hackage.haskell.org/package/hspec-megaparsec)
   — utilities for testing Megaparsec parsers with with
   [Hspec](https://hackage.haskell.org/package/hspec).
+* [`tagsoup-megaparsec`](https://hackage.haskell.org/package/tagsoup-megaparsec)
+  — a library for easily using [TagSoup](https://hackage.haskell.org/package/tagsoup)
+  as a token type in Megaparsec.
 
 ## Authors
 
