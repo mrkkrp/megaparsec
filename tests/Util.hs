@@ -232,8 +232,10 @@ data EC
   | Expected   (ErrorItem Char)
   | Custom     Dec
 
+#if !MIN_VERSION_QuickCheck(2,9,0)
 instance Arbitrary a => Arbitrary (NonEmpty a) where
   arbitrary = NE.fromList . getNonEmpty <$> arbitrary
+#endif
 
 instance Arbitrary t => Arbitrary (ErrorItem t) where
   arbitrary = oneof
