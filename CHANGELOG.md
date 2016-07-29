@@ -1,3 +1,8 @@
+## Megaparsec 5.1.0
+
+* Defined `displayException` for `ParseError`, so exceptions are displayed
+  in human-friendly form now. This works with GHC 7.10 and later.
+
 ## Megaparsec 5.0.1
 
 * Derived `NFData` instances for `Pos`, `InvalidPosException`, `SourcePos`,

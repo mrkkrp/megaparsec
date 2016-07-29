@@ -139,7 +139,17 @@ instance (Ord t, Ord e) => Monoid (ParseError t e) where
   mappend = (<>)
   {-# INLINE mappend #-}
 
-instance (Show t, Typeable t, Show e, Typeable e) => Exception (ParseError t e)
+instance ( Show t
+         , Typeable t
+         , Ord t
+         , ShowToken t
+         , Show e
+         , Typeable e
+         , ShowErrorComponent e )
+  => Exception (ParseError t e) where
+#if MIN_VERSION_base(4,8,0)
+  displayException = parseErrorPretty
+#endif
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring longest match. In other words, earlier error
