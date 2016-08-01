@@ -54,6 +54,12 @@ data Operator m a
 -- This is not done by default because in some cases you don't want to allow
 -- repeating prefix or postfix operators.
 --
+-- If you want to have an operator that is a prefix of another operator in
+-- the table, use the following (or similar) wrapper instead of plain
+-- 'symbol':
+--
+-- > op n = (lexeme . try) (string n <* notFollowedBy punctuationChar)
+--
 -- @makeExprParser@ takes care of all the complexity involved in building an
 -- expression parser. Here is an example of an expression parser that
 -- handles prefix signs, postfix increment and basic arithmetic:
