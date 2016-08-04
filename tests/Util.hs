@@ -244,7 +244,7 @@ instance Arbitrary t => Arbitrary (ErrorItem t) where
     , return EndOfInput ]
 
 instance Arbitrary Pos where
-  arbitrary = unsafePos . getPositive <$> arbitrary
+  arbitrary = unsafePos <$> (getSmall <$> arbitrary `suchThat` (> 0))
 
 instance Arbitrary SourcePos where
   arbitrary = SourcePos
