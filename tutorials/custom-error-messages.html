@@ -151,7 +151,7 @@
 <li><code>fail</code> method</li>
 <li>…and incorrect indentation related to machinery in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a>.</li>
 </ul>
-<p>What this means is that our new custom type should somehow provide a way to represent those things too. The requirement that a type should be capable to represent the above-mentioned exceptional situations is captured by the <code>ErrorComponent</code> type class:</p>
+<p>What this means is that our new custom type should somehow provide a way to represent those things too. The requirement that a type should be capable of representing the above-mentioned exceptional situations is captured by the <code>ErrorComponent</code> type class:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The type class defines how to represent information about various</span>
 <span class="co">-- exceptional situations. Data types that are used as custom data component</span>
 <span class="co">-- in 'ParseError' must be instances of this type class.</span>
