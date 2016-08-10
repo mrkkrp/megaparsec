@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content />
+    <meta name="author" content />
+    <title>Megaparsec | How to introduce custom error messages</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="../css/megaparsec.css" />
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="../">
+            Megaparsec
+          </a>
+        </div>
+        <div class="navbar-right">
+          <ul class="nav navbar-nav">
+            
+            <li>
+              <a href="../tutorials.html">Tutorials</a>
+            </li>
+            
+            <li>
+              <a href="https://hackage.haskell.org/package/megaparsec">Hackage</a>
+            </li>
+            
+            <li>
+              <a href="https://github.com/mrkkrp/megaparsec">GitHub</a>
+            </li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row-fluid">
+        <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2 main">
+          <div class="page-header">
+            <h1>How to introduce custom error messages
+              
+              <br />
+              <small>
+                With Megaparsec 5 it's possible to use user-defined data types as part of parse errors
+              </small>
+              
+            </h1>
+            <hr />
+            <div class="content">
+              
+<em>Last updated on August 10, 2016</em>
+<hr />
+
+
+<p>One of the advantages of Megaparsec 5 is the ability to use your own data types as part of data that is returned on parse failure. This opens up the possibility to tailor error messages to your domain of interest in a way that is quite unique to this library. Needless to say, all data that constitutes a error message is typed in Megaparsec 5, so it’s easy to inspect and manipulate it after the fact.</p>
+<h2 id="the-goal">The goal</h2>
+<p>In this tutorial we will walk through creation of a parser found in an existing library called <a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a>, which is an alternative parser for the popular <a href="https://hackage.haskell.org/package/cassava"><code>cassava</code></a> library that allows to parse CSV data. The default parser features not very user-friendly error messages, so I was asked to design a better one using Megaparsec 5.</p>
+<p>In addition to standard error messages (“expected” and “unexpected” tokens), the library can report problems that have to do with using methods from <code>FromRecord</code> and <code>FromNamedRecord</code> type classes that describe how to transform a collection of <code>ByteString</code>s into a particular instance of those type classes. While performing the conversion, things may go wrong, and we would like to use a special data constructor in these cases.</p>
+<p>The complete source code can be found in <a href="https://github.com/stackbuilders/cassava-megaparsec">this GitHub repository</a>.</p>
+<h2 id="language-extensions-and-imports">Language extensions and imports</h2>
+<p>We will need some language extensions and imports, here is the top of <code>Data.Csv.Parser.Megaparsec</code> almost literally:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE BangPatterns       #-}</span>
+<span class="ot">{-# LANGUAGE DeriveDataTypeable #-}</span>
+<span class="ot">{-# LANGUAGE RecordWildCards    #-}</span>
+
+<span class="kw">module</span> <span class="dt">Data.Csv.Parser.Megaparsec</span>
+  ( <span class="dt">Cec</span> (<span class="fu">..</span>)
+  , decode
+  , decodeWith
+  , decodeByName
+  , decodeByNameWith )
+<span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Control.Monad</span>
+<span class="kw">import </span><span class="dt">Data.ByteString</span> (<span class="dt">ByteString</span>)
+<span class="kw">import </span><span class="dt">Data.Char</span> (chr)
+<span class="kw">import </span><span class="dt">Data.Csv</span> <span class="kw">hiding</span>
+  ( <span class="dt">Parser</span>
+  , record
+  , namedRecord
+  , header
+  , toNamedRecord
+  , decode
+  , decodeWith
+  , decodeByName
+  , decodeByNameWith )
+<span class="kw">import </span><span class="dt">Data.Data</span>
+<span class="kw">import </span><span class="dt">Data.Vector</span> (<span class="dt">Vector</span>)
+<span class="kw">import </span><span class="dt">Data.Word</span> (<span class="dt">Word8</span>)
+<span class="kw">import </span><span class="dt">Text.Megaparsec</span>
+<span class="kw">import qualified</span> <span class="dt">Data.ByteString.Char8</span> <span class="kw">as</span> <span class="dt">BC8</span>
+<span class="kw">import qualified</span> <span class="dt">Data.ByteString.Lazy</span>  <span class="kw">as</span> <span class="dt">BL</span>
+<span class="kw">import qualified</span> <span class="dt">Data.Csv</span>              <span class="kw">as</span> <span class="dt">C</span>
+<span class="kw">import qualified</span> <span class="dt">Data.HashMap.Strict</span>   <span class="kw">as</span> <span class="dt">H</span>
+<span class="kw">import qualified</span> <span class="dt">Data.Set</span>              <span class="kw">as</span> <span class="dt">S</span>
+<span class="kw">import qualified</span> <span class="dt">Data.Vector</span>           <span class="kw">as</span> <span class="dt">V</span></code></pre></div>
+<p>Note that there are two imports for <code>Data.Csv</code>, one for some common things like names of type class that I want to keep unprefixed and the second one for the rest of the stuff (qualified as <code>C</code>).</p>
+<h2 id="what-is-parseerror-actually">What is <code>ParseError</code> actually?</h2>
+<p>To start with custom error messages we should take a look at how parse errors are represented in Megaparsec 5.</p>
+<p>The main type for error messages in <code>ParseError</code> which is defined like this:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The data type @ParseError@ represents parse errors. It provides the</span>
+<span class="co">-- stack of source positions, set of expected and unexpected tokens as well</span>
+<span class="co">-- as set of custom associated data. The data type is parametrized over</span>
+<span class="co">-- token type @t@ and custom data @e@.</span>
+<span class="fu">--</span>
+<span class="co">-- Note that stack of source positions contains current position as its</span>
+<span class="co">-- head, and the rest of positions allows to track full sequence of include</span>
+<span class="co">-- files with topmost source file at the end of the list.</span>
+<span class="fu">--</span>
+<span class="co">-- 'Semigroup' (or 'Monoid') instance of the data type allows to merge parse</span>
+<span class="co">-- errors from different branches of parsing. When merging two</span>
+<span class="co">-- 'ParseError's, longest match is preferred; if positions are the same,</span>
+<span class="co">-- custom data sets and collections of message items are combined.</span>
+
+<span class="kw">data</span> <span class="dt">ParseError</span> t e <span class="fu">=</span> <span class="dt">ParseError</span>
+  {<span class="ot"> errorPos        ::</span> <span class="dt">NonEmpty</span> <span class="dt">SourcePos</span> <span class="co">-- ^ Stack of source positions</span>
+  ,<span class="ot"> errorUnexpected ::</span> <span class="dt">Set</span> (<span class="dt">ErrorItem</span> t)  <span class="co">-- ^ Unexpected items</span>
+  ,<span class="ot"> errorExpected   ::</span> <span class="dt">Set</span> (<span class="dt">ErrorItem</span> t)  <span class="co">-- ^ Expected items</span>
+  ,<span class="ot"> errorCustom     ::</span> <span class="dt">Set</span> e              <span class="co">-- ^ Associated data, if any</span>
+  } <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Read</span>, <span class="dt">Eq</span>, <span class="dt">Data</span>, <span class="dt">Typeable</span>, <span class="dt">Generic</span>)</code></pre></div>
+<p>Conceptually, we have four components in a parse error:</p>
+<ul>
+<li><p>Position (may be multi-dimensional to support include files).</p></li>
+<li><p>Unexpected “items” (see <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Error.html#t:ErrorItem"><code>ErrorItem</code></a> if you are curious).</p></li>
+<li><p>Expected “items”.</p></li>
+<li><p>Everything else — here we have a set of things of <code>e</code> type. <code>e</code> is the type we will be defining and using in this tutorial.</p></li>
+</ul>
+<h2 id="defining-custom-error-component">Defining custom error component</h2>
+<p>We cannot ship the library without some sort of default candidate to take the place of <code>e</code> type, so here it is:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | “Default error component”. This in our instance of 'ErrorComponent'</span>
+<span class="co">-- provided out-of-box.</span>
+<span class="fu">--</span>
+<span class="co">-- @since 5.0.0</span>
+
+<span class="kw">data</span> <span class="dt">Dec</span>
+  <span class="fu">=</span> <span class="dt">DecFail</span> <span class="dt">String</span>         <span class="co">-- ^ 'fail' has been used in parser monad</span>
+  <span class="fu">|</span> <span class="dt">DecIndentation</span> <span class="dt">Ordering</span> <span class="dt">Pos</span> <span class="dt">Pos</span>
+    <span class="co">-- ^ Incorrect indentation error: desired ordering between reference</span>
+    <span class="co">-- level and actual level, reference indentation level, actual</span>
+    <span class="co">-- indentation level</span>
+  <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Read</span>, <span class="dt">Eq</span>, <span class="dt">Ord</span>, <span class="dt">Data</span>, <span class="dt">Typeable</span>)</code></pre></div>
+<p>As you can see it is just a sum type that accounts for all types of failures that we need to think about in the vanilla Megaparsec:</p>
+<ul>
+<li><code>fail</code> method</li>
+<li>…and incorrect indentation related to machinery in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a>.</li>
+</ul>
+<p>What this means is that our new custom type should somehow provide a way to represent those things too. The requirement that a type should be capable to represent the above-mentioned exceptional situations is captured by the <code>ErrorComponent</code> type class:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The type class defines how to represent information about various</span>
+<span class="co">-- exceptional situations. Data types that are used as custom data component</span>
+<span class="co">-- in 'ParseError' must be instances of this type class.</span>
+<span class="fu">--</span>
+<span class="co">-- @since 5.0.0</span>
+
+<span class="kw">class</span> <span class="dt">Ord</span> e <span class="ot">=&gt;</span> <span class="dt">ErrorComponent</span> e <span class="kw">where</span>
+
+  <span class="co">-- | Represent message passed to 'fail' in parser monad.</span>
+  <span class="fu">--</span>
+  <span class="co">-- @since 5.0.0</span>
+
+<span class="ot">  representFail ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> e
+
+  <span class="co">-- | Represent information about incorrect indentation.</span>
+  <span class="fu">--</span>
+  <span class="co">-- @since 5.0.0</span>
+
+  representIndentation
+<span class="ot">    ::</span> <span class="dt">Ordering</span> <span class="co">-- ^ Desired ordering between reference level and actual level</span>
+    <span class="ot">-&gt;</span> <span class="dt">Pos</span>             <span class="co">-- ^ Reference indentation level</span>
+    <span class="ot">-&gt;</span> <span class="dt">Pos</span>             <span class="co">-- ^ Actual indentation level</span>
+    <span class="ot">-&gt;</span> e</code></pre></div>
+<p>Every type that is going to be used as part of <code>ParseError</code> must be an instance of <code>ErrorComponent</code> type class.</p>
+<p>Another thing we would like to do with custom error component is to format it somehow, so it could be inserted in pretty-printed representation of <code>ParseError</code>. This behavior is defined by the <code>ShowErrorComponent</code> type class:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The type class defines how to print custom data component of</span>
+<span class="co">-- 'ParseError'.</span>
+<span class="fu">--</span>
+<span class="co">-- @since 5.0.0</span>
+
+<span class="kw">class</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> <span class="dt">ShowErrorComponent</span> a <span class="kw">where</span>
+
+  <span class="co">-- | Pretty-print custom data component of 'ParseError'.</span>
+
+<span class="ot">  showErrorComponent ::</span> a <span class="ot">-&gt;</span> <span class="dt">String</span></code></pre></div>
+<p>We will need to make our new data type instance of that class as well.</p>
+<p>So, let’s start. We can grab existing definitions and instances of <code>Dec</code> data type and change them as necessary. The special case we want to support is about failed conversion from vector of <code>ByteString</code>s to some particular type, let’s capture this:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Custom error component for CSV parsing. It allows typed reporting of</span>
+<span class="co">-- conversion errors.</span>
+
+<span class="kw">data</span> <span class="dt">Cec</span>
+  <span class="fu">=</span> <span class="dt">CecFail</span> <span class="dt">String</span>
+  <span class="fu">|</span> <span class="dt">CecIndentation</span> <span class="dt">Ordering</span> <span class="dt">Pos</span> <span class="dt">Pos</span>
+  <span class="fu">|</span> <span class="dt">CecConversionError</span> <span class="dt">String</span>
+  <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Data</span>, <span class="dt">Typeable</span>, <span class="dt">Ord</span>, <span class="dt">Read</span>, <span class="dt">Show</span>)
+
+<span class="kw">instance</span> <span class="dt">ShowErrorComponent</span> <span class="dt">Cec</span> <span class="kw">where</span>
+  showErrorComponent (<span class="dt">CecFail</span> msg) <span class="fu">=</span> msg
+  showErrorComponent (<span class="dt">CecIndentation</span> ord ref actual) <span class="fu">=</span>
+    <span class="st">&quot;incorrect indentation (got &quot;</span> <span class="fu">++</span> show (unPos actual) <span class="fu">++</span>
+    <span class="st">&quot;, should be &quot;</span> <span class="fu">++</span> p <span class="fu">++</span> show (unPos ref) <span class="fu">++</span> <span class="st">&quot;)&quot;</span>
+    <span class="kw">where</span> p <span class="fu">=</span> <span class="kw">case</span> ord <span class="kw">of</span>
+                <span class="dt">LT</span> <span class="ot">-&gt;</span> <span class="st">&quot;less than &quot;</span>
+                <span class="dt">EQ</span> <span class="ot">-&gt;</span> <span class="st">&quot;equal to &quot;</span>
+                <span class="dt">GT</span> <span class="ot">-&gt;</span> <span class="st">&quot;greater than &quot;</span>
+  showErrorComponent (<span class="dt">CecConversionError</span> msg) <span class="fu">=</span>
+    <span class="st">&quot;conversion error: &quot;</span> <span class="fu">++</span> msg
+
+<span class="kw">instance</span> <span class="dt">ErrorComponent</span> <span class="dt">Cec</span> <span class="kw">where</span>
+  representFail        <span class="fu">=</span> <span class="dt">CecFail</span>
+  representIndentation <span class="fu">=</span> <span class="dt">CecIndentation</span></code></pre></div>
+<p>We have re-used definitions from Megaparsec’s source code for <code>Dec</code> here and added a special case represented by <code>CecConversionError</code>. It contains a <code>String</code> that conversion functions of Cassava return. We could do better if Cassava provided typed error values, but <code>String</code> is all we have, so let’s work with it.</p>
+<p>Another handy definition we need is <code>Parser</code> type synonym. We cannot use one of the default <code>Parser</code> definitions because those assume <code>Dec</code>, so we define it ourselves rather trivially:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parser type that uses “custom error component” 'Cec'.</span>
+
+<span class="kw">type</span> <span class="dt">Parser</span> <span class="fu">=</span> <span class="dt">Parsec</span> <span class="dt">Cec</span> <span class="dt">BL.ByteString</span></code></pre></div>
+<h2 id="top-level-api-and-helpers">Top level API and helpers</h2>
+<p>Let’s start from the top and take a look at the top-level, public API:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Deserialize CSV records form a lazy 'BL.ByteString'. If this fails due</span>
+<span class="co">-- to incomplete or invalid input, 'Left' is returned. Equivalent to</span>
+<span class="co">-- 'decodeWith' 'defaultDecodeOptions'.</span>
+
+<span class="ot">decode ::</span> <span class="dt">FromRecord</span> a
+  <span class="ot">=&gt;</span> <span class="dt">HasHeader</span>
+     <span class="co">-- ^ Whether the data contains header that should be skipped</span>
+  <span class="ot">-&gt;</span> FilePath
+     <span class="co">-- ^ File name (use empty string if you have none)</span>
+  <span class="ot">-&gt;</span> <span class="dt">BL.ByteString</span>
+     <span class="co">-- ^ CSV data</span>
+  <span class="ot">-&gt;</span> <span class="dt">Either</span> (<span class="dt">ParseError</span> <span class="dt">Char</span> <span class="dt">Cec</span>) (<span class="dt">Vector</span> a)
+decode <span class="fu">=</span> decodeWith defaultDecodeOptions
+
+<span class="co">-- | Like 'decode', but lets you customize how the CSV data is parsed.</span>
+
+<span class="ot">decodeWith ::</span> <span class="dt">FromRecord</span> a
+  <span class="ot">=&gt;</span> <span class="dt">DecodeOptions</span>
+     <span class="co">-- ^ Decoding options</span>
+  <span class="ot">-&gt;</span> <span class="dt">HasHeader</span>
+     <span class="co">-- ^ Whether the data contains header that should be skipped</span>
+  <span class="ot">-&gt;</span> FilePath
+     <span class="co">-- ^ File name (use empty string if you have none)</span>
+  <span class="ot">-&gt;</span> <span class="dt">BL.ByteString</span>
+     <span class="co">-- ^ CSV data</span>
+  <span class="ot">-&gt;</span> <span class="dt">Either</span> (<span class="dt">ParseError</span> <span class="dt">Char</span> <span class="dt">Cec</span>) (<span class="dt">Vector</span> a)
+decodeWith <span class="fu">=</span> decodeWithC csv
+
+<span class="co">-- | Deserialize CSV records from a lazy 'BL.ByteString'. If this fails due</span>
+<span class="co">-- to incomplete or invalid input, 'Left' is returned. The data is assumed</span>
+<span class="co">-- to be preceded by a header. Equivalent to 'decodeByNameWith'</span>
+<span class="co">-- 'defaultDecodeOptions'.</span>
+
+<span class="ot">decodeByName ::</span> <span class="dt">FromNamedRecord</span> a
+  <span class="ot">=&gt;</span> FilePath          <span class="co">-- ^ File name (use empty string if you have none)</span>
+  <span class="ot">-&gt;</span> <span class="dt">BL.ByteString</span>     <span class="co">-- ^ CSV data</span>
+  <span class="ot">-&gt;</span> <span class="dt">Either</span> (<span class="dt">ParseError</span> <span class="dt">Char</span> <span class="dt">Cec</span>) (<span class="dt">Header</span>, <span class="dt">Vector</span> a)
+decodeByName <span class="fu">=</span> decodeByNameWith defaultDecodeOptions
+
+<span class="co">-- | Like 'decodeByName', but lets you customize how the CSV data is parsed.</span>
+
+<span class="ot">decodeByNameWith ::</span> <span class="dt">FromNamedRecord</span> a
+  <span class="ot">=&gt;</span> <span class="dt">DecodeOptions</span>     <span class="co">-- ^ Decoding options</span>
+  <span class="ot">-&gt;</span> FilePath          <span class="co">-- ^ File name (use empty string if you have none)</span>
+  <span class="ot">-&gt;</span> <span class="dt">BL.ByteString</span>     <span class="co">-- ^ CSV data</span>
+  <span class="ot">-&gt;</span> <span class="dt">Either</span> (<span class="dt">ParseError</span> <span class="dt">Char</span> <span class="dt">Cec</span>) (<span class="dt">Header</span>, <span class="dt">Vector</span> a)
+decodeByNameWith opts <span class="fu">=</span> parse (csvWithHeader opts)
+
+<span class="co">-- | Decode CSV data using the provided parser, skipping a leading header if</span>
+<span class="co">-- necessary.</span>
+
+decodeWithC
+<span class="ot">  ::</span> (<span class="dt">DecodeOptions</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> a)
+     <span class="co">-- ^ Parsing function parametrized by 'DecodeOptions'</span>
+  <span class="ot">-&gt;</span> <span class="dt">DecodeOptions</span>
+     <span class="co">-- ^ Decoding options</span>
+  <span class="ot">-&gt;</span> <span class="dt">HasHeader</span>
+     <span class="co">-- ^ Whether to expect a header in the input</span>
+  <span class="ot">-&gt;</span> FilePath
+     <span class="co">-- ^ File name (use empty string if you have none)</span>
+  <span class="ot">-&gt;</span> <span class="dt">BL.ByteString</span>
+     <span class="co">-- ^ CSV data</span>
+  <span class="ot">-&gt;</span> <span class="dt">Either</span> (<span class="dt">ParseError</span> <span class="dt">Char</span> <span class="dt">Cec</span>) a
+decodeWithC p opts<span class="fu">@</span><span class="dt">DecodeOptions</span> {<span class="fu">..</span>} hasHeader <span class="fu">=</span> parse parser
+  <span class="kw">where</span>
+    parser <span class="fu">=</span> <span class="kw">case</span> hasHeader <span class="kw">of</span>
+      <span class="dt">HasHeader</span> <span class="ot">-&gt;</span> header decDelimiter <span class="fu">*&gt;</span> p opts
+      <span class="dt">NoHeader</span>  <span class="ot">-&gt;</span> p opts</code></pre></div>
+<p>Really nothing interesting here, just a bunch of wrappers that boil down to running the <code>parser</code> either with skipping the CSV header or not.</p>
+<p>What I would really like to show to you is the helpers, because one of them is going to be very handy when you decide to write your own parser after reading this manual. Here are the helpers:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | End parsing signaling a “conversion error”.</span>
+
+<span class="ot">conversionError ::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+conversionError msg <span class="fu">=</span> failure S.empty S.empty (S.singleton err)
+  <span class="kw">where</span>
+    err <span class="fu">=</span> <span class="dt">CecConversionError</span> msg
+
+<span class="co">-- | Convert a 'Record' to a 'NamedRecord' by attaching column names. The</span>
+<span class="co">-- 'Header' and 'Record' must be of the same length.</span>
+
+<span class="ot">toNamedRecord ::</span> <span class="dt">Header</span> <span class="ot">-&gt;</span> <span class="dt">Record</span> <span class="ot">-&gt;</span> <span class="dt">NamedRecord</span>
+toNamedRecord hdr v <span class="fu">=</span> H.fromList <span class="fu">.</span> V.toList <span class="fu">$</span> V.zip hdr v
+
+<span class="co">-- | Parse a byte of specified value and return unit.</span>
+
+<span class="ot">blindByte ::</span> <span class="dt">Word8</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> ()
+blindByte <span class="fu">=</span> void <span class="fu">.</span> char <span class="fu">.</span> chr <span class="fu">.</span> fromIntegral</code></pre></div>
+<p>The <code>conversionError</code> is a handy thing to have as you can quickly fail with your custom error message without writing all the <code>failure</code>-related boilerplate. <code>toNamedRecord</code> just converts a <code>Record</code> to <code>NamedRecord</code>, while <code>blindByte</code> reads a character (passed to it as a <code>Word8</code> value) and returns a unit <code>()</code>.</p>
+<h2 id="the-parser">The parser</h2>
+<p>Let’s start with parsing a field. A field in a CSV file can be either escaped or unescaped:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse a field. The field may be in either the escaped or non-escaped</span>
+<span class="co">-- format. The returned value is unescaped.</span>
+
+<span class="ot">field ::</span> <span class="dt">Word8</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">Field</span>
+field del <span class="fu">=</span> label <span class="st">&quot;field&quot;</span> (escapedField <span class="fu">&lt;|&gt;</span> unescapedField del)</code></pre></div>
+<p>An escaped field is written inside straight quotes <code>&quot;&quot;</code> and can contain any characters at all, but the quote sign itself <code>&quot;</code> must be escaped by repeating it twice:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse an escaped field.</span>
+
+<span class="ot">escapedField ::</span> <span class="dt">Parser</span> <span class="dt">ByteString</span>
+escapedField <span class="fu">=</span>
+  BC8.pack <span class="fu">&lt;$!&gt;</span> between (char <span class="ch">'&quot;'</span>) (char <span class="ch">'&quot;'</span>) (many <span class="fu">$</span> normalChar <span class="fu">&lt;|&gt;</span> escapedDq)
+  <span class="kw">where</span>
+    normalChar <span class="fu">=</span> noneOf <span class="st">&quot;\&quot;&quot;</span> <span class="fu">&lt;?&gt;</span> <span class="st">&quot;unescaped character&quot;</span>
+    escapedDq  <span class="fu">=</span> label <span class="st">&quot;escaped double-quote&quot;</span> (<span class="ch">'&quot;'</span> <span class="fu">&lt;$</span> string <span class="st">&quot;\&quot;\&quot;&quot;</span>)</code></pre></div>
+<p>Simple so far. <code>unescapedField</code> is even simpler, it can contain any character except for the quote sign <code>&quot;</code>, delimiter sign, and newline characters:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse an unescaped field.</span>
+
+<span class="ot">unescapedField ::</span> <span class="dt">Word8</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">ByteString</span>
+unescapedField del <span class="fu">=</span> BC8.pack <span class="fu">&lt;$!&gt;</span> many (noneOf es)
+  <span class="kw">where</span>
+    es <span class="fu">=</span> chr (fromIntegral del) <span class="fu">:</span> <span class="st">&quot;\&quot;\n\r&quot;</span></code></pre></div>
+<p>To parse a record we have to parse non-empty collection of fields separated by delimiter characters (supplied from the <code>DecodeOptions</code> thing). Then we convert it to <code>Vector ByteString</code>, because that’s what Cassava’s conversion functions expect:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse a record, not including the terminating line separator. The</span>
+<span class="co">-- terminating line separate is not included as the last record in a CSV</span>
+<span class="co">-- file is allowed to not have a terminating line separator.</span>
+
+record
+<span class="ot">  ::</span> <span class="dt">Word8</span>             <span class="co">-- ^ Field delimiter</span>
+  <span class="ot">-&gt;</span> (<span class="dt">Record</span> <span class="ot">-&gt;</span> <span class="dt">C.Parser</span> a)
+     <span class="co">-- ^ How to “parse” record to get the data of interest</span>
+  <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+record del f <span class="fu">=</span> <span class="kw">do</span>
+  notFollowedBy eof <span class="co">-- to prevent reading empty line at the end of file</span>
+  r <span class="ot">&lt;-</span> V.fromList <span class="fu">&lt;$!&gt;</span> (sepBy1 (field del) (blindByte del) <span class="fu">&lt;?&gt;</span> <span class="st">&quot;record&quot;</span>)
+  <span class="kw">case</span> C.runParser (f r) <span class="kw">of</span>
+    <span class="dt">Left</span> msg <span class="ot">-&gt;</span> conversionError msg
+    <span class="dt">Right</span> x  <span class="ot">-&gt;</span> return x</code></pre></div>
+<p>The <code>(&lt;$!&gt;)</code> operator works just like the familiar <code>(&lt;$&gt;)</code>operator, but applies <code>V.fromList</code> strictly. Now that we have the vector of <code>ByteString</code>s, we can try to convert it: on success we just return the result, on failure we fail using the <code>conversionError</code> helper.</p>
+<p>The library also should handle CSV files with headers:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse a CSV file that includes a header.</span>
+
+<span class="ot">csvWithHeader ::</span> <span class="dt">FromNamedRecord</span> a
+  <span class="ot">=&gt;</span> <span class="dt">DecodeOptions</span>     <span class="co">-- ^ Decoding options</span>
+  <span class="ot">-&gt;</span> <span class="dt">Parser</span> (<span class="dt">Header</span>, <span class="dt">Vector</span> a)
+     <span class="co">-- ^ The parser that parser collection of named records</span>
+csvWithHeader <span class="fu">!</span><span class="dt">DecodeOptions</span> {<span class="fu">..</span>} <span class="fu">=</span> <span class="kw">do</span>
+  <span class="fu">!</span>hdr <span class="ot">&lt;-</span> header decDelimiter
+  <span class="kw">let</span> f <span class="fu">=</span> parseNamedRecord <span class="fu">.</span> toNamedRecord hdr
+  xs   <span class="ot">&lt;-</span> sepEndBy1 (record decDelimiter f) eol
+  eof
+  return <span class="fu">$</span> <span class="kw">let</span> <span class="fu">!</span>v <span class="fu">=</span> V.fromList xs <span class="kw">in</span> (hdr, v)
+
+<span class="co">-- | Parse a header, including the terminating line separator.</span>
+
+<span class="ot">header ::</span> <span class="dt">Word8</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">Header</span>
+header del <span class="fu">=</span> V.fromList <span class="fu">&lt;$!&gt;</span> p <span class="fu">&lt;*</span> eol
+  <span class="kw">where</span>
+    p <span class="fu">=</span> sepBy1 (name del) (blindByte del) <span class="fu">&lt;?&gt;</span> <span class="st">&quot;file header&quot;</span>
+
+<span class="co">-- | Parse a header name. Header names have the same format as regular</span>
+<span class="co">-- 'field's.</span>
+
+<span class="ot">name ::</span> <span class="dt">Word8</span> <span class="ot">-&gt;</span> <span class="dt">Parser</span> <span class="dt">Name</span>
+name del <span class="fu">=</span> field del <span class="fu">&lt;?&gt;</span> <span class="st">&quot;name in header&quot;</span></code></pre></div>
+<p>The code should be self-explanatory by now. The only thing that remains is to parse collection of records:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse a CSV file that does not include a header.</span>
+
+<span class="ot">csv ::</span> <span class="dt">FromRecord</span> a
+  <span class="ot">=&gt;</span> <span class="dt">DecodeOptions</span>     <span class="co">-- ^ Decoding options</span>
+  <span class="ot">-&gt;</span> <span class="dt">Parser</span> (<span class="dt">Vector</span> a) <span class="co">-- ^ The parser that parses collection of records</span>
+csv <span class="fu">!</span><span class="dt">DecodeOptions</span> {<span class="fu">..</span>} <span class="fu">=</span> <span class="kw">do</span>
+  xs <span class="ot">&lt;-</span> sepEndBy1 (record decDelimiter parseRecord) eol
+  eof
+  return <span class="fu">$!</span> V.fromList xs</code></pre></div>
+<p>Too simple!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>I hope this walk-through has demonstrated that it’s quite trivial to insert your own data into Megaparsec error messages. This way it’s also possible to pump out some data from failing parser or just keep track of things in a type-safe way, which is one thing we should always care about when writing Haskell programs.</p>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  </body>
+</html>
