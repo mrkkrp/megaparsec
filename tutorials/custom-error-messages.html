@@ -385,6 +385,15 @@ csv <span class="fu">!</span><span class="dt">DecodeOptions</span> {<span class=
   eof
   return <span class="fu">$!</span> V.fromList xs</code></pre></div>
 <p>Too simple!</p>
+<h2 id="trying-it-out">Trying it out</h2>
+<p>The custom error messages play seamlessly with the rest of the parser. Let’s parse a CSV file into collection of <code>(String, Maybe Int, Double)</code> items. If I try to parse <code>&quot;foo</code>, I get the usual Megaparsec error message with “unexpected” and “expected” parts:</p>
+<pre><code>my-file.csv:1:5:
+unexpected end of input
+expecting '&quot;', escaped double-quote, or unescaped character</code></pre>
+<p>However, when that phase of parsing is passed successfully, as with <code>foo,12,boo</code> input, the conversion is attempted and its results are reported:</p>
+<pre><code>my-file.csv:1:11:
+conversion error: expected Double, got &quot;boo&quot; (Failed reading: takeWhile1)</code></pre>
+<p>(I wouldn’t mind if <code>(Failed reading: takeWhile1)</code> part were omitted, but that’s what Cassava’s conversion methods are producing.)</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>I hope this walk-through has demonstrated that it’s quite trivial to insert your own data into Megaparsec error messages. This way it’s also possible to pump out some data from failing parser or just keep track of things in a type-safe way, which is one thing we should always care about when writing Haskell programs.</p>
 
