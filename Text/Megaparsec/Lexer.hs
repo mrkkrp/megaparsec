@@ -105,9 +105,9 @@ space :: MonadParsec e s m
   -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
 
--- | This is wrapper for lexemes. Typical usage is to supply first argument
--- (parser that consumes white space, probably defined via 'space') and use
--- the resulting function to wrap parsers for every lexeme.
+-- | This is a wrapper for lexemes. Typical usage is to supply the first
+-- argument (parser that consumes white space, probably defined via 'space')
+-- and use the resulting function to wrap parsers for every lexeme.
 --
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.integer
@@ -148,7 +148,7 @@ symbol' :: (MonadParsec e s m, Token s ~ Char)
   -> m String
 symbol' spc = lexeme spc . C.string'
 
--- | Given comment prefix this function returns parser that skips line
+-- | Given comment prefix this function returns a parser that skips line
 -- comments. Note that it stops just before newline character but doesn't
 -- consume the newline. Newline is either supposed to be consumed by 'space'
 -- parser or picked up manually.
@@ -218,11 +218,11 @@ incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
 
 -- | @indentGuard spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks column
--- position. Ordering between current indentation level and reference
+-- position. Ordering between current indentation level and the reference
 -- indentation level @ref@ should be @ord@, otherwise the parser fails. On
--- success current column position is returned.
+-- success the current column position is returned.
 --
--- When you want to parse block of indentation first run this parser with
+-- When you want to parse a block of indentation, first run this parser with
 -- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@ — this will
 -- make sure you have some indentation. Use returned value to check
 -- indentation on every subsequent line according to syntax of your
@@ -240,7 +240,7 @@ indentGuard sc ord ref = do
     then return actual
     else incorrectIndent ord ref actual
 
--- | Parse non-indented construction. This ensures that there is no
+-- | Parse a non-indented construction. This ensures that there is no
 -- indentation before actual data. Useful, for example, as a wrapper for
 -- top-level function definitions.
 --
@@ -375,7 +375,7 @@ charLiteral = label "literal character" $ do
 -- Numbers
 
 -- | Parse an integer without sign in decimal representation (according to
--- format of integer literals described in Haskell report).
+-- the format of integer literals described in the Haskell report).
 --
 -- If you need to parse signed integers, see 'signed' combinator.
 
@@ -389,10 +389,10 @@ decimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 decimal = nump "" C.digitChar <?> "decimal integer"
 
 -- | Parse an integer in hexadecimal representation. Representation of
--- hexadecimal number is expected to be according to Haskell report except
--- for the fact that this parser doesn't parse “0x” or “0X” prefix. It is
--- responsibility of the programmer to parse correct prefix before parsing
--- the number itself.
+-- hexadecimal number is expected to be according to the Haskell report
+-- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
+-- It is responsibility of the programmer to parse correct prefix before
+-- parsing the number itself.
 --
 -- For example you can make it conform to Haskell report like this:
 --
@@ -402,10 +402,10 @@ hexadecimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 
 -- | Parse an integer in octal representation. Representation of octal
--- number is expected to be according to Haskell report except for the fact
--- that this parser doesn't parse “0o” or “0O” prefix. It is responsibility
--- of the programmer to parse correct prefix before parsing the number
--- itself.
+-- number is expected to be according to the Haskell report except for the
+-- fact that this parser doesn't parse “0o” or “0O” prefix. It is
+-- responsibility of the programmer to parse correct prefix before parsing
+-- the number itself.
 
 octal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 octal = nump "0o" C.octDigitChar <?> "octal integer"
@@ -417,11 +417,11 @@ octal = nump "0o" C.octDigitChar <?> "octal integer"
 nump :: MonadParsec e s m => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
--- | Parse floating point value as 'Scientific' number. 'Scientific' is
+-- | Parse a floating point value as 'Scientific' number. 'Scientific' is
 -- great for parsing of arbitrary precision numbers coming from an untrusted
 -- source. See documentation in "Data.Scientific" for more information.
--- Representation of floating point value is expected to be according to
--- Haskell report.
+-- Representation of the floating point value is expected to be according to
+-- the Haskell report.
 --
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
@@ -432,7 +432,7 @@ scientific :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 scientific = label "floating point number" (read <$> f)
   where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
 
--- | Parse floating point number without sign. This is a simple shortcut
+-- | Parse a floating point number without sign. This is a simple shortcut
 -- defined as:
 --
 -- > float = toRealFloat <$> scientific
@@ -468,10 +468,10 @@ number :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 number = label "number" (read <$> f)
   where f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
 
--- | @signed space p@ parser parses optional sign, then if there is a sign
--- it will consume optional white space (using @space@ parser), then it runs
--- parser @p@ which should return a number. Sign of the number is changed
--- according to previously parsed sign.
+-- | @signed space p@ parser parses an optional sign, then if there is a
+-- sign it will consume optional white space (using @space@ parser), then it
+-- runs parser @p@ which should return a number. Sign of the number is
+-- changed according to previously parsed sign.
 --
 -- For example, to parse signed integer you can write:
 --

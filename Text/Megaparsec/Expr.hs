@@ -86,8 +86,8 @@ makeExprParser :: MonadParsec e s m
   -> m a               -- ^ Resulting expression parser
 makeExprParser = foldl addPrecLevel
 
--- | @addPrecLevel p ops@ adds ability to parse operators in table @ops@ to
--- parser @p@.
+-- | @addPrecLevel p ops@ adds the ability to parse operators in table @ops@
+-- to parser @p@.
 
 addPrecLevel :: MonadParsec e s m => m a -> [Operator m a] -> m a
 addPrecLevel term ops =
@@ -98,7 +98,7 @@ addPrecLevel term ops =
         las'  = pInfixL (choice las) term'
         nas'  = pInfixN (choice nas) term'
 
--- | @pTerm prefix term postfix@ parses term with @term@ surrounded by
+-- | @pTerm prefix term postfix@ parses a term with @term@ surrounded by
 -- optional prefix and postfix unary operators. Parsers @prefix@ and
 -- @postfix@ are allowed to fail, in this case 'id' is used.
 
