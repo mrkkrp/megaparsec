@@ -158,7 +158,7 @@ skipLineComment :: (MonadParsec e s m, Token s ~ Char)
   -> m ()
 skipLineComment prefix = p >> void (manyTill C.anyChar n)
   where p = C.string prefix
-        n = lookAhead C.newline
+        n = lookAhead (void C.newline) <|> eof
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.

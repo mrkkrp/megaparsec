@@ -71,6 +71,7 @@ tests = testGroup "Lexer"
   [ testProperty "space combinator"       prop_space
   , testProperty "symbol combinator"      prop_symbol
   , testProperty "symbol' combinator"     prop_symbol'
+  , testCase     "case_skipLineCommentEof" case_skipLineCommentEof
   , testCase     "skipBlockCommentNested" case_skipBlockCommentNested
   , testProperty "indentLevel"            prop_indentLevel
   , testProperty "incorrectIndent"        prop_incorrectIndent
@@ -164,6 +165,12 @@ parseSymbol p' f s' t = checkParser p r s
           | otherwise = posErr (length s - 1) s [utok (last s), eeof]
         g = takeWhile (not . isSpace) s
         s = s' ++ maybeToList t
+
+case_skipLineCommentEof :: Assertion
+case_skipLineCommentEof = checkCase p r s
+  where p = space (void C.spaceChar) (skipLineComment "//") empty <* eof
+        r = Right ()
+        s = "  // this line comment doesn't have a newline at the end "
 
 case_skipBlockCommentNested :: Assertion
 case_skipBlockCommentNested = checkCase p r s

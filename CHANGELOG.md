@@ -3,6 +3,9 @@
 * Defined `displayException` for `ParseError`, so exceptions are displayed
   in human-friendly form now. This works with GHC 7.10 and later.
 
+* Line comments parsed by `skipLineComment` now may end at the end of input
+  and do not necessarily require a newline to be parsed correctly. See #119.
+
 ## Megaparsec 5.0.1
 
 * Derived `NFData` instances for `Pos`, `InvalidPosException`, `SourcePos`,
