@@ -180,7 +180,7 @@ import Text.Megaparsec.Prim
 -- @many p@ applies the parser @p@ /zero/ or more times. Returns a list of
 -- the returned values of @p@.
 --
--- > identifier = (:) <$> letter <*> many (alphaNum <|> char '_')
+-- > identifier = (:) <$> letter <*> many (alphaNumChar <|> char '_')
 
 -- $some
 --
