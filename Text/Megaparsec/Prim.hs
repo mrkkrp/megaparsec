@@ -76,6 +76,7 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Prelude hiding (all)
+import Test.QuickCheck hiding (Result (..), label)
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
 import qualified Control.Monad.Trans.Reader        as L
@@ -109,6 +110,17 @@ data State s = State
   deriving (Show, Eq, Data, Typeable, Generic)
 
 instance NFData s => NFData (State s)
+
+instance Arbitrary a => Arbitrary (State a) where
+  arbitrary = State
+    <$> arbitrary
+    <*>
+#if !MIN_VERSION_QuickCheck(2,9,0)
+      (NE.fromList . getNonEmpty <$> arbitrary)
+#else
+      arbitrary
+#endif
+    <*> (unsafePos <$> choose (1, 20))
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with returned value) or failure (with parse error), and

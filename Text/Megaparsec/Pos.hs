@@ -39,6 +39,7 @@ import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
+import Test.QuickCheck
 import Unsafe.Coerce
 
 #if !MIN_VERSION_base(4,8,0)
@@ -57,6 +58,9 @@ import Data.Word (Word)
 
 newtype Pos = Pos Word
   deriving (Show, Eq, Ord, Data, Typeable, NFData)
+
+instance Arbitrary Pos where
+  arbitrary = unsafePos <$> (getSmall <$> arbitrary `suchThat` (> 0))
 
 -- | Construction of 'Pos' from an instance of 'Integral'. The function
 -- throws 'InvalidPosException' when given non-positive argument. Note that
@@ -102,6 +106,14 @@ instance Read Pos where
       ("Pos", r2) <- lex r1
       (x,     r3) <- readsPrec 11 r2
       (,r3) <$> mkPos (x :: Integer)
+
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos
+    <$> sized (\n -> do
+          k <- choose (0, n `div` 2)
+          vectorOf k arbitrary)
+    <*> (unsafePos <$> choose (1, 1000))
+    <*> (unsafePos <$> choose (1,  100))
 
 -- | The exception is thrown by 'mkPos' when its argument is not a positive
 -- number.

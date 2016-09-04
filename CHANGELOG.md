@@ -13,6 +13,16 @@
   not already *obviously* covered in the main test suite were included into
   it.
 
+* Added `Arbitrary` instances for the following data types: `Pos`,
+  `SourcePos`, `ErrorItem`, `Dec`, `ParseError` and `State`. This should
+  make testing easier without the need to add orphan instances every time.
+  The drawback is that we start to depend on `QuickCheck`, but that's a fair
+  price.
+
+* The test suite now uses the combination of Hspec and the
+  `hpesc-megaparsec` package, which also improved the latter (that package
+  is the recommended way to test Megaparsec parsers).
+
 ## Megaparsec 5.0.1
 
 * Derived `NFData` instances for `Pos`, `InvalidPosException`, `SourcePos`,
