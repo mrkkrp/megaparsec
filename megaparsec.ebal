@@ -1,1 +1,1 @@
-((test "--test-arguments=--threads=2 --maximum-generated-tests=1000"))
+((test "--test-arguments=--qc-max-success=1000"))
