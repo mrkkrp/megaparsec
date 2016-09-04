@@ -6,6 +6,9 @@
 * Line comments parsed by `skipLineComment` now may end at the end of input
   and do not necessarily require a newline to be parsed correctly. See #119.
 
+* Exposed `parseErrorTextPretty` function in `Text.Megaparsec.Error` to
+  allow render `ParseError`s without stack of source positions.
+
 ## Megaparsec 5.0.1
 
 * Derived `NFData` instances for `Pos`, `InvalidPosException`, `SourcePos`,

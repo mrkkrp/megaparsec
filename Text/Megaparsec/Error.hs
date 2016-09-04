@@ -26,7 +26,8 @@ module Text.Megaparsec.Error
   , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
-  , sourcePosStackPretty )
+  , sourcePosStackPretty
+  , parseErrorTextPretty )
 where
 
 import Control.DeepSeq
@@ -233,8 +234,13 @@ instance ShowErrorComponent Dec where
                 EQ -> "equal to "
                 GT -> "greater than "
 
--- | Pretty-print 'ParseError'. Note that rendered 'String' always ends with
--- a newline.
+-- | Pretty-print 'ParseError'. The rendered 'String' always ends with a
+-- newline.
+--
+-- The function is defined as:
+--
+-- > parseErrorPretty e =
+-- >   sourcePosStackPretty (errorPos e) ++ ":\n" ++ parseErrorTextPretty e
 --
 -- @since 5.0.0
 
@@ -243,14 +249,8 @@ parseErrorPretty :: ( Ord t
                     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
   -> String            -- ^ Result of rendering
-parseErrorPretty (ParseError pos us ps xs) =
-  sourcePosStackPretty pos ++ ":\n" ++
-  if E.null us && E.null ps && E.null xs
-    then "unknown parse error\n"
-    else concat
-      [ messageItemsPretty "unexpected " us
-      , messageItemsPretty "expecting "  ps
-      , unlines (showErrorComponent <$> E.toAscList xs) ]
+parseErrorPretty e =
+  sourcePosStackPretty (errorPos e) ++ ":\n" ++ parseErrorTextPretty e
 
 -- | Pretty-print stack of source positions.
 --
@@ -281,3 +281,22 @@ orList :: NonEmpty String -> String
 orList (x:|[])  = x
 orList (x:|[y]) = x ++ " or " ++ y
 orList xs       = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs
+
+-- | Pretty-print textual part of a 'ParseError', that is, everything except
+-- stack of source positions. The rendered staring always ends with a new
+-- line.
+--
+-- @since 5.1.0
+
+parseErrorTextPretty :: ( Ord t
+                        , ShowToken t
+                        , ShowErrorComponent e )
+  => ParseError t e    -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+parseErrorTextPretty (ParseError _ us ps xs) =
+  if E.null us && E.null ps && E.null xs
+    then "unknown parse error\n"
+    else concat
+      [ messageItemsPretty "unexpected " us
+      , messageItemsPretty "expecting "  ps
+      , unlines (showErrorComponent <$> E.toAscList xs) ]
