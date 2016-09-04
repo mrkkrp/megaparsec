@@ -9,6 +9,10 @@
 * Exposed `parseErrorTextPretty` function in `Text.Megaparsec.Error` to
   allow render `ParseError`s without stack of source positions.
 
+* Eliminated the `old-tests` test suite — Parsec legacy. The cases that are
+  not already *obviously* covered in the main test suite were included into
+  it.
+
 ## Megaparsec 5.0.1
 
 * Derived `NFData` instances for `Pos`, `InvalidPosException`, `SourcePos`,

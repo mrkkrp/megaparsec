@@ -98,28 +98,6 @@ library
     ghc-options:      -O2 -Wall
   default-language:   Haskell2010
 
-test-suite old-tests
-  main-is:            Main.hs
-  hs-source-dirs:     old-tests
-  type:               exitcode-stdio-1.0
-  if flag(dev)
-    ghc-options:      -Wall -Werror
-  else
-    ghc-options:      -O2 -Wall
-  other-modules:      Bugs
-                    , Bugs.Bug2
-                    , Bugs.Bug6
-                    , Bugs.Bug9
-                    , Bugs.Bug35
-                    , Bugs.Bug39
-                    , Util
-  build-depends:      base                 >= 4.6 && < 5.0
-                    , HUnit                >= 1.2 && < 1.4
-                    , megaparsec           >= 5.0.1
-                    , test-framework       >= 0.6 && < 1.0
-                    , test-framework-hunit >= 0.2 && < 0.4
-  default-language:   Haskell2010
-
 test-suite tests
   main-is:            Main.hs
   hs-source-dirs:     tests
