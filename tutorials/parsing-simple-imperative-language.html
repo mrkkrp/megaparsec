@@ -85,7 +85,7 @@ b   ::= true | false | not b | b opb b | a opr a
 opa ::= + | - | * | /
 opb ::= and | or
 opr ::= &gt; | &lt;</code></pre>
-<p>Note that we have three groups of operators — arithmetic, booloan and relational ones.</p>
+<p>Note that we have three groups of operators — arithmetic, boolean and relational ones.</p>
 <p>And now the definition of statements:</p>
 <pre><code>S ::= x := a | skip | S1; S2 | ( S ) | if b then S1 else S2 | while b do S</code></pre>
 <p>We probably want to parse that into some internal representation of the language (abstract syntax tree). Therefore we need to define the data structures for the expressions and statements.</p>
@@ -96,7 +96,7 @@ opr ::= &gt; | &lt;</code></pre>
            <span class="fu">|</span> <span class="dt">BBinary</span> <span class="dt">BBinOp</span> <span class="dt">BExpr</span> <span class="dt">BExpr</span>
            <span class="fu">|</span> <span class="dt">RBinary</span> <span class="dt">RBinOp</span> <span class="dt">AExpr</span> <span class="dt">AExpr</span>
              <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
-<p>Binary booloan operators:</p>
+<p>Binary boolean operators:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">BBinOp</span> <span class="fu">=</span> <span class="dt">And</span> <span class="fu">|</span> <span class="dt">Or</span> <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>Relational operators:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">RBinOp</span> <span class="fu">=</span> <span class="dt">Greater</span> <span class="fu">|</span> <span class="dt">Less</span> <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
