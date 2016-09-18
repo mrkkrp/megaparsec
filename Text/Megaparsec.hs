@@ -177,15 +177,20 @@ import Text.Megaparsec.Prim
 
 -- $many
 --
--- @many p@ applies the parser @p@ /zero/ or more times. Returns a list of
--- the returned values of @p@.
+-- @many p@ applies the parser @p@ /zero/ or more times and returns a list
+-- of the returned values of @p@. Note that if the @p@ parser fails
+-- consuming input, then the entire @many p@ parser fails with the error
+-- message @p@ produced instead of just stopping iterating. In these cases
+-- wrapping @p@ with 'try' may be desirable.
 --
 -- > identifier = (:) <$> letter <*> many (alphaNumChar <|> char '_')
 
 -- $some
 --
--- @some p@ applies the parser @p@ /one/ or more times. Returns a list of
--- the returned values of @p@.
+-- @some p@ applies the parser @p@ /one/ or more times and returns a list of
+-- the returned values of @p@. The note about behavior of the combinator in
+-- case when @p@ fails consuming input (see 'A.many') applies to 'some' as
+-- well.
 --
 -- > word = some letter
 
