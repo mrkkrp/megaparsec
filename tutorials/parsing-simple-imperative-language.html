@@ -160,13 +160,14 @@ rword w <span class="fu">=</span> string w <span class="fu">*&gt;</span> notFoll
 rws <span class="fu">=</span> [<span class="st">&quot;if&quot;</span>,<span class="st">&quot;then&quot;</span>,<span class="st">&quot;else&quot;</span>,<span class="st">&quot;while&quot;</span>,<span class="st">&quot;do&quot;</span>,<span class="st">&quot;skip&quot;</span>,<span class="st">&quot;true&quot;</span>,<span class="st">&quot;false&quot;</span>,<span class="st">&quot;not&quot;</span>,<span class="st">&quot;and&quot;</span>,<span class="st">&quot;or&quot;</span>]
 
 <span class="ot">identifier ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
-identifier <span class="fu">=</span> lexeme (p <span class="fu">&gt;&gt;=</span> check)
+identifier <span class="fu">=</span> (lexeme <span class="fu">.</span> try) (p <span class="fu">&gt;&gt;=</span> check)
   <span class="kw">where</span>
     p       <span class="fu">=</span> (<span class="fu">:</span>) <span class="fu">&lt;$&gt;</span> letterChar <span class="fu">&lt;*&gt;</span> many alphaNumChar
     check x <span class="fu">=</span> <span class="kw">if</span> x <span class="ot">`elem`</span> rws
                 <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
                 <span class="kw">else</span> return x</code></pre></div>
 <p><code>identifier</code> may seem complex, but it’s really simple. We just parse sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
+<p>Note the use of <code>try</code> in identifier. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is executed. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
 <p>And that’s it, we have just written lexer for our language, now we can start writing parser.</p>
 <h2 id="parser">Parser</h2>
 <p>As already mentioned a program in this language is simply a statement, so the main parser should basically only parse a statement. But remember to take care of initial whitespace — our parsers only get rid of whitespace after the tokens!</p>
