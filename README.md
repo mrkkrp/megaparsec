@@ -313,6 +313,11 @@ The following packages are designed to be used with Megaparsec:
 * [`hspec-megaparsec`](https://hackage.haskell.org/package/hspec-megaparsec)
   — utilities for testing Megaparsec parsers with with
   [Hspec](https://hackage.haskell.org/package/hspec).
+
+* [`cassava-megaparsec`](https://hackage.haskell.org/package/cassava-megaparsec) —
+  Megaparsec parser of CSV files that plays nicely
+  with [Cassava](https://hackage.haskell.org/package/cassava).
+
 * [`tagsoup-megaparsec`](https://hackage.haskell.org/package/tagsoup-megaparsec)
   — a library for easily using [TagSoup](https://hackage.haskell.org/package/tagsoup)
   as a token type in Megaparsec.
