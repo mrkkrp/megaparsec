@@ -277,6 +277,8 @@ differences between the two libraries:
 * Megaparsec is faster.
 
 If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
+Also see [this original announcement](https://notehub.org/w7037) for another
+comparison.
 
 To be honest Parsec's development has seemingly stagnated. It has no test
 suite (only three per-bug tests), and all its releases beginning from
