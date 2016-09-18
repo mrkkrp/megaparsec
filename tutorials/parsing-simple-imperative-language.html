@@ -167,7 +167,7 @@ identifier <span class="fu">=</span> (lexeme <span class="fu">.</span> try) (p <
                 <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
                 <span class="kw">else</span> return x</code></pre></div>
 <p><code>identifier</code> may seem complex, but it’s really simple. We just parse sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
-<p>Note the use of <code>try</code> in identifier. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is executed. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
+<p>Note the use of <code>try</code> in <code>identifier</code>. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is executed. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
 <p>And that’s it, we have just written lexer for our language, now we can start writing parser.</p>
 <h2 id="parser">Parser</h2>
 <p>As already mentioned a program in this language is simply a statement, so the main parser should basically only parse a statement. But remember to take care of initial whitespace — our parsers only get rid of whitespace after the tokens!</p>
