@@ -214,6 +214,9 @@ and Parsec. In most cases Megaparsec is faster, sometimes dramatically
 faster. If you happen to have some other benchmarks, I would appreciate if
 you add Megaparsec to them and let me know how it performs.
 
+If you think your Megaparsec parser is not efficient enough, take a look
+at [these instructions](https://mrkkrp.github.io/megaparsec/tutorials/writing-a-fast-parser.html).
+
 ## Comparison with other solutions
 
 There are quite a few libraries that can be used for parsing in Haskell,
