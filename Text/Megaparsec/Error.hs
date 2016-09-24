@@ -48,7 +48,7 @@ import qualified Data.Set           as E
 import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative
 #endif
 
 -- | Data type that is used to represent “unexpected\/expected” items in

@@ -44,7 +44,7 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Prim
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative
 #endif
 
 instance Arbitrary GeneralCategory where
@@ -145,8 +145,11 @@ spec = do
     checkCharPred "punctuation" isPunctuation punctuationChar
 
   describe "symbolChar" $
+#if MIN_VERSION_base(4,8,0)
     checkCharRange "symbol" "<>$£`~|×÷^®°¸¯=¬+¤±¢¨´©¥¦" symbolChar
-
+#else
+    checkCharRange "symbol" "<>$£`~|×÷^®°¸¯=¬+¤±¢¨´©¥¦§¶" symbolChar
+#endif
   describe "separatorChar" $
     checkCharRange "separator" " \160" separatorChar
 

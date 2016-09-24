@@ -35,7 +35,7 @@ import Data.Char (isControl, isSpace)
 import Data.Function (on)
 import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Monoid ((<>))
+import Data.Monoid
 import Data.Set (Set)
 import Test.Hspec
 import Test.QuickCheck
@@ -47,7 +47,6 @@ import qualified Data.Set           as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Foldable (Foldable, all)
-import Data.Monoid (mempty)
 import Prelude hiding (all)
 #endif
 

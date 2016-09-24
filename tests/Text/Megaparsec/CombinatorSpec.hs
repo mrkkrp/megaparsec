@@ -34,7 +34,7 @@ import Control.Applicative
 import Data.Char (isLetter, isDigit)
 import Data.List (intersperse)
 import Data.Maybe (fromMaybe, maybeToList, isNothing, fromJust)
-import Data.Monoid ((<>))
+import Data.Monoid
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc

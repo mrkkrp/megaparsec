@@ -62,7 +62,7 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>), (<*))
+import Control.Applicative
 #endif
 
 ----------------------------------------------------------------------------
@@ -102,8 +102,8 @@ prs_ p = parse (p <* eof) ""
 -- | Just like 'prs', but interprets given parser as various monads (tries
 -- all supported monads transformers in turn).
 
-grs :: (Eq a, Show a)
-  => (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
+grs
+  :: (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
   -> (Either (ParseError Char Dec) a -> Expectation)
     -- ^ How to check result of parsing
@@ -119,8 +119,8 @@ grs p s r = do
 
 -- | 'grs'' to 'grs' as 'prs'' to 'prs'.
 
-grs' :: (Eq a, Show a)
-  => (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
+grs'
+  :: (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
   -> ((State String, Either (ParseError Char Dec) a) -> Expectation)
     -- ^ How to check result of parsing

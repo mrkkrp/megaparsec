@@ -34,7 +34,7 @@
 
 module Text.Megaparsec.LexerSpec (spec) where
 
-import Control.Applicative (empty)
+import Control.Applicative
 import Control.Monad (void)
 import Data.Char hiding (ord)
 import Data.List (isInfixOf)
@@ -52,10 +52,6 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
 import qualified Text.Megaparsec.Char as C
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*), (<*>), (<$))
-#endif
 
 spec :: Spec
 spec = do

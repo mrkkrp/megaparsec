@@ -43,14 +43,14 @@ import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Char (toUpper, chr)
-import Data.Foldable (asum)
+import Data.Foldable (asum, concat)
 import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
-import Data.Monoid ((<>))
+import Data.Monoid
 import Data.Proxy
 import Data.Word (Word8)
-import Prelude hiding (span)
+import Prelude hiding (span, concat)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc

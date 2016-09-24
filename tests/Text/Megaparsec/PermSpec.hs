@@ -32,7 +32,7 @@ module Text.Megaparsec.PermSpec (spec) where
 
 import Control.Applicative
 import Data.List (nub, elemIndices)
-import Data.Monoid ((<>))
+import Data.Monoid
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc

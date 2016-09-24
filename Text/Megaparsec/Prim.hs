@@ -95,7 +95,7 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*), pure)
+import Control.Applicative
 #endif
 
 ----------------------------------------------------------------------------

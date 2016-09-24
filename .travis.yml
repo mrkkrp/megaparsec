@@ -33,9 +33,11 @@ script:
     "1.18") cabal configure --enable-tests --enable-library-coverage -v2 -f dev ;;
     *)      cabal configure --enable-tests --enable-coverage -v2 -f dev ;;
    esac
- - travis_wait 40 cabal build
- - cabal test --show-details=always
-              --test-option=--qc-max-success=1000
+ - travis_wait 60 cabal build
+ - case "$GHCVER" in
+    "7.6.3") true ;;
+    *)       cabal test --show-details=always --test-option=--qc-max-success=1000 ;;
+   esac
  - cabal sdist
  - if [ "$CABALVER" != "1.16" ]; then
     cabal haddock | grep "100%" | wc -l | grep "14";
