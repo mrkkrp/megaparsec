@@ -1,5 +1,5 @@
 --
--- QuickCheck tests for Megaparsec's expression parsers.
+-- Tests for Megaparsec's expression parsers.
 --
 -- Copyright © 2015–2016 Megaparsec contributors
 --
@@ -30,32 +30,54 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies     #-}
 
-module Expr (tests) where
+module Text.Megaparsec.ExprSpec (spec) where
 
 import Control.Applicative (some, (<|>))
-import Data.Char (isDigit, digitToInt)
-
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Data.Monoid ((<>))
+import Test.Hspec
+import Test.Hspec.Megaparsec
+import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
-
 import Text.Megaparsec.Char
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Expr
 import Text.Megaparsec.Prim
 
-import Util
-
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
 #endif
 
-tests :: Test
-tests = testGroup "Expression parsers"
-  [ testProperty "correctness of expression parser" prop_correctness
-  , testProperty "error message on empty input"     prop_empty_error
-  , testProperty "error message on missing term"    prop_missing_term
-  , testProperty "error message on missing op"      prop_missing_op ]
+spec :: Spec
+spec =
+  describe "makeExprParser" $ do
+    context "when given valid rendered AST" $
+      it "can parse it back" $
+        property $ \node -> do
+          let s = showNode node
+          prs  expr s `shouldParse`     node
+          prs' expr s `succeedsLeaving` ""
+    context "when stream in empty" $
+      it "signals correct parse error" $
+        prs (expr <* eof) "" `shouldFailWith` err posI (ueof <> elabel "term")
+    context "when term is missing" $
+      it "signals correct parse error" $ do
+        let p = expr <* eof
+            n = 1 :: Integer
+        prs p "-" `shouldFailWith` err (posN n "-") (ueof <> elabel "term")
+        prs p "(" `shouldFailWith` err (posN n "(") (ueof <> elabel "term")
+        prs p "*" `shouldFailWith` err posI (utok '*' <> elabel "term")
+    context "operator is missing" $
+      it "signals correct parse error" $
+        property $ \a b -> do
+          let p = expr <* eof
+              a' = inParens a
+              n  = length a' + 1
+              s  = a'  ++ " " ++ inParens b
+              c  = s !! n
+          if c == '-'
+            then prs p s `shouldParse` Sub a b
+            else prs p s `shouldFailWith`
+                 err (posN n s) (utok c <> eeof <> elabel "operator")
 
 -- Algebraic structures to build abstract syntax tree of our expression.
 
@@ -143,7 +165,7 @@ parens = between (symbol "(") (symbol ")")
 integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
 integer = lexeme (read <$> some digitChar <?> "integer")
 
--- Here we use table of operators that makes use of all features of
+-- Here we use a table of operators that makes use of all features of
 -- 'makeExprParser'. Then we generate abstract syntax tree (AST) of complex
 -- but valid expressions and render them to get their textual
 -- representation.
@@ -163,27 +185,3 @@ table = [ [ Prefix  (symbol "-" *> pure Neg)
           , InfixL  (symbol "/" *> pure Div) ]
         , [ InfixL  (symbol "+" *> pure Sum)
           , InfixL  (symbol "-" *> pure Sub)] ]
-
-prop_correctness :: Node -> Property
-prop_correctness node = checkParser expr (Right node) (showNode node)
-
-prop_empty_error :: Property
-prop_empty_error = checkParser expr r s
-  where r = posErr 0 s [ueof, elabel "term"]
-        s = ""
-
-prop_missing_term :: Char -> Property
-prop_missing_term c = checkParser expr r s
-  where r | c `elem` "-(" = posErr 1 s [ueof, elabel "term"]
-          | isDigit c     = Right . Val . fromIntegral . digitToInt $ c
-          | otherwise     = posErr 0 s [utok c, elabel "term"]
-        s = pure c
-
-prop_missing_op :: Node -> Node -> Property
-prop_missing_op a b = checkParser expr r s
-  where a' = inParens a
-        c = s !! n
-        n = succ $ length a'
-        r | c == '-'  = Right $ Sub a b
-          | otherwise = posErr n s [utok c, eeof, elabel "operator"]
-        s = a' ++ " " ++ inParens b

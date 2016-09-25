@@ -402,7 +402,7 @@ string' = tokens casei
 -- | Case-insensitive equality test for characters.
 
 casei :: Char -> Char -> Bool
-casei x y = toLower x == toLower y
+casei x y = toUpper x == toUpper y
 {-# INLINE casei #-}
 
 -- | Case-insensitive 'elem'.
