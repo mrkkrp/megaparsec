@@ -7,7 +7,7 @@
   and do not necessarily require a newline to be parsed correctly. See #119.
 
 * Exposed `parseErrorTextPretty` function in `Text.Megaparsec.Error` to
-  allow render `ParseError`s without stack of source positions.
+  allow to render `ParseError`s without stack of source positions.
 
 * Eliminated the `old-tests` test suite — Parsec legacy. The cases that are
   not already *obviously* covered in the main test suite were included into
@@ -22,6 +22,8 @@
 * The test suite now uses the combination of Hspec and the
   `hpesc-megaparsec` package, which also improved the latter (that package
   is the recommended way to test Megaparsec parsers).
+
+* Further documentation improvements.
 
 ## Megaparsec 5.0.1
 
