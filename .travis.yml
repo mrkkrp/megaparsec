@@ -46,11 +46,10 @@ script:
 after_script:
  - cabal install hpc-coveralls
  - export PATH=~/.cabal/bin:$PATH
- - hpc-coveralls --coverage-mode=StrictlyFullLines
-                 --exclude-dir=tests
-                 --exclude-dir=old-tests
-                 --exclude-dir=benchmarks
-                 tests old-tests
+ - case "$GHCVER" in
+    "7.6.3") true ;;
+    *) hpc-coveralls --coverage-mode=StrictlyFullLines --exclude-dir=tests --exclude-dir=benchmarks tests ;;
+   esac
 
 notifications:
   email: false
