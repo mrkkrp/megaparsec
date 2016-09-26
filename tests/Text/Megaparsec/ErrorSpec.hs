@@ -48,6 +48,8 @@ import qualified Data.Set           as E
 #if !MIN_VERSION_base(4,8,0)
 import Data.Foldable (Foldable, all)
 import Prelude hiding (all)
+#else
+import Control.Exception (Exception (..))
 #endif
 
 type PE = ParseError Char Dec
@@ -197,6 +199,13 @@ spec = do
     it "result always ends with a newline" $
       property $ \x ->
         parseErrorTextPretty (x :: PE) `shouldSatisfy` ("\n" `isSuffixOf`)
+
+#if MIN_VERSION_base(4,8,0)
+  describe "displayException" $
+    it "produces the same result as parseErrorPretty" $
+      property $ \x ->
+        displayException x `shouldBe` parseErrorPretty (x :: PE)
+#endif
 
 ----------------------------------------------------------------------------
 -- Helpers

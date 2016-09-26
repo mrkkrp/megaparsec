@@ -122,9 +122,8 @@ p `shouldSucceedOn` s = shouldSucceed (p s)
 -- Testing of error messages
 
 -- | Create an expectation that parser should fail producing certain
--- 'ParseError'. Use functions from "Text.Megaparsec.Error" to construct
--- parse errors to check against. See "Text.Megaparsec.Pos" for functions to
--- construct textual positions.
+-- 'ParseError'. Use the 'err' function from this module to construct a
+-- 'ParseError' to compare with.
 --
 -- > parse (char 'x') "" "b" `shouldFailWith` err posI (utok 'b' <> etok 'x')
 

@@ -352,6 +352,12 @@ spec = do
       it "signals correct parse error" $
         prs float "" `shouldFailWith`
           err posI (ueof <> elabel "floating point number")
+    context "when there is float with exponent without explicit sign" $
+      it "parses it all right" $ do
+        let p = float
+            s = "123e3"
+        prs  p s `shouldParse` 123e3
+        prs' p s `succeedsLeaving` ""
 
   describe "number" $ do
     context "when stream begins with a number" $
@@ -397,7 +403,7 @@ spec = do
         property $ \n' -> do
           let p = signed (hidden C.space) integer
               n = getNonNegative n'
-              s = show n
+              s = '+' : show n
           prs  p s `shouldParse` n
           prs' p s `succeedsLeaving` ""
     context "when number is prefixed with white space" $

@@ -209,17 +209,29 @@ spec = do
         let u = pure (+ n)
         in prs (u <*> pure (y :: Int)) "" ===
            prs (pure ($ y) <*> u) ""
-    it "(*>) works correctly" $
-      property $ \n m ->
-        let u = pure (+ (m :: Int))
-            v = pure (n :: Int)
-        in prs (u *> v) "" ===
-           prs (pure (const id) <*> u <*> v) ""
-    it "(<*) works correctly" $
-      property $ \n m ->
-        let u = pure (m :: Int)
-            v = pure (+ (n :: Int))
-        in prs (u <* v) "" === prs (pure const <*> u <*> v) ""
+    describe "(<*>)" $
+      context "when first parser succeeds without consuming" $
+        context "when second parser fails consuming input" $
+          it "fails consuming input" $ do
+            let p = m <*> n
+                m = return (\x -> 'a' : x)
+                n = string "bc" <* empty
+                s = "bc"
+            prs  p s `shouldFailWith` err (posN (4 :: Int) s) mempty
+            prs' p s `failsLeaving`   ""
+    describe "(*>)" $
+      it "works correctly" $
+        property $ \n m ->
+          let u = pure (+ (m :: Int))
+              v = pure (n :: Int)
+          in prs (u *> v) "" ===
+             prs (pure (const id) <*> u <*> v) ""
+    describe "(<*)" $
+      it "works correctly" $
+        property $ \n m ->
+          let u = pure (m :: Int)
+              v = pure (+ (n :: Int))
+          in prs (u <* v) "" === prs (pure const <*> u <*> v) ""
 
   describe "ParsecT Alternative instance" $ do
 
@@ -392,6 +404,14 @@ spec = do
         let m = return (m' :: Int)
             k = return (+ k')
         prs (k <*> m) "" `shouldBe` prs (k `ap` m) ""
+
+  describe "ParsecT MonadFail instance" $
+    describe "fail" $
+      it "signals correct parse error" $
+        property $ \s msg -> do
+          let p = void (fail msg)
+          prs  p s `shouldFailWith` err posI (cstm $ DecFail msg)
+          prs' p s `failsLeaving` s
 
   describe "ParsecT MonadIO instance" $
     it "liftIO works" $
@@ -610,7 +630,7 @@ spec = do
         it "error message is reported as usual" $
           property $ \a b c -> b /= c ==> do
             let p :: MonadParsec Dec String m => m Char
-                p = try (char a *> char b)
+                p = lookAhead (char a *> char b)
                 s = [a,c]
             grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (utok c <> etok b))
             grs' p s (`failsLeaving` [c])
@@ -625,7 +645,7 @@ spec = do
       context "when inner parser fails without consuming" $
         it "error message is reported as usual" $ do
           let p :: MonadParsec Dec String m => m Char
-              p = try empty
+              p = lookAhead empty
           grs p "" (`shouldFailWith` err posI mempty)
 
     describe "notFollowedBy" $ do
