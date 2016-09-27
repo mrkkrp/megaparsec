@@ -140,6 +140,8 @@ module Text.Megaparsec
   , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
+    -- * Debugging
+  , dbg
     -- * Low-level operations
   , Stream (..)
   , State (..)
