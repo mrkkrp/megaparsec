@@ -619,7 +619,7 @@ spec = do
             grs' p "" ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
 
     describe "lookAhead" $ do
-      context "when inner parser succeeds consuming" $
+      context "when inner parser succeeds consuming" $ do
         it "result is returned but parser state is not changed" $
           property $ \a w -> do
             let p :: MonadParsec Dec String m => m Pos
@@ -627,6 +627,13 @@ spec = do
                 s = [a]
             grs  p s (`shouldParse` defaultTabWidth)
             grs' p s (`succeedsLeaving` s)
+        it "hints are not preserved" $
+          property $ \a -> do
+            let p :: MonadParsec Dec String m => m String
+                p = lookAhead (many (char a)) <* empty
+                s = [a]
+            grs  p s (`shouldFailWith` err posI mempty)
+            grs' p s (`failsLeaving` s)
       context "when inner parser fails consuming" $
         it "error message is reported as usual" $
           property $ \a b c -> b /= c ==> do
@@ -635,7 +642,7 @@ spec = do
                 s = [a,c]
             grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (utok c <> etok b))
             grs' p s (`failsLeaving` [c])
-      context "when inner parser succeeds without consuming" $
+      context "when inner parser succeeds without consuming" $ do
         it "result is returned but parser state in not changed" $
           property $ \a w -> do
             let p :: MonadParsec Dec String m => m Pos
@@ -643,6 +650,13 @@ spec = do
                 s = [a]
             grs  p s (`shouldParse` defaultTabWidth)
             grs' p s (`succeedsLeaving` s)
+        it "hints are not preserved" $
+          property $ \a b -> a /= b ==> do
+            let p :: MonadParsec Dec String m => m String
+                p = lookAhead (many (char a)) <* empty
+                s = [b]
+            grs  p s (`shouldFailWith` err posI mempty)
+            grs' p s (`failsLeaving` s)
       context "when inner parser fails without consuming" $
         it "error message is reported as usual" $ do
           let p :: MonadParsec Dec String m => m Char
@@ -659,7 +673,7 @@ spec = do
             grs  p s (`shouldFailWith` err posI (utok a))
             grs' p s (`failsLeaving` s)
             grs' p s ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
-      context "when inner parser fails consuming" $
+      context "when inner parser fails consuming" $ do
         it "succeeds without consuming" $
           property $ \a b c w -> b /= c ==> do
             let p :: MonadParsec Dec String m => m ()
@@ -667,6 +681,13 @@ spec = do
                 s = [a,c]
             grs' p s (`succeedsLeaving` s)
             grs' p s ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
+        it "hints are not preserved" $
+          property $ \a b -> a /= b ==> do
+            let p :: MonadParsec Dec String m => m ()
+                p = notFollowedBy (char b *> many (char a) <* char a) <* empty
+                s = [b,b]
+            grs  p s (`shouldFailWith` err posI mempty)
+            grs' p s (`failsLeaving` s)
       context "when inner parser succeeds without consuming" $
         it "signals correct parse error" $
           property $ \a w -> do
@@ -676,13 +697,20 @@ spec = do
             grs  p s (`shouldFailWith` err posI (utok a))
             grs' p s (`failsLeaving` s)
             grs' p s ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
-      context "when inner parser fails without consuming" $
+      context "when inner parser fails without consuming" $ do
         it "succeeds without consuming" $
           property $ \w -> do
             let p :: MonadParsec Dec String m => m ()
                 p = notFollowedBy (setTabWidth w *> empty)
             grs  p "" (`shouldParse` ())
             grs' p "" ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
+        it "hints are not preserved" $
+          property $ \a -> do
+            let p :: MonadParsec Dec String m => m ()
+                p = notFollowedBy (many (char a) <* char a) <* empty
+                s = ""
+            grs  p s (`shouldFailWith` err posI mempty)
+            grs' p s (`failsLeaving` s)
 
     describe "withRecovery" $ do
       context "when inner parser succeeds consuming" $
@@ -694,39 +722,48 @@ spec = do
             grs  p s (`shouldParse` Just a)
             grs' p s (`succeedsLeaving` as)
       context "when inner parser fails consuming" $ do
-        context "when recovering parser succeeds consuming input" $
-          it "its result is returned and position is advanced" $ -- TODO check hints
+        context "when recovering parser succeeds consuming input" $ do
+          it "its result is returned and position is advanced" $
             property $ \a b c as -> b /= c ==> do
               let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
                   p = withRecovery (\e -> Left e <$ string (c : as))
                         (Right <$> char a <* char b)
-                  -- p' :: MonadParsec Dec String m => m (Either (ParseError Char Dec) String)
-                  -- p' = p <* empty
                   s = a : c : as
-                  -- l = fromIntegral (length s)
               grs  p s (`shouldParse` Left (err (posN (1 :: Int) s) (utok c <> etok b)))
               grs' p s (`succeedsLeaving` "")
-              -- grs p' s (`shouldFailWith` err (posN l s) mempty)
+          it "hints are not preserved" $
+            property $ \a b c as -> b /= c ==> do
+              let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                  p = withRecovery (\e -> Left e <$ string (c : as))
+                        (Right <$> char a <* many (char b) <* char b) <* empty
+                  s = a : c : as
+              grs  p s (`shouldFailWith` err (posN (length s) s) mempty)
+              grs' p s (`failsLeaving` "")
         context "when recovering parser fails consuming input" $
           it "the original parse error (and state) is reported" $
             property $ \a b c as -> b /= c ==> do
               let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
-                  p = withRecovery (\e -> Left e <$ char b <* empty)
+                  p = withRecovery (\e -> Left e <$ char c <* empty)
                         (Right <$> char a <* char b)
                   s = a : c : as
               grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (utok c <> etok b))
               grs' p s (`failsLeaving` (c : as))
-        context "when recovering parser succeeds without consuming" $
-          it "its result is returned (and state)" $ -- TODO check hints
+        context "when recovering parser succeeds without consuming" $ do
+          it "its result is returned (and state)" $
             property $ \a b c as -> b /= c ==> do
               let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
                   p = withRecovery (return . Left) (Right <$> char a <* char b)
-                  -- p' :: MonadParsec Dec String m => m (Either (ParseError Char Dec) String)
-                  -- p' = p <* empty
                   s = a : c : as
               grs  p s (`shouldParse` Left (err (posN (1 :: Int) s) (utok c <> etok b)))
               grs' p s (`succeedsLeaving` (c : as))
-              -- grs p' s (`shouldFailWith` err (posN 1 s) (etok a))
+          it "original hints are preserved" $
+            property $ \a b c as -> b /= c ==> do
+              let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                  p = withRecovery (return . Left)
+                        (Right <$> char a <* many (char b) <* char b) <* empty
+                  s = a : c : as
+              grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (etok b))
+              grs' p s (`failsLeaving` (c:as))
         context "when recovering parser fails without consuming" $
           it "the original parse error (and state) is reported" $
             property $ \a b c as -> b /= c ==> do
@@ -745,7 +782,7 @@ spec = do
             grs' p s (`succeedsLeaving` s)
       context "when inner parser fails without consuming" $ do
         context "when recovering parser succeeds consuming input" $
-          it "its result is returned and position is advanced" $ -- TODO check hints
+          it "its result is returned and position is advanced" $
             property $ \a as -> do
               let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
                   p = withRecovery (\e -> Left e <$ string s) empty
@@ -761,13 +798,21 @@ spec = do
                   s = a : as
               grs  p s (`shouldFailWith` err posI mempty)
               grs' p s (`failsLeaving` s)
-        context "when recovering parser succeeds without consuming" $
-          it "its result is returned (and state)" $ -- TODO check hints
+        context "when recovering parser succeeds without consuming" $ do
+          it "its result is returned (and state)" $
             property $ \s -> do
               let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
                   p = withRecovery (return . Left) empty
               grs  p s (`shouldParse` Left (err posI mempty))
               grs' p s (`succeedsLeaving` s)
+          it "original hints are preserved" $
+            property $ \a b as -> a /= b ==> do
+              let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) String)
+                  p = withRecovery (return . Left)
+                        (Right <$> many (char a) <* empty) <* empty
+                  s = b : as
+              grs  p s (`shouldFailWith` err posI (etok a))
+              grs' p s (`failsLeaving` s)
         context "when recovering parser fails without consuming" $
           it "the original parse error (and state) is reported" $
             property $ \s -> do
