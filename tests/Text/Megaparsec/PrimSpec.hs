@@ -598,13 +598,12 @@ spec = do
             grs' p s (`succeedsLeaving` "")
       context "when inner parser fails consuming" $
         it "backtracks, it appears as if the parser has not consumed anything" $
-        -- TODO also check that it backtracks state in general as well
           property $ \a b c -> b /= c ==> do
             let p :: MonadParsec Dec String m => m Char
                 p = try (char a *> char b)
                 s = [a,c]
             grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (utok c <> etok b))
-            grs' p s (`failsLeaving` [c]) -- FIXME it should leave entire input
+            grs' p s (`failsLeaving` s)
       context "when inner parser succeeds without consuming" $
         it "try has no effect" $
           property $ \a -> do
@@ -612,10 +611,12 @@ spec = do
                 p = try (return a)
             grs p "" (`shouldParse` a)
       context "when inner parser fails without consuming" $
-        it "try has no effect" $ do
-          let p :: MonadParsec Dec String m => m Char
-              p = try empty
-          grs p "" (`shouldFailWith` err posI mempty)
+        it "try backtracks parser state anyway" $
+          property $ \w -> do
+            let p :: MonadParsec Dec String m => m Char
+                p = try (setTabWidth w *> empty)
+            grs  p "" (`shouldFailWith` err posI mempty)
+            grs' p "" ((`shouldBe` defaultTabWidth) . stateTabWidth . fst)
 
     describe "lookAhead" $ do
       context "when inner parser succeeds consuming" $

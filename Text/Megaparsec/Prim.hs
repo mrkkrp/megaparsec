@@ -536,8 +536,8 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   hidden :: m a -> m a
   hidden = label ""
 
-  -- | The parser @try p@ behaves like parser @p@, except that it
-  -- pretends that it hasn't consumed any input when an error occurs.
+  -- | The parser @try p@ behaves like parser @p@, except that it backtracks
+  -- parser state when @p@ fails (either consuming input or not).
   --
   -- This combinator is used whenever arbitrary look ahead is needed. Since
   -- it pretends that it hasn't consumed any input when @p@ fails, the
@@ -708,7 +708,8 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
 
 pTry :: ParsecT e s m a -> ParsecT e s m a
 pTry p = ParsecT $ \s cok _ eok eerr ->
-  unParser p s cok eerr eok eerr
+  let eerr' err _ = eerr err s
+  in unParser p s cok eerr' eok eerr'
 {-# INLINE pTry #-}
 
 pLookAhead :: ParsecT e s m a -> ParsecT e s m a

@@ -23,6 +23,10 @@
   `hpesc-megaparsec` package, which also improved the latter (that package
   is the recommended way to test Megaparsec parsers).
 
+* The `try` combinator now truly backtracks parser state when its argument
+  parser fails (either consuming input or not). Most users will never notice
+  the difference though. See #142.
+
 * Further documentation improvements.
 
 ## Megaparsec 5.0.1
