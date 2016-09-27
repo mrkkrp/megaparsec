@@ -575,16 +575,17 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
 
   try :: m a -> m a
 
-  -- | @lookAhead p@ parses @p@ without consuming any input.
-  --
-  -- If @p@ fails and consumes some input, so does @lookAhead@. Combine with
-  -- 'try' if this is undesirable.
+  -- | If @p@ in @lookAhead p@ succeeds (either consuming input or not) the
+  -- whole parser behaves like @p@ succeeded without consuming anything
+  -- (parser state is not updated as well). If @p@ fails, @lookAhead@ has no
+  -- effect, i.e. it will fail consuming input if @p@ fails consuming input.
+  -- Combine with 'try' if this is undesirable.
 
   lookAhead :: m a -> m a
 
   -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
-  -- does not consume any input and can be used to implement the “longest
-  -- match” rule.
+  -- /never consumes/ any input and /never modifies/ parser state. It can be
+  -- used to implement the “longest match” rule.
 
   notFollowedBy :: m a -> m ()
 
