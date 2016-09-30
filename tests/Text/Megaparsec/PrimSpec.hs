@@ -1091,6 +1091,34 @@ spec = do
               return cs
         prs (S.runWriterT p) "abx" `shouldParse` ("ab", pre ++ "AB" ++ post ++ "x")
 
+  describe "dbg" $ do
+    -- NOTE We don't test properties here to avoid flood of debugging output
+    -- when the test runs.
+    context "when inner parser succeeds consuming input" $
+      it "has no effect on how parser works" $ do
+        let p = dbg "char" (char 'a')
+            s = "ab"
+        prs  p s `shouldParse` 'a'
+        prs' p s `succeedsLeaving` "b"
+    context "when inner parser fails consuming input" $
+      it "has no effect on how parser works" $ do
+        let p = dbg "chars" (char 'a' *> char 'c')
+            s = "abc"
+        prs  p s `shouldFailWith` err (posN (1 :: Int) s) (utok 'b' <> etok 'c')
+        prs' p s `failsLeaving` "bc"
+    context "when inner parser succeeds without consuming" $
+      it "has no effect on how parser works" $ do
+        let p = dbg "return" (return 'a')
+            s = "abc"
+        prs  p s `shouldParse` 'a'
+        prs' p s `succeedsLeaving` s
+    context "when inner parser fails without consuming" $
+      it "has no effect on how parser works" $ do
+        let p = dbg "empty" (void empty)
+            s = "abc"
+        prs  p s `shouldFailWith` err posI mempty
+        prs' p s `failsLeaving` s
+
 ----------------------------------------------------------------------------
 -- Helpers
 

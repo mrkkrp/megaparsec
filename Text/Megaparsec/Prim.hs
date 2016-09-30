@@ -54,7 +54,9 @@ module Text.Megaparsec.Prim
   , runParserT'
   , parse
   , parseMaybe
-  , parseTest )
+  , parseTest
+    -- * Debugging
+  , dbg )
 where
 
 import Control.DeepSeq
@@ -74,6 +76,7 @@ import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
+import Debug.Trace
 import GHC.Generics
 import Prelude hiding (all)
 import Test.QuickCheck hiding (Result (..), label)
@@ -1153,3 +1156,129 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
+
+----------------------------------------------------------------------------
+-- Debugging
+
+-- | @dbg label p@ parser works exactly like @p@, but when it's evaluated it
+-- prints information useful for debugging. The @label@ is only used to
+-- refer to this parser in the debugging output. This combinator uses the
+-- 'trace' function from "Debug.Trace" under the hood.
+--
+-- Typical usage is to wrap every sub-parser in misbehaving parser with
+-- 'dbg' assigning meaningful labels. Then give it a shot and go through the
+-- print-out. As of current version, this combinator prints all available
+-- information except for /hints/, which are probably only interesting to
+-- the maintainer of Megaparsec itself and may be quite verbose to output in
+-- general. Let me know if you would like to be able to see hints as part of
+-- debugging output.
+--
+-- The output itself is pretty self-explanatory, although the following
+-- abbreviations should be clarified (they are derived from low-level source
+-- code):
+--
+--     * @COK@ — “consumed OK”. The parser consumed input and succeeded.
+--     * @CERR@ — “consumed error”. The parser consumed input and failed.
+--     * @EOK@ — “empty OK”. The parser succeeded without consuming input.
+--     * @EERR@ — “empty error”. The parser failed without consuming input.
+--
+-- Due to how input streams are represented (see 'Stream'), we need to
+-- traverse entire input twice (calculating length before and after @p@
+-- parser) to understand what part of input was matched and consumed. This
+-- makes this combinator very inefficient, be sure to remove it from your
+-- code once you have finished with debugging.
+--
+-- Finally, it's not possible to lift this function into some monad
+-- transformers without introducing surprising behavior (e.g. unexpected
+-- state backtracking) or adding otherwise redundant constraints (e.g.
+-- 'Show' instance for state), so this helper is only available for
+-- 'ParsecT' monad, not 'MonadParsec' in general.
+--
+-- @since 5.1.0
+
+dbg :: forall e s m a.
+  ( Stream s
+  , ShowToken (Token s)
+  , ShowErrorComponent e
+  , Show a )
+  => String            -- ^ Debugging label
+  -> ParsecT e s m a   -- ^ Parser to debug
+  -> ParsecT e s m a   -- ^ Parser that prints debugging messages
+dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
+  let l = dbgLog lbl :: DbgItem s e a -> String
+      cok' x s' hs = flip trace (cok x s' hs) $
+        l (DbgIn (unfold (stateInput s))) ++
+        l (DbgCOK (streamTake (streamDelta s s') (stateInput s)) x)
+      cerr' err s' = flip trace (cerr err s') $
+        l (DbgIn (unfold (stateInput s))) ++
+        l (DbgCERR (streamTake (streamDelta s s') (stateInput s)) err)
+      eok' x s' hs = flip trace (eok x s' hs) $
+        l (DbgIn (unfold (stateInput s))) ++
+        l (DbgEOK (streamTake (streamDelta s s') (stateInput s)) x)
+      eerr' err s' = flip trace (eerr err s') $
+        l (DbgIn (unfold (stateInput s))) ++
+        l (DbgEERR (streamTake (streamDelta s s') (stateInput s)) err)
+  in unParser p s cok' cerr' eok' eerr'
+
+-- | Single piece of info to be rendered with 'dbgLog'.
+
+data DbgItem s e a
+  = DbgIn   [Token s]
+  | DbgCOK  [Token s] a
+  | DbgCERR [Token s] (ParseError (Token s) e)
+  | DbgEOK  [Token s] a
+  | DbgEERR [Token s] (ParseError (Token s) e)
+
+-- | Render a single piece of debugging info.
+
+dbgLog :: (ShowToken (Token s), ShowErrorComponent e, Show a, Ord (Token s))
+  => String            -- ^ Debugging label
+  -> DbgItem s e a     -- ^ Information to render
+  -> String            -- ^ Rendered result
+dbgLog lbl item = prefix msg
+  where
+    prefix = unlines . fmap ((lbl ++ "> ") ++) . lines
+    msg = case item of
+      DbgIn   ts   ->
+        "IN: " ++ showStream ts
+      DbgCOK  ts a ->
+        "MATCH (COK): " ++ showStream ts ++ "\nVALUE: " ++ show a
+      DbgCERR ts e ->
+        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+      DbgEOK  ts a ->
+        "MATCH (EOK): " ++ showStream ts ++ "\nVALUE: " ++ show a
+      DbgEERR ts e ->
+        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+
+-- | Pretty-print a list of tokens.
+
+showStream :: ShowToken t => [t] -> String
+showStream ts =
+  case NE.nonEmpty ts of
+    Nothing -> "<EMPTY>"
+    Just ne ->
+      let (h, r) = splitAt 40 (showTokens ne)
+      in if null r then h else h ++ " <…>"
+
+-- | Calculate difference in length of two input streams from given parser
+-- 'State's.
+
+streamDelta :: Stream s
+  => State s           -- ^ State of parser before consumption
+  -> State s           -- ^ State of parser after consumption
+  -> Int               -- ^ Number of consumed tokens
+streamDelta s0 s1 = streamLength (stateInput s0) - streamLength (stateInput s1)
+  where streamLength s = length (unfold s)
+
+-- | Extract given number of tokens from the stream.
+
+streamTake :: Stream s => Int -> s -> [Token s]
+streamTake n s = take n (unfold s)
+
+-- | Custom version of 'unfold' that matches signature of 'uncons' method in
+-- 'Stream' type class we use.
+
+unfold :: Stream s => s -> [Token s]
+unfold s = case uncons s of
+  Nothing -> []
+  Just (t, s') -> t : unfold s'
