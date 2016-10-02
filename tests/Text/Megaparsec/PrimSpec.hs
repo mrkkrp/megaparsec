@@ -846,6 +846,52 @@ spec = do
                 | otherwise                  = f (err (posN a s) (utok 'b' <> etok 'c' <> ma))
           grs (p <* eof) s r
 
+    describe "observing" $ do
+      context "when inner parser succeeds consuming" $
+        it "returns its result in Right" $
+          property $ \a as -> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                p = observing (char a)
+                s = a : as
+            grs  p s (`shouldParse` Right a)
+            grs' p s (`succeedsLeaving` as)
+      context "when inner parser fails consuming" $ do
+        it "returns its parse error in Left preserving state" $
+          property $ \a b c as -> b /= c ==> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                p = observing (char a *> char b)
+                s = a : c : as
+            grs  p s (`shouldParse` Left (err (posN (1 :: Int) s) (utok c <> etok b)))
+            grs' p s (`succeedsLeaving` (c:as))
+        it "does not create any hints" $
+          property $ \a b c as -> b /= c ==> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                p = observing (char a *> char b) *> empty
+                s = a : c : as
+            grs  p s (`shouldFailWith` err (posN (1 :: Int) s) mempty)
+            grs' p s (`failsLeaving` (c:as))
+      context "when inner parser succeeds without consuming" $
+        it "returns its result in Right" $
+          property $ \a s -> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                p = observing (return a)
+            grs  p s (`shouldParse` Right a)
+            grs' p s (`succeedsLeaving` s)
+      context "when inner parser fails without consuming" $ do
+        it "returns its parse error in Left preserving state" $
+          property $ \s -> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) ())
+                p = observing empty
+            grs  p s (`shouldParse` Left (err posI mempty))
+            grs' p s (`succeedsLeaving` s)
+        it "creates correct hints" $
+          property $ \a b as -> a /= b ==> do
+            let p :: MonadParsec Dec String m => m (Either (ParseError Char Dec) Char)
+                p = observing (char a) <* empty
+                s = b : as
+            grs  p s (`shouldFailWith` err posI (etok a))
+            grs' p s (`failsLeaving` (b:as))
+
     describe "eof" $ do
       context "when input stream is empty" $
         it "succeeds" $
