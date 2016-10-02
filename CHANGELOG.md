@@ -27,6 +27,8 @@
   parser fails (either consuming input or not). Most users will never notice
   the difference though. See #142.
 
+* Added the `dbg` function that should be helpful for debugging.
+
 * Further documentation improvements.
 
 ## Megaparsec 5.0.1
