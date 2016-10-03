@@ -29,6 +29,10 @@
 
 * Added the `dbg` function that should be helpful for debugging.
 
+* Added `observing` primitive combinator that allows to “observe” parse
+  errors without ending parsing (they are returned in `Left`, while normal
+  results are wrapped in `Right`).
+
 * Further documentation improvements.
 
 ## Megaparsec 5.0.1

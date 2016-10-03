@@ -609,6 +609,19 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     -> m a             -- ^ Original parser
     -> m a             -- ^ Parser that can recover from failures
 
+  -- | @observing p@ allows to “observe” failure of @p@ parser, should it
+  -- happen, without actually ending parsing, but instead getting the
+  -- 'ParseError' in 'Left'. On success parsed value is returned in 'Right'
+  -- as usual. Note that this primitive just allows you to observe parse
+  -- errors as they happen, it does not backtrack or change how the @p@
+  -- parser works in any way.
+  --
+  -- @since 5.1.0
+
+  observing
+    :: m a
+    -> m (Either (ParseError (Token s) e) a)
+
   -- | This parser only succeeds at the end of the input.
 
   eof :: m ()
@@ -684,6 +697,7 @@ instance (ErrorComponent e, Stream s) => MonadParsec e s (ParsecT e s m) where
   lookAhead         = pLookAhead
   notFollowedBy     = pNotFollowedBy
   withRecovery      = pWithRecovery
+  observing         = pObserving
   eof               = pEof
   token             = pToken
   tokens            = pTokens
@@ -752,6 +766,15 @@ pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
         in unParser (r err) ms rcok rcerr reok reerr
   in unParser p s cok mcerr eok meerr
 {-# INLINE pWithRecovery #-}
+
+pObserving
+  :: ParsecT e s m a
+  -> ParsecT e s m (Either (ParseError (Token s) e) a)
+pObserving p = ParsecT $ \s cok _ eok _ ->
+  let cerr' err s' = cok (Left err) s' mempty
+      eerr' err s' = eok (Left err) s' (toHints err)
+  in unParser p s (cok . Right) cerr' (eok . Right) eerr'
+{-# INLINE pObserving #-}
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
 pEof = ParsecT $ \s@(State input (pos:|z) w) _ _ eok eerr ->
@@ -1075,6 +1098,8 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
     notFollowedBy (fst <$> m s) >> return ((),s)
   withRecovery r (L.StateT m) = L.StateT $ \s ->
     withRecovery (\e -> L.runStateT (r e) s) (m s)
+  observing     (L.StateT m) = L.StateT $ \s ->
+    fixs s <$> observing (m s)
   eof                        = lift eof
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
@@ -1091,6 +1116,8 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
     notFollowedBy (fst <$> m s) >> return ((),s)
   withRecovery r (S.StateT m) = S.StateT $ \s ->
     withRecovery (\e -> S.runStateT (r e) s) (m s)
+  observing     (S.StateT m) = S.StateT $ \s ->
+    fixs s <$> observing (m s)
   eof                        = lift eof
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
@@ -1105,6 +1132,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT st m) where
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
   withRecovery r (L.ReaderT m) = L.ReaderT $ \s ->
     withRecovery (\e -> L.runReaderT (r e) s) (m s)
+  observing     (L.ReaderT m) = L.ReaderT $ observing . m
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
@@ -1121,6 +1149,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
     (,mempty) <$> notFollowedBy (fst <$> m)
   withRecovery r (L.WriterT m) = L.WriterT $
     withRecovery (L.runWriterT . r) m
+  observing     (L.WriterT m) = L.WriterT $
+    fixs mempty <$> observing m
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
@@ -1137,6 +1167,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
     (,mempty) <$> notFollowedBy (fst <$> m)
   withRecovery r (S.WriterT m) = S.WriterT $
     withRecovery (S.runWriterT . r) m
+  observing     (S.WriterT m) = S.WriterT $
+    fixs mempty <$> observing m
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
@@ -1151,11 +1183,17 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
   withRecovery r (IdentityT m) = IdentityT $
     withRecovery (runIdentityT . r) m
+  observing     (IdentityT m) = IdentityT $ observing m
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift $ tokens e ts
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
+
+fixs :: s -> Either a (b, s) -> (Either a b, s)
+fixs s (Left a)       = (Left a, s)
+fixs _ (Right (b, s)) = (Right b, s)
+{-# INLINE fixs #-}
 
 ----------------------------------------------------------------------------
 -- Debugging
