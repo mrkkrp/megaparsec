@@ -83,6 +83,9 @@ via combination of these primitives:
   continue parsing. Once parsing is finished, several parse errors may be
   reported or ignored altogether.
 
+* `observing` allows to “observe” parse errors without ending parsing (they
+  are returned in `Left`, while normal results are wrapped in `Right`).
+
 * `eof` only succeeds at the end of input.
 
 * `token` is used to parse single token.
