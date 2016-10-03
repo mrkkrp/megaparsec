@@ -96,6 +96,7 @@
 <li><p><code>lookAhead</code> allows to parse something without consuming input.</p></li>
 <li><p><code>notFollowedBy</code> succeeds when its argument fails, it does not consume input.</p></li>
 <li><p><code>withRecovery</code> allows to recover from parse errors “on-the-fly” and continue parsing. Once parsing is finished, several parse errors may be reported or ignored altogether.</p></li>
+<li><p><code>observing</code> allows to “observe” parse errors without ending parsing (they are returned in <code>Left</code>, while normal results are wrapped in <code>Right</code>).</p></li>
 <li><p><code>eof</code> only succeeds at the end of input.</p></li>
 <li><p><code>token</code> is used to parse single token.</p></li>
 <li><p><code>tokens</code> makes it easy to parse several tokens in a row.</p></li>
