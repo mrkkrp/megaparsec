@@ -1085,6 +1085,22 @@ spec = do
                 some (try (anyChar <* notEof)) <* char 'x'
           prs (L.runStateT p 0) "abx" `shouldParse` ("ab", n :: Integer)
 
+    describe "observing" $ do
+      context "when inner parser succeeds" $
+        it "can affect state" $
+          property $ \m n -> do
+            let p = do
+                  L.put m
+                  observing (L.modify (+ n))
+            prs (L.execStateT p 0) "" `shouldParse` (m + n :: Integer)
+      context "when inner parser fails" $
+        it "cannot affect state" $
+          property $ \m n -> do
+            let p = do
+                  L.put m
+                  observing (L.modify (+ n) <* empty)
+            prs (L.execStateT p 0) "" `shouldParse` (m :: Integer)
+
   describe "MonadParsec instance of strict StateT" $ do
 
     describe "(<|>)" $
@@ -1109,7 +1125,24 @@ spec = do
                 some (try (anyChar <* notEof)) <* char 'x'
           prs (S.runStateT p 0) "abx" `shouldParse` ("ab", n :: Integer)
 
-  describe "MonadParsec instance of lazy WriterT" $
+    describe "observing" $ do
+      context "when inner parser succeeds" $
+        it "can affect state" $
+          property $ \m n -> do
+            let p = do
+                  S.put m
+                  observing (L.modify (+ n))
+            prs (S.execStateT p 0) "" `shouldParse` (m + n :: Integer)
+      context "when inner parser fails" $
+        it "cannot affect state" $
+          property $ \m n -> do
+            let p = do
+                  S.put m
+                  observing (L.modify (+ n) <* empty)
+            prs (S.execStateT p 0) "" `shouldParse` (m :: Integer)
+
+  describe "MonadParsec instance of lazy WriterT" $ do
+
     it "generally works" $
       property $ \pre post -> do
         let loggedLetter = letterChar >>= \x -> L.tell [x] >> return x
@@ -1123,7 +1156,20 @@ spec = do
               return cs
         prs (L.runWriterT p) "abx" `shouldParse` ("ab", pre ++ "AB" ++ post ++ "x")
 
-  describe "MonadParsec instance of strict WriterT" $
+    describe "observing" $ do
+      context "when inner parser succeeds" $
+        it "can affect log" $
+          property $ \n -> do
+            let p = observing (L.tell $ Sum n)
+            prs (L.execWriterT p) "" `shouldParse` (Sum n :: Sum Integer)
+      context "when inner parser fails" $
+        it "cannot affect log" $
+          property $ \n -> do
+            let p = observing (L.tell (Sum n) <* empty)
+            prs (L.execWriterT p) "" `shouldParse` (mempty :: Sum Integer)
+
+  describe "MonadParsec instance of strict WriterT" $ do
+
     it "generally works" $
       property $ \pre post -> do
         let loggedLetter = letterChar >>= \x -> S.tell [x] >> return x
@@ -1137,27 +1183,51 @@ spec = do
               return cs
         prs (S.runWriterT p) "abx" `shouldParse` ("ab", pre ++ "AB" ++ post ++ "x")
 
+    describe "observing" $ do
+      context "when inner parser succeeds" $
+        it "can affect log" $
+          property $ \n -> do
+            let p = observing (S.tell $ Sum n)
+            prs (S.execWriterT p) "" `shouldParse` (Sum n :: Sum Integer)
+      context "when inner parser fails" $
+        it "cannot affect log" $
+          property $ \n -> do
+            let p = observing (S.tell (Sum n) <* empty)
+            prs (S.execWriterT p) "" `shouldParse` (mempty :: Sum Integer)
+
   describe "dbg" $ do
     -- NOTE We don't test properties here to avoid flood of debugging output
     -- when the test runs.
-    context "when inner parser succeeds consuming input" $
+    context "when inner parser succeeds consuming input" $ do
       it "has no effect on how parser works" $ do
         let p = dbg "char" (char 'a')
             s = "ab"
         prs  p s `shouldParse` 'a'
         prs' p s `succeedsLeaving` "b"
+      it "its hints are preserved" $
+        property $ \a b as -> a /= b ==> do
+          let p = dbg "many chars" (many (char a)) <* empty
+              s = a : b : as
+          prs  p s `shouldFailWith` err (posN (1 :: Int) s) (etok a)
+          prs' p s `failsLeaving` (b:as)
     context "when inner parser fails consuming input" $
       it "has no effect on how parser works" $ do
         let p = dbg "chars" (char 'a' *> char 'c')
             s = "abc"
         prs  p s `shouldFailWith` err (posN (1 :: Int) s) (utok 'b' <> etok 'c')
         prs' p s `failsLeaving` "bc"
-    context "when inner parser succeeds without consuming" $
+    context "when inner parser succeeds without consuming" $ do
       it "has no effect on how parser works" $ do
         let p = dbg "return" (return 'a')
             s = "abc"
         prs  p s `shouldParse` 'a'
         prs' p s `succeedsLeaving` s
+      it "its hints are preserved" $
+        property $ \a b as -> a /= b ==> do
+          let p = dbg "many chars" (many (char a)) <* empty
+              s = b : as
+          prs  p s `shouldFailWith` err posI (etok a)
+          prs' p s `failsLeaving` (b:as)
     context "when inner parser fails without consuming" $
       it "has no effect on how parser works" $ do
         let p = dbg "empty" (void empty)
