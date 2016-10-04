@@ -70,6 +70,7 @@ module Text.Megaparsec
   , lookAhead
   , notFollowedBy
   , withRecovery
+  , observing
   , eof
   , token
   , tokens

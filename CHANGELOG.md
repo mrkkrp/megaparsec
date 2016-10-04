@@ -1,3 +1,7 @@
+## Megaparsec 5.1.1
+
+* Exported the `observing` primitive from `Text.Megaparsec`.
+
 ## Megaparsec 5.1.0
 
 * Defined `displayException` for `ParseError`, so exceptions are displayed
