@@ -1,3 +1,10 @@
+## Megaparsec 5.1.2
+
+* Stopped using property tests with `dbg` helper to avoid flood of debugging
+  info when test suite is run.
+
+* Fixed the build with `QuickCheck` versions older than 2.9.0.
+
 ## Megaparsec 5.1.1
 
 * Exported the `observing` primitive from `Text.Megaparsec`.

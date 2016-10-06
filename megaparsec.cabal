@@ -27,7 +27,7 @@
 -- POSSIBILITY OF SUCH DAMAGE.
 
 name:                 megaparsec
-version:              5.1.1
+version:              5.1.2
 cabal-version:        >= 1.10
 license:              BSD2
 license-file:         LICENSE.md
@@ -124,7 +124,7 @@ test-suite tests
                     , exceptions   >= 0.6   && < 0.9
                     , hspec        >= 2.0   && < 3.0
                     , hspec-expectations >= 0.5 && < 0.8
-                    , megaparsec   >= 5.1.1
+                    , megaparsec   >= 5.1.2
                     , mtl          >= 2.0   && < 3.0
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2   && < 1.3
@@ -150,7 +150,7 @@ benchmark benchmarks
   build-depends:      base         >= 4.6  && < 5.0
                     , bytestring   >= 0.10 && < 0.11
                     , criterion    >= 0.6.2.1 && < 1.2
-                    , megaparsec   >= 5.1.1
+                    , megaparsec   >= 5.1.2
                     , text         >= 0.2  && < 1.3
   default-language:   Haskell2010
 
