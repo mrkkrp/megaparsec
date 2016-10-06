@@ -1204,12 +1204,11 @@ spec = do
             s = "ab"
         prs  p s `shouldParse` 'a'
         prs' p s `succeedsLeaving` "b"
-      it "its hints are preserved" $
-        property $ \a b as -> a /= b ==> do
-          let p = dbg "many chars" (many (char a)) <* empty
-              s = a : b : as
-          prs  p s `shouldFailWith` err (posN (1 :: Int) s) (etok a)
-          prs' p s `failsLeaving` (b:as)
+      it "its hints are preserved" $ do
+        let p = dbg "many chars" (many (char 'a')) <* empty
+            s = "abcd"
+        prs  p s `shouldFailWith` err (posN (1 :: Int) s) (etok 'a')
+        prs' p s `failsLeaving` "bcd"
     context "when inner parser fails consuming input" $
       it "has no effect on how parser works" $ do
         let p = dbg "chars" (char 'a' *> char 'c')
@@ -1222,12 +1221,11 @@ spec = do
             s = "abc"
         prs  p s `shouldParse` 'a'
         prs' p s `succeedsLeaving` s
-      it "its hints are preserved" $
-        property $ \a b as -> a /= b ==> do
-          let p = dbg "many chars" (many (char a)) <* empty
-              s = b : as
-          prs  p s `shouldFailWith` err posI (etok a)
-          prs' p s `failsLeaving` (b:as)
+      it "its hints are preserved" $ do
+        let p = dbg "many chars" (many (char 'a')) <* empty
+            s = "bcd"
+        prs  p s `shouldFailWith` err posI (etok 'a')
+        prs' p s `failsLeaving` "bcd"
     context "when inner parser fails without consuming" $
       it "has no effect on how parser works" $ do
         let p = dbg "empty" (void empty)
