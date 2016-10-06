@@ -72,6 +72,12 @@ import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
 
+#if !MIN_VERSION_QuickCheck(2,8,2)
+instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
+  arbitrary = E.fromList <$> arbitrary
+  shrink    = fmap E.fromList . shrink . E.toList
+#endif
+
 spec :: Spec
 spec = do
 

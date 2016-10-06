@@ -175,15 +175,20 @@ instance ( Show t
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
   arbitrary = ParseError
-    <$>
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      (NE.fromList . getNonEmpty <$> arbitrary)
+#if MIN_VERSION_QuickCheck(2,9,0)
+    <$> arbitrary
 #else
-      arbitrary
+    <$> (NE.fromList . getNonEmpty <$> arbitrary)
 #endif
+#if MIN_VERSION_QuickCheck(2,8,2)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
+#else
+    <*> (E.fromList <$> arbitrary)
+    <*> (E.fromList <$> arbitrary)
+    <*> (E.fromList <$> arbitrary)
+#endif
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring longest match. In other words, earlier error
