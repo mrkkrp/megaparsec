@@ -123,7 +123,7 @@ test-suite tests
                     , containers   >= 0.5   && < 0.6
                     , exceptions   >= 0.6   && < 0.9
                     , hspec        >= 2.0   && < 3.0
-                    , hspec-expectations >= 0.5 && < 0.8
+                    , hspec-expectations >= 0.5 && < 0.9
                     , megaparsec   >= 5.1.2
                     , mtl          >= 2.0   && < 3.0
                     , scientific   >= 0.3.1 && < 0.4
