@@ -40,7 +40,6 @@ import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Test.QuickCheck
-import Unsafe.Coerce
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -93,7 +92,7 @@ unsafePos x =
 -- @since 5.0.0
 
 unPos :: Pos -> Word
-unPos = unsafeCoerce
+unPos (Pos w) = w
 {-# INLINE unPos #-}
 
 instance Semigroup Pos where
