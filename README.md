@@ -102,7 +102,8 @@ such primitive, not minimal number of them. You can read the comprehensive
 description of every primitive function in
 [Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
 
-Megaparsec can currently work with the following types of input stream:
+Megaparsec can currently work with the following types of input stream
+out-of-box:
 
 * `String` = `[Char]`
 
