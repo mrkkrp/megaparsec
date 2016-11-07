@@ -82,6 +82,8 @@ import Prelude hiding (all)
 import Test.QuickCheck hiding (Result (..), label)
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
+import qualified Control.Monad.RWS.Lazy            as L
+import qualified Control.Monad.RWS.Strict          as S
 import qualified Control.Monad.Trans.Reader        as L
 import qualified Control.Monad.Trans.State.Lazy    as L
 import qualified Control.Monad.Trans.State.Strict  as S
@@ -1124,7 +1126,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
 
-instance MonadParsec e s m => MonadParsec e s (L.ReaderT st m) where
+instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
@@ -1175,6 +1177,46 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
+instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
+  failure us ps xs            = lift (failure us ps xs)
+  label n          (L.RWST m) = L.RWST $ \r s -> label n (m r s)
+  try              (L.RWST m) = L.RWST $ \r s -> try (m r s)
+  lookAhead        (L.RWST m) = L.RWST $ \r s -> do
+    (x,_,_) <- lookAhead (m r s)
+    return (x,s,mempty)
+  notFollowedBy    (L.RWST m) = L.RWST $ \r s -> do
+    notFollowedBy (void $ m r s)
+    return ((),s,mempty)
+  withRecovery   n (L.RWST m) = L.RWST $ \r s ->
+    withRecovery (\e -> L.runRWST (n e) r s) (m r s)
+  observing        (L.RWST m) = L.RWST $ \r s ->
+    fixs' s <$> observing (m r s)
+  eof                         = lift eof
+  token test mt               = lift (token test mt)
+  tokens e ts                 = lift (tokens e ts)
+  getParserState              = lift getParserState
+  updateParserState f         = lift (updateParserState f)
+
+instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
+  failure us ps xs            = lift (failure us ps xs)
+  label n          (S.RWST m) = S.RWST $ \r s -> label n (m r s)
+  try              (S.RWST m) = S.RWST $ \r s -> try (m r s)
+  lookAhead        (S.RWST m) = S.RWST $ \r s -> do
+    (x,_,_) <- lookAhead (m r s)
+    return (x,s,mempty)
+  notFollowedBy    (S.RWST m) = S.RWST $ \r s -> do
+    notFollowedBy (void $ m r s)
+    return ((),s,mempty)
+  withRecovery   n (S.RWST m) = S.RWST $ \r s ->
+    withRecovery (\e -> S.runRWST (n e) r s) (m r s)
+  observing        (S.RWST m) = S.RWST $ \r s ->
+    fixs' s <$> observing (m r s)
+  eof                         = lift eof
+  token test mt               = lift (token test mt)
+  tokens e ts                 = lift (tokens e ts)
+  getParserState              = lift getParserState
+  updateParserState f         = lift (updateParserState f)
+
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   failure us ps xs            = lift (failure us ps xs)
   label n       (IdentityT m) = IdentityT $ label n m
@@ -1194,6 +1236,11 @@ fixs :: s -> Either a (b, s) -> (Either a b, s)
 fixs s (Left a)       = (Left a, s)
 fixs _ (Right (b, s)) = (Right b, s)
 {-# INLINE fixs #-}
+
+fixs' :: Monoid w => s -> Either a (b, s, w) -> (Either a b, s, w)
+fixs' s (Left a)        = (Left a, s, mempty)
+fixs' _ (Right (b,s,w)) = (Right b, s, w)
+{-# INLINE fixs' #-}
 
 ----------------------------------------------------------------------------
 -- Debugging

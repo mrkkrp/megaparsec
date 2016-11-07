@@ -61,6 +61,8 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import Text.Megaparsec.String
+import qualified Control.Monad.RWS.Lazy      as L
+import qualified Control.Monad.RWS.Strict    as S
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
@@ -1162,6 +1164,18 @@ spec = do
               return cs
         prs (L.runWriterT p) "abx" `shouldParse` ("ab", pre ++ "AB" ++ post ++ "x")
 
+    describe "lookAhead" $
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = lookAhead (L.tell [w])
+          prs (L.runWriterT p) "" `shouldParse` ((), mempty :: [Int])
+
+    describe "notFollowedBy" $
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = notFollowedBy (L.tell [w] <* char 'a')
+          prs (L.runWriterT p) "" `shouldParse` ((), mempty :: [Int])
+
     describe "observing" $ do
       context "when inner parser succeeds" $
         it "can affect log" $
@@ -1189,6 +1203,18 @@ spec = do
               return cs
         prs (S.runWriterT p) "abx" `shouldParse` ("ab", pre ++ "AB" ++ post ++ "x")
 
+    describe "lookAhead" $
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = lookAhead (S.tell [w])
+          prs (S.runWriterT p) "" `shouldParse` ((), mempty :: [Int])
+
+    describe "notFollowedBy" $
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = notFollowedBy (S.tell [w] <* char 'a')
+          prs (S.runWriterT p) "" `shouldParse` ((), mempty :: [Int])
+
     describe "observing" $ do
       context "when inner parser succeeds" $
         it "can affect log" $
@@ -1200,6 +1226,146 @@ spec = do
           property $ \n -> do
             let p = observing (S.tell (Sum n) <* empty)
             prs (S.execWriterT p) "" `shouldParse` (mempty :: Sum Integer)
+
+  describe "MonadParsec instance of lazy RWST" $ do
+
+    describe "label" $
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = label "a" ((,) <$> L.ask <*> L.get)
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "try" $
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = try ((,) <$> L.ask <*> L.get)
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "lookAhead" $ do
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = lookAhead ((,) <$> L.ask <*> L.get)
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = lookAhead (L.tell [w])
+          prs (L.runRWST p (0 :: Int) (0 :: Int)) "" `shouldParse`
+            ((), 0, mempty :: [Int])
+      it "does not allow to influence state outside it" $
+        property $ \s0 s1 -> (s0 /= s1) ==> do
+          let p = lookAhead (L.put s1)
+          prs (L.runRWST p (0 :: Int) (s0 :: Int)) "" `shouldParse`
+            ((), s0, mempty :: [Int])
+
+    describe "notFollowedBy" $ do
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = notFollowedBy (L.tell [w] <* char 'a')
+          prs (L.runRWST p (0 :: Int) (0 :: Int)) "" `shouldParse`
+            ((), 0, mempty :: [Int])
+      it "does not allow to influence state outside it" $
+        property $ \s0 s1 -> (s0 /= s1) ==> do
+          let p = notFollowedBy (L.put s1 <* char 'a')
+          prs (L.runRWST p (0 :: Int) (s0 :: Int)) "" `shouldParse`
+            ((), s0, mempty :: [Int])
+
+    describe "withRecovery" $ do
+      it "allows main parser to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = withRecovery (const empty) ((,) <$> L.ask <*> L.get)
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+      it "allows recovering parser to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = withRecovery (\_ -> (,) <$> L.ask <*> L.get) empty
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "observing" $ do
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = observing ((,) <$> L.ask <*> L.get)
+          prs (L.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            (Right (r, s), s, mempty :: [Int])
+      context "when the inner parser fails" $
+        it "backtracks state" $
+          property $ \r s0 s1 -> (s0 /= s1) ==> do
+            let p = observing (L.put s1 <* empty)
+            prs (L.runRWST p (r :: Int) (s0 :: Int)) "" `shouldParse`
+              (Left (err posI mempty), s0, mempty :: [Int])
+
+  describe "MonadParsec instance of strict RWST" $ do
+
+    describe "label" $
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = label "a" ((,) <$> S.ask <*> S.get)
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "try" $
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = try ((,) <$> S.ask <*> S.get)
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "lookAhead" $ do
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = lookAhead ((,) <$> S.ask <*> S.get)
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = lookAhead (S.tell [w])
+          prs (S.runRWST p (0 :: Int) (0 :: Int)) "" `shouldParse`
+            ((), 0, mempty :: [Int])
+      it "does not allow to influence state outside it" $
+        property $ \s0 s1 -> (s0 /= s1) ==> do
+          let p = lookAhead (S.put s1)
+          prs (S.runRWST p (0 :: Int) (s0 :: Int)) "" `shouldParse`
+            ((), s0, mempty :: [Int])
+
+    describe "notFollowedBy" $ do
+      it "discards what writer tells inside it" $
+        property $ \w -> do
+          let p = notFollowedBy (S.tell [w] <* char 'a')
+          prs (S.runRWST p (0 :: Int) (0 :: Int)) "" `shouldParse`
+            ((), 0, mempty :: [Int])
+      it "does not allow to influence state outside it" $
+        property $ \s0 s1 -> (s0 /= s1) ==> do
+          let p = notFollowedBy (S.put s1 <* char 'a')
+          prs (S.runRWST p (0 :: Int) (s0 :: Int)) "" `shouldParse`
+            ((), s0, mempty :: [Int])
+
+    describe "withRecovery" $ do
+      it "allows main parser to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = withRecovery (const empty) ((,) <$> S.ask <*> S.get)
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+      it "allows recovering parser to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = withRecovery (\_ -> (,) <$> S.ask <*> S.get) empty
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            ((r, s), s, mempty :: [Int])
+
+    describe "observing" $ do
+      it "allows to access reader context and state inside it" $
+        property $ \r s -> do
+          let p = observing ((,) <$> S.ask <*> S.get)
+          prs (S.runRWST p (r :: Int) (s :: Int)) "" `shouldParse`
+            (Right (r, s), s, mempty :: [Int])
+      context "when the inner parser fails" $
+        it "backtracks state" $
+          property $ \r s0 s1 -> (s0 /= s1) ==> do
+            let p = observing (S.put s1 <* empty)
+            prs (S.runRWST p (r :: Int) (s0 :: Int)) "" `shouldParse`
+              (Left (err posI mempty), s0, mempty :: [Int])
 
   describe "dbg" $ do
     -- NOTE We don't test properties here to avoid flood of debugging output

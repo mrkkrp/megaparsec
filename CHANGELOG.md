@@ -1,3 +1,7 @@
+## Megaparsec 5.2.0
+
+* Added `MonadParsec` instance for `RWST`.
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
