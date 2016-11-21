@@ -56,6 +56,8 @@ import Test.Hspec.Megaparsec
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
+import qualified Control.Monad.RWS.Lazy      as L
+import qualified Control.Monad.RWS.Strict    as S
 import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
@@ -116,6 +118,8 @@ grs p s r = do
   r (prs (S.evalStateT p ()) s)
   r (prs (evalWriterTL p)    s)
   r (prs (evalWriterTS p)    s)
+  r (prs (evalRWSTL    p)    s)
+  r (prs (evalRWSTS    p)    s)
 
 -- | 'grs'' to 'grs' as 'prs'' to 'prs'.
 
@@ -133,11 +137,23 @@ grs' p s r = do
   r (prs' (S.evalStateT p ()) s)
   r (prs' (evalWriterTL p)    s)
   r (prs' (evalWriterTS p)    s)
+  r (prs' (evalRWSTL    p)    s)
+  r (prs' (evalRWSTS    p)    s)
 
 evalWriterTL :: Monad m => L.WriterT [Int] m a -> m a
 evalWriterTL = liftM fst . L.runWriterT
 evalWriterTS :: Monad m => S.WriterT [Int] m a -> m a
 evalWriterTS = liftM fst . S.runWriterT
+
+evalRWSTL :: Monad m => L.RWST () [Int] () m a -> m a
+evalRWSTL m = do
+  (a,_,_) <- L.runRWST m () ()
+  return a
+
+evalRWSTS :: Monad m => S.RWST () [Int] () m a -> m a
+evalRWSTS m = do
+  (a,_,_) <- S.runRWST m () ()
+  return a
 
 ----------------------------------------------------------------------------
 -- Working with source position
