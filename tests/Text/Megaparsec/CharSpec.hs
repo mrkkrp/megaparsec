@@ -67,7 +67,7 @@ spec = do
           prs  eol s' `shouldParse`     "\n"
           prs' eol s' `succeedsLeaving` s
     context "when stream begins with CRLF sequence" $
-      it "parses the CSRF sequence" $
+      it "parses the CRLF sequence" $
         property $ \s -> do
           let s' = '\r' : '\n' : s
           prs  eol s' `shouldParse`     "\r\n"
@@ -82,7 +82,7 @@ spec = do
       it "signals correct parse error" $
         prs eol "\r" `shouldFailWith` err posI
           (utok '\r' <> elabel "end of line")
-    context "when stream does not begin with newline or CSRF sequence" $
+    context "when stream does not begin with newline or CRLF sequence" $
       it "signals correct parse error" $
         property $ \ch s -> (ch `notElem` "\r\n") ==> do
           let s' = ch : s
