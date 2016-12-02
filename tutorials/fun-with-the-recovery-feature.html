@@ -198,6 +198,8 @@ bar = 15</code></pre>
 <h2 id="conclusion">Conclusion</h2>
 <p>When you want to use <code>withRecovery</code>, the main thing to remember that parts of text that you want to allow to fail should be clearly separated from each other, so recovering parser can reliably skip to the next part if current part cannot be parsed. In a language like Python, you could use indentation levels to tell apart high-level definitions, for example. In every case you should use your judgment and creativity to decide how to make use of <code>withRecovery</code>. In some cases it may be not worth it, but more often than not you will be able to improve experience of people who work with your product by using this new Megaparsec’s feature.</p>
 
+
+
             </div>
           </div>
         </div>
