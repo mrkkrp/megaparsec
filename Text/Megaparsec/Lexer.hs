@@ -99,7 +99,7 @@ import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
 -- of the file).
 
 space :: MonadParsec e s m
-  => m () -- ^ A parser for a space character (e.g. 'C.spaceChar')
+  => m () -- ^ A parser for a space character (e.g. @'void' 'C.spaceChar'@)
   -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
   -> m ()
@@ -264,7 +264,7 @@ data IndentOpt m a b
     -- ^ Parse many indented tokens (possibly zero), use given indentation
     -- level (if 'Nothing', use level of the first indented token); the
     -- second argument tells how to get final result, and third argument
-    -- describes how to parse indented token
+    -- describes how to parse an indented token
   | IndentSome (Maybe Pos) ([b] -> m a) (m b)
     -- ^ Just like 'IndentMany', but requires at least one indented token to
     -- be present
