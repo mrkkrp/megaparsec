@@ -336,6 +336,16 @@ spec = do
           let p = many (char 'a') *> many (char 'b') *> eof
           prs p "c" `shouldFailWith` err posI
             (utok 'c' <> etok 'a' <> etok 'b' <> eeof)
+      context "when the argument parser succeeds without consuming" $
+        it "is run nevertheless" $
+          property $ \n' -> do
+            let n = getSmall (getNonNegative n') :: Integer
+                p = void . many $ do
+                  x <- S.get
+                  if x < n then S.modify (+ 1) else empty
+                v :: S.State Integer (Either (ParseError Char Dec) ())
+                v = runParserT p "" ""
+            S.execState v 0 `shouldBe` n
 
     describe "some" $ do
       context "when stream begins with things argument of some parses" $

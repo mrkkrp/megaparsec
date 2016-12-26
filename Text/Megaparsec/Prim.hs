@@ -385,14 +385,9 @@ manyAcc p = ParsecT $ \s cok cerr eok _ ->
         unParser p s'
         (seq xs $ walk $ x:xs)       -- consumed-OK
         cerr                         -- consumed-error
-        manyErr                      -- empty-OK
+        (seq xs $ walk $ x:xs)       -- empty-OK
         (errToHints $ cok (x:xs) s') -- empty-error
-  in unParser p s (walk []) cerr manyErr (errToHints $ eok [] s)
-
-manyErr :: a
-manyErr = error $
-  "Text.Megaparsec.Prim.many: combinator 'many' is applied to a parser"
-  ++ " that may consume no input."
+  in unParser p s (walk []) cerr (walk []) (errToHints $ eok [] s)
 
 instance (ErrorComponent e, Stream s)
     => Monad (ParsecT e s m) where
