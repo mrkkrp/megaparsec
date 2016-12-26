@@ -2,6 +2,15 @@
 
 * Added `MonadParsec` instance for `RWST`.
 
+* Allowed `many` to run parsers that do not consume input. Previously this
+  signalled an `error` which was ugly. Of course, in most cases giving
+  `many` a parser that do not consume input will lead to non-termination
+  bugs, but there are legal cases when this should be allowed. The test
+  suite now contains an example of this. Non-termination issues is something
+  inherited from the power Megaparsec gives (with more power comes more
+  responsibility), so that `error` case in `many` really does not solve the
+  problem, it was just a little ah-hoc guard we got from Parsec's past.
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
