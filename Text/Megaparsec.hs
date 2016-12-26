@@ -33,7 +33,15 @@
 -- > -- import Text.Megaparsec.Text.Lazy
 --
 -- As you can see the second import depends on data type you want to use as
--- input stream. It just defines useful type-synonym @Parser@.
+-- input stream. It just defines the useful type-synonym @Parser@.
+--
+-- Megaparsec 5 uses some type-level machinery to provide flexibility
+-- without compromising on type safety. Thus type signatures are sometimes
+-- necessary to avoid ambiguous types. If you're seeing a error message that
+-- reads like “Ambiguous type variable @e0@ arising from … prevents the
+-- constraint @(ErrorComponent e0)@ from being resolved”, you need to give
+-- an explicit signature to your parser to eliminate the ambiguity. It's a
+-- good idea to provide type signatures for all top-level definitions.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm",
