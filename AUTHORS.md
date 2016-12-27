@@ -49,3 +49,4 @@ Names below are sorted alphabetically.
 * Simon Vandel
 * Slava Shklyaev
 * Tal Walter
+* Tomáš Janoušek
