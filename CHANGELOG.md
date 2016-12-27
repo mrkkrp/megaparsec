@@ -11,6 +11,9 @@
   responsibility), so that `error` case in `many` really does not solve the
   problem, it was just a little ah-hoc guard we got from Parsec's past.
 
+* `IndentNone` option of `indentBlock` now picks whitespace after it like
+  its sisters `IndentMany` and `IndentSome` do, see #161.
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
