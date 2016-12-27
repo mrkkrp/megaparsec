@@ -289,7 +289,7 @@ indentBlock sc r = do
   ref <- indentLevel
   a   <- r
   case a of
-    IndentNone x -> return x
+    IndentNone x -> sc *> return x
     IndentMany indent f p -> do
       mlvl <- optional . try $ C.eol *> indentGuard sc GT ref
       case mlvl of

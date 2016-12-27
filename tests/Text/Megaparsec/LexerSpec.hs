@@ -186,7 +186,7 @@ spec = do
              | otherwise -> prs p s `shouldParse`
                (sbla, [(sblb, [sblc]), (sblb, [sblc])])
     it "IndentMany works as intended" $
-      property $ forAll (mkIndent sbla 0) $ \s -> do
+      property $ forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpaceNl) $ \s -> do
         let p    = lvla
             lvla = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
             lvlb = b sblb
@@ -194,6 +194,17 @@ spec = do
             l x  = return . (x,)
         prs  p s `shouldParse` (sbla, [])
         prs' p s `succeedsLeaving` ""
+    it "works with many and both IndentMany and IndentNone" $
+      property $ forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpaceNl) $ \s -> do
+        let p1   = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
+            p2   = indentBlock scn $ IndentNone sbla <$ b sbla
+            lvlb = b sblb
+            b    = symbol sc
+            l x  = return . (x,)
+        prs  (many p1) s `shouldParse` [(sbla, [])]
+        prs  (many p2) s `shouldParse` [sbla]
+        prs' (many p1) s `succeedsLeaving` ""
+        prs' (many p2) s `succeedsLeaving` ""
 
   describe "lineFold" $
     it "works as intended" $
@@ -427,6 +438,9 @@ spec = do
 mkWhiteSpace :: Gen String
 mkWhiteSpace = concat <$> listOf whiteUnit
   where whiteUnit = oneof [whiteChars, whiteLine, whiteBlock]
+
+mkWhiteSpaceNl :: Gen String
+mkWhiteSpaceNl = (<>) <$> mkWhiteSpace <*> pure "\n"
 
 mkSymbol :: Gen String
 mkSymbol = (++) <$> symbolName <*> whiteChars
