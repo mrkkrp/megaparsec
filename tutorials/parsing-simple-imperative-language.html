@@ -55,7 +55,7 @@
             <hr />
             <div class="content">
               
-<em>Last updated on May 14, 2015</em>
+<em>Last updated on January  1, 2017</em>
 <hr />
 
 
@@ -70,10 +70,10 @@
 <li><a href="#notes">Notes</a></li>
 </ol>
 <h2 id="imports">Imports</h2>
-<p>First let’s specify the name of the module:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">ParseWhile</span> <span class="kw">where</span></code></pre></div>
-<p>And then import the necessary libraries:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">import </span><span class="dt">Control.Monad</span> (void)
+<p>First let’s import the necessary libraries:</p>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Main</span> (main) <span class="kw">where</span>
+
+<span class="kw">import </span><span class="dt">Control.Monad</span> (void)
 <span class="kw">import </span><span class="dt">Text.Megaparsec</span>
 <span class="kw">import </span><span class="dt">Text.Megaparsec.Expr</span>
 <span class="kw">import </span><span class="dt">Text.Megaparsec.String</span> <span class="co">-- input stream is of type ‘String’</span>
@@ -91,34 +91,38 @@ opr ::= &gt; | &lt;</code></pre>
 <p>We probably want to parse that into some internal representation of the language (an <a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">abstract syntax tree</a>). Therefore we need to define the data structures for the expressions and statements.</p>
 <h2 id="data-structures">Data structures</h2>
 <p>We need to take care of boolean and arithmetic expressions and the appropriate operators. First let’s look at the boolean expressions:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">BExpr</span> <span class="fu">=</span> <span class="dt">BoolConst</span> <span class="dt">Bool</span>
-           <span class="fu">|</span> <span class="dt">Not</span> <span class="dt">BExpr</span>
-           <span class="fu">|</span> <span class="dt">BBinary</span> <span class="dt">BBinOp</span> <span class="dt">BExpr</span> <span class="dt">BExpr</span>
-           <span class="fu">|</span> <span class="dt">RBinary</span> <span class="dt">RBinOp</span> <span class="dt">AExpr</span> <span class="dt">AExpr</span>
-             <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">BExpr</span>
+  <span class="fu">=</span> <span class="dt">BoolConst</span> <span class="dt">Bool</span>
+  <span class="fu">|</span> <span class="dt">Not</span> <span class="dt">BExpr</span>
+  <span class="fu">|</span> <span class="dt">BBinary</span> <span class="dt">BBinOp</span> <span class="dt">BExpr</span> <span class="dt">BExpr</span>
+  <span class="fu">|</span> <span class="dt">RBinary</span> <span class="dt">RBinOp</span> <span class="dt">AExpr</span> <span class="dt">AExpr</span>
+  <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>Binary boolean operators:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">BBinOp</span> <span class="fu">=</span> <span class="dt">And</span> <span class="fu">|</span> <span class="dt">Or</span> <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>Relational operators:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">RBinOp</span> <span class="fu">=</span> <span class="dt">Greater</span> <span class="fu">|</span> <span class="dt">Less</span> <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>Now we define the types for arithmetic expressions:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">AExpr</span> <span class="fu">=</span> <span class="dt">Var</span> <span class="dt">String</span>
-           <span class="fu">|</span> <span class="dt">IntConst</span> <span class="dt">Integer</span>
-           <span class="fu">|</span> <span class="dt">Neg</span> <span class="dt">AExpr</span>
-           <span class="fu">|</span> <span class="dt">ABinary</span> <span class="dt">ABinOp</span> <span class="dt">AExpr</span> <span class="dt">AExpr</span>
-             <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">AExpr</span>
+  <span class="fu">=</span> <span class="dt">Var</span> <span class="dt">String</span>
+  <span class="fu">|</span> <span class="dt">IntConst</span> <span class="dt">Integer</span>
+  <span class="fu">|</span> <span class="dt">Neg</span> <span class="dt">AExpr</span>
+  <span class="fu">|</span> <span class="dt">ABinary</span> <span class="dt">ABinOp</span> <span class="dt">AExpr</span> <span class="dt">AExpr</span>
+  <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>And arithmetic operators:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">ABinOp</span> <span class="fu">=</span> <span class="dt">Add</span>
-            <span class="fu">|</span> <span class="dt">Subtract</span>
-            <span class="fu">|</span> <span class="dt">Multiply</span>
-            <span class="fu">|</span> <span class="dt">Divide</span>
-              <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">ABinOp</span>
+  <span class="fu">=</span> <span class="dt">Add</span>
+  <span class="fu">|</span> <span class="dt">Subtract</span>
+  <span class="fu">|</span> <span class="dt">Multiply</span>
+  <span class="fu">|</span> <span class="dt">Divide</span>
+  <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <p>Finally let’s take care of the statements:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Stmt</span> <span class="fu">=</span> <span class="dt">Seq</span> [<span class="dt">Stmt</span>]
-          <span class="fu">|</span> <span class="dt">Assign</span> <span class="dt">String</span> <span class="dt">AExpr</span>
-          <span class="fu">|</span> <span class="dt">If</span> <span class="dt">BExpr</span> <span class="dt">Stmt</span> <span class="dt">Stmt</span>
-          <span class="fu">|</span> <span class="dt">While</span> <span class="dt">BExpr</span> <span class="dt">Stmt</span>
-          <span class="fu">|</span> <span class="dt">Skip</span>
-            <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Stmt</span>
+  <span class="fu">=</span> <span class="dt">Seq</span> [<span class="dt">Stmt</span>]
+  <span class="fu">|</span> <span class="dt">Assign</span> <span class="dt">String</span> <span class="dt">AExpr</span>
+  <span class="fu">|</span> <span class="dt">If</span> <span class="dt">BExpr</span> <span class="dt">Stmt</span> <span class="dt">Stmt</span>
+  <span class="fu">|</span> <span class="dt">While</span> <span class="dt">BExpr</span> <span class="dt">Stmt</span>
+  <span class="fu">|</span> <span class="dt">Skip</span>
+  <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre></div>
 <h2 id="lexer">Lexer</h2>
 <p>Having all the data structures we can go on with writing the code to do the actual parsing. Here we will define <em>lexemes</em> of our language. When writing a lexer for a language it’s always important to define what counts as whitespace and how it should be consumed. <code>space</code> from <code>Text.Megaparsec.Lexer</code> module can be helpful here:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">sc ::</span> <span class="dt">Parser</span> ()
@@ -167,13 +171,13 @@ identifier <span class="fu">=</span> (lexeme <span class="fu">.</span> try) (p <
     check x <span class="fu">=</span> <span class="kw">if</span> x <span class="ot">`elem`</span> rws
                 <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
                 <span class="kw">else</span> return x</code></pre></div>
-<p><code>identifier</code> may seem complex, but it’s really simple. We just parse a sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
-<p>Note the use of <code>try</code> in <code>identifier</code>. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is executed. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
+<p><code>identifier</code> may seem complex, but it’s actually simple. We just parse a sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
+<p>Note the use of <code>try</code> in <code>identifier</code>. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is evaluated. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
 <p>And that’s it, we have just written lexer for our language, now we can start writing parser.</p>
 <h2 id="parser">Parser</h2>
-<p>As already mentioned, a program in this language is simply a statement, so the main parser should basically only parse a statement. But remember to take care of initial whitespace — our parsers only get rid of whitespace after the tokens!</p>
+<p>As already mentioned, a program in this language is simply a statement, so the main parser should basically only parse a statement. But remember to take care of initial whitespace — our parsers only get rid of whitespace <em>after</em> the tokens!</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">whileParser ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
-whileParser <span class="fu">=</span> sc <span class="fu">*&gt;</span> stmt <span class="fu">&lt;*</span> eof</code></pre></div>
+whileParser <span class="fu">=</span> between sc eof stmt</code></pre></div>
 <p>Now because any statement might be actually a sequence of statements separated by semicolon, we use <code>sepBy1</code> to parse at least one statement. The result is a list of statements. We also allow grouping statements by parentheses, which is useful, for instance, in the <code>while</code> loop.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">stmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
 stmt <span class="fu">=</span> parens stmt <span class="fu">&lt;|&gt;</span> stmtSeq
@@ -188,34 +192,34 @@ stmt' <span class="fu">=</span> ifStmt <span class="fu">&lt;|&gt;</span> whileSt
 <p>If you have a parser that might fail after consuming some input, and you still want to try the next parser, you should take a look at the <code>try</code> combinator. For instance <code>try p &lt;|&gt; q</code> will try parsing with <code>p</code> and if it fails, even after consuming the input, the <code>q</code> parser will be used as if nothing has been consumed by <code>p</code>.</p>
 <p>Now let’s define the parsers for all the possible statements. This is quite straightforward as we just use the parsers from the lexer and then use all the necessary information to create appropriate data structures.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">ifStmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
-ifStmt <span class="fu">=</span>
-  <span class="kw">do</span> rword <span class="st">&quot;if&quot;</span>
-     cond  <span class="ot">&lt;-</span> bExpr
-     rword <span class="st">&quot;then&quot;</span>
-     stmt1 <span class="ot">&lt;-</span> stmt
-     rword <span class="st">&quot;else&quot;</span>
-     stmt2 <span class="ot">&lt;-</span> stmt
-     return <span class="fu">$</span> <span class="dt">If</span> cond stmt1 stmt2
+ifStmt <span class="fu">=</span> <span class="kw">do</span>
+  rword <span class="st">&quot;if&quot;</span>
+  cond  <span class="ot">&lt;-</span> bExpr
+  rword <span class="st">&quot;then&quot;</span>
+  stmt1 <span class="ot">&lt;-</span> stmt
+  rword <span class="st">&quot;else&quot;</span>
+  stmt2 <span class="ot">&lt;-</span> stmt
+  return (<span class="dt">If</span> cond stmt1 stmt2)
 
 <span class="ot">whileStmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
-whileStmt <span class="fu">=</span>
-  <span class="kw">do</span> rword <span class="st">&quot;while&quot;</span>
-     cond <span class="ot">&lt;-</span> bExpr
-     rword <span class="st">&quot;do&quot;</span>
-     stmt1 <span class="ot">&lt;-</span> stmt
-     return <span class="fu">$</span> <span class="dt">While</span> cond stmt1
+whileStmt <span class="fu">=</span> <span class="kw">do</span>
+  rword <span class="st">&quot;while&quot;</span>
+  cond <span class="ot">&lt;-</span> bExpr
+  rword <span class="st">&quot;do&quot;</span>
+  stmt1 <span class="ot">&lt;-</span> stmt
+  return (<span class="dt">While</span> cond stmt1)
 
 <span class="ot">assignStmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
-assignStmt <span class="fu">=</span>
-  <span class="kw">do</span> var  <span class="ot">&lt;-</span> identifier
-     void <span class="fu">$</span> symbol <span class="st">&quot;:=&quot;</span>
-     expr <span class="ot">&lt;-</span> aExpr
-     return <span class="fu">$</span> <span class="dt">Assign</span> var expr
+assignStmt <span class="fu">=</span> <span class="kw">do</span>
+  var  <span class="ot">&lt;-</span> identifier
+  void (symbol <span class="st">&quot;:=&quot;</span>)
+  expr <span class="ot">&lt;-</span> aExpr
+  return (<span class="dt">Assign</span> var expr)
 
 <span class="ot">skipStmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
 skipStmt <span class="fu">=</span> <span class="dt">Skip</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;skip&quot;</span></code></pre></div>
 <h2 id="expressions">Expressions</h2>
-<p>What’s left is to parse the expressions. Fortunately Megaparsec provides a very easy way to do that. Let’s define the arithmetic and boolean expressions:</p>
+<p>What’s left is to parse the expressions. Fortunately Megaparsec provides an easy way to do that. Let’s define the arithmetic and boolean expressions:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">aExpr ::</span> <span class="dt">Parser</span> <span class="dt">AExpr</span>
 aExpr <span class="fu">=</span> makeExprParser aTerm aOperators
 
@@ -224,53 +228,58 @@ bExpr <span class="fu">=</span> makeExprParser bTerm bOperators</code></pre></di
 <p>Now we have to define the lists with operator precedence, associativity and what constructors to use in each case.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">aOperators ::</span> [[<span class="dt">Operator</span> <span class="dt">Parser</span> <span class="dt">AExpr</span>]]
 aOperators <span class="fu">=</span>
-  [ [<span class="dt">Prefix</span> (symbol <span class="st">&quot;-&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Neg</span>) ]
-  , [ <span class="dt">InfixL</span> (symbol <span class="st">&quot;*&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">ABinary</span> <span class="dt">Multiply</span>))
-    , <span class="dt">InfixL</span> (symbol <span class="st">&quot;/&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">ABinary</span> <span class="dt">Divide</span>)) ]
-  , [ <span class="dt">InfixL</span> (symbol <span class="st">&quot;+&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">ABinary</span> <span class="dt">Add</span>))
-    , <span class="dt">InfixL</span> (symbol <span class="st">&quot;-&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">ABinary</span> <span class="dt">Subtract</span>)) ]
+  [ [<span class="dt">Prefix</span> (<span class="dt">Neg</span> <span class="fu">&lt;$</span> symbol <span class="st">&quot;-&quot;</span>) ]
+  , [ <span class="dt">InfixL</span> (<span class="dt">ABinary</span> <span class="dt">Multiply</span> <span class="fu">&lt;$</span> symbol <span class="st">&quot;*&quot;</span>)
+    , <span class="dt">InfixL</span> (<span class="dt">ABinary</span> <span class="dt">Divide</span>   <span class="fu">&lt;$</span> symbol <span class="st">&quot;/&quot;</span>) ]
+  , [ <span class="dt">InfixL</span> (<span class="dt">ABinary</span> <span class="dt">Add</span>      <span class="fu">&lt;$</span> symbol <span class="st">&quot;+&quot;</span>)
+    , <span class="dt">InfixL</span> (<span class="dt">ABinary</span> <span class="dt">Subtract</span> <span class="fu">&lt;$</span> symbol <span class="st">&quot;-&quot;</span>) ]
   ]
 
 <span class="ot">bOperators ::</span> [[<span class="dt">Operator</span> <span class="dt">Parser</span> <span class="dt">BExpr</span>]]
 bOperators <span class="fu">=</span>
-  [ [<span class="dt">Prefix</span> (rword <span class="st">&quot;not&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Not</span>) ]
-  , [<span class="dt">InfixL</span> (rword <span class="st">&quot;and&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">BBinary</span> <span class="dt">And</span>))
-    , <span class="dt">InfixL</span> (rword <span class="st">&quot;or&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">BBinary</span> <span class="dt">Or</span>)) ]
+  [ [<span class="dt">Prefix</span> (<span class="dt">Not</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;not&quot;</span>) ]
+  , [<span class="dt">InfixL</span> (<span class="dt">BBinary</span> <span class="dt">And</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;and&quot;</span>)
+    , <span class="dt">InfixL</span> (<span class="dt">BBinary</span> <span class="dt">Or</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;or&quot;</span>) ]
   ]</code></pre></div>
 <p>In case of prefix operators it is enough to specify which one should be parsed and what is the associated data constructor. Infix operators are defined similarly, but there are several variants of infix constructors for various associativity. Note that the operator precedence depends only on the order of the elements in the list.</p>
 <p>Finally we have to define the terms. In case of arithmetic expressions, it is quite simple:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">aTerm ::</span> <span class="dt">Parser</span> <span class="dt">AExpr</span>
 aTerm <span class="fu">=</span> parens aExpr
-     <span class="fu">&lt;|&gt;</span> <span class="dt">Var</span>      <span class="fu">&lt;$&gt;</span> identifier
-     <span class="fu">&lt;|&gt;</span> <span class="dt">IntConst</span> <span class="fu">&lt;$&gt;</span> integer</code></pre></div>
+  <span class="fu">&lt;|&gt;</span> <span class="dt">Var</span>      <span class="fu">&lt;$&gt;</span> identifier
+  <span class="fu">&lt;|&gt;</span> <span class="dt">IntConst</span> <span class="fu">&lt;$&gt;</span> integer</code></pre></div>
 <p>However, the term in a boolean expression is a bit more tricky. In this case, a term can also be an expression with relational operator consisting of arithmetic expressions.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">bTerm ::</span> <span class="dt">Parser</span> <span class="dt">BExpr</span>
 bTerm <span class="fu">=</span>  parens bExpr
-     <span class="fu">&lt;|&gt;</span> (rword <span class="st">&quot;true&quot;</span>  <span class="fu">*&gt;</span> pure (<span class="dt">BoolConst</span> <span class="dt">True</span>))
-     <span class="fu">&lt;|&gt;</span> (rword <span class="st">&quot;false&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">BoolConst</span> <span class="dt">False</span>))
-     <span class="fu">&lt;|&gt;</span> rExpr</code></pre></div>
+  <span class="fu">&lt;|&gt;</span> (rword <span class="st">&quot;true&quot;</span>  <span class="fu">*&gt;</span> pure (<span class="dt">BoolConst</span> <span class="dt">True</span>))
+  <span class="fu">&lt;|&gt;</span> (rword <span class="st">&quot;false&quot;</span> <span class="fu">*&gt;</span> pure (<span class="dt">BoolConst</span> <span class="dt">False</span>))
+  <span class="fu">&lt;|&gt;</span> rExpr</code></pre></div>
 <p>Therefore we have to define a parser for relational expressions:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rExpr ::</span> <span class="dt">Parser</span> <span class="dt">BExpr</span>
-rExpr <span class="fu">=</span>
-  <span class="kw">do</span> a1 <span class="ot">&lt;-</span> aExpr
-     op <span class="ot">&lt;-</span> relation
-     a2 <span class="ot">&lt;-</span> aExpr
-     return <span class="fu">$</span> <span class="dt">RBinary</span> op a1 a2
+rExpr <span class="fu">=</span> <span class="kw">do</span>
+  a1 <span class="ot">&lt;-</span> aExpr
+  op <span class="ot">&lt;-</span> relation
+  a2 <span class="ot">&lt;-</span> aExpr
+  return (<span class="dt">RBinary</span> op a1 a2)
 
 <span class="ot">relation ::</span> <span class="dt">Parser</span> <span class="dt">RBinOp</span>
-relation <span class="fu">=</span>  (symbol <span class="st">&quot;&gt;&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Greater</span>)
-        <span class="fu">&lt;|&gt;</span> (symbol <span class="st">&quot;&lt;&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Less</span>)</code></pre></div>
+relation <span class="fu">=</span> (symbol <span class="st">&quot;&gt;&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Greater</span>)
+  <span class="fu">&lt;|&gt;</span> (symbol <span class="st">&quot;&lt;&quot;</span> <span class="fu">*&gt;</span> pure <span class="dt">Less</span>)</code></pre></div>
 <p>And that’s it. We have a quite simple parser which is able to parse a few statements and arithmetic/boolean expressions.</p>
 <h2 id="notes">Notes</h2>
 <p>If you want to experiment with the parser inside GHCi, these functions might be handy:</p>
 <ul>
-<li><p><code>parseTest p input</code> applies parser <code>p</code> on input <code>input</code> and prints results.</p></li>
-<li><p><code>parseFromFile p filename</code> applies parser <code>p</code> on contents of file <code>filename</code>.</p></li>
+<li><code>parseTest p input</code> applies parser <code>p</code> on input <code>input</code> and prints results.</li>
 </ul>
 <hr />
 <p>Original Parsec tutorial in Haskell Wiki:</p>
 <p><a href="https://wiki.haskell.org/Parsing_a_simple_imperative_language" class="uri">https://wiki.haskell.org/Parsing_a_simple_imperative_language</a></p>
 
+
+<hr />
+<p>
+  (Psst! Looking for source code for this tutorial?
+  It's <a href="https://github.com/mrkkrp/megaparsec-site/tree/master/tutorial-code/ParsingWhile.hs">here</a>.)
+</p>
 
 
             </div>
