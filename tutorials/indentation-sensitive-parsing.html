@@ -227,7 +227,7 @@ pComplexItem <span class="fu">=</span> L.indentBlock scn p
 <span class="ot">pLineFold ::</span> <span class="dt">Parser</span> <span class="dt">String</span>
 pLineFold <span class="fu">=</span> L.lineFold scn <span class="fu">$</span> \sc' <span class="ot">-&gt;</span>
   <span class="kw">let</span> ps <span class="fu">=</span> some (alphaNumChar <span class="fu">&lt;|&gt;</span> char <span class="ch">'-'</span>) <span class="ot">`sepBy1`</span> try sc'
-  <span class="kw">in</span> unwords <span class="fu">&lt;$&gt;</span> ps <span class="fu">&lt;*</span> scn</code></pre></div>
+  <span class="kw">in</span> unwords <span class="fu">&lt;$&gt;</span> ps <span class="fu">&lt;*</span> sc</code></pre></div>
 <p><code>lineFold</code> works like this: you give it space consumer that accepts newlines and it gives you special space consumer that you can use in callback to consume space between elements of line fold. An important thing here is that you should use normal space consumer at the end of line fold or your fold will have no end.</p>
 <p>Playing with the final version of our parser is left as an exercise for the reader — you can create “items” that consist of multiple words and as long as they are “line-folded” they will be parsed and concatenated with single space between them.</p>
 <h2 id="conclusion">Conclusion</h2>
