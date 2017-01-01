@@ -352,7 +352,7 @@ issue or pull request [here](https://github.com/mrkkrp/megaparsec-site).
 
 ## License
 
-Copyright © 2015–2016 Megaparsec contributors<br>
+Copyright © 2015–2017 Megaparsec contributors<br>
 Copyright © 2007 Paolo Martini<br>
 Copyright © 1999–2000 Daan Leijen
 

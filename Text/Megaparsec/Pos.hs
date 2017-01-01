@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Pos
--- Copyright   :  © 2015–2016 Megaparsec contributors
+-- Copyright   :  © 2015–2017 Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov@opmbx.org>
