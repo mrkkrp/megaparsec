@@ -23,6 +23,7 @@
     * [Megaparsec and Parsec](#megaparsec-and-parsec)
     * [Megaparsec and Parsers](#megaparsec-and-parsers)
 * [Related packages](#related-packages)
+* [Links to announcements](#links-to-announcements)
 * [Authors](#authors)
 * [Contribution](#contribution)
 * [License](#license)
@@ -333,6 +334,16 @@ The following packages are designed to be used with Megaparsec:
 * [`tagsoup-megaparsec`](https://hackage.haskell.org/package/tagsoup-megaparsec)
   — a library for easily using [TagSoup](https://hackage.haskell.org/package/tagsoup)
   as a token type in Megaparsec.
+
+## Links to announcements
+
+Here are some blog posts mainly announcing new features of the project and
+describing what sort of things are now possible:
+
+* [The original Megaparsec 4.0.0 announcement](https://notehub.org/w7037)
+* [Megaparsec 4 and 5](https://mrkkrp.github.io/posts/megaparsec-4-and-5.html)
+* [Announcing Megaparsec 5](https://mrkkrp.github.io/posts/announcing-megaparsec-5.html)
+* [Latest additions to Megaparsec](https://mrkkrp.github.io/posts/latest-additions-to-megaparsec.html)
 
 ## Authors
 
