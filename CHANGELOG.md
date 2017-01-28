@@ -14,6 +14,9 @@
 * `IndentNone` option of `indentBlock` now picks whitespace after it like
   its sisters `IndentMany` and `IndentSome` do, see #161.
 
+* The criterion benchmark was completely re-written and a new weigh
+  benchmark to analyze memory consumption was added.
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
