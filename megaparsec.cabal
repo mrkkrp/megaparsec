@@ -50,6 +50,10 @@ extra-doc-files:      AUTHORS.md
                     , CHANGELOG.md
                     , README.md
 
+source-repository head
+  type:               git
+  location:           https://github.com/mrkkrp/megaparsec.git
+
 flag dev
   description:        Turn on development settings.
   manual:             True
@@ -139,21 +143,30 @@ test-suite tests
 
   default-language:   Haskell2010
 
-benchmark benchmarks
+benchmark bench-speed
   main-is:            Main.hs
-  hs-source-dirs:     benchmarks
+  hs-source-dirs:     bench-speed
   type:               exitcode-stdio-1.0
+  build-depends:      base         >= 4.6  && < 5.0
+                    , criterion    >= 0.6.2.1 && < 1.2
+                    , deepseq      >= 1.3  && < 1.5
+                    , megaparsec   >= 5.1.2
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
-  build-depends:      base         >= 4.6  && < 5.0
-                    , bytestring   >= 0.10 && < 0.11
-                    , criterion    >= 0.6.2.1 && < 1.2
-                    , megaparsec   >= 5.1.2
-                    , text         >= 0.2  && < 1.3
   default-language:   Haskell2010
 
-source-repository head
-  type:               git
-  location:           https://github.com/mrkkrp/megaparsec.git
+benchmark bench-memory
+  main-is:            Main.hs
+  hs-source-dirs:     bench-memory
+  type:               exitcode-stdio-1.0
+  build-depends:      base         >= 4.6  && < 5.0
+                    , deepseq      >= 1.3  && < 1.5
+                    , megaparsec   >= 5.1.2
+                    , weigh        >= 0.0.3
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
