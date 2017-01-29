@@ -376,18 +376,6 @@ pAp m k = ParsecT $ \s cok cerr eok eerr ->
 instance (ErrorComponent e, Stream s) => A.Alternative (ParsecT e s m) where
   empty  = mzero
   (<|>)  = mplus
-  many p = reverse <$> manyAcc p
-
-manyAcc :: ParsecT e s m a -> ParsecT e s m [a]
-manyAcc p = ParsecT $ \s cok cerr eok _ ->
-  let errToHints c err _ = c (toHints err)
-      walk xs x s' _ =
-        unParser p s'
-        (seq xs $ walk $ x:xs)       -- consumed-OK
-        cerr                         -- consumed-error
-        (seq xs $ walk $ x:xs)       -- empty-OK
-        (errToHints $ cok (x:xs) s') -- empty-error
-  in unParser p s (walk []) cerr (walk []) (errToHints $ eok [] s)
 
 instance (ErrorComponent e, Stream s)
     => Monad (ParsecT e s m) where

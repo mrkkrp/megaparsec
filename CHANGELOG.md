@@ -17,6 +17,10 @@
 * The criterion benchmark was completely re-written and a new weigh
   benchmark to analyze memory consumption was added.
 
+* Performance improvements: `count` (marginal improvement, simpler
+  implementation), `count'` (considerable improvement), and `many`
+  (marginal improvement, simpler implementation).
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
