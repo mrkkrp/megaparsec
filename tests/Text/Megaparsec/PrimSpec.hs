@@ -46,7 +46,7 @@ import Data.Char (toUpper, chr)
 import Data.Foldable (asum, concat)
 import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Monoid
 import Data.Proxy
 import Data.Word (Word8)
@@ -139,24 +139,38 @@ spec = do
             ( st { statePos = apos }
             , Left (err apos $ utok h <> eeof) )
 
-    describe "token" $
-      it "updates position in stream correctly" $
-        property $ \st@State {..} span -> do
-          let p = pSpan span
-              h = head stateInput
-              (apos, npos) =
-                let z = NE.tail statePos
-                in (spanStart h :| z, spanEnd h :| z)
-          if | null stateInput -> runParser' p st `shouldBe`
-               ( st
-               , Left (err statePos $ ueof <> etok span) )
-             | spanBody h == spanBody span -> runParser' p st `shouldBe`
-               ( st { statePos = npos
-                    , stateInput = tail stateInput }
-               , Right span )
-             | otherwise -> runParser' p st `shouldBe`
-               ( st { statePos = apos}
-               , Left (err apos $ utok h <> etok span))
+    describe "token" $ do
+      context "when input stream is empty" $
+        it "signals correct parse error" $
+          property $ \st'@State {..} span -> do
+            let p = pSpan span
+                st = (st' :: State [Span]) { stateInput = [] }
+            runParser' p st `shouldBe`
+              ( st
+              , Left (err statePos $ ueof <> etok span) )
+      context "when head of stream matches" $
+        it "updates parser state correctly" $
+          property $ \st'@State {..} span -> do
+            let p = pSpan span
+                st = st' { stateInput = span : stateInput }
+                npos = spanEnd span :| NE.tail statePos
+            runParser' p st `shouldBe`
+              ( st { statePos             = npos
+                   , stateTokensProcessed = stateTokensProcessed + 1
+                   , stateInput           = stateInput }
+              , Right span )
+      context "when head of stream does not match" $ do
+        let checkIt s span =
+              let ms = listToMaybe s
+              in isJust ms && (spanBody <$> ms) /= Just (spanBody span)
+        it "signals correct parse error" $
+          property $ \st@State {..} span -> checkIt stateInput span ==> do
+            let p = pSpan span
+                h = head stateInput
+                apos = spanStart h :| NE.tail statePos
+            runParser' p st `shouldBe`
+              ( st { statePos = apos }
+              , Left (err apos $ utok h <> etok span))
 
     describe "tokens" $
       it "updates position is stream correctly" $
@@ -176,8 +190,9 @@ spec = do
                ( st
                , Left (err statePos $ ueof <> etoks ts) )
              | il == tl -> runParser' p st `shouldBe`
-               ( st { statePos   = npos
-                    , stateInput = drop (length ts) stateInput }
+               ( st { statePos             = npos
+                    , stateTokensProcessed = stateTokensProcessed + fromIntegral tl
+                    , stateInput           = drop (length ts) stateInput }
                , Right consumed )
              | otherwise -> runParser' p st `shouldBe`
                ( st { statePos = apos }
@@ -975,12 +990,25 @@ spec = do
 
   describe "combinators for manipulating parser state" $ do
 
+    describe "setInput and getInput" $
+      it "sets input and gets it back" $
+        property $ \s -> do
+          let p = do
+                st0 <- getInput
+                guard (null st0)
+                setInput s
+                result <- string s
+                st1 <- getInput
+                guard (null st1)
+                return result
+          prs p "" `shouldParse` s
+
     describe "setPosition and getPosition" $
       it "sets position and gets it back" $
         property $ \st pos -> do
           let p :: Parser SourcePos
               p = setPosition pos >> getPosition
-              f (State s (_:|xs) w) y = State s (y:|xs) w
+              f (State s (_:|xs) tp w) y = State s (y:|xs) tp w
           runParser' p st `shouldBe` (f st pos, Right pos)
 
     describe "pushPosition" $
@@ -1000,18 +1028,11 @@ spec = do
           fst (runParser' p st) `shouldBe`
             st { statePos = fromMaybe pos (snd (NE.uncons pos)) }
 
-    describe "setInput and getInput" $
-      it "sets input and gets it back" $
-        property $ \s -> do
-          let p = do
-                st0 <- getInput
-                guard (null st0)
-                setInput s
-                result <- string s
-                st1 <- getInput
-                guard (null st1)
-                return result
-          prs p "" `shouldParse` s
+    describe "setTokensProcessed and getTokensProcessed" $
+      it "sets number of processed toknes and gets it back" $
+        property $ \tp -> do
+          let p = setTokensProcessed tp >> getTokensProcessed
+          prs p "" `shouldParse` tp
 
     describe "setTabWidth and getTabWidth" $
       it "sets tab width and gets it back" $
@@ -1025,11 +1046,11 @@ spec = do
           let p :: MonadParsec Dec String m => m (State String)
               p = do
                 st <- getParserState
-                guard (st == State s posI defaultTabWidth)
+                guard (st == State s posI 0 defaultTabWidth)
                 setParserState s1
                 updateParserState (f s2)
                 liftM2 const getParserState (setInput "")
-              f (State s1' pos w) (State s2' _ _) = State (max s1' s2') pos w
+              f (State s1' pos tp w) (State s2' _ _ _) = State (max s1' s2') pos tp w
               s = ""
           grs p s (`shouldParse` f s2 s1)
 
@@ -1471,8 +1492,8 @@ emulateStrParsing
   :: State String
   -> String
   -> (State String, Either (ParseError Char Dec) String)
-emulateStrParsing st@(State i (pos:|z) t) s =
+emulateStrParsing st@(State i (pos:|z) tp w) s =
   if l == length s
-    then (State (drop l i) (updatePosString t pos s :| z) t, Right s)
+    then (State (drop l i) (updatePosString w pos s :| z) (tp + fromIntegral l) w, Right s)
     else (st, Left $ err (pos:|z) (etoks s <> utoks (take (l + 1) i)))
   where l = length (takeWhile id $ zipWith (==) s i)

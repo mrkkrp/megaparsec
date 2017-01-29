@@ -44,17 +44,19 @@ module Text.Megaparsec.Prim
   , setPosition
   , pushPosition
   , popPosition
+  , getTokensProcessed
+  , setTokensProcessed
   , getTabWidth
   , setTabWidth
   , setParserState
     -- * Running parser
+  , parse
+  , parseMaybe
+  , parseTest
   , runParser
   , runParser'
   , runParserT
   , runParserT'
-  , parse
-  , parseMaybe
-  , parseTest
     -- * Debugging
   , dbg )
 where
@@ -70,6 +72,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Identity
 import Data.Data (Data)
 import Data.Foldable (foldl')
+import Data.List (genericTake)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid hiding ((<>))
 import Data.Proxy
@@ -101,6 +104,7 @@ import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
+import Data.Word (Word)
 #endif
 
 ----------------------------------------------------------------------------
@@ -109,10 +113,17 @@ import Control.Applicative
 -- | This is Megaparsec's state, it's parametrized over stream type @s@.
 
 data State s = State
-  { stateInput    :: s
-  , statePos      :: NonEmpty SourcePos
-  , stateTabWidth :: Pos }
-  deriving (Show, Eq, Data, Typeable, Generic)
+  { stateInput :: s
+    -- ^ Current input (already processed input is removed from the stream)
+  , statePos :: NonEmpty SourcePos
+    -- ^ Current position (column + line number) with support for include files
+  , stateTokensProcessed :: {-# UNPACK #-} !Word
+    -- ^ Number of processed tokens so far
+    --
+    -- @since 5.2.0
+  , stateTabWidth :: Pos
+    -- ^ Tab width to use
+  } deriving (Show, Eq, Data, Typeable, Generic)
 
 instance NFData s => NFData (State s)
 
@@ -125,6 +136,7 @@ instance Arbitrary a => Arbitrary (State a) where
 #else
       arbitrary
 #endif
+    <*> choose (1, 10000)
     <*> (unsafePos <$> choose (1, 20))
 
 -- | All information available after parsing. This includes consumption of
@@ -404,7 +416,7 @@ instance (ErrorComponent e, Stream s)
   fail = pFail
 
 pFail :: ErrorComponent e => String -> ParsecT e s m a
-pFail msg = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+pFail msg = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos E.empty E.empty d) s
   where d = E.singleton (representFail msg)
 {-# INLINE pFail #-}
@@ -458,7 +470,7 @@ instance (ErrorComponent e, Stream s)
   mplus = pPlus
 
 pZero :: ParsecT e s m a
-pZero = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+pZero = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos E.empty E.empty E.empty) s
 {-# INLINE pZero #-}
 
@@ -475,12 +487,13 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
 
--- | From two states, return the one with greater textual position. If the
--- positions are equal, prefer the latter state.
+-- | From two states, return the one with greater number of processed
+-- tokens. If the numbers of processed tokens are equal, prefer the latter
+-- state.
 
 longestMatch :: State s -> State s -> State s
-longestMatch s1@(State _ pos1 _) s2@(State _ pos2 _) =
-  case pos1 `compare` pos2 of
+longestMatch s1@(State _ _ tp1 _) s2@(State _ _ tp2 _) =
+  case tp1 `compare` tp2 of
     LT -> s2
     EQ -> s2
     GT -> s1
@@ -694,7 +707,7 @@ pFailure
   -> Set (ErrorItem (Token s))
   -> Set e
   -> ParsecT e s m a
-pFailure us ps xs = ParsecT $ \s@(State _ pos _) _ _ _ eerr ->
+pFailure us ps xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos us ps xs) s
 {-# INLINE pFailure #-}
 
@@ -722,7 +735,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 {-# INLINE pLookAhead #-}
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
-pNotFollowedBy p = ParsecT $ \s@(State input pos _) _ _ eok eerr ->
+pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (uncons input)
       unexpect u = ParseError pos (E.singleton u) E.empty E.empty
       cok' _ _ _ = eerr (unexpect what) s
@@ -762,7 +775,7 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
 {-# INLINE pObserving #-}
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
-pEof = ParsecT $ \s@(State input (pos:|z) w) _ _ eok eerr ->
+pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
   case uncons input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
@@ -772,7 +785,7 @@ pEof = ParsecT $ \s@(State input (pos:|z) w) _ _ eok eerr ->
           , errorUnexpected = (E.singleton . Tokens . nes) x
           , errorExpected   = E.singleton EndOfInput
           , errorCustom     = E.empty }
-          (State input (apos:|z) w)
+          (State input (apos:|z) tp w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
@@ -781,7 +794,7 @@ pToken :: forall e s m a. Stream s
                         , Set e ) a)
   -> Maybe (Token s)
   -> ParsecT e s m a
-pToken test mtoken = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
+pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   case uncons input of
     Nothing -> eerr ParseError
       { errorPos        = pos:|z
@@ -794,9 +807,9 @@ pToken test mtoken = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
         Left (us, ps, xs) ->
           apos `seq` eerr
             (ParseError (apos:|z) us ps xs)
-            (State input (apos:|z) w)
+            (State input (apos:|z) tp w)
         Right x ->
-          let newstate = State cs (npos:|z) w
+          let newstate = State cs (npos:|z) (tp + 1) w
           in npos `seq` cok x newstate mempty
 {-# INLINE pToken #-}
 
@@ -805,7 +818,7 @@ pTokens :: forall e s m. Stream s
   -> [Token s]
   -> ParsecT e s m [Token s]
 pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens test tts = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
+pTokens test tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   let updatePos' = updatePos (Proxy :: Proxy s) w
       toTokens   = Tokens . NE.fromList . reverse
       unexpect pos' u = ParseError
@@ -815,20 +828,23 @@ pTokens test tts = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
         , errorCustom     = E.empty }
       go _ [] is rs =
         let ris   = reverse is
-            !npos = foldl' (\p t -> snd (updatePos' p t)) pos ris
-        in cok ris (State rs (npos:|z) w) mempty
+            (npos, tp') = foldl'
+              (\(p, n) t -> (snd (updatePos' p t), n + 1))
+              (pos, tp)
+              ris
+        in cok ris (State rs (npos:|z) tp' w) mempty
       go apos (t:ts) is rs =
         case uncons rs of
           Nothing ->
             apos `seq` eerr
               (unexpect (apos:|z) (toTokens is))
-              (State input (apos:|z) w)
+              (State input (apos:|z) tp w)
           Just (x,xs) ->
             if test t x
               then go apos ts (x:is) xs
               else apos `seq` eerr
                      (unexpect (apos:|z) . toTokens $ x:is)
-                     (State input (apos:|z) w)
+                     (State input (apos:|z) tp w)
   in case uncons input of
        Nothing ->
          eerr (unexpect (pos:|z) EndOfInput) s
@@ -839,7 +855,7 @@ pTokens test tts = ParsecT $ \s@(State input (pos:|z) w) cok _ _ eerr ->
               then go apos ts [x] xs
               else apos `seq` eerr
                      (unexpect (apos:|z) $ Tokens (nes x))
-                     (State input (apos:|z) w)
+                     (State input (apos:|z) tp w)
 {-# INLINE pTokens #-}
 
 pGetParserState :: ParsecT e s m (State s)
@@ -882,7 +898,7 @@ getInput = stateInput <$> getParserState
 -- 'setInput' functions can for example be used to deal with include files.
 
 setInput :: MonadParsec e s m => s -> m ()
-setInput s = updateParserState (\(State _ pos w) -> State s pos w)
+setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 
 -- | Return the current source position.
 --
@@ -896,8 +912,8 @@ getPosition = NE.head . statePos <$> getParserState
 -- See also: 'getPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
 
 setPosition :: MonadParsec e s m => SourcePos -> m ()
-setPosition pos = updateParserState $ \(State s (_:|z) w) ->
-  State s (pos:|z) w
+setPosition pos = updateParserState $ \(State s (_:|z) tp w) ->
+  State s (pos:|z) tp w
 
 -- | Push given position into stack of positions and continue parsing
 -- working with this position. Useful for working with include files and the
@@ -908,8 +924,8 @@ setPosition pos = updateParserState $ \(State s (_:|z) w) ->
 -- @since 5.0.0
 
 pushPosition :: MonadParsec e s m => SourcePos -> m ()
-pushPosition pos = updateParserState $ \(State s z w) ->
-  State s (NE.cons pos z) w
+pushPosition pos = updateParserState $ \(State s z tp w) ->
+  State s (NE.cons pos z) tp w
 
 -- | Pop a position from stack of positions unless it only contains one
 -- element (in that case stack of positions remains the same). This is how
@@ -920,10 +936,25 @@ pushPosition pos = updateParserState $ \(State s z w) ->
 -- @since 5.0.0
 
 popPosition :: MonadParsec e s m => m ()
-popPosition = updateParserState $ \(State s z w) ->
+popPosition = updateParserState $ \(State s z tp w) ->
   case snd (NE.uncons z) of
-    Nothing -> State s z w
-    Just z' -> State s z' w
+    Nothing -> State s z  tp w
+    Just z' -> State s z' tp w
+
+-- | Get number of tokens processed so far.
+--
+-- @since 5.2.0
+
+getTokensProcessed :: MonadParsec e s m => m Word
+getTokensProcessed = stateTokensProcessed <$> getParserState
+
+-- | Set number of tokens processed so far.
+--
+-- @since 5.2.0
+
+setTokensProcessed :: MonadParsec e s m => Word -> m ()
+setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
+  State s pos tp w
 
 -- | Return tab width. Default tab width is equal to 'defaultTabWidth'. You
 -- can set different tab width with help of 'setTabWidth'.
@@ -935,7 +966,8 @@ getTabWidth = stateTabWidth <$> getParserState
 -- 'defaultTabWidth' will be used.
 
 setTabWidth :: MonadParsec e s m => Pos -> m ()
-setTabWidth w = updateParserState (\(State s pos _) -> State s pos w)
+setTabWidth w = updateParserState $ \(State s pos tp _) ->
+  State s pos tp w
 
 -- | @setParserState st@ set the full parser state to @st@.
 
@@ -1052,11 +1084,6 @@ runParserT' p s = do
     OK    x -> return (s', Right x)
     Error e -> return (s', Left  e)
 
--- | Given name of source file and input construct initial state for parser.
-
-initialState :: String -> s -> State s
-initialState name s = State s (initialPos name :| []) defaultTabWidth
-
 -- | Low-level unpacking of the 'ParsecT' type. 'runParserT' and 'runParser'
 -- are built upon this.
 
@@ -1069,6 +1096,15 @@ runParsecT p s = unParser p s cok cerr eok eerr
         cerr err s' = return $ Reply s' Consumed (Error err)
         eok a s' _  = return $ Reply s' Virgin   (OK a)
         eerr err s' = return $ Reply s' Virgin   (Error err)
+
+-- | Given name of source file and input construct initial state for parser.
+
+initialState :: String -> s -> State s
+initialState name s = State
+  { stateInput           = s
+  , statePos             = initialPos name :| []
+  , stateTokensProcessed = 0
+  , stateTabWidth        = defaultTabWidth }
 
 ----------------------------------------------------------------------------
 -- Instances of 'MonadParsec'
@@ -1250,12 +1286,6 @@ fixs' _ (Right (b,s,w)) = (Right b, s, w)
 --     * @EOK@ — “empty OK”. The parser succeeded without consuming input.
 --     * @EERR@ — “empty error”. The parser failed without consuming input.
 --
--- Due to how input streams are represented (see 'Stream'), we need to
--- traverse entire input twice (calculating length before and after @p@
--- parser) to understand what part of input was matched and consumed. This
--- makes this combinator very inefficient, be sure to remove it from your
--- code once you have finished with debugging.
---
 -- Finally, it's not possible to lift this function into some monad
 -- transformers without introducing surprising behavior (e.g. unexpected
 -- state backtracking) or adding otherwise redundant constraints (e.g.
@@ -1328,20 +1358,19 @@ showStream ts =
       let (h, r) = splitAt 40 (showTokens ne)
       in if null r then h else h ++ " <…>"
 
--- | Calculate difference in length of two input streams from given parser
--- 'State's.
+-- | Calculate number of consumed tokens given 'State' of parser before and
+-- after parsing.
 
-streamDelta :: Stream s
-  => State s           -- ^ State of parser before consumption
+streamDelta
+  :: State s           -- ^ State of parser before consumption
   -> State s           -- ^ State of parser after consumption
-  -> Int               -- ^ Number of consumed tokens
-streamDelta s0 s1 = streamLength (stateInput s0) - streamLength (stateInput s1)
-  where streamLength s = length (unfold s)
+  -> Word              -- ^ Number of consumed tokens
+streamDelta s0 s1 = stateTokensProcessed s1 - stateTokensProcessed s0
 
 -- | Extract given number of tokens from the stream.
 
-streamTake :: Stream s => Int -> s -> [Token s]
-streamTake n s = take n (unfold s)
+streamTake :: Stream s => Word -> s -> [Token s]
+streamTake n s = genericTake n (unfold s)
 
 -- | Custom version of 'unfold' that matches signature of 'uncons' method in
 -- 'Stream' type class we use.

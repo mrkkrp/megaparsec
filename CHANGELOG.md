@@ -21,6 +21,13 @@
   implementation), `count'` (considerable improvement), and `many`
   (marginal improvement, simpler implementation).
 
+* Added `stateTokensProcessed` field to parser state and helper functions
+  `getTokensProcessed` and `setTokensProcessed`. The field contains number
+  of processed tokens so far. This allows, for example, create wrappers that
+  return just parsed fragment of input stream alongside with result of
+  parsing. (It was possible before, but very inefficient because it required
+  traversing entire input stream twice.)
+
 ## Megaparsec 5.1.2
 
 * Stopped using property tests with `dbg` helper to avoid flood of debugging
