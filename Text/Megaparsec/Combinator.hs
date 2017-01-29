@@ -12,7 +12,8 @@
 -- Commonly used generic combinators. Note that all combinators works with
 -- any 'Alternative' instances.
 
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP          #-}
 
 module Text.Megaparsec.Combinator
   ( between
@@ -63,9 +64,7 @@ choice = asum
 -- values.
 
 count :: Applicative m => Int -> m a -> m [a]
-count n p
-  | n <= 0    = pure []
-  | otherwise = sequenceA (replicate n p)
+count n p = sequenceA (replicate n p)
 {-# INLINE count #-}
 
 -- | @count\' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
@@ -76,12 +75,15 @@ count n p
 -- as if it were equal to zero.
 
 count' :: Alternative m => Int -> Int -> m a -> m [a]
-count' m n p
-  | n <= 0 || m > n = pure []
-  | m > 0           = (:) <$> p <*> count' (pred m) (pred n) p
-  | otherwise       =
-      let f t ts = maybe [] (:ts) t
-      in f <$> optional p <*> count' 0 (pred n) p
+count' m' n' p = go m' n'
+  where
+    go !m !n
+      | n <= 0 || m > n = pure []
+      | m > 0           = (:) <$> p <*> go (m - 1) (n - 1)
+      | otherwise       =
+          let f t ts = maybe [] (:ts) t
+          in f <$> optional p <*> go 0 (pred n)
+{-# INLINE count' #-}
 
 -- | Combine two alternatives.
 --
