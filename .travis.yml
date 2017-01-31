@@ -48,7 +48,7 @@ after_script:
  - export PATH=~/.cabal/bin:$PATH
  - case "$GHCVER" in
     "7.6.3") true ;;
-    *) hpc-coveralls --coverage-mode=StrictlyFullLines --exclude-dir=tests --exclude-dir=benchmarks tests ;;
+    *) hpc-coveralls --coverage-mode=StrictlyFullLines --exclude-dir=bench-speed --exclude-dir=bench-memory tests ;;
    esac
 
 notifications:
