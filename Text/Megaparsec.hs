@@ -53,13 +53,13 @@ module Text.Megaparsec
   ( -- * Running parser
     Parsec
   , ParsecT
+  , parse
+  , parseMaybe
+  , parseTest
   , runParser
   , runParser'
   , runParserT
   , runParserT'
-  , parse
-  , parseMaybe
-  , parseTest
     -- * Combinators
   , (A.<|>)
   -- $assocbo
@@ -160,6 +160,8 @@ module Text.Megaparsec
   , setPosition
   , pushPosition
   , popPosition
+  , getTokensProcessed
+  , setTokensProcessed
   , getTabWidth
   , setTabWidth
   , getParserState
