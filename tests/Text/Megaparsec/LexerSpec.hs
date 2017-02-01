@@ -174,7 +174,7 @@ spec = do
              | col2 <= col1 -> prs p s `shouldFailWith`
                err (posN (getIndent l2 + g 2) s) (ii GT col1 col2)
              | col3 == col2 -> prs p s `shouldFailWith`
-               err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> etoks sblc)
+               err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> etoks sblc <> eeof)
              | col3 <= col0 -> prs p s `shouldFailWith`
                err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> eeof)
              | col3 < col1 -> prs p s `shouldFailWith`
@@ -185,7 +185,7 @@ spec = do
                err (posN (getIndent l4 + g 4) s) (ii GT col3 col4)
              | otherwise -> prs p s `shouldParse`
                (sbla, [(sblb, [sblc]), (sblb, [sblc])])
-    it "IndentMany works as intended" $
+    it "IndentMany works as intended (newline at the end)" $
       property $ forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpaceNl) $ \s -> do
         let p    = lvla
             lvla = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
@@ -194,6 +194,24 @@ spec = do
             l x  = return . (x,)
         prs  p s `shouldParse` (sbla, [])
         prs' p s `succeedsLeaving` ""
+    it "IndentMany works as intended (eof)" $
+      property $ forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpace) $ \s -> do
+        let p    = lvla
+            lvla = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
+            lvlb = b sblb
+            b    = symbol sc
+            l x  = return . (x,)
+        prs  p s `shouldParse` (sbla, [])
+        prs' p s `succeedsLeaving` ""
+    it "IndentMany works as intended (whitespace aligned precisely to the ref level)" $ do
+      let p    = lvla
+          lvla = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
+          lvlb = b sblb
+          b    = symbol sc
+          l x  = return . (x,)
+          s    = "aaa\n bbb\n "
+      prs  p s `shouldParse` (sbla, [sblb])
+      prs' p s `succeedsLeaving` ""
     it "works with many and both IndentMany and IndentNone" $
       property $ forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpaceNl) $ \s -> do
         let p1   = indentBlock scn $ IndentMany Nothing (l sbla) lvlb <$ b sbla
