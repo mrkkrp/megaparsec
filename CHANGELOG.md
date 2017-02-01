@@ -11,9 +11,6 @@
   responsibility), so that `error` case in `many` really does not solve the
   problem, it was just a little ah-hoc guard we got from Parsec's past.
 
-* `IndentNone` option of `indentBlock` now picks whitespace after it like
-  its sisters `IndentMany` and `IndentSome` do, see #161.
-
 * The criterion benchmark was completely re-written and a new weigh
   benchmark to analyze memory consumption was added.
 
@@ -27,6 +24,13 @@
   return just parsed fragment of input stream alongside with result of
   parsing. (It was possible before, but very inefficient because it required
   traversing entire input stream twice.)
+
+* `IndentNone` option of `indentBlock` now picks whitespace after it like
+  its sisters `IndentMany` and `IndentSome` do, see #161.
+
+* Fixed a couple of quite subtle bugs in `indentBlock` introduced by
+  changing behaviour of `skipLineComment` in version 5.1.0. See #178 for
+  more information.
 
 ## Megaparsec 5.1.2
 

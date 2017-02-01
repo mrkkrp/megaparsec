@@ -20,6 +20,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiWayIf       #-}
 {-# LANGUAGE TypeFamilies     #-}
 
 module Text.Megaparsec.Lexer
@@ -291,13 +292,17 @@ indentBlock sc r = do
   case a of
     IndentNone x -> sc *> return x
     IndentMany indent f p -> do
-      mlvl <- optional . try $ C.eol *> indentGuard sc GT ref
-      case mlvl of
-        Nothing  -> sc *> f []
-        Just lvl -> indentedItems ref (fromMaybe lvl indent) sc p >>= f
+      mlvl <- (optional . try) (C.eol *> indentGuard sc GT ref)
+      done <- isJust <$> optional eof
+      case (mlvl, done) of
+        (Just lvl, False) ->
+          indentedItems ref (fromMaybe lvl indent) sc p >>= f
+        _ -> sc *> f []
     IndentSome indent f p -> do
       lvl <- C.eol *> indentGuard sc GT ref
-      indentedItems ref (fromMaybe lvl indent) sc p >>= f
+      x   <- p
+      xs  <- indentedItems ref (fromMaybe lvl indent) sc p
+      f (x:xs)
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of public API.
@@ -310,15 +315,15 @@ indentedItems :: MonadParsec e s m
   -> m [b]
 indentedItems ref lvl sc p = go
   where
-    go = (sc *> indentLevel) >>= re
-    re pos
-      | pos <= ref = return []
-      | pos == lvl = (:) <$> p <*> go
-      | otherwise  = do
-          done <- isJust <$> optional eof
-          if done
-            then return []
-            else incorrectIndent EQ lvl pos
+    go = do
+      sc
+      pos  <- indentLevel
+      done <- isJust <$> optional eof
+      if done
+        then return []
+        else if | pos <= ref -> return []
+                | pos == lvl -> (:) <$> p <*> go
+                | otherwise  -> incorrectIndent EQ lvl pos
 
 -- | Create a parser that supports line-folding. The first argument is used
 -- to consume white space between components of line fold, thus it /must/
