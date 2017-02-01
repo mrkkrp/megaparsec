@@ -4,12 +4,10 @@ sudo: false
 
 matrix:
   include:
-    - env: CABALVER=1.16 GHCVER=7.6.3
-      addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.3], sources: [hvr-ghc]}}
-    - env: CABALVER=1.18 GHCVER=7.8.4
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4], sources: [hvr-ghc]}}
-    - env: CABALVER=1.22 GHCVER=7.10.3
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3],sources: [hvr-ghc]}}
+    - env: CABALVER=1.24 GHCVER=7.8.4
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.8.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.24 GHCVER=7.10.3
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.10.3],sources: [hvr-ghc]}}
     - env: CABALVER=1.24 GHCVER=8.0.2
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2], sources: [hvr-ghc]}}
     - env: CABALVER=head GHCVER=head
@@ -28,28 +26,20 @@ install:
  - cabal install --only-dependencies --enable-tests
 
 script:
- - case "$CABALVER" in
-    "1.16") cabal configure --enable-tests -v2 -f dev ;;
-    "1.18") cabal configure --enable-tests --enable-library-coverage -v2 -f dev ;;
-    *)      cabal configure --enable-tests --enable-coverage -v2 -f dev ;;
-   esac
+ - cabal configure --enable-tests --enable-coverage -v2 -f dev
  - travis_wait 60 cabal build
- - case "$GHCVER" in
-    "7.6.3") true ;;
-    *)       cabal test --show-details=always --test-option=--qc-max-success=1000 ;;
-   esac
+ - cabal test --show-details=always --test-option=--qc-max-success=1000
  - cabal sdist
- - if [ "$CABALVER" != "1.16" ]; then
-    cabal haddock | grep "100%" | wc -l | grep "14";
-   fi
+ - cabal haddock | grep "100%" | wc -l | grep "14"
 
 after_script:
  - cabal install hpc-coveralls
  - export PATH=~/.cabal/bin:$PATH
- - case "$GHCVER" in
-    "7.6.3") true ;;
-    *) hpc-coveralls --coverage-mode=StrictlyFullLines --exclude-dir=bench-speed --exclude-dir=bench-memory --exclude-dir=tests tests ;;
-   esac
+ - hpc-coveralls --coverage-mode=StrictlyFullLines
+                 --exclude-dir=bench-memory
+                 --exclude-dir=bench-speed
+                 --exclude-dir=tests
+                 tests
 
 notifications:
   email: false
