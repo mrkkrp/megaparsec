@@ -70,6 +70,7 @@ module Text.Megaparsec
   , A.optional
   -- $optional
   , unexpected
+  , match
   , failure
   , (<?>)
   , label

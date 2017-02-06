@@ -37,6 +37,7 @@ module Text.Megaparsec.Prim
   , MonadParsec (..)
   , (<?>)
   , unexpected
+  , match
     -- * Parser state combinators
   , getInput
   , setInput
@@ -879,6 +880,20 @@ infix 0 <?>
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (E.singleton item) E.empty E.empty
 {-# INLINE unexpected #-}
+
+-- | Return both the result of a parse and the list of tokens that were
+-- consumed during parsing. This relies on the change of the
+-- 'stateTokensProcessed' value to evaluate how many tokens were consumed.
+--
+-- @since 5.3.0
+
+match :: MonadParsec e s m => m a -> m ([Token s], a)
+match p = do
+  tp  <- getTokensProcessed
+  s   <- getInput
+  r   <- p
+  tp' <- getTokensProcessed
+  return (streamTake (tp' - tp) s, r)
 
 -- | Make a singleton non-empty list from a value.
 
