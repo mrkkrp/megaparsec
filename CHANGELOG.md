@@ -1,3 +1,8 @@
+## Megaparsec 5.3.0
+
+* Added the `match` combinator that allows to get collection of consumed
+  tokens along with result of parsing.
+
 ## Megaparsec 5.2.0
 
 * Added `MonadParsec` instance for `RWST`.

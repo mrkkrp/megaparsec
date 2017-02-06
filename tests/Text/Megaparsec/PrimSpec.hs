@@ -518,6 +518,13 @@ spec = do
             , errorExpected   = E.empty
             , errorCustom     = E.empty })
 
+    describe "match" $
+      it "return consumed tokens along with the result" $
+        property $ \str -> do
+          let p  = match (string str)
+          prs  p str `shouldParse`     (str,str)
+          prs' p str `succeedsLeaving` ""
+
     describe "failure" $
       it "signals correct parse error" $
         property $ \us ps xs -> do
