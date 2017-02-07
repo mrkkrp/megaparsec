@@ -3,6 +3,8 @@
 * Added the `match` combinator that allows to get collection of consumed
   tokens along with result of parsing.
 
+* Dropped support for GHC 7.6.
+
 ## Megaparsec 5.2.0
 
 * Added `MonadParsec` instance for `RWST`.
