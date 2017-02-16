@@ -19,9 +19,11 @@
 * [Tutorials](#tutorials)
 * [Performance](#performance)
 * [Comparison with other solutions](#comparison-with-other-solutions)
-    * [Megaparsec and Attoparsec](#megaparsec-and-attoparsec)
-    * [Megaparsec and Parsec](#megaparsec-and-parsec)
-    * [Megaparsec and Parsers](#megaparsec-and-parsers)
+    * [Megaparsec vs Attoparsec](#megaparsec-vs-attoparsec)
+    * [Megaparsec vs Parsec](#megaparsec-vs-parsec)
+    * [Megaparsec vs Trifecta](#megaparsec-vs-trifecta)
+    * [Megaparsec vs Earley](#megaparsec-vs-earley)
+    * [Megaparsec vs Parsers](#megaparsec-vs-parsers)
 * [Related packages](#related-packages)
 * [Links to announcements](#links-to-announcements)
 * [Authors](#authors)
@@ -230,7 +232,7 @@ at [these instructions](https://mrkkrp.github.io/megaparsec/tutorials/writing-a-
 There are quite a few libraries that can be used for parsing in Haskell,
 let's compare Megaparsec with some of them.
 
-### Megaparsec and Attoparsec
+### Megaparsec vs Attoparsec
 
 [Attoparsec](https://github.com/bos/attoparsec) is another prominent Haskell
 library for parsing. Although the both libraries deal with parsing, it's
@@ -244,11 +246,13 @@ usually easy to decide which you will need in particular project:
   texts. It has better error messages and it's implemented as monad
   transformer.
 
+* Megaparsec is better supported.
+
 So, if you work with something human-readable where size of input data is
 usually not huge, just go with Megaparsec, otherwise Attoparsec may be a
 better choice.
 
-### Megaparsec and Parsec
+### Megaparsec vs Parsec
 
 Since Megaparsec is a fork of Parsec, it's necessary to list main
 differences between the two libraries:
@@ -284,6 +288,8 @@ differences between the two libraries:
 
 * Megaparsec is faster.
 
+* Megaparsec is better supported.
+
 If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
 Also see [this original announcement](https://notehub.org/w7037) for another
 comparison.
@@ -297,21 +303,74 @@ Megaparsec from now on because it solves many problems of original Parsec
 project. If you think you still have a reason to use original Parsec, open
 an issue.
 
-### Megaparsec and Parsers
+### Megaparsec vs Trifecta
+
+[Trifecta](https://hackage.haskell.org/package/trifecta) is another Haskell
+library featuring good error messages. Like some other projects of Edward
+Kmett, it's probably good, but also poorly documented, arcane, and has
+unfixed [bugs and flaws](https://github.com/ekmett/trifecta/issues) that
+Edward is too busy to fix (simply a fact, no offense intended). Other
+reasons one may question choice of Trifecta is his/her parsing library:
+
+* Complicated, doesn't have any tutorials available, and documentation
+  doesn't help at all.
+
+* Trifecta can parse `String` and `ByteString` natively, but not `Text`.
+
+* Trifecta's error messages may be different with their own features, but
+  certainly not as flexible as Megaparsec's error messages in the latest
+  versions.
+
+* Depends on `lens`. This means you'll pull in half of Hackage as transitive
+  dependencies. Also if you're not into `lens` and would like to keep your
+  code “vanilla”, you may not like the API.
+
+* Megaparsec is better supported.
+
+### Megaparsec vs Earley
+
+[Earley](https://hackage.haskell.org/package/Earley) is a newer library that
+allows to safely (it your code compiles, then it probably works) parse
+context-free grammars (CFG). Megaparsec is a lower-level library compared to
+Early, but there are still enough reasons to choose it over Early:
+
+* Megaparsec is faster.
+
+* Your grammar may be not context free or you may want introduce some sort
+  of state to the parsing process. Almost all non-trivial parsers require
+  something of this sort. Even if your grammar is context-free, state may
+  allow to add some additional niceties. Early does not support that.
+
+* Megaparsec's error messages are more flexible allowing to include
+  arbitrary data in them, return multiple error messages, mark regions that
+  affect any error that happens in those regions, etc.
+
+* The approach Early uses differs from conventional monadic parsing. If you
+  work not alone, chances people you work with, especially beginners will be
+  much more productive with libraries taking more traditional path to
+  parsing like Megaparsec.
+
+* Megaparsec is better supported.
+
+IOW, Megaparsec is less safe but also much more powerful.
+
+### Megaparsec vs Parsers
 
 There is [Parsers](https://hackage.haskell.org/package/parsers) package,
 which is great. You can use it with Megaparsec or Parsec, but consider the
 following:
 
-* It depends on *both* Attoparsec and Parsec, which means you always grab
-  useless code installing it. This is ridiculous, by the way, because this
-  package is supposed to be useful for parser builders, so they can write
-  basic core functionality and get the rest “for free”. But with these
-  useful functions you get two more parsers as dependencies.
+* It depends on Attoparsec, Parsec, and Trifecta, which means you always
+  grab half of Hackage as transitive dependencies by using it. This is
+  ridiculous, by the way, because this package is supposed to be useful for
+  parser builders, so they can write basic core functionality and get the
+  rest “for free”.
 
 * It currently has a bug in definition of `lookAhead` for various monad
   transformers like `StateT`, etc. which is visible when you create
   backtracking state via monad stack, not via built-in features.
+
+* Megaparsec is better supported.
 
 We intended to use Parsers library in Megaparsec at some point, but aside
 from already mentioned flaws the library has different conventions for
