@@ -332,20 +332,20 @@ reasons one may question choice of Trifecta is his/her parsing library:
 [Earley](https://hackage.haskell.org/package/Earley) is a newer library that
 allows to safely (it your code compiles, then it probably works) parse
 context-free grammars (CFG). Megaparsec is a lower-level library compared to
-Early, but there are still enough reasons to choose it over Early:
+Earley, but there are still enough reasons to choose it over Earley:
 
 * Megaparsec is faster.
 
 * Your grammar may be not context free or you may want introduce some sort
   of state to the parsing process. Almost all non-trivial parsers require
   something of this sort. Even if your grammar is context-free, state may
-  allow to add some additional niceties. Early does not support that.
+  allow to add some additional niceties. Earley does not support that.
 
 * Megaparsec's error messages are more flexible allowing to include
   arbitrary data in them, return multiple error messages, mark regions that
   affect any error that happens in those regions, etc.
 
-* The approach Early uses differs from conventional monadic parsing. If you
+* The approach Earley uses differs from conventional monadic parsing. If you
   work not alone, chances people you work with, especially beginners will be
   much more productive with libraries taking more traditional path to
   parsing like Megaparsec.
