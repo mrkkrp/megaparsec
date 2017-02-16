@@ -556,7 +556,7 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   --
   -- What happens here? First parser consumes “le” and fails (because it
   -- doesn't see a “t”). The second parser, however, isn't tried, since the
-  -- first parser has already consumed some input! @try@ fixes this behavior
+  -- first parser has already consumed some input! 'try' fixes this behavior
   -- and allows backtracking to work:
   --
   -- >>> parseTest (try (string "let") <|> string "lexical") "lexical"
@@ -570,10 +570,11 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   -- unexpected "le"
   -- expecting "let" or "lexical"
   --
-  -- Please note that as of Megaparsec 4.4.0, 'string' backtracks
+  -- __Please note__ that as of Megaparsec 4.4.0, 'string' backtracks
   -- automatically (see 'tokens'), so it does not need 'try'. However, the
   -- examples above demonstrate the idea behind 'try' so well that it was
-  -- decided to keep them.
+  -- decided to keep them. You still need to use 'try' when your
+  -- alternatives are complex, composite parsers.
 
   try :: m a -> m a
 
