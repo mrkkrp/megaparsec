@@ -253,7 +253,11 @@ class Ord (Token s) => Stream s where
   -- | Update position in stream given tab width, current position, and
   -- current token. The result is a tuple where the first element will be
   -- used to report parse errors for current token, while the second element
-  -- is the incremented position that will be stored in parser's state.
+  -- is the incremented position that will be stored in parser's state. The
+  -- stored (incremented) position is used whenever position can't
+  -- be\/shouldn't be updated by consuming a token. For example, when using
+  -- 'failure', we don't grab a new token (we need to fail right were we are
+  -- now), so error position will be taken from parser's state.
   --
   -- When you work with streams where elements do not contain information
   -- about their position in input, result is usually consists of the third
