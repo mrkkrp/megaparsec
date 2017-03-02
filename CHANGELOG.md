@@ -3,6 +3,9 @@
 * Added the `match` combinator that allows to get collection of consumed
   tokens along with result of parsing.
 
+* Added the `region` combinator which allows to process parse errors
+  happening when its argument parser is run.
+
 * Dropped support for GHC 7.6.
 
 ## Megaparsec 5.2.0
