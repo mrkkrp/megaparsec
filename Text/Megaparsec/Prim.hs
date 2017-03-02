@@ -903,7 +903,9 @@ match p = do
   return (streamTake (tp' - tp) s, r)
 
 -- | Specify how to process 'ParseError's that happen inside of this
--- wrapper.
+-- wrapper. As a side effect of current implementation changing 'errorPos'
+-- with this combinator will also change the final 'statePos' in parser
+-- state.
 --
 -- @since 5.3.0
 

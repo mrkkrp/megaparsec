@@ -44,6 +44,7 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Char (toUpper, chr)
 import Data.Foldable (asum, concat)
+import Data.Function (on)
 import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
@@ -70,6 +71,7 @@ import qualified Control.Monad.Writer.Strict as S
 import qualified Data.ByteString.Char8       as B
 import qualified Data.ByteString.Lazy.Char8  as BL
 import qualified Data.List.NonEmpty          as NE
+import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
@@ -524,6 +526,34 @@ spec = do
           let p  = match (string str)
           prs  p str `shouldParse`     (str,str)
           prs' p str `succeedsLeaving` ""
+
+    describe "region" $ do
+      context "when inner parser succeeds" $
+        it "has no effect" $
+          property $ \st e n -> do
+            let p :: Parser Int
+                p = region (const e) (pure n)
+            runParser' p st `shouldBe` (st, Right (n :: Int))
+      context "when inner parser fails" $
+        it "the given function is used on the parse error" $
+          property $ \st e0 e1 -> do
+            let p :: Parser Int
+                p = region f $ failure
+                  (errorUnexpected e0)
+                  (errorExpected   e0)
+                  (errorCustom     e0)
+                f x = ParseError
+                  { errorPos        = ((G.<>)  `on` errorPos)        x e1
+                  , errorUnexpected = (E.union `on` errorUnexpected) x e1
+                  , errorExpected   = (E.union `on` errorExpected)   x e1
+                  , errorCustom     = (E.union `on` errorCustom)     x e1 }
+                r = ParseError
+                  { errorPos        = finalPos
+                  , errorUnexpected = (E.union `on` errorUnexpected) e0 e1
+                  , errorExpected   = (E.union `on` errorExpected)   e0 e1
+                  , errorCustom     = (E.union `on` errorCustom)     e0 e1 }
+                finalPos = statePos st G.<> errorPos e1
+            runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
 
     describe "failure" $
       it "signals correct parse error" $
