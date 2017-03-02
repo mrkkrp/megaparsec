@@ -71,6 +71,7 @@ module Text.Megaparsec
   -- $optional
   , unexpected
   , match
+  , region
   , failure
   , (<?>)
   , label
