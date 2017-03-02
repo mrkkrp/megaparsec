@@ -21,6 +21,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -38,6 +39,7 @@ module Text.Megaparsec.Prim
   , (<?>)
   , unexpected
   , match
+  , region
     -- * Parser state combinators
   , getInput
   , setInput
@@ -899,6 +901,25 @@ match p = do
   r   <- p
   tp' <- getTokensProcessed
   return (streamTake (tp' - tp) s, r)
+
+-- | Specify how to process 'ParseError's that happen inside of this
+-- wrapper.
+--
+-- @since 5.3.0
+
+region :: MonadParsec e s m
+  => (ParseError (Token s) e -> ParseError (Token s) e)
+     -- ^ How to process 'ParseError's
+  -> m a               -- ^ The “region” that processing applies to
+  -> m a
+region f m = do
+  r <- observing m
+  case r of
+    Left err -> do
+      let ParseError {..} = f err
+      updateParserState $ \st -> st { statePos = errorPos }
+      failure errorUnexpected errorExpected errorCustom
+    Right x -> return x
 
 -- | Make a singleton non-empty list from a value.
 
