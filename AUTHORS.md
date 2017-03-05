@@ -50,3 +50,4 @@ Names below are sorted alphabetically.
 * Slava Shklyaev
 * Tal Walter
 * Tomáš Janoušek
+* Vladislav Zavialov
