@@ -8,6 +8,8 @@
 
 * Dropped support for GHC 7.6.
 
+* Added an `ErrorComponent` instance for `()`.
+
 ## Megaparsec 5.2.0
 
 * Added `MonadParsec` instance for `RWST`.

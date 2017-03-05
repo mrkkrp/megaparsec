@@ -100,6 +100,10 @@ class Ord e => ErrorComponent e where
     -> Pos             -- ^ Actual indentation level
     -> e
 
+instance ErrorComponent () where
+  representFail _ = ()
+  representIndentation _ _ _ = ()
+
 -- | “Default error component”. This in our instance of 'ErrorComponent'
 -- provided out-of-box.
 --
