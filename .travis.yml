@@ -2,6 +2,11 @@ language: c
 
 sudo: false
 
+cache:
+  directories:
+    - ~/.ghc
+    - ~/.cabal
+
 matrix:
   include:
     - env: CABALVER=1.24 GHCVER=7.8.4
@@ -19,6 +24,7 @@ install:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - travis_retry cabal update
  - cabal install --only-dependencies --enable-tests
+ - cabal install hpc-coveralls
 
 script:
  - cabal configure --enable-tests --enable-coverage -v2 -f dev
@@ -28,7 +34,6 @@ script:
  - cabal haddock | grep "100%" | wc -l | grep "14"
 
 after_script:
- - cabal install hpc-coveralls
  - export PATH=~/.cabal/bin:$PATH
  - hpc-coveralls --coverage-mode=StrictlyFullLines
                  --exclude-dir=bench-memory
