@@ -22,8 +22,8 @@ import Control.Applicative ((<|>))
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Prim
 
--- | This data type specifies operators that work on values of type @a@.
--- An operator is either binary infix or unary prefix or postfix. A binary
+-- | This data type specifies operators that work on values of type @a@. An
+-- operator is either binary infix or unary prefix or postfix. A binary
 -- operator has also an associated associativity.
 
 data Operator m a

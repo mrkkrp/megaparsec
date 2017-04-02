@@ -16,7 +16,8 @@ import Text.Megaparsec.Error (Dec)
 import Text.Megaparsec.Prim
 
 -- | Modules corresponding to various types of streams define 'Parser'
--- accordingly, so user can use it to easily change type of input stream by
--- importing different “type modules”. This one is for lazy text.
+-- accordingly, so the user can use it to easily change type of the input
+-- stream by importing different “type modules”. This one is for lazy
+-- 'Text'.
 
 type Parser = Parsec Dec Text

@@ -84,7 +84,7 @@ instance Arbitrary t => Arbitrary (ErrorItem t) where
 
 class Ord e => ErrorComponent e where
 
-  -- | Represent message passed to 'fail' in parser monad.
+  -- | Represent the message passed to 'fail' in parser monad.
   --
   -- @since 5.0.0
 
@@ -104,7 +104,7 @@ instance ErrorComponent () where
   representFail _ = ()
   representIndentation _ _ _ = ()
 
--- | “Default error component”. This in our instance of 'ErrorComponent'
+-- | “Default error component”. This is our instance of 'ErrorComponent'
 -- provided out-of-box.
 --
 -- @since 5.0.0
@@ -137,7 +137,7 @@ instance ErrorComponent Dec where
 -- as set of custom associated data. The data type is parametrized over
 -- token type @t@ and custom data @e@.
 --
--- Note that stack of source positions contains current position as its
+-- Note that the stack of source positions contains current position as its
 -- head, and the rest of positions allows to track full sequence of include
 -- files with topmost source file at the end of the list.
 --

@@ -36,8 +36,8 @@ import Control.Applicative ((<$>), (<*>))
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>
 
--- | The type @PermParser s m a@ denotes a permutation parser that,
--- when converted by the 'makePermParser' function, produces instance of
+-- | The type @PermParser s m a@ denotes a permutation parser that, when
+-- converted by the 'makePermParser' function, produces instance of
 -- 'MonadParsec' @m@ that parses @s@ stream and returns a value of type @a@
 -- on success.
 --
@@ -49,10 +49,10 @@ data PermParser s m a = Perm (Maybe a) [Branch s m a]
 
 data Branch s m a = forall b. Branch (PermParser s m (b -> a)) (m b)
 
--- | The parser @makePermParser perm@ parses a permutation of parser described
--- by @perm@. For example, suppose we want to parse a permutation of: an
--- optional string of @a@'s, the character @b@ and an optional @c@. This can
--- be described by:
+-- | The parser @makePermParser perm@ parses a permutation of parser
+-- described by @perm@. For example, suppose we want to parse a permutation
+-- of: an optional string of @a@'s, the character @b@ and an optional @c@.
+-- This can be described by:
 --
 -- > test = makePermParser $
 -- >          (,,) <$?> ("", some (char 'a'))
@@ -99,10 +99,10 @@ f <$$> p = newperm f <||> p
   -> PermParser s m b  -- ^ Permutation parser
 f <$?> xp = newperm f <|?> xp
 
--- | The expression @perm \<||> p@ adds parser @p@ to the permutation
--- parser @perm@. The parser @p@ is not allowed to accept empty input — use
--- the optional combinator ('<|?>') instead. Returns a new permutation
--- parser that includes @p@.
+-- | The expression @perm \<||> p@ adds parser @p@ to the permutation parser
+-- @perm@. The parser @p@ is not allowed to accept empty input — use the
+-- optional combinator ('<|?>') instead. Returns a new permutation parser
+-- that includes @p@.
 
 (<||>) :: MonadParsec e s m
   => PermParser s m (a -> b) -- ^ Given permutation parser
@@ -110,10 +110,10 @@ f <$?> xp = newperm f <|?> xp
   -> PermParser s m b  -- ^ Resulting parser
 (<||>) = add
 
--- | The expression @perm \<||> (x, p)@ adds parser @p@ to the
--- permutation parser @perm@. The parser @p@ is optional — if it cannot be
--- applied, the default value @x@ will be used instead. Returns a new
--- permutation parser that includes the optional parser @p@.
+-- | The expression @perm \<||> (x, p)@ adds parser @p@ to the permutation
+-- parser @perm@. The parser @p@ is optional — if it cannot be applied, the
+-- default value @x@ will be used instead. Returns a new permutation parser
+-- that includes the optional parser @p@.
 
 (<|?>) :: MonadParsec e s m
   => PermParser s m (a -> b) -- ^ Given permutation parser

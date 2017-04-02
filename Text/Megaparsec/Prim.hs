@@ -113,7 +113,7 @@ import Data.Word (Word)
 ----------------------------------------------------------------------------
 -- Data types
 
--- | This is Megaparsec's state, it's parametrized over stream type @s@.
+-- | This is the Megaparsec's state, it's parametrized over stream type @s@.
 
 data State s = State
   { stateInput :: s
@@ -150,8 +150,7 @@ instance Arbitrary a => Arbitrary (State a) where
 
 data Reply e s a = Reply (State s) Consumption (Result (Token s) e a)
 
--- | This data structure represents an aspect of result of parser's
--- work.
+-- | This data structure represents an aspect of result of parser's work.
 --
 -- See also: 'Result', 'Reply'.
 
@@ -159,8 +158,7 @@ data Consumption
   = Consumed -- ^ Some part of input stream was consumed
   | Virgin   -- ^ No input was consumed
 
--- | This data structure represents an aspect of result of parser's
--- work.
+-- | This data structure represents an aspect of result of parser's work.
 --
 -- See also: 'Consumption', 'Reply'.
 
@@ -227,8 +225,8 @@ accHints
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 {-# INLINE accHints #-}
 
--- | Replace most recent group of hints (if any) with given 'ErrorItem' (or
--- delete it if 'Nothing' is given). This is used in 'label' primitive.
+-- | Replace the most recent group of hints (if any) with given 'ErrorItem'
+-- (or delete it if 'Nothing' is given). This is used in 'label' primitive.
 
 refreshLastHint :: Hints t -> Maybe (ErrorItem t) -> Hints t
 refreshLastHint (Hints [])     _        = Hints []
@@ -349,8 +347,8 @@ instance Stream TL.Text where
 -- You call specific continuation when you want to proceed in that specific
 -- branch of control flow.
 
--- | @Parsec@ is non-transformer variant of more general 'ParsecT'
--- monad transformer.
+-- | @Parsec@ is non-transformer variant of more general 'ParsecT' monad
+-- transformer.
 
 type Parsec e s = ParsecT e s Identity
 
@@ -666,10 +664,10 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   -- > string = tokens (==)
   --
   -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
-  -- primitive, which means that if it fails, it never consumes any
-  -- input. This is done to make its consumption model match how error
-  -- messages for this primitive are reported (which becomes an important
-  -- thing as user gets more control with primitives like 'withRecovery'):
+  -- primitive, which means that if it fails, it never consumes any input.
+  -- This is done to make its consumption model match how error messages for
+  -- this primitive are reported (which becomes an important thing as user
+  -- gets more control with primitives like 'withRecovery'):
   --
   -- >>> parseTest (string "abc") "abd"
   -- 1:1:
@@ -874,7 +872,7 @@ pUpdateParserState :: (State s -> State s) -> ParsecT e s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
--- | A synonym for 'label' in form of an operator.
+-- | A synonym for 'label' in the form of an operator.
 
 infix 0 <?>
 

@@ -75,21 +75,21 @@ import Prelude hiding (any, elem, notElem)
 ----------------------------------------------------------------------------
 -- Simple parsers
 
--- | Parses a newline character.
+-- | Parse a newline character.
 
 newline :: (MonadParsec e s m, Token s ~ Char) => m Char
 newline = char '\n'
 {-# INLINE newline #-}
 
--- | Parses a carriage return character followed by a newline character.
--- Returns sequence of characters parsed.
+-- | Parse a carriage return character followed by a newline character.
+-- Return sequence of characters parsed.
 
 crlf :: (MonadParsec e s m, Token s ~ Char) => m String
 crlf = string "\r\n"
 {-# INLINE crlf #-}
 
--- | Parses a CRLF (see 'crlf') or LF (see 'newline') end of line. Returns
--- the sequence of characters parsed.
+-- | Parse a CRLF (see 'crlf') or LF (see 'newline') end of line. Return the
+-- sequence of characters parsed.
 --
 -- > eol = (pure <$> newline) <|> crlf
 
@@ -97,13 +97,13 @@ eol :: (MonadParsec e s m, Token s ~ Char) => m String
 eol = (pure <$> newline) <|> crlf <?> "end of line"
 {-# INLINE eol #-}
 
--- | Parses a tab character.
+-- | Parse a tab character.
 
 tab :: (MonadParsec e s m, Token s ~ Char) => m Char
 tab = char '\t'
 {-# INLINE tab #-}
 
--- | Skips /zero/ or more white space characters.
+-- | Skip /zero/ or more white space characters.
 --
 -- See also: 'skipMany' and 'spaceChar'.
 
@@ -114,21 +114,21 @@ space = skipMany spaceChar
 ----------------------------------------------------------------------------
 -- Categories of characters
 
--- | Parses control characters, which are the non-printing characters of the
--- Latin-1 subset of Unicode.
+-- | Parse a control character (a non-printing character of the Latin-1
+-- subset of Unicode).
 
 controlChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 controlChar = satisfy isControl <?> "control character"
 {-# INLINE controlChar #-}
 
--- | Parses a Unicode space character, and the control characters: tab,
+-- | Parse a Unicode space character, and the control characters: tab,
 -- newline, carriage return, form feed, and vertical tab.
 
 spaceChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 spaceChar = satisfy isSpace <?> "white space"
 {-# INLINE spaceChar #-}
 
--- | Parses an upper-case or title-case alphabetic Unicode character. Title
+-- | Parse an upper-case or title-case alphabetic Unicode character. Title
 -- case is used by a small number of letter ligatures like the
 -- single-character form of Lj.
 
@@ -136,23 +136,22 @@ upperChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 upperChar = satisfy isUpper <?> "uppercase letter"
 {-# INLINE upperChar #-}
 
--- | Parses a lower-case alphabetic Unicode character.
+-- | Parse a lower-case alphabetic Unicode character.
 
 lowerChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 lowerChar = satisfy isLower <?> "lowercase letter"
 {-# INLINE lowerChar #-}
 
--- | Parses alphabetic Unicode characters: lower-case, upper-case and
--- title-case letters, plus letters of case-less scripts and modifiers
--- letters.
+-- | Parse an alphabetic Unicode character: lower-case, upper-case, or
+-- title-case letter, or a letter of case-less scripts\/modifier letter.
 
 letterChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 letterChar = satisfy isLetter <?> "letter"
 {-# INLINE letterChar #-}
 
--- | Parses alphabetic or numeric digit Unicode characters.
+-- | Parse an alphabetic or numeric digit Unicode characters.
 --
--- Note that numeric digits outside the ASCII range are parsed by this
+-- Note that the numeric digits outside the ASCII range are parsed by this
 -- parser but not by 'digitChar'. Such digits may be part of identifiers but
 -- are not used by the printer and reader to represent numbers.
 
@@ -160,88 +159,88 @@ alphaNumChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 alphaNumChar = satisfy isAlphaNum <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
--- | Parses printable Unicode characters: letters, numbers, marks,
--- punctuation, symbols and spaces.
+-- | Parse a printable Unicode character: letter, number, mark, punctuation,
+-- symbol or space.
 
 printChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 printChar = satisfy isPrint <?> "printable character"
 {-# INLINE printChar #-}
 
--- | Parses an ASCII digit, i.e between “0” and “9”.
+-- | Parse an ASCII digit, i.e between “0” and “9”.
 
 digitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 digitChar = satisfy isDigit <?> "digit"
 {-# INLINE digitChar #-}
 
--- | Parses an octal digit, i.e. between “0” and “7”.
+-- | Parse an octal digit, i.e. between “0” and “7”.
 
 octDigitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 octDigitChar = satisfy isOctDigit <?> "octal digit"
 {-# INLINE octDigitChar #-}
 
--- | Parses a hexadecimal digit, i.e. between “0” and “9”, or “a” and “f”,
--- or “A” and “F”.
+-- | Parse a hexadecimal digit, i.e. between “0” and “9”, or “a” and “f”, or
+-- “A” and “F”.
 
 hexDigitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 hexDigitChar = satisfy isHexDigit <?> "hexadecimal digit"
 {-# INLINE hexDigitChar #-}
 
--- | Parses Unicode mark characters, for example accents and the like, which
--- combine with preceding characters.
+-- | Parse a Unicode mark character (accents and the like), which combines
+-- with preceding characters.
 
 markChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 markChar = satisfy isMark <?> "mark character"
 {-# INLINE markChar #-}
 
--- | Parses Unicode numeric characters, including digits from various
--- scripts, Roman numerals, et cetera.
+-- | Parse a Unicode numeric character, including digits from various
+-- scripts, Roman numerals, etc.
 
 numberChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 numberChar = satisfy isNumber <?> "numeric character"
 {-# INLINE numberChar #-}
 
--- | Parses Unicode punctuation characters, including various kinds of
+-- | Parse a Unicode punctuation character, including various kinds of
 -- connectors, brackets and quotes.
 
 punctuationChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 punctuationChar = satisfy isPunctuation <?> "punctuation"
 {-# INLINE punctuationChar #-}
 
--- | Parses Unicode symbol characters, including mathematical and currency
+-- | Parse a Unicode symbol characters, including mathematical and currency
 -- symbols.
 
 symbolChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 symbolChar = satisfy isSymbol <?> "symbol"
 {-# INLINE symbolChar #-}
 
--- | Parses Unicode space and separator characters.
+-- | Parse a Unicode space and separator characters.
 
 separatorChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 separatorChar = satisfy isSeparator <?> "separator"
 {-# INLINE separatorChar #-}
 
--- | Parses a character from the first 128 characters of the Unicode character set,
--- corresponding to the ASCII character set.
+-- | Parse a character from the first 128 characters of the Unicode
+-- character set, corresponding to the ASCII character set.
 
 asciiChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 asciiChar = satisfy isAscii <?> "ASCII character"
 {-# INLINE asciiChar #-}
 
--- | Parses a character from the first 256 characters of the Unicode
+-- | Parse a character from the first 256 characters of the Unicode
 -- character set, corresponding to the ISO 8859-1 (Latin-1) character set.
 
 latin1Char :: (MonadParsec e s m, Token s ~ Char) => m Char
 latin1Char = satisfy isLatin1 <?> "Latin-1 character"
 {-# INLINE latin1Char #-}
 
--- | @charCategory cat@ Parses character in Unicode General Category @cat@,
+-- | @charCategory cat@ parses character in Unicode General Category @cat@,
 -- see 'Data.Char.GeneralCategory'.
 
 charCategory :: (MonadParsec e s m, Token s ~ Char) => GeneralCategory -> m Char
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 {-# INLINE charCategory #-}
 
--- | Returns human-readable name of Unicode General Category.
+-- | Return human-readable name of Unicode General Category.
 
 categoryName :: GeneralCategory -> String
 categoryName cat =
@@ -320,10 +319,9 @@ anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
--- list of characters @cs@. Returns the parsed character. Note that this
--- parser doesn't automatically generate “expected” component of error
--- message, so usually you should label it manually with 'label' or
--- ('<?>').
+-- collection of characters @cs@. Returns the parsed character. Note that
+-- this parser doesn't automatically generate “expected” component of error
+-- message, so usually you should label it manually with 'label' or ('<?>').
 --
 -- See also: 'satisfy'.
 --
@@ -342,9 +340,9 @@ oneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
 oneOf' cs = satisfy (`elemi` cs)
 {-# INLINE oneOf' #-}
 
--- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current
--- character /not/ in the supplied list of characters @cs@. Returns the
--- parsed character.
+-- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current character
+-- /not/ in the supplied list of characters @cs@. Returns the parsed
+-- character.
 
 noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
 noneOf cs = satisfy (`notElem` cs)

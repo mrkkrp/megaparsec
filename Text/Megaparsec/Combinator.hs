@@ -9,8 +9,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Commonly used generic combinators. Note that all combinators works with
--- any 'Alternative' instances.
+-- Commonly used generic combinators. Note that all the combinators work
+-- with any 'Alternative' instance.
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP          #-}
@@ -52,16 +52,15 @@ between :: Applicative m => m open -> m close -> m a -> m a
 between open close p = open *> p <* close
 {-# INLINE between #-}
 
--- | @choice ps@ tries to apply the parsers in the list @ps@ in order,
--- until one of them succeeds. Returns the value of the succeeding parser.
+-- | @choice ps@ tries to apply the parsers in the list @ps@ in order, until
+-- one of them succeeds. Returns the value of the succeeding parser.
 
 choice :: (Foldable f, Alternative m) => f (m a) -> m a
 choice = asum
 {-# INLINE choice #-}
 
--- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or
--- equal to zero, the parser equals to @return []@. Returns a list of @n@
--- values.
+-- | @count n p@ parses @n@ occurrences of @p@. If @n@ is smaller or equal
+-- to zero, the parser equals to @return []@. Returns a list of @n@ values.
 
 count :: Applicative m => Int -> m a -> m [a]
 count n p = sequenceA (replicate n p)
@@ -93,8 +92,8 @@ eitherP :: Alternative m => m a -> m b -> m (Either a b)
 eitherP a b = (Left <$> a) <|> (Right <$> b)
 {-# INLINE eitherP #-}
 
--- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated
--- and ended by @sep@. Returns a list of values returned by @p@.
+-- | @endBy p sep@ parses /zero/ or more occurrences of @p@, separated and
+-- ended by @sep@. Returns a list of values returned by @p@.
 --
 -- > cStatements = cStatement `endBy` semicolon
 
@@ -102,16 +101,16 @@ endBy :: Alternative m => m a -> m sep -> m [a]
 endBy p sep = many (p <* sep)
 {-# INLINE endBy #-}
 
--- | @endBy1 p sep@ parses /one/ or more occurrences of @p@, separated
--- and ended by @sep@. Returns a list of values returned by @p@.
+-- | @endBy1 p sep@ parses /one/ or more occurrences of @p@, separated and
+-- ended by @sep@. Returns a list of values returned by @p@.
 
 endBy1 :: Alternative m => m a -> m sep -> m [a]
 endBy1 p sep = some (p <* sep)
 {-# INLINE endBy1 #-}
 
--- | @manyTill p end@ applies parser @p@ /zero/ or more times until
--- parser @end@ succeeds. Returns the list of values returned by @p@. This
--- parser can be used to scan comments:
+-- | @manyTill p end@ applies parser @p@ /zero/ or more times until parser
+-- @end@ succeeds. Returns the list of values returned by @p@. This parser
+-- can be used to scan comments:
 --
 -- > simpleComment = string "<!--" >> manyTill anyChar (string "-->")
 
@@ -126,9 +125,8 @@ someTill :: Alternative m => m a -> m end -> m [a]
 someTill p end = (:) <$> p <*> manyTill p end
 {-# INLINE someTill #-}
 
--- | @option x p@ tries to apply parser @p@. If @p@ fails without
--- consuming input, it returns the value @x@, otherwise the value returned
--- by @p@.
+-- | @option x p@ tries to apply parser @p@. If @p@ fails without consuming
+-- input, it returns the value @x@, otherwise the value returned by @p@.
 --
 -- > priority = option 0 (digitToInt <$> digitChar)
 
@@ -136,8 +134,8 @@ option :: Alternative m => a -> m a -> m a
 option x p = p <|> pure x
 {-# INLINE option #-}
 
--- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated
--- by @sep@. Returns a list of values returned by @p@.
+-- | @sepBy p sep@ parses /zero/ or more occurrences of @p@, separated by
+-- @sep@. Returns a list of values returned by @p@.
 --
 -- > commaSep p = p `sepBy` comma
 
@@ -145,30 +143,28 @@ sepBy :: Alternative m => m a -> m sep -> m [a]
 sepBy p sep = sepBy1 p sep <|> pure []
 {-# INLINE sepBy #-}
 
--- | @sepBy1 p sep@ parses /one/ or more occurrences of @p@, separated
--- by @sep@. Returns a list of values returned by @p@.
+-- | @sepBy1 p sep@ parses /one/ or more occurrences of @p@, separated by
+-- @sep@. Returns a list of values returned by @p@.
 
 sepBy1 :: Alternative m => m a -> m sep -> m [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 {-# INLINE sepBy1 #-}
 
--- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@,
--- separated and optionally ended by @sep@. Returns a list of values
--- returned by @p@.
+-- | @sepEndBy p sep@ parses /zero/ or more occurrences of @p@, separated
+-- and optionally ended by @sep@. Returns a list of values returned by @p@.
 
 sepEndBy :: Alternative m => m a -> m sep -> m [a]
 sepEndBy p sep = sepEndBy1 p sep <|> pure []
 {-# INLINE sepEndBy #-}
 
--- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@,
--- separated and optionally ended by @sep@. Returns a list of values
--- returned by @p@.
+-- | @sepEndBy1 p sep@ parses /one/ or more occurrences of @p@, separated
+-- and optionally ended by @sep@. Returns a list of values returned by @p@.
 
 sepEndBy1 :: Alternative m => m a -> m sep -> m [a]
 sepEndBy1 p sep = (:) <$> p <*> ((sep *> sepEndBy p sep) <|> pure [])
 
--- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping
--- its result.
+-- | @skipMany p@ applies the parser @p@ /zero/ or more times, skipping its
+-- result.
 --
 -- > space = skipMany spaceChar
 
@@ -176,8 +172,8 @@ skipMany :: Alternative m => m a -> m ()
 skipMany p = void $ many p
 {-# INLINE skipMany #-}
 
--- | @skipSome p@ applies the parser @p@ /one/ or more times, skipping
--- its result.
+-- | @skipSome p@ applies the parser @p@ /one/ or more times, skipping its
+-- result.
 
 skipSome :: Alternative m => m a -> m ()
 skipSome p = void $ some p

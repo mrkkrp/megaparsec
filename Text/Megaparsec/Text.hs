@@ -16,7 +16,7 @@ import Text.Megaparsec.Prim
 import Data.Text
 
 -- | Modules corresponding to various types of streams define 'Parser'
--- accordingly, so user can use it to easily change type of input stream by
--- importing different “type modules”. This one is for strict text.
+-- accordingly, so the user can use it to easily change type of input stream
+-- by importing different “type modules”. This one is for strict 'Text'.
 
 type Parser = Parsec Dec Text

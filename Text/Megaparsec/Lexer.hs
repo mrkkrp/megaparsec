@@ -353,10 +353,10 @@ lineFold sc action =
 ----------------------------------------------------------------------------
 -- Character and string literals
 
--- | The lexeme parser parses a single literal character without
--- quotes. Purpose of this parser is to help with parsing of conventional
--- escape sequences. It's your responsibility to take care of character
--- literal syntax in your language (by surrounding it with single quotes or
+-- | The lexeme parser parses a single literal character without quotes.
+-- Purpose of this parser is to help with parsing of conventional escape
+-- sequences. It's your responsibility to take care of character literal
+-- syntax in your language (by surrounding it with single quotes or
 -- similar).
 --
 -- The literal character is parsed according to the grammar rules defined in
