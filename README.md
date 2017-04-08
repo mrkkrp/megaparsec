@@ -246,8 +246,6 @@ usually easy to decide which you will need in particular project:
   texts. It has better error messages and it's implemented as monad
   transformer.
 
-* Megaparsec is better supported.
-
 So, if you work with something human-readable where size of input data is
 usually not huge, just go with Megaparsec, otherwise Attoparsec may be a
 better choice.
@@ -325,8 +323,6 @@ reasons one may question choice of Trifecta is his/her parsing library:
   dependencies. Also if you're not into `lens` and would like to keep your
   code “vanilla”, you may not like the API.
 
-* Megaparsec is better supported.
-
 ### Megaparsec vs Earley
 
 [Earley](https://hackage.haskell.org/package/Earley) is a newer library that
@@ -350,8 +346,6 @@ Earley, but there are still enough reasons to choose it over Earley:
   much more productive with libraries taking more traditional path to
   parsing like Megaparsec.
 
-* Megaparsec is better supported.
-
 IOW, Megaparsec is less safe but also much more powerful.
 
 ### Megaparsec vs Parsers
@@ -369,8 +363,6 @@ following:
 * It currently has a bug in definition of `lookAhead` for various monad
   transformers like `StateT`, etc. which is visible when you create
   backtracking state via monad stack, not via built-in features.
-
-* Megaparsec is better supported.
 
 We intended to use Parsers library in Megaparsec at some point, but aside
 from already mentioned flaws the library has different conventions for
