@@ -577,12 +577,12 @@ spec = do
               grs  p s (`shouldFailWith` err (posN (1 :: Int) s) mempty)
               grs' p s (`failsLeaving` "")
         context "inner parser produces hints" $
-          it "replaces the last hint with “rest of <label>”" $
+          it "replaces the last hint with “the rest of <label>”" $
             property $ \lbl a -> not (null lbl) ==> do
               let p :: MonadParsec Dec String m => m String
                   p = label lbl (many (char a)) <* empty
                   s = [a]
-              grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (elabel $ "rest of " ++ lbl))
+              grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (elabel $ "the rest of " ++ lbl))
               grs' p s (`failsLeaving` "")
       context "when inner parser consumes and fails" $
         it "reports parse error without modification" $

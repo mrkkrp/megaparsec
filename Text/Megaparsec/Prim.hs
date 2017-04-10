@@ -720,7 +720,7 @@ pFailure us ps xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   let el = Label <$> NE.nonEmpty l
-      cl = Label . (NE.fromList "rest of " <>) <$> NE.nonEmpty l
+      cl = Label . (NE.fromList "the rest of " <>) <$> NE.nonEmpty l
       cok' x s' hs = cok x s' (refreshLastHint hs cl)
       eok' x s' hs = eok x s' (refreshLastHint hs el)
       eerr'    err = eerr err
