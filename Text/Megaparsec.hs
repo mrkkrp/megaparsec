@@ -72,6 +72,7 @@ module Text.Megaparsec
   , unexpected
   , match
   , region
+  , anchor
   , failure
   , (<?>)
   , label

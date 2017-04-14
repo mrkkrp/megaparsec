@@ -40,6 +40,7 @@ module Text.Megaparsec.Prim
   , unexpected
   , match
   , region
+  , anchor
     -- * Parser state combinators
   , getInput
   , setInput
@@ -920,6 +921,25 @@ region f m = do
       updateParserState $ \st -> st { statePos = errorPos }
       failure errorUnexpected errorExpected errorCustom
     Right x -> return x
+
+-- | Define a region inside which any 'ParseError' will point to the
+-- position where first parsed token in the region begins.
+--
+-- @since 5.3.0
+
+anchor :: forall e s m a. MonadParsec e s m
+  => m a               -- ^ The anchored parser
+  -> m a
+anchor m = do
+  State {..} <- getParserState
+  let setPos err = err { errorPos = pos:|posStack }
+      pos =
+        case fst <$> uncons stateInput of
+          Nothing -> currentPos
+          Just t -> fst
+            (updatePos (Proxy :: Proxy s) stateTabWidth currentPos t)
+      (currentPos:|posStack) = statePos
+  region setPos m
 
 -- | Make a singleton non-empty list from a value.
 
