@@ -6,6 +6,10 @@
 * Added the `region` combinator which allows to process parse errors
   happening when its argument parser is run.
 
+* Added the `anchor` combinator that allows to define a region in which any
+  parse error will point to the position where first parsed token in the
+  region begins.
+
 * Dropped support for GHC 7.6.
 
 * Added an `ErrorComponent` instance for `()`.
