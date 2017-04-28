@@ -74,7 +74,7 @@
 <li><a href="#notes">Notes</a></li>
 </ol>
 <h2 id="imports">Imports</h2>
-<p>First let’s import the necessary libraries:</p>
+<p>First let’s import the necessary modules:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">Main</span> (main) <span class="kw">where</span>
 
 <span class="kw">import </span><span class="dt">Control.Monad</span> (void)
@@ -134,7 +134,7 @@ sc <span class="fu">=</span> L.space (void spaceChar) lineCmnt blockCmnt
   <span class="kw">where</span> lineCmnt  <span class="fu">=</span> L.skipLineComment <span class="st">&quot;//&quot;</span>
         blockCmnt <span class="fu">=</span> L.skipBlockComment <span class="st">&quot;/*&quot;</span> <span class="st">&quot;*/&quot;</span></code></pre></div>
 <p><code>sc</code> stands for “space consumer”. <code>space</code> takes three arguments: a parser that parses single whitespace character, a parser for line comments, and a parser for block (multi-line) comments. <code>skipLineComment</code> and <code>skipBlockComment</code> help with quickly creating parsers to consume the comments. (If our language didn’t have block comments, we could pass <code>empty</code> from <code>Control.Applicative</code> as the third argument of <code>space</code>.)</p>
-<p>Next, we will use a strategy where whitespace will be consumed <em>after</em> every lexeme automatically, but not before it. Let’s define a wrapper to achieve this:</p>
+<p>Next, we will follow the strategy where whitespace will be consumed <em>after</em> every lexeme automatically, but not before it. Let’s define a wrapper to achieve this:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">lexeme ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
 lexeme <span class="fu">=</span> L.lexeme sc</code></pre></div>
 <p>Perfect. Now we can wrap any parser in <code>lexeme</code> and it will consume any trailing whitespace with <code>sc</code>.</p>
@@ -158,7 +158,7 @@ integer <span class="fu">=</span> lexeme L.integer
 semi <span class="fu">=</span> symbol <span class="st">&quot;;&quot;</span></code></pre></div>
 <p>Great. To parse various operators we can just use <code>symbol</code>, but reserved words and identifiers are a bit trickier. There are two points to note:</p>
 <ul>
-<li><p>Parsers of reserved words should check that the parsed reserved word is not a prefix of an identifier.</p></li>
+<li><p>Parsers for reserved words should check that the parsed reserved word is not a prefix of an identifier.</p></li>
 <li><p>Parsers of identifiers should check that parsed identifier is not a reserved word.</p></li>
 </ul>
 <p>Let’s express it in code:</p>
@@ -175,14 +175,14 @@ identifier <span class="fu">=</span> (lexeme <span class="fu">.</span> try) (p <
     check x <span class="fu">=</span> <span class="kw">if</span> x <span class="ot">`elem`</span> rws
                 <span class="kw">then</span> fail <span class="fu">$</span> <span class="st">&quot;keyword &quot;</span> <span class="fu">++</span> show x <span class="fu">++</span> <span class="st">&quot; cannot be an identifier&quot;</span>
                 <span class="kw">else</span> return x</code></pre></div>
-<p><code>identifier</code> may seem complex, but it’s actually simple. We just parse a sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
+<p><code>identifier</code> may seem complex, but it’s actually simple. We just parse a sequence of characters where first character is a letter and the rest is several characters where every one of them can be either letter or number. Once we have parsed such a string, we check if it’s in list of reserved words, fail with informative message if it is, and return the result otherwise.</p>
 <p>Note the use of <code>try</code> in <code>identifier</code>. This is necessary to backtrack to beginning of the identifier in cases when <code>fail</code> is evaluated. Otherwise things like <code>many identifier</code> would fail on such identifiers instead of just stopping.</p>
 <p>And that’s it, we have just written lexer for our language, now we can start writing parser.</p>
 <h2 id="parser">Parser</h2>
 <p>As already mentioned, a program in this language is simply a statement, so the main parser should basically only parse a statement. But remember to take care of initial whitespace — our parsers only get rid of whitespace <em>after</em> the tokens!</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">whileParser ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
 whileParser <span class="fu">=</span> between sc eof stmt</code></pre></div>
-<p>Now because any statement might be actually a sequence of statements separated by semicolon, we use <code>sepBy1</code> to parse at least one statement. The result is a list of statements. We also allow grouping statements by parentheses, which is useful, for instance, in the <code>while</code> loop.</p>
+<p>Now because any statement might be actually a sequence of statements separated by semicolons, we use <code>sepBy1</code> to parse at least one statement. The result is a list of statements. We also allow grouping statements with parentheses, which is useful, for instance, in the <code>while</code> loop.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">stmt ::</span> <span class="dt">Parser</span> <span class="dt">Stmt</span>
 stmt <span class="fu">=</span> parens stmt <span class="fu">&lt;|&gt;</span> stmtSeq
 
@@ -245,13 +245,13 @@ bOperators <span class="fu">=</span>
   , [<span class="dt">InfixL</span> (<span class="dt">BBinary</span> <span class="dt">And</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;and&quot;</span>)
     , <span class="dt">InfixL</span> (<span class="dt">BBinary</span> <span class="dt">Or</span> <span class="fu">&lt;$</span> rword <span class="st">&quot;or&quot;</span>) ]
   ]</code></pre></div>
-<p>In case of prefix operators it is enough to specify which one should be parsed and what is the associated data constructor. Infix operators are defined similarly, but there are several variants of infix constructors for various associativity. Note that the operator precedence depends only on the order of the elements in the list.</p>
+<p>In case of prefix operators it is enough to specify which one should be parsed and what is the associated data constructor. Infix operators are defined similarly, but there are several variants of infix constructors for various associativity options. Note that the operator precedence depends only on the order of the elements in the list.</p>
 <p>Finally we have to define the terms. In case of arithmetic expressions, it is quite simple:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">aTerm ::</span> <span class="dt">Parser</span> <span class="dt">AExpr</span>
 aTerm <span class="fu">=</span> parens aExpr
   <span class="fu">&lt;|&gt;</span> <span class="dt">Var</span>      <span class="fu">&lt;$&gt;</span> identifier
   <span class="fu">&lt;|&gt;</span> <span class="dt">IntConst</span> <span class="fu">&lt;$&gt;</span> integer</code></pre></div>
-<p>However, the term in a boolean expression is a bit more tricky. In this case, a term can also be an expression with relational operator consisting of arithmetic expressions.</p>
+<p>However, a term in a boolean expression is a bit more tricky. In this case, a term can also be an expression with relational operator consisting of arithmetic expressions.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">bTerm ::</span> <span class="dt">Parser</span> <span class="dt">BExpr</span>
 bTerm <span class="fu">=</span>  parens bExpr
   <span class="fu">&lt;|&gt;</span> (rword <span class="st">&quot;true&quot;</span>  <span class="fu">*&gt;</span> pure (<span class="dt">BoolConst</span> <span class="dt">True</span>))

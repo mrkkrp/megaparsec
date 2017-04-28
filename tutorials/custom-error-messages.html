@@ -63,10 +63,10 @@
 <hr />
 
 
-<p>One of the advantages of Megaparsec 5 is the ability to use your own data types as part of data that is returned on parse failure. This opens up the possibility to tailor error messages to your domain of interest in a way that is quite unique to this library. Needless to say, all data that constitutes a error message is typed in Megaparsec 5, so it’s easy to inspect and manipulate it after the fact.</p>
+<p>One of the advantages of Megaparsec 5 is the ability to use your own data types as part of data that is returned on parse failure. This opens up the possibility to tailor error messages to your domain of interest in a way that is quite unique to this library. Needless to say, all data that constitutes a error message is typed in Megaparsec 5, so it’s easy to inspect and manipulate it.</p>
 <h2 id="the-goal">The goal</h2>
 <p>In this tutorial we will walk through creation of a parser found in an existing library called <a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a>, which is an alternative parser for the popular <a href="https://hackage.haskell.org/package/cassava"><code>cassava</code></a> library that allows to parse CSV data. The default parser features not very user-friendly error messages, so I was asked to design a better one using Megaparsec 5.</p>
-<p>In addition to standard error messages (“expected” and “unexpected” tokens), the library can report problems that have to do with using methods from <code>FromRecord</code> and <code>FromNamedRecord</code> type classes that describe how to transform a collection of <code>ByteString</code>s into a particular instance of those type classes. While performing the conversion, things may go wrong, and we would like to use a special data constructor in these cases.</p>
+<p>In addition to the standard error messages (“expected” and “unexpected” tokens), the library can report problems that have to do with using methods from <code>FromRecord</code> and <code>FromNamedRecord</code> type classes that describe how to transform a collection of <code>ByteString</code>s into a particular instance of those type classes. While performing the conversion, things may go wrong, and we would like to use a special data constructor in these cases.</p>
 <p>The complete source code can be found in <a href="https://github.com/stackbuilders/cassava-megaparsec">this GitHub repository</a>.</p>
 <h2 id="language-extensions-and-imports">Language extensions and imports</h2>
 <p>We will need some language extensions and imports, here is the top of <code>Data.Csv.Parser.Megaparsec</code> almost literally:</p>
@@ -153,7 +153,7 @@
 <p>As you can see it is just a sum type that accounts for all types of failures that we need to think about in the vanilla Megaparsec:</p>
 <ul>
 <li><code>fail</code> method</li>
-<li>…and incorrect indentation related to machinery in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a>.</li>
+<li>…and incorrect indentation related to the machinery in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a>.</li>
 </ul>
 <p>What this means is that our new custom type should somehow provide a way to represent those things too. The requirement that a type should be capable of representing the above-mentioned exceptional situations is captured by the <code>ErrorComponent</code> type class:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The type class defines how to represent information about various</span>

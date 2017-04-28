@@ -155,7 +155,6 @@
 <ul>
 <li><p><em>Attoparsec</em> is much faster but not that feature-rich. It should be used when you want to process large amounts of data where performance matters more than quality of error messages.</p></li>
 <li><p><em>Megaparsec</em> is good for parsing of source code or other human-readable texts. It has better error messages and it’s implemented as monad transformer.</p></li>
-<li><p>Megaparsec is better supported.</p></li>
 </ul>
 <p>So, if you work with something human-readable where size of input data is usually not huge, just go with Megaparsec, otherwise Attoparsec may be a better choice.</p>
 <h3 id="megaparsec-vs-parsec">Megaparsec vs Parsec</h3>
@@ -183,7 +182,6 @@
 <li><p>Trifecta can parse <code>String</code> and <code>ByteString</code> natively, but not <code>Text</code>.</p></li>
 <li><p>Trifecta’s error messages may be different with their own features, but certainly not as flexible as Megaparsec’s error messages in the latest versions.</p></li>
 <li><p>Depends on <code>lens</code>. This means you’ll pull in half of Hackage as transitive dependencies. Also if you’re not into <code>lens</code> and would like to keep your code “vanilla”, you may not like the API.</p></li>
-<li><p>Megaparsec is better supported.</p></li>
 </ul>
 <h3 id="megaparsec-vs-earley">Megaparsec vs Earley</h3>
 <p><a href="https://hackage.haskell.org/package/Earley">Earley</a> is a newer library that allows to safely (it your code compiles, then it probably works) parse context-free grammars (CFG). Megaparsec is a lower-level library compared to Earley, but there are still enough reasons to choose it over Earley:</p>
@@ -192,7 +190,6 @@
 <li><p>Your grammar may be not context free or you may want introduce some sort of state to the parsing process. Almost all non-trivial parsers require something of this sort. Even if your grammar is context-free, state may allow to add some additional niceties. Earley does not support that.</p></li>
 <li><p>Megaparsec’s error messages are more flexible allowing to include arbitrary data in them, return multiple error messages, mark regions that affect any error that happens in those regions, etc.</p></li>
 <li><p>The approach Earley uses differs from conventional monadic parsing. If you work not alone, chances people you work with, especially beginners will be much more productive with libraries taking more traditional path to parsing like Megaparsec.</p></li>
-<li><p>Megaparsec is better supported.</p></li>
 </ul>
 <p>IOW, Megaparsec is less safe but also much more powerful.</p>
 <h3 id="megaparsec-vs-parsers">Megaparsec vs Parsers</h3>
@@ -200,7 +197,6 @@
 <ul>
 <li><p>It depends on Attoparsec, Parsec, and Trifecta, which means you always grab half of Hackage as transitive dependencies by using it. This is ridiculous, by the way, because this package is supposed to be useful for parser builders, so they can write basic core functionality and get the rest “for free”.</p></li>
 <li><p>It currently has a bug in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features.</p></li>
-<li><p>Megaparsec is better supported.</p></li>
 </ul>
 <p>We intended to use Parsers library in Megaparsec at some point, but aside from already mentioned flaws the library has different conventions for naming of things, different set of “core” functions, etc., different approach to lexer. So it didn’t happen, Megaparsec has minimal dependencies, it is feature-rich and self-contained.</p>
 <h2 id="related-packages">Related packages</h2>
