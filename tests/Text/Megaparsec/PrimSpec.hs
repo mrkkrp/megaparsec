@@ -200,6 +200,22 @@ spec = do
                ( st { statePos = apos }
                , Left (err apos $ utoks (take (il + 1) stateInput) <> etoks ts) )
 
+    describe "getNextTokenPosition" $ do
+      context "when input stream is empty" $
+        it "returns Nothing" $
+          property $ \st' -> do
+            let p :: CustomParser (Maybe SourcePos)
+                p = getNextTokenPosition
+                st = (st' :: State [Span]) { stateInput = [] }
+            runParser' p st `shouldBe` (st, Right Nothing)
+      context "when input stream is not empty" $
+        it "return the position of start of the next token" $
+           property $ \st' h -> do
+             let p :: CustomParser (Maybe SourcePos)
+                 p = getNextTokenPosition
+                 st = st' { stateInput = h : stateInput st' }
+             runParser' p st `shouldBe` (st, (Right . Just . spanStart) h)
+
   describe "ParsecT Functor instance" $ do
     it "obeys identity law" $
       property $ \n ->
