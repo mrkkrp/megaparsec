@@ -216,6 +216,21 @@ spec = do
                  st = st' { stateInput = h : stateInput st' }
              runParser' p st `shouldBe` (st, (Right . Just . spanStart) h)
 
+  describe "ParsecT Semigroup instance" $
+    it "the associative operation works" $
+      property $ \a b -> do
+        let p = pure [a] G.<> pure [b]
+        prs p "" `shouldParse` ([a,b] :: [Int])
+
+  describe "ParsecT Monoid instance" $ do
+    it "mempty works" $ do
+      let p = mempty
+      prs p "" `shouldParse` ([] :: [Int])
+    it "mappend works" $
+      property $ \a b -> do
+        let p = pure [a] `mappend` pure [b]
+        prs p "" `shouldParse` ([a,b] :: [Int])
+
   describe "ParsecT Functor instance" $ do
     it "obeys identity law" $
       property $ \n ->
