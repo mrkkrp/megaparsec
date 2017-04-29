@@ -9,6 +9,8 @@
 * Added the `getNextTokenPosition`, which returns position where the next
   token in the stream begins.
 
+* Defined `Semigroup` and `Monoid` instances of `ParsecT`.
+
 * Dropped support for GHC 7.6.
 
 * Added an `ErrorComponent` instance for `()`.

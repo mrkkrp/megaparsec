@@ -365,6 +365,18 @@ newtype ParsecT e s m a = ParsecT
       -> (ParseError (Token s) e -> State s -> m b) -- empty-error
       -> m b }
 
+instance (ErrorComponent e, Stream s, Semigroup a)
+    => Semigroup (ParsecT e s m a) where
+  (<>) = A.liftA2 (<>)
+  {-# INLINE (<>) #-}
+
+instance (ErrorComponent e, Stream s, Monoid a)
+    => Monoid (ParsecT e s m a) where
+  mempty = pure mempty
+  {-# INLINE mempty #-}
+  mappend = A.liftA2 mappend
+  {-# INLINE mappend #-}
+
 instance Functor (ParsecT e s m) where
   fmap = pMap
 
