@@ -159,6 +159,7 @@ module Text.Megaparsec
   , getInput
   , setInput
   , getPosition
+  , getNextTokenPosition
   , setPosition
   , pushPosition
   , popPosition

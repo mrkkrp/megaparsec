@@ -6,6 +6,9 @@
 * Added the `region` combinator which allows to process parse errors
   happening when its argument parser is run.
 
+* Added the `getNextTokenPosition`, which returns position where the next
+  token in the stream begins.
+
 * Dropped support for GHC 7.6.
 
 * Added an `ErrorComponent` instance for `()`.

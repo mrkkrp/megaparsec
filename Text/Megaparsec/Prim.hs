@@ -44,6 +44,7 @@ module Text.Megaparsec.Prim
   , getInput
   , setInput
   , getPosition
+  , getNextTokenPosition
   , setPosition
   , pushPosition
   , popPosition
@@ -947,6 +948,17 @@ setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 
 getPosition :: MonadParsec e s m => m SourcePos
 getPosition = NE.head . statePos <$> getParserState
+
+-- | Get position where the next token in the stream begins. If the stream
+-- is empty, return 'Nothing'.
+--
+-- @since 5.3.0
+
+getNextTokenPosition :: forall e s m. MonadParsec e s m => m (Maybe SourcePos)
+getNextTokenPosition = do
+  State {..} <- getParserState
+  let f = fst . updatePos (Proxy :: Proxy s) stateTabWidth (NE.head statePos)
+  return (f . fst <$> uncons stateInput)
 
 -- | @setPosition pos@ sets the current source position to @pos@.
 --
