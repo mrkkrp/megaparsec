@@ -43,6 +43,7 @@ module Text.Megaparsec.Lexer
     -- * Character and string literals
   , charLiteral
     -- * Numbers
+  , integerBase
   , integer
   , decimal
   , hexadecimal
@@ -53,13 +54,14 @@ module Text.Megaparsec.Lexer
   , signed )
 where
 
-import Control.Applicative ((<|>), some, optional)
+import Control.Applicative ((<|>), some, optional, empty, many)
 import Control.Monad (void)
-import Data.Char (readLitChar)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
+import Data.Foldable (foldl')
 import qualified Data.Set as E
+import qualified Data.Char as Char
 
 import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
@@ -190,8 +192,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- Indentation
 
 -- | Return current indentation level.
---
--- The function is a simple shortcut defined as:
+---- The function is a simple shortcut defined as:
 --
 -- > indentLevel = sourceColumn <$> getPosition
 --
@@ -380,12 +381,31 @@ charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
   -- and we do know that r will be non-empty if count' succeeds.
   ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
-  case listToMaybe (readLitChar r) of
+  case listToMaybe (Char.readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
     Nothing      -> unexpected (Tokens (x:|[]))
 
 ----------------------------------------------------------------------------
 -- Numbers
+
+-- | Parse an integer without sign in the given base.
+-- Additionally, ignored characters can be given.
+--
+-- If you need to parse signed integers, see 'signed' combinator.
+
+integerBase :: (MonadParsec e s m, Token s ~ Char) => Int -> m Char -> m Integer
+integerBase base ignore =
+  toInt <$> ((:) <$> baseDigit base <*> many (baseDigit base <|> (ignore *> baseDigit base)))
+  where toInt = foldl' (\acc x -> fromIntegral base * acc + toInteger (Char.digitToInt x)) 0
+
+baseDigit :: (MonadParsec e s m, Token s ~ Char) => Int -> m Char
+baseDigit = C.satisfy . isBaseDigit
+
+isBaseDigit :: Int -> Char -> Bool
+isBaseDigit base c = (c >= '0' && ord <= Char.ord '0' + min 10 base - 1) ||
+                     ok (ord - Char.ord 'A') || ok (ord - Char.ord 'a')
+  where ord = Char.ord c
+        ok x = base > 10 && base < 36 && x >= 0 && x < base - 10
 
 -- | Parse an integer without sign in decimal representation (according to
 -- the format of integer literals described in the Haskell report).
@@ -399,7 +419,7 @@ integer = decimal <?> "integer"
 -- while this parser is labeled with “decimal integer”.
 
 decimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-decimal = nump "" C.digitChar <?> "decimal integer"
+decimal = integerBase 10 empty <?> "decimal integer"
 
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to the Haskell report
@@ -412,7 +432,7 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 
 hexadecimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
+hexadecimal = integerBase 16 empty <?> "hexadecimal integer"
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
@@ -421,14 +441,7 @@ hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 -- the number itself.
 
 octal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-octal = nump "0o" C.octDigitChar <?> "octal integer"
-
--- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
--- prepends @prefix@ to returned value and tries to interpret the result as
--- an integer according to Haskell syntax.
-
-nump :: MonadParsec e s m => String -> m Char -> m Integer
-nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
+octal = integerBase 8 empty <?> "octal integer"
 
 -- | Parse a floating point value as 'Scientific' number. 'Scientific' is
 -- great for parsing of arbitrary precision numbers coming from an untrusted
