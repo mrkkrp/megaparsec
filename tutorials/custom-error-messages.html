@@ -59,13 +59,13 @@
             <hr />
             <div class="content">
               
-<em>Last updated on August 10, 2016</em>
+<em>Last updated on May 25, 2017</em>
 <hr />
 
 
 <p>One of the advantages of Megaparsec 5 is the ability to use your own data types as part of data that is returned on parse failure. This opens up the possibility to tailor error messages to your domain of interest in a way that is quite unique to this library. Needless to say, all data that constitutes a error message is typed in Megaparsec 5, so it’s easy to inspect and manipulate it.</p>
 <h2 id="the-goal">The goal</h2>
-<p>In this tutorial we will walk through creation of a parser found in an existing library called <a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a>, which is an alternative parser for the popular <a href="https://hackage.haskell.org/package/cassava"><code>cassava</code></a> library that allows to parse CSV data. The default parser features not very user-friendly error messages, so I was asked to design a better one using Megaparsec 5.</p>
+<p>In this tutorial we will walk through creation of a parser found in the existing library called <a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a>, which is an alternative parser for the popular <a href="https://hackage.haskell.org/package/cassava"><code>cassava</code></a> library that allows to parse CSV data. The default parser features not very user-friendly error messages, so I was asked to design a better one using Megaparsec 5.</p>
 <p>In addition to the standard error messages (“expected” and “unexpected” tokens), the library can report problems that have to do with using methods from <code>FromRecord</code> and <code>FromNamedRecord</code> type classes that describe how to transform a collection of <code>ByteString</code>s into a particular instance of those type classes. While performing the conversion, things may go wrong, and we would like to use a special data constructor in these cases.</p>
 <p>The complete source code can be found in <a href="https://github.com/stackbuilders/cassava-megaparsec">this GitHub repository</a>.</p>
 <h2 id="language-extensions-and-imports">Language extensions and imports</h2>
@@ -109,18 +109,18 @@
 <h2 id="what-is-parseerror-actually">What is <code>ParseError</code> actually?</h2>
 <p>To start with custom error messages we should take a look at how parse errors are represented in Megaparsec 5.</p>
 <p>The main type for error messages in <code>ParseError</code> which is defined like this:</p>
-<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The data type @ParseError@ represents parse errors. It provides the</span>
-<span class="co">-- stack of source positions, set of expected and unexpected tokens as well</span>
-<span class="co">-- as set of custom associated data. The data type is parametrized over</span>
-<span class="co">-- token type @t@ and custom data @e@.</span>
+<div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | 'ParseError' represents… parse errors. It provides the stack of source</span>
+<span class="co">-- positions, a set of expected and unexpected tokens as well as a set of</span>
+<span class="co">-- custom associated data. The data type is parametrized over the token type</span>
+<span class="co">-- @t@ and the custom data @e@.</span>
 <span class="co">--</span>
-<span class="co">-- Note that stack of source positions contains current position as its</span>
+<span class="co">-- Note that the stack of source positions contains current position as its</span>
 <span class="co">-- head, and the rest of positions allows to track full sequence of include</span>
 <span class="co">-- files with topmost source file at the end of the list.</span>
 <span class="co">--</span>
-<span class="co">-- 'Semigroup' (or 'Monoid') instance of the data type allows to merge parse</span>
-<span class="co">-- errors from different branches of parsing. When merging two</span>
-<span class="co">-- 'ParseError's, longest match is preferred; if positions are the same,</span>
+<span class="co">-- 'Semigroup' (and 'Monoid') instance of the data type allows to merge</span>
+<span class="co">-- parse errors from different branches of parsing. When merging two</span>
+<span class="co">-- 'ParseError's, the longest match is preferred; if positions are the same,</span>
 <span class="co">-- custom data sets and collections of message items are combined.</span>
 
 <span class="kw">data</span> <span class="dt">ParseError</span> t e <span class="fu">=</span> <span class="dt">ParseError</span>
@@ -131,12 +131,12 @@
   } <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Read</span>, <span class="dt">Eq</span>, <span class="dt">Data</span>, <span class="dt">Typeable</span>, <span class="dt">Generic</span>)</code></pre></div>
 <p>Conceptually, we have four components in a parse error:</p>
 <ul>
-<li><p>Position (may be multi-dimensional to support include files).</p></li>
-<li><p>Unexpected “items” (see <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Error.html#t:ErrorItem"><code>ErrorItem</code></a> if you are curious).</p></li>
-<li><p>Expected “items”.</p></li>
-<li><p>Everything else — here we have a set of things of <code>e</code> type. <code>e</code> is the type we will be defining and using in this tutorial.</p></li>
+<li>Position (may be multi-dimensional to support include files).</li>
+<li>Unexpected “items” (see <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Error.html#t:ErrorItem"><code>ErrorItem</code></a> if you are curious).</li>
+<li>Expected “items”.</li>
+<li>Everything else—here we have a set of things of <code>e</code> type. <code>e</code> is the type we will be defining and using in this tutorial.</li>
 </ul>
-<h2 id="defining-custom-error-component">Defining custom error component</h2>
+<h2 id="defining-a-custom-error-component">Defining a custom error component</h2>
 <p>We cannot ship the library without some sort of default candidate to take the place of <code>e</code> type, so here it is:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | “Default error component”. This in our instance of 'ErrorComponent'</span>
 <span class="co">-- provided out-of-box.</span>
@@ -179,7 +179,7 @@
     <span class="ot">-&gt;</span> <span class="dt">Pos</span>             <span class="co">-- ^ Reference indentation level</span>
     <span class="ot">-&gt;</span> <span class="dt">Pos</span>             <span class="co">-- ^ Actual indentation level</span>
     <span class="ot">-&gt;</span> e</code></pre></div>
-<p>Every type that is going to be used as part of <code>ParseError</code> must be an instance of <code>ErrorComponent</code> type class.</p>
+<p>Every type that is going to be used as part of <code>ParseError</code> must be an instance of the <code>ErrorComponent</code> type class.</p>
 <p>Another thing we would like to do with custom error component is to format it somehow, so it could be inserted in pretty-printed representation of <code>ParseError</code>. This behavior is defined by the <code>ShowErrorComponent</code> type class:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | The type class defines how to print custom data component of</span>
 <span class="co">-- 'ParseError'.</span>
@@ -218,7 +218,7 @@
   representFail        <span class="fu">=</span> <span class="dt">CecFail</span>
   representIndentation <span class="fu">=</span> <span class="dt">CecIndentation</span></code></pre></div>
 <p>We have re-used definitions from Megaparsec’s source code for <code>Dec</code> here and added a special case represented by <code>CecConversionError</code>. It contains a <code>String</code> that conversion functions of Cassava return. We could do better if Cassava provided typed error values, but <code>String</code> is all we have, so let’s work with it.</p>
-<p>Another handy definition we need is <code>Parser</code> type synonym. We cannot use one of the default <code>Parser</code> definitions because those assume <code>Dec</code>, so we define it ourselves rather trivially:</p>
+<p>Another handy definition we need is the <code>Parser</code> type synonym. We cannot use one of the default <code>Parser</code> definitions because those assume <code>Dec</code>, so we define it ourselves rather trivially:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parser type that uses “custom error component” 'Cec'.</span>
 
 <span class="kw">type</span> <span class="dt">Parser</span> <span class="fu">=</span> <span class="dt">Parsec</span> <span class="dt">Cec</span> <span class="dt">BL.ByteString</span></code></pre></div>
@@ -335,7 +335,7 @@ escapedField <span class="fu">=</span>
 unescapedField del <span class="fu">=</span> BC8.pack <span class="fu">&lt;$!&gt;</span> many (noneOf es)
   <span class="kw">where</span>
     es <span class="fu">=</span> chr (fromIntegral del) <span class="fu">:</span> <span class="st">&quot;\&quot;\n\r&quot;</span></code></pre></div>
-<p>To parse a record we have to parse non-empty collection of fields separated by delimiter characters (supplied from the <code>DecodeOptions</code> thing). Then we convert it to <code>Vector ByteString</code>, because that’s what Cassava’s conversion functions expect:</p>
+<p>To parse a record we have to parse a non-empty collection of fields separated by delimiter characters (supplied from the <code>DecodeOptions</code> thing). Then we convert it to <code>Vector ByteString</code>, because that’s what Cassava’s conversion functions expect:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- | Parse a record, not including the terminating line separator. The</span>
 <span class="co">-- terminating line separate is not included as the last record in a CSV</span>
 <span class="co">-- file is allowed to not have a terminating line separator.</span>

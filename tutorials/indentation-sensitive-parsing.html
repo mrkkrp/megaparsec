@@ -59,20 +59,20 @@
             <hr />
             <div class="content">
               
-<em>Last updated on December  2, 2016</em>
+<em>Last updated on May 25, 2017</em>
 <hr />
 
 
-<p>Megaparsec 4.3.0 introduces new combinators that should be of some use when you want to parse indentation-sensitive input. Megaparsec 5.0.0 adds support for line-folds, completing support for indentation-sensitive parsing. This tutorial shows how these new tools work, compose, and hopefully, <em>feel natural</em> — something we cannot say about ad-hoc solutions to this problem that exist as separate packages to work on top of Parsec, for example.</p>
+<p>Megaparsec 4.3.0 introduces new combinators that should be of some use when you want to parse indentation-sensitive input. Megaparsec 5.0.0 adds support for line-folds, completing support for indentation-sensitive parsing. This tutorial shows how these new tools work, compose, and hopefully, <em>feel natural</em>—something we cannot say about ad-hoc solutions to this problem that exist as separate packages to work on top of Parsec, for example.</p>
 <ol style="list-style-type: decimal">
 <li><a href="#combinator-overview">Combinator overview</a></li>
-<li><a href="#parsing-simple-indented-list">Parsing simple indented list</a></li>
+<li><a href="#parsing-a-simple-indented-list">Parsing a simple indented list</a></li>
 <li><a href="#nested-indented-list">Nested indented list</a></li>
 <li><a href="#adding-line-folds">Adding line folds</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 </ol>
 <h2 id="combinator-overview">Combinator overview</h2>
-<p>From the first release of Megaparsec, there has been the <code>indentGuard</code> function, which is a great shortcut, but kind of pain to use for complex tasks. So, we won’t cover it here, instead we will talk about the new combinators built upon it and available beginning from Megaparsec 4.3.0.</p>
+<p>From the first release of Megaparsec, there has been the <code>indentGuard</code> function, which is a great shortcut, but a kind of pain to use for complex tasks. So, we won’t cover it here, instead we will talk about the new combinators built upon it and available beginning from Megaparsec 4.3.0.</p>
 <p>First, we have <code>indentLevel</code>, which is defined just as:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">indentLevel ::</span> <span class="dt">MonadParsec</span> e s m <span class="ot">=&gt;</span> m <span class="dt">Pos</span>
 indentLevel <span class="fu">=</span> sourceColumn <span class="fu">&lt;$&gt;</span> getPosition</code></pre></div>
@@ -103,8 +103,8 @@ nonIndented sc p <span class="fu">=</span> indentGuard sc <span class="dt">EQ</s
   <span class="fu">|</span> <span class="dt">IndentSome</span> (<span class="dt">Maybe</span> <span class="dt">Int</span>) ([b] <span class="ot">-&gt;</span> m a) (m b)
     <span class="co">-- ^ Just like 'IndentMany', but requires at least one indented token to</span>
     <span class="co">-- be present</span></code></pre></div>
-<p>We can change our mind and parse no indented tokens, we can parse <em>many</em> (that is, possibly zero) indented tokens or require <em>at least one</em> such token. We can either allow <code>indentBlock</code> detect indentation level of first indented token and use that, or manually specify indentation level. This should be flexible enough.</p>
-<h2 id="parsing-simple-indented-list">Parsing simple indented list</h2>
+<p>We can change our mind and parse no indented tokens, we can parse <em>many</em> (that is, possibly zero) indented tokens or require <em>at least one</em> such token. We can either allow <code>indentBlock</code> detect indentation level of the first indented token and use that, or manually specify indentation level. This should be flexible enough.</p>
+<h2 id="parsing-a-simple-indented-list">Parsing a simple indented list</h2>
 <p>Now it’s time to put our new tools into practice. In this section, we will parse a simple indented list of some items. Let’s begin with the import section:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE TupleSections #-}</span>
 
@@ -128,7 +128,7 @@ sc <span class="fu">=</span> L.space (void <span class="fu">$</span> oneOf <span
 <span class="ot">lexeme ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
 lexeme <span class="fu">=</span> L.lexeme sc</code></pre></div>
 <p>Just for fun, we will allow line comments that start with <code>#</code> as well.</p>
-<p>Assuming <code>pItemList</code> parses entire list, we can define high-level parser as:</p>
+<p>Assuming <code>pItemList</code> parses the entire list, we can define the high-level parser as:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">parser ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
 parser <span class="fu">=</span> pItemList <span class="fu">&lt;*</span> eof</code></pre></div>
 <p>This will make it consume all input.</p>
@@ -156,7 +156,7 @@ incorrect indentation (got <span class="dv">3</span>, should be equal to <span c
 <span class="dv">2</span><span class="fu">:</span><span class="dv">1</span><span class="fu">:</span>
 unexpected <span class="ch">'o'</span>
 expecting end <span class="kw">of</span> input</code></pre></div>
-<p>Remember that we’re using <code>IndentMany</code> option, so empty lists are OK, on the other hand built-in combinator <code>space</code> has hidden the phrase “expecting more space” from error messages (usually you don’t want it because it adds noise to all messages), so this error message is perfectly reasonable.</p>
+<p>Remember that we’re using <code>IndentMany</code> option, so empty lists are OK, on the other hand the built-in combinator <code>space</code> has hidden the phrase “expecting more space” from error messages (usually you don’t want it because it adds noise to all messages), so this error message is perfectly reasonable.</p>
 <p>Let’s continue:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell">λ<span class="fu">&gt;</span> parseTest parser <span class="st">&quot;something\n  one\n    two\n  three&quot;</span>
 <span class="dv">3</span><span class="fu">:</span><span class="dv">5</span><span class="fu">:</span>
@@ -185,7 +185,7 @@ incorrect indentation (got <span class="dv">3</span>, should be equal to <span c
 <p>First message may be a bit surprising, but Megaparsec knows that there must be at least one item in the list, so it checks indentation level and it’s 1, which is incorrect, so it reports it.</p>
 <h2 id="nested-indented-list">Nested indented list</h2>
 <p>What I like about <code>indentBlock</code> is that another <code>indentBlock</code> can be put inside of it and the whole thing will work smoothly, parsing more complex input with several levels of indentation. No additional effort is required.</p>
-<p>Let’s allow list items to have sub-items. For this we will need one new parser, <code>pComplexItem</code> (looks familiar…):</p>
+<p>Let’s allow list items to have sub-items. For this we will need a new parser, <code>pComplexItem</code> (looks familiar…):</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pComplexItem ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
 pComplexItem <span class="fu">=</span> L.indentBlock scn p
   <span class="kw">where</span>
@@ -219,7 +219,7 @@ pItemList <span class="fu">=</span> L.nonIndented scn (L.indentBlock scn p)
     , (<span class="st">&quot;paragraph-three&quot;</span>, []) ] )</code></pre></div>
 <p>And this looks like it works!</p>
 <h2 id="adding-line-folds">Adding line folds</h2>
-<p><code>lineFold</code> helper is introduced in Megaparsec 5.0.0. A line fold consists of several elements that can be put on one line or on several lines as long as indentation level of subsequent items is greater than indentation level of first item.</p>
+<p><code>lineFold</code> helper is introduced in Megaparsec 5.0.0. A line fold consists of several elements that can be put on one line or on several lines as long as indentation level of subsequent items is greater than indentation level of the first item.</p>
 <p>Let’s make use of <code>lineFold</code> and add line folds to our program.</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pComplexItem ::</span> <span class="dt">Parser</span> (<span class="dt">String</span>, [<span class="dt">String</span>])
 pComplexItem <span class="fu">=</span> L.indentBlock scn p
@@ -232,15 +232,15 @@ pComplexItem <span class="fu">=</span> L.indentBlock scn p
 pLineFold <span class="fu">=</span> L.lineFold scn <span class="fu">$</span> \sc' <span class="ot">-&gt;</span>
   <span class="kw">let</span> ps <span class="fu">=</span> some (alphaNumChar <span class="fu">&lt;|&gt;</span> char <span class="ch">'-'</span>) <span class="ot">`sepBy1`</span> try sc'
   <span class="kw">in</span> unwords <span class="fu">&lt;$&gt;</span> ps <span class="fu">&lt;*</span> sc</code></pre></div>
-<p><code>lineFold</code> works like this: you give it space consumer that accepts newlines and it gives you special space consumer that you can use in the callback to consume space between elements of line fold. An important thing here is that you should use normal space consumer at the end of line fold or your fold will have no end.</p>
-<p>Playing with the final version of our parser is left as an exercise for the reader — you can create “items” that consist of multiple words and as long as they are “line-folded” they will be parsed and concatenated with single space between them.</p>
+<p><code>lineFold</code> works like this: you give it a space consumer that accepts newlines and it gives you a special space consumer that you can use in the callback to consume space between elements of line fold. An important thing here is that you should use normal space consumer at the end of line fold or your fold will have no end.</p>
+<p>Playing with the final version of our parser is left as an exercise for the reader—you can create “items” that consist of multiple words and as long as they are “line-folded” they will be parsed and concatenated with single space between them.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Note that every sub-list behaves independently — you will see that if you try to feed the parser with various variants of malformed data. And this is no surprise, since no state is shared between different parts of the structure — it’s just assembled purely from simpler parts — sufficiently elegant solution in the spirit of the rest of the library.</p>
+<p>Note that every sub-list behaves independently—you will see that if you try to feed the parser with various variants of malformed data. And this is no surprise, since no state is shared between different parts of the structure—it’s just assembled purely from simpler parts—sufficiently elegant solution in the spirit of the rest of the library.</p>
 
 
 <hr />
 <p>
-  (Psst! Looking for source code for this tutorial?
+  (Psst! Looking for the source code for this tutorial?
   It's <a href="https://github.com/mrkkrp/megaparsec-site/tree/master/tutorial-code/IndentationSensitiveParsing.hs">here</a>.)
 </p>
 

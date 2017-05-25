@@ -91,45 +91,46 @@
 <h2 id="features">Features</h2>
 <p>This project provides flexible solutions to satisfy common parsing needs. The section describes them shortly. If you’re looking for comprehensive documentation, see the <a href="#documentation">section about documentation</a>.</p>
 <h3 id="core-features">Core features</h3>
-<p>The package is built around <code>MonadParsec</code>, a MTL-style monad transformer. All tools and features work with any instance of <code>MonadParsec</code>. You can achieve various effects combining monad transformers, i.e. building monad stack. Since most common monad transformers like <code>WriterT</code>, <code>StateT</code>, <code>ReaderT</code> and others are instances of <code>MonadParsec</code>, you can wrap <code>ParsecT</code> <em>in</em> these monads, achieving, for example, backtracking state.</p>
-<p>On the other hand <code>ParsecT</code> is instance of many type classes as well. The most useful ones are <code>Monad</code>, <code>Applicative</code>, <code>Alternative</code>, and <code>MonadParsec</code>.</p>
-<p>The module <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html"><code>Text.Megaparsec.Combinator</code></a> (its functions are included in <code>Text.Megaparsec</code>) contains traditional, general combinators that work with any instance of <code>Alternative</code> and some even with instances of <code>Applicative</code>.</p>
-<p>Role of <code>Monad</code>, <code>Applicative</code>, and <code>Alternative</code> should be obvious, so let’s enumerate methods of <code>MonadParsec</code> type class. The class represents core, basic functions of Megaparsec parsing. The rest of library is built via combination of these primitives:</p>
+<p>The package is built around <code>MonadParsec</code>, an MTL-style monad transformer. All tools and features work with all instances of <code>MonadParsec</code>. You can achieve various effects combining monad transformers, i.e. building monad stack. Since the standard common monad transformers like <code>WriterT</code>, <code>StateT</code>, <code>ReaderT</code> and others are instances of the <code>MonadParsec</code> type class, you can wrap <code>ParsecT</code> <em>in</em> these monads, achieving, for example, backtracking state.</p>
+<p>On the other hand <code>ParsecT</code> is an instance of many type classes as well. The most useful ones are <code>Monad</code>, <code>Applicative</code>, <code>Alternative</code>, and <code>MonadParsec</code>.</p>
+<p>The module <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html"><code>Text.Megaparsec.Combinator</code></a> (its functions are included in <code>Text.Megaparsec</code>) contains traditional, general combinators that work with instances of <code>Applicative</code> and <code>Alternative</code>.</p>
+<p>Let’s enumerate methods of the <code>MonadParsec</code> type class. The class abstracts primitive functions of Megaparsec parsing. The rest of the library is built via combination of these primitives:</p>
 <ul>
-<li><p><code>failure</code> allows to fail with arbitrary collection of messages.</p></li>
-<li><p><code>label</code> allows to add a “label” to any parser, so when it fails the user will see the label in the error message where “expected” items are enumerated.</p></li>
-<li><p><code>hidden</code> hides any parser from error messages altogether, this is officially recommended way to hide things, prefer it to the <code>label &quot;&quot;</code> approach.</p></li>
+<li><p><code>failure</code> allows to fail reporting an arbitrary parse error.</p></li>
+<li><p><code>label</code> allows to add a “label” to a parser, so if it fails the user will see the label instead of an automatically deduced expected token.</p></li>
+<li><p><code>hidden</code> hides a parser from error messages altogether. This is the recommended way to hide things, prefer it to the <code>label &quot;&quot;</code> approach.</p></li>
 <li><p><code>try</code> enables backtracking in parsing.</p></li>
-<li><p><code>lookAhead</code> allows to parse something without consuming input.</p></li>
-<li><p><code>notFollowedBy</code> succeeds when its argument fails, it does not consume input.</p></li>
+<li><p><code>lookAhead</code> allows to parse input without consuming it.</p></li>
+<li><p><code>notFollowedBy</code> succeeds when its argument fails and does not consume input.</p></li>
 <li><p><code>withRecovery</code> allows to recover from parse errors “on-the-fly” and continue parsing. Once parsing is finished, several parse errors may be reported or ignored altogether.</p></li>
 <li><p><code>observing</code> allows to “observe” parse errors without ending parsing (they are returned in <code>Left</code>, while normal results are wrapped in <code>Right</code>).</p></li>
 <li><p><code>eof</code> only succeeds at the end of input.</p></li>
-<li><p><code>token</code> is used to parse single token.</p></li>
+<li><p><code>token</code> is used to parse a single token.</p></li>
 <li><p><code>tokens</code> makes it easy to parse several tokens in a row.</p></li>
-<li><p><code>getParserState</code> returns full parser state.</p></li>
-<li><p><code>updateParserState</code> applies given function on parser state.</p></li>
+<li><p><code>getParserState</code> returns the full parser state.</p></li>
+<li><p><code>updateParserState</code> applies a given function on the parser state.</p></li>
 </ul>
-<p>This list of core functions is longer than in some other libraries. Our goal was efficient and readable implementation of functionality provided by every such primitive, not minimal number of them. You can read the comprehensive description of every primitive function in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html">Megaparsec documentation</a>.</p>
-<p>Megaparsec can currently work with the following types of input stream out-of-box:</p>
+<p>This list of core functions is longer than in some other libraries. Our goal is efficient, readable implementations, and rich functionality, not minimal number of primitive combinators. You can read the comprehensive description of every primitive function in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html">Megaparsec documentation</a>.</p>
+<p>Megaparsec can currently work with the following types of input stream out-of-the-box:</p>
 <ul>
-<li><p><code>String</code> = <code>[Char]</code></p></li>
-<li><p><code>ByteString</code> (strict and lazy)</p></li>
-<li><p><code>Text</code> (strict and lazy)</p></li>
+<li><code>String</code> = <code>[Char]</code></li>
+<li><code>ByteString</code> (strict and lazy)</li>
+<li><code>Text</code> (strict and lazy)</li>
 </ul>
+<p>It’s also simple to make it work with custom token streams, and Megaparsec users have done so many times with great success.</p>
 <h3 id="error-messages">Error messages</h3>
-<p>Megaparsec 5 introduces well-typed error messages and ability to use custom data types to adjust the library to your domain of interest. No need to keep your info as shapeless bunch of strings anymore.</p>
-<p>The default error component (<code>Dec</code>) has constructors corresponding to <code>fail</code> function and indentation-related error messages. It is a decent option that should work out-of-box for most parsing needs, while you are free to use your own custom error component when necessary with little effort.</p>
-<p>This new design allowed Megaparsec 5 to have much more helpful error messages for indentation-sensitive parsing instead of plain “incorrect indentation” phrase.</p>
+<p>Megaparsec 5 introduces well-typed error messages and the ability to use custom data types to adjust the library to specific domain of interest. No need to use a shapeless bunch of strings anymore.</p>
+<p>The default error component (<code>Dec</code>) has constructors corresponding to the <code>fail</code> function and indentation-related error messages. It is a decent option that should work out-of-box for most parsing needs, while you are free to use your own custom error component when necessary.</p>
+<p>This new design allowed Megaparsec 5 to have much more helpful error messages for indentation-sensitive parsing instead of the plain “incorrect indentation” phrase.</p>
 <h3 id="alex-and-happy-support">Alex and Happy support</h3>
-<p>Megaparsec works well with streams of tokens produced by tools like Alex/Happy. Megaparsec 5 adds <code>updatePos</code> method to <code>Stream</code> type class that gives you full control over textual positions that are used to report token positions in error messages. You can update current position on per character basis or extract it from token — all cases are covered.</p>
+<p>Megaparsec works well with streams of tokens produced by tools like Alex/Happy. Megaparsec 5 adds <code>updatePos</code> method to <code>Stream</code> type class that gives you full control over textual positions that are used to report token positions in error messages. You can update current position on per character basis or extract it from token.</p>
 <h3 id="character-parsing">Character parsing</h3>
-<p>Megaparsec has decent support for Unicode-aware character parsing. Functions for character parsing live in <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html"><code>Text.Megaparsec.Char</code></a> (they all are included in <code>Text.Megaparsec</code>). The functions can be divided into several categories:</p>
+<p>Megaparsec has decent support for Unicode-aware character parsing. Functions for character parsing live in the <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html"><code>Text.Megaparsec.Char</code></a> module (they all are included in <code>Text.Megaparsec</code>). The functions can be divided into several categories:</p>
 <ul>
-<li><p><em>Simple parsers</em> — parsers that parse certain character or several characters of the same kind. This includes <code>newline</code>, <code>crlf</code>, <code>eol</code>, <code>tab</code>, and <code>space</code>.</p></li>
+<li><p><em>Simple parsers</em>—parsers that parse certain character or several characters of the same kind. This includes <code>newline</code>, <code>crlf</code>, <code>eol</code>, <code>tab</code>, and <code>space</code>.</p></li>
 <li><p><em>Parsers corresponding to categories of characters</em> parse single character that belongs to certain category of characters, for example: <code>controlChar</code>, <code>spaceChar</code>, <code>upperChar</code>, <code>lowerChar</code>, <code>printChar</code>, <code>digitChar</code>, and others.</p></li>
-<li><p><em>General parsers</em> that allow you to parse a single character you specify or one of given characters, or any character except for given ones, or character satisfying given predicate. Case-insensitive versions of the parsers are available.</p></li>
-<li><p><em>Parsers for sequences of characters</em> parse strings. These are more efficient and provide better error messages than other approaches most programmers can come up with. Case-sensitive <code>string</code> parser is available as well as case-insensitive <code>string'</code>.</p></li>
+<li><p><em>General parsers</em> that allow you to parse a single character you specify or one of the given characters, or any character except for the given ones, or character satisfying given predicate. Case-insensitive versions of the parsers are available.</p></li>
+<li><p><em>Parsers for sequences of characters</em> parse strings. Case-sensitive <code>string</code> parser is available as well as case-insensitive <code>string'</code>.</p></li>
 </ul>
 <h3 id="permutation-parsing">Permutation parsing</h3>
 <p>For those who are interested in parsing of permutation phrases, there is <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Perm.html"><code>Text.Megaparsec.Perm</code></a>. You have to import the module explicitly, it’s not included in the <code>Text.Megaparsec</code> module.</p>
@@ -138,13 +139,13 @@
 <p>Given a table of operators that describes their fixity and precedence, you can construct a parser that will parse any expression involving the operators. See documentation for comprehensive description of how it works.</p>
 <h3 id="lexer">Lexer</h3>
 <p><a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a> is a module that should help you write your lexer. If you have used <code>Parsec</code> in the past, this module “fixes” its particularly inflexible <code>Text.Parsec.Token</code>.</p>
-<p><code>Text.Megaparsec.Lexer</code> is intended to be imported qualified, it’s not included in <code>Text.Megaparsec</code>. The module doesn’t impose how you should write your parser, but certain approaches may be more elegant than others. An especially important theme is parsing of white space, comments, and indentation.</p>
+<p><code>Text.Megaparsec.Lexer</code> is intended to be imported via a qualified import, it’s not included in <code>Text.Megaparsec</code>. The module doesn’t impose how you should write your parser, but certain approaches may be more elegant than others. An especially important theme is parsing of white space, comments, and indentation.</p>
 <p>The design of the module allows you quickly solve simple tasks and doesn’t get in your way when you want to implement something less standard.</p>
-<p>Since Megaparsec 5, all tools for indentation-sensitive parsing are available in <code>Text.Megaparsec.Lexer</code> module — no third party packages required.</p>
+<p>Since Megaparsec 5, all tools for indentation-sensitive parsing are available in <code>Text.Megaparsec.Lexer</code> module—no third party packages required.</p>
 <h2 id="documentation">Documentation</h2>
 <p>Megaparsec is well-documented. All functions and data-types are thoroughly described. We pay attention to avoid outdated info or unclear phrases in our documentation. See the <a href="https://hackage.haskell.org/package/megaparsec">current version of Megaparsec documentation on Hackage</a> for yourself.</p>
 <h2 id="tutorials">Tutorials</h2>
-<p>You can visit <a href="https://mrkkrp.github.io/megaparsec/">site of the project</a> which has <a href="https://mrkkrp.github.io/megaparsec/tutorials.html">several tutorials</a> that should help you to start with your parsing tasks. The site also has instructions and tips for Parsec users who decide to switch. If you want to improve an existing tutorial or add your own, open a PR against <a href="https://github.com/mrkkrp/megaparsec-site">this repo</a>.</p>
+<p>You can visit the <a href="https://mrkkrp.github.io/megaparsec/">site of the project</a> which has <a href="https://mrkkrp.github.io/megaparsec/tutorials.html">several tutorials</a> that should help you to start with your parsing tasks. The site also has instructions and tips for Parsec users who decide to migrate to Megaparsec. If you want to improve an existing tutorial or add your own, open a PR against <a href="https://github.com/mrkkrp/megaparsec-site">this repo</a>.</p>
 <h2 id="performance">Performance</h2>
 <p>Despite being quite flexible, Megaparsec is also faster than Parsec. The repository includes benchmarks that can be easily used to compare Megaparsec and Parsec. In most cases Megaparsec is faster, sometimes dramatically faster. If you happen to have some other benchmarks, I would appreciate if you add Megaparsec to them and let me know how it performs.</p>
 <p>If you think your Megaparsec parser is not efficient enough, take a look at <a href="https://mrkkrp.github.io/megaparsec/tutorials/writing-a-fast-parser.html">these instructions</a>.</p>
@@ -158,9 +159,9 @@
 </ul>
 <p>So, if you work with something human-readable where size of input data is usually not huge, just go with Megaparsec, otherwise Attoparsec may be a better choice.</p>
 <h3 id="megaparsec-vs-parsec">Megaparsec vs Parsec</h3>
-<p>Since Megaparsec is a fork of Parsec, it’s necessary to list main differences between the two libraries:</p>
+<p>Since Megaparsec is a fork of Parsec, we are bound to list the main differences between the two libraries:</p>
 <ul>
-<li><p>Better error messages. We test our error messages using dense QuickCheck tests. Good error messages are just as important for us as correct return values of our parsers. Megaparsec will be especially useful if you write compiler or interpreter for some language.</p></li>
+<li><p>Better error messages. We test our error messages using dense QuickCheck tests. Good error messages are just as important for us as correct return values of our parsers. Megaparsec will be especially useful if you write a compiler or an interpreter for some language.</p></li>
 <li><p>Some quirks and “buggy features” (as well as plain bugs) of original Parsec are fixed. There is no undocumented surprising stuff in Megaparsec.</p></li>
 <li><p>Better support for Unicode parsing in <code>Text.Megaparsec.Char</code>.</p></li>
 <li><p>Megaparsec has more powerful combinators and can parse languages where indentation matters.</p></li>
@@ -170,13 +171,14 @@
 <li><p>Megaparsec’s code is clearer and doesn’t contain “magic” found in original Parsec.</p></li>
 <li><p>Megaparsec has well-typed error messages and custom error messages.</p></li>
 <li><p>Megaparsec can recover from parse errors “on the fly” and continue parsing.</p></li>
+<li><p>Megaparsec allows to conditionally process parse errors <em>inside your parser</em> before parsing is finished. In particular, it’s possible to define regions in which parse errors, should they happen, will get a “context tag”, e.g. we could build a context stack like “in function definition foo”, “in expression x”, etc. This is not possible with Parsec.</p></li>
 <li><p>Megaparsec is faster.</p></li>
-<li><p>Megaparsec is better supported.</p></li>
+<li><p>Megaparsec is <del>better</del> supported.</p></li>
 </ul>
 <p>If you want to see a detailed change log, <code>CHANGELOG.md</code> may be helpful. Also see <a href="https://notehub.org/w7037">this original announcement</a> for another comparison.</p>
-<p>To be honest Parsec’s development has seemingly stagnated. It has no test suite (only three per-bug tests), and all its releases beginning from version 3.1.2 (according or its change log) were about introducing and fixing regressions. Parsec is old and somewhat famous in Haskell community, so we understand there will be some kind of inertia, but we advise you use Megaparsec from now on because it solves many problems of original Parsec project. If you think you still have a reason to use original Parsec, open an issue.</p>
+<p>To be honest Parsec’s development has seemingly stagnated. It has no test suite (only three per-bug tests), and all its releases beginning from version 3.1.2 (according or its change log) were about introducing and fixing regressions. Parsec is old and somewhat famous in the Haskell community, so we understand there will be some kind of inertia, but we advise you use Megaparsec from now on because it solves many problems of the original Parsec project. If you think you still have a reason to use original Parsec, open an issue.</p>
 <h3 id="megaparsec-vs-trifecta">Megaparsec vs Trifecta</h3>
-<p><a href="https://hackage.haskell.org/package/trifecta">Trifecta</a> is another Haskell library featuring good error messages. Like some other projects of Edward Kmett, it’s probably good, but also poorly documented, arcane, and has unfixed <a href="https://github.com/ekmett/trifecta/issues">bugs and flaws</a> that Edward is too busy to fix (simply a fact, no offense intended). Other reasons one may question choice of Trifecta is his/her parsing library:</p>
+<p><a href="https://hackage.haskell.org/package/trifecta">Trifecta</a> is another Haskell library featuring good error messages. Like some other projects of Edward Kmett, it’s probably good, but also under-documented, and has unfixed <a href="https://github.com/ekmett/trifecta/issues">bugs and flaws</a> that Edward is too busy to fix (simply a fact, no offense intended). Other reasons one may question choice of Trifecta is his/her parsing library:</p>
 <ul>
 <li><p>Complicated, doesn’t have any tutorials available, and documentation doesn’t help at all.</p></li>
 <li><p>Trifecta can parse <code>String</code> and <code>ByteString</code> natively, but not <code>Text</code>.</p></li>
@@ -187,38 +189,38 @@
 <p><a href="https://hackage.haskell.org/package/Earley">Earley</a> is a newer library that allows to safely (it your code compiles, then it probably works) parse context-free grammars (CFG). Megaparsec is a lower-level library compared to Earley, but there are still enough reasons to choose it over Earley:</p>
 <ul>
 <li><p>Megaparsec is faster.</p></li>
-<li><p>Your grammar may be not context free or you may want introduce some sort of state to the parsing process. Almost all non-trivial parsers require something of this sort. Even if your grammar is context-free, state may allow to add some additional niceties. Earley does not support that.</p></li>
+<li><p>Your grammar may be not context-free or you may want introduce some sort of state to the parsing process. Almost all non-trivial parsers require something of this sort. Even if your grammar is context-free, state may allow to add some additional niceties. Earley does not support that.</p></li>
 <li><p>Megaparsec’s error messages are more flexible allowing to include arbitrary data in them, return multiple error messages, mark regions that affect any error that happens in those regions, etc.</p></li>
-<li><p>The approach Earley uses differs from conventional monadic parsing. If you work not alone, chances people you work with, especially beginners will be much more productive with libraries taking more traditional path to parsing like Megaparsec.</p></li>
+<li><p>The approach Earley uses differs from the conventional monadic parsing. If you work not alone, chances people you work with, especially beginners will be much more productive with libraries taking more traditional path to parsing like Megaparsec.</p></li>
 </ul>
-<p>IOW, Megaparsec is less safe but also much more powerful.</p>
+<p>IOW, Megaparsec is less safe but also more powerful.</p>
 <h3 id="megaparsec-vs-parsers">Megaparsec vs Parsers</h3>
 <p>There is <a href="https://hackage.haskell.org/package/parsers">Parsers</a> package, which is great. You can use it with Megaparsec or Parsec, but consider the following:</p>
 <ul>
 <li><p>It depends on Attoparsec, Parsec, and Trifecta, which means you always grab half of Hackage as transitive dependencies by using it. This is ridiculous, by the way, because this package is supposed to be useful for parser builders, so they can write basic core functionality and get the rest “for free”.</p></li>
-<li><p>It currently has a bug in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features.</p></li>
+<li><p>It currently has a <del>bug</del> feature in definition of <code>lookAhead</code> for various monad transformers like <code>StateT</code>, etc. which is visible when you create backtracking state via monad stack, not via built-in features. The feature makes it so <code>lookAhead</code> will backtrack your parser state but not your custom state added via <code>StateT</code>. Kmett thinks this behavior is better.</p></li>
 </ul>
-<p>We intended to use Parsers library in Megaparsec at some point, but aside from already mentioned flaws the library has different conventions for naming of things, different set of “core” functions, etc., different approach to lexer. So it didn’t happen, Megaparsec has minimal dependencies, it is feature-rich and self-contained.</p>
+<p>We intended to use Parsers library in Megaparsec at some point, but aside from already mentioned flaws the library has different conventions for naming of things, different set of “core” functions, etc., different approach to lexing. So it didn’t happen, Megaparsec has minimal dependencies, it is feature-rich and self-contained.</p>
 <h2 id="related-packages">Related packages</h2>
 <p>The following packages are designed to be used with Megaparsec:</p>
 <ul>
-<li><p><a href="https://hackage.haskell.org/package/hspec-megaparsec"><code>hspec-megaparsec</code></a> — utilities for testing Megaparsec parsers with with <a href="https://hackage.haskell.org/package/hspec">Hspec</a>.</p></li>
-<li><p><a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a> — Megaparsec parser of CSV files that plays nicely with <a href="https://hackage.haskell.org/package/cassava">Cassava</a>.</p></li>
-<li><p><a href="https://hackage.haskell.org/package/tagsoup-megaparsec"><code>tagsoup-megaparsec</code></a> — a library for easily using <a href="https://hackage.haskell.org/package/tagsoup">TagSoup</a> as a token type in Megaparsec.</p></li>
+<li><p><a href="https://hackage.haskell.org/package/hspec-megaparsec"><code>hspec-megaparsec</code></a>—utilities for testing Megaparsec parsers with with <a href="https://hackage.haskell.org/package/hspec">Hspec</a>.</p></li>
+<li><p><a href="https://hackage.haskell.org/package/cassava-megaparsec"><code>cassava-megaparsec</code></a>—Megaparsec parser of CSV files that plays nicely with <a href="https://hackage.haskell.org/package/cassava">Cassava</a>.</p></li>
+<li><p><a href="https://hackage.haskell.org/package/tagsoup-megaparsec"><code>tagsoup-megaparsec</code></a>—a library for easily using <a href="https://hackage.haskell.org/package/tagsoup">TagSoup</a> as a token type in Megaparsec.</p></li>
 </ul>
 <h2 id="links-to-announcements">Links to announcements</h2>
 <p>Here are some blog posts mainly announcing new features of the project and describing what sort of things are now possible:</p>
 <ul>
-<li><a href="https://notehub.org/w7037">The original Megaparsec 4.0.0 announcement</a></li>
-<li><a href="https://mrkkrp.github.io/posts/megaparsec-4-and-5.html">Megaparsec 4 and 5</a></li>
-<li><a href="https://mrkkrp.github.io/posts/announcing-megaparsec-5.html">Announcing Megaparsec 5</a></li>
 <li><a href="https://mrkkrp.github.io/posts/latest-additions-to-megaparsec.html">Latest additions to Megaparsec</a></li>
+<li><a href="https://mrkkrp.github.io/posts/announcing-megaparsec-5.html">Announcing Megaparsec 5</a></li>
+<li><a href="https://mrkkrp.github.io/posts/megaparsec-4-and-5.html">Megaparsec 4 and 5</a></li>
+<li><a href="https://notehub.org/w7037">The original Megaparsec 4.0.0 announcement</a></li>
 </ul>
 <h2 id="authors">Authors</h2>
-<p>The project was started and is currently maintained by Mark Karpov. You can find complete list of contributors in <code>AUTHORS.md</code> file in official repository of the project. Thanks to all the people who propose features and ideas, although they are not in <code>AUTHORS.md</code>, without them Megaparsec would not be that good.</p>
+<p>The project was started and is currently maintained by Mark Karpov. You can find the complete list of contributors in the <code>AUTHORS.md</code> file in the official repository of the project. Thanks to all the people who propose features and ideas, although they are not in <code>AUTHORS.md</code>, without them Megaparsec would not be that good.</p>
 <h2 id="contribution">Contribution</h2>
 <p>Issues (bugs, feature requests or otherwise feedback) may be reported in <a href="https://github.com/mrkkrp/megaparsec/issues">the GitHub issue tracker for this project</a>.</p>
-<p>Pull requests are also welcome (and yes, they will get attention and will be merged quickly if they are good, we are progressive folks).</p>
+<p>Pull requests are also welcome (and yes, they will get attention and will be merged quickly if they are good).</p>
 <p>If you want to write a tutorial to be hosted on Megaparsec’s site, open an issue or pull request <a href="https://github.com/mrkkrp/megaparsec-site">here</a>.</p>
 <h2 id="license">License</h2>
 <p>Copyright © 2015–2017 Megaparsec contributors<br> Copyright © 2007 Paolo Martini<br> Copyright © 1999–2000 Daan Leijen</p>

@@ -59,7 +59,7 @@
             <hr />
             <div class="content">
               
-<em>Last updated on May 14, 2016</em>
+<em>Last updated on May 25, 2017</em>
 <hr />
 
 
@@ -92,7 +92,7 @@
 <span class="kw">import </span><span class="dt">Text.Megaparsec.Expr</span>
 <span class="co">-- if you need to parse languages:</span>
 <span class="kw">import qualified</span> <span class="dt">Text.Megaparsec.Lexer</span> <span class="kw">as</span> <span class="dt">L</span></code></pre></div>
-<p>So, the only noticeable difference that Megaparsec has no <code>Text.Megaparsec.Token</code> module which is replaced with <code>Text.Megaparsec.Lexer</code>, see about this in section <a href="#what-happened-to-text.parsec.token">“What happened to <code>Text.Parsec.Token</code>”</a>.</p>
+<p>So, the only noticeable difference that Megaparsec has no <code>Text.Megaparsec.Token</code> module which is replaced with <code>Text.Megaparsec.Lexer</code>, see about this in the section <a href="#what-happened-to-text.parsec.token">“What happened to <code>Text.Parsec.Token</code>”</a>.</p>
 <h2 id="renamed-things">Renamed things</h2>
 <p>Megaparsec introduces a more consistent naming scheme, so some things are called differently, but renaming functions is a very easy task, you don’t need to think. Here are renamed items:</p>
 <ul>
@@ -116,16 +116,16 @@
 <li><code>spaces</code> → <code>space</code> †</li>
 <li><code>upper</code> → <code>upperChar</code></li>
 </ul>
-<p>† — pay attention to these, since <code>space</code> parses <em>many</em> <code>spaceChar</code>s, including zero, if you write something like <code>many space</code>, your parser will hang. So be careful to replace <code>many space</code> with either <code>many spaceChar</code> or <code>spaces</code>.</p>
+<p>†—pay attention to these, since <code>space</code> parses <em>many</em> <code>spaceChar</code>s, including zero, if you write something like <code>many space</code>, your parser will hang. So be careful to replace <code>many space</code> with either <code>many spaceChar</code> or <code>spaces</code>.</p>
 <h2 id="removed-things">Removed things</h2>
 <p>Parsec also has many names for the same or similar things. Megaparsec usually has one function per task that does its job well. Here are the items that were removed in Megaparsec and reasons of their removal:</p>
 <ul>
-<li><p><code>parseFromFile</code> — from file and then parsing its contents is trivial for every instance of <code>Stream</code> and this function provides no way to use newer methods for running a parser, such as <code>runParser'</code>.</p></li>
-<li><p><code>getState</code>, <code>putState</code>, <code>modifyState</code> — ad-hoc backtracking user state has been eliminated.</p></li>
+<li><p><code>parseFromFile</code>—from file and then parsing its contents is trivial for every instance of <code>Stream</code> and this function provides no way to use newer methods for running a parser, such as <code>runParser'</code>.</p></li>
+<li><p><code>getState</code>, <code>putState</code>, <code>modifyState</code>—ad-hoc backtracking user state has been eliminated.</p></li>
 <li><p><code>unexpected</code>, <code>token</code> and <code>tokens</code>, now there is a bit different versions of these functions under the same name.</p></li>
 <li><p><code>Reply</code> and <code>Consumed</code> are not public data types anymore, because they are low-level implementation details.</p></li>
 <li><p><code>runPT</code> and <code>runP</code> were essentially synonyms for <code>runParserT</code> and <code>runParser</code> respectively.</p></li>
-<li><p><code>chainl</code>, <code>chainl1</code>, <code>chainr</code>, and <code>chainr1</code> — use <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html"><code>Text.Megaparsec.Expr</code></a> instead.</p></li>
+<li><p><code>chainl</code>, <code>chainl1</code>, <code>chainr</code>, and <code>chainr1</code>—use <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html"><code>Text.Megaparsec.Expr</code></a> instead.</p></li>
 </ul>
 <h2 id="completely-changed-things">Completely changed things</h2>
 <p>In Megaparsec 5 the modules <code>Text.Megaparsec.Pos</code> and <code>Text.Megaparsec.Error</code> are completely different from those found in Parsec and Megaparsec 4. Take some time to look at documentation of the modules if your use-case requires operations on error messages or positions. You may like the fact that we have well-typed and extensible error messages now.</p>
@@ -134,9 +134,9 @@
 <li><p>The <code>Stream</code> type class now have <code>updatePos</code> method that gives precise control over advancing of textual positions during parsing.</p></li>
 <li><p>Note that argument order of <code>label</code> has been flipped (the label itself goes first now), so you can write now: <code>myParser = label &quot;my parser&quot; $ …</code>.</p></li>
 <li><p>Don’t use the <code>label &quot;&quot;</code> (or the <code>… &lt;?&gt; &quot;&quot;</code>) idiom to “hide” some “expected” tokens from error messages, use <code>hidden</code>.</p></li>
-<li><p>New <code>token</code> parser is more powerful, its first argument provides full control over reported error message while its second argument allows to specify how to report missing token in case of empty input stream.</p></li>
+<li><p>The new <code>token</code> parser is more powerful, its first argument provides full control over reported error message while its second argument allows to specify how to report a missing token in case of empty input stream.</p></li>
 <li><p>Now <code>tokens</code> parser allows to control how tokens are compared (yes, we have case-insensitive <code>string</code> called <code>string'</code>).</p></li>
-<li><p>The <code>unexpected</code> parser allows to specify precisely what is unexpected in well-typed manner.</p></li>
+<li><p>The <code>unexpected</code> parser allows to specify precisely what is unexpected in a well-typed manner.</p></li>
 <li><p>Tab width is not hard-coded anymore, use <code>getTabWidth</code> and <code>setTabWidth</code> to change it. Default tab width is <code>defaultTabWidth</code>.</p></li>
 <li><p>Now you can reliably test error messages, equality for them is now defined properly (in Parsec <code>Expect &quot;foo&quot;</code> is equal to <code>Expect &quot;bar&quot;</code>), error messages are also well-typed and customizeable.</p></li>
 <li><p>To render a error message, apply <code>parseErrorPretty</code> on it.</p></li>
@@ -169,9 +169,9 @@
 <h2 id="expression-parsing">Expression parsing</h2>
 <p><code>makeExprParser</code> has flipped order of arguments: term parser first, operator table second. To specify associativity of infix operators you use one of the three <code>Operator</code> constructors:</p>
 <ul>
-<li><code>InfixN</code> — non-associative infix</li>
-<li><code>InfixL</code> — left-associative infix</li>
-<li><code>InfixR</code> — right-associative infix</li>
+<li><code>InfixN</code>—non-associative infix</li>
+<li><code>InfixL</code>—left-associative infix</li>
+<li><code>InfixR</code>—right-associative infix</li>
 </ul>
 <h2 id="what-happened-to-text.parsec.token">What happened to <code>Text.Parsec.Token</code>?</h2>
 <p>That module was extremely inflexible and thus it has been eliminated. In Megaparsec you have <a href="https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Lexer.html"><code>Text.Megaparsec.Lexer</code></a> instead, which doesn’t impose anything on user but provides useful helpers. The module can also parse indentation-sensitive languages.</p>
@@ -205,11 +205,11 @@ skipBlockComment' <span class="fu">=</span> …
 <span class="ot">sc ::</span> <span class="dt">MyParser</span> ()
 sc <span class="fu">=</span> space (void spaceChar) skipLineComment' skipBlockComment'</code></pre></div>
 <h3 id="indentation-sensitive-languages">Indentation-sensitive languages</h3>
-<p>Parsing of indentation-sensitive language deserves its own tutorial, but let’s take a look at basic tools upon which you can build. First of all you should work with space consumer that doesn’t eat newlines automatically. This means you’ll need to pick them up manually.</p>
-<p>Main helper is called <code>indentGuard</code>. It takes parser that will be used to consume white space (indentation) and a predicate of type <code>Int -&gt; Bool</code>. If after running the given parser column number does not satisfy given predicate, the parser fails with message “incorrect indentation”, otherwise it returns current column number.</p>
+<p>Parsing of indentation-sensitive language deserves its own tutorial, but let’s take a look at the basic tools upon which you can build. First of all you should work with space consumer that doesn’t eat newlines automatically. This means you’ll need to pick them up manually.</p>
+<p>The main helper is called <code>indentGuard</code>. It takes a parser that will be used to consume white space (indentation) and a predicate of type <code>Int -&gt; Bool</code>. If after running the given parser column number does not satisfy given predicate, the parser fails with message “incorrect indentation”, otherwise it returns current column number.</p>
 <p>In simple cases you can explicitly pass around value returned by <code>indentGuard</code>, i.e. current level of indentation. If you prefer to preserve some sort of state you can achieve backtracking state combining <code>StateT</code> and <code>ParsecT</code>, like this:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="dt">StateT</span> <span class="dt">Int</span> <span class="dt">Parser</span> a</code></pre></div>
-<p>Here we have state of type <code>Int</code>. You can use <code>get</code> and <code>put</code> as usual, although it may be better to write modified version of <code>indentGuard</code> that could get current indentation level (indentation level on previous line), then consume indentation of current line, perform necessary checks, and put new level of indentation.</p>
+<p>Here we have state of the type <code>Int</code>. You can use <code>get</code> and <code>put</code> as usual, although it may be better to write a modified version of <code>indentGuard</code> that could get current indentation level (indentation level on previous line), then consume indentation of current line, perform necessary checks, and put new level of indentation.</p>
 <p><em>Later update</em>: now we have full support for indentation-sensitive parsing, see <code>nonIndented</code>, <code>indentBlock</code>, and <code>lineFold</code> in the <code>Text.Megaparsec.Lexer</code> module.</p>
 <h3 id="character-and-string-literals">Character and string literals</h3>
 <p>Parsing of string and character literals is done a bit differently than in Parsec. You have the single helper <code>charLiteral</code>, which parses a character literal. It <em>does not</em> parse surrounding quotes, because different languages may quote character literals differently. Purpose of this parser is to help with parsing of conventional escape sequences (literal character is parsed according to rules defined in Haskell report).</p>
@@ -229,14 +229,14 @@ float <span class="fu">=</span> lexeme L.float
 
 <span class="ot">number ::</span> <span class="dt">Parser</span> <span class="dt">Scientific</span>
 number lexeme L.number <span class="co">-- similar to ‘naturalOrFloat’ in Parsec</span></code></pre></div>
-<p>Note that Megaparsec internally uses standard Haskell functions to parse floating point numbers, thus no precision loss is possible (and it’s tested). On the other hand, Parsec again re-implements the whole thing. Approach taken by Parsec authors is to parse the numbers one by one and then re-create the floating point number by means of floating point arithmetic. Any professional knows that this is not possible and the only way to parse floating point number is via bit-level manipulation (it’s usually done on OS level, in C libraries). Of course results produced by Parsec built-in parser for floating point numbers are incorrect. This is a known bug now, but it’s been a long time till we “discovered” it, because again, Parsec has no test suite. (<em>Update</em>: it took one year but Parsec’s maintainer has recently merged a pull request that seems to fix that and released Parsec 3.1.11.)</p>
+<p>Note that Megaparsec internally uses the standard Haskell functions to parse floating point numbers, thus no precision loss is possible (and it’s tested). On the other hand, Parsec again re-implements the whole thing. Approach taken by Parsec authors is to parse the numbers one by one and then re-create the floating point number by means of floating point arithmetic. Any professional knows that this is not possible and the only way to parse floating point number is via bit-level manipulation (it’s usually done on OS level, in C libraries). Of course results produced by Parsec built-in parser for floating point numbers are incorrect. This is a known bug now, but it’s been a long time till we “discovered” it, because again, Parsec has no test suite. (<em>Update</em>: it took one year but Parsec’s maintainer has recently merged a pull request that seems to fix that and released Parsec 3.1.11.)</p>
 <p>Hexadecimal and octal numbers do not parse “0x” or “0o” prefixes, because different languages may have other prefixes for this sort of numbers. We should parse the prefixes manually:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">hexadecimal ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
 hexadecimal <span class="fu">=</span> lexeme <span class="fu">$</span> char <span class="ch">'0'</span> <span class="fu">&gt;&gt;</span> char' <span class="ch">'x'</span> <span class="fu">&gt;&gt;</span> L.hexadecimal
 
 <span class="ot">octal ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
 octal <span class="fu">=</span> lexeme <span class="fu">$</span> char <span class="ch">'0'</span> <span class="fu">&gt;&gt;</span> char' <span class="ch">'o'</span> <span class="fu">&gt;&gt;</span> L.octal</code></pre></div>
-<p>Since Haskell report says nothing about sign in numeric literals, basic parsers like <code>integer</code> do not parse sign. You can easily create parsers for signed numbers with help of <code>signed</code>:</p>
+<p>Since Haskell report says nothing about sign in numeric literals, basic parsers like <code>integer</code> do not parse sign. You can easily create parsers for signed numbers with the help of <code>signed</code>:</p>
 <div class="sourceCode"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">signedInteger ::</span> <span class="dt">Parser</span> <span class="dt">Integer</span>
 signedInteger <span class="fu">=</span> L.signed sc integer
 
