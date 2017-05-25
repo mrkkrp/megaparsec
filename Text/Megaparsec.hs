@@ -13,17 +13,17 @@
 -- If you are new to Megaparsec and don't know where to begin, take a look
 -- at our tutorials <https://mrkkrp.github.io/megaparsec/tutorials.html>.
 --
--- By default this module is set up to parse character data. If you'd like to
--- parse the result of your own tokenizer you should start with the following
--- imports:
+-- By default this module is set up to parse character data. If you'd like
+-- to parse the result of your own tokenizer you should start with the
+-- following imports:
 --
 -- > import Text.Megaparsec.Prim
 -- > import Text.Megaparsec.Combinator
 --
 -- Then you can implement your own version of 'satisfy' on top of the
--- 'token' primitive.
+-- 'token' primitive, etc.
 --
--- Typical import section looks like this:
+-- The typical import section looks like this:
 --
 -- > import Text.Megaparsec
 -- > import Text.Megaparsec.String
@@ -205,13 +205,13 @@ import Text.Megaparsec.Prim
 --
 -- @some p@ applies the parser @p@ /one/ or more times and returns a list of
 -- the returned values of @p@. The note about behavior of the combinator in
--- case when @p@ fails consuming input (see 'A.many') applies to 'some' as
--- well.
+-- the case when @p@ fails consuming input (see 'A.many') applies to 'some'
+-- as well.
 --
 -- > word = some letter
 
 -- $optional
 --
--- @optional p@ tries to apply parser @p@. It will parse @p@ or nothing. It
--- only fails if @p@ fails after consuming input. On success result of @p@
--- is returned inside of 'Just', on failure 'Nothing' is returned.
+-- @optional p@ tries to apply the parser @p@. It will parse @p@ or nothing.
+-- It only fails if @p@ fails after consuming input. On success result of
+-- @p@ is returned inside of 'Just', on failure 'Nothing' is returned.

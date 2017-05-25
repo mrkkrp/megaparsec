@@ -226,8 +226,9 @@ accHints
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 {-# INLINE accHints #-}
 
--- | Replace the most recent group of hints (if any) with given 'ErrorItem'
--- (or delete it if 'Nothing' is given). This is used in 'label' primitive.
+-- | Replace the most recent group of hints (if any) with the given
+-- 'ErrorItem' (or delete it if 'Nothing' is given). This is used in 'label'
+-- primitive.
 
 refreshLastHint :: Hints t -> Maybe (ErrorItem t) -> Hints t
 refreshLastHint (Hints [])     _        = Hints []
@@ -254,24 +255,24 @@ class Ord (Token s) => Stream s where
   -- | Update position in stream given tab width, current position, and
   -- current token. The result is a tuple where the first element will be
   -- used to report parse errors for current token, while the second element
-  -- is the incremented position that will be stored in parser's state. The
-  -- stored (incremented) position is used whenever position can't
+  -- is the incremented position that will be stored in the parser's state.
+  -- The stored (incremented) position is used whenever position can't
   -- be\/shouldn't be updated by consuming a token. For example, when using
   -- 'failure', we don't grab a new token (we need to fail right were we are
   -- now), so error position will be taken from parser's state.
   --
   -- When you work with streams where elements do not contain information
-  -- about their position in input, result is usually consists of the third
-  -- argument unchanged and incremented position calculated with respect to
-  -- current token. This is how default instances of 'Stream' work (they use
-  -- 'defaultUpdatePos', which may be a good starting point for your own
-  -- position-advancing function).
+  -- about their position in input, the result is usually consists of the
+  -- third argument unchanged and incremented position calculated with
+  -- respect to current token. This is how default instances of 'Stream'
+  -- work (they use 'defaultUpdatePos', which may be a good starting point
+  -- for your own position-advancing function).
   --
-  -- When you wish to deal with stream of tokens where every token “knows”
+  -- When you wish to deal with a stream of tokens where every token “knows”
   -- its start and end position in input (for example, you have produced the
   -- stream with Happy\/Alex), then the best strategy is to use the start
-  -- position as actual element position and provide the end position of the
-  -- token as incremented one.
+  -- position as the actual element position and provide the end position of
+  -- the token as the incremented one.
   --
   -- @since 5.0.0
 
@@ -318,38 +319,8 @@ instance Stream TL.Text where
   updatePos = const defaultUpdatePos
   {-# INLINE updatePos #-}
 
--- If you're reading this, you may be interested in how Megaparsec works on
--- lower level. That's quite simple. 'ParsecT' is a wrapper around function
--- that takes five arguments:
---
---     * State. It includes input stream, position in input stream and
---     current value of tab width.
---
---     * “Consumed-OK” continuation (cok). This is a function that takes
---     three arguments: result of parsing, state after parsing, and hints
---     (see their description above). This continuation is called when
---     something has been consumed during parsing and result is OK (no error
---     occurred).
---
---     * “Consumed-error” continuation (cerr). This function is called when
---     some part of input stream has been consumed and parsing resulted in
---     an error. This continuation takes 'ParseError' and state information
---     at the time error occurred.
---
---     * “Empty-OK” continuation (eok). The function takes the same
---     arguments as “consumed-OK” continuation. “Empty-OK” is called when no
---     input has been consumed and no error occurred.
---
---     * “Empty-error” continuation (eerr). The function is called when no
---     input has been consumed, but nonetheless parsing resulted in an
---     error. Just like “consumed-error”, the continuation takes
---     'ParseError' record and state information.
---
--- You call specific continuation when you want to proceed in that specific
--- branch of control flow.
-
--- | @Parsec@ is non-transformer variant of more general 'ParsecT' monad
--- transformer.
+-- | @Parsec@ is a non-transformer variant of the more general 'ParsecT'
+-- monad transformer.
 
 type Parsec e s = ParsecT e s Identity
 
@@ -439,8 +410,6 @@ pFail msg = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   where d = E.singleton (representFail msg)
 {-# INLINE pFail #-}
 
--- | Low-level creation of the 'ParsecT' type.
-
 mkPT :: Monad m => (State s -> m (Reply e s a)) -> ParsecT e s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
@@ -505,8 +474,8 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
 
--- | From two states, return the one with greater number of processed
--- tokens. If the numbers of processed tokens are equal, prefer the latter
+-- | From two states, return the one with the greater number of processed
+-- tokens. If the numbers of processed tokens are equal, prefer the second
 -- state.
 
 longestMatch :: State s -> State s -> State s
@@ -529,7 +498,7 @@ instance MonadTrans (ParsecT e s) where
 class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
-  -- | The most general way to stop parsing and report 'ParseError'.
+  -- | The most general way to stop parsing and report a 'ParseError'.
   --
   -- 'unexpected' is defined in terms of this function:
   --
@@ -556,22 +525,22 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   hidden = label ""
 
   -- | The parser @try p@ behaves like parser @p@, except that it backtracks
-  -- parser state when @p@ fails (either consuming input or not).
+  -- the parser state when @p@ fails (either consuming input or not).
   --
   -- This combinator is used whenever arbitrary look ahead is needed. Since
   -- it pretends that it hasn't consumed any input when @p@ fails, the
   -- ('A.<|>') combinator will try its second alternative even when the
   -- first parser failed while consuming input.
   --
-  -- For example, here is a parser that is supposed to parse word “let” or
-  -- “lexical”:
+  -- For example, here is a parser that is supposed to parse the word “let”
+  -- or the word “lexical”:
   --
   -- >>> parseTest (string "let" <|> string "lexical") "lexical"
   -- 1:1:
   -- unexpected "lex"
   -- expecting "let"
   --
-  -- What happens here? First parser consumes “le” and fails (because it
+  -- What happens here? The first parser consumes “le” and fails (because it
   -- doesn't see a “t”). The second parser, however, isn't tried, since the
   -- first parser has already consumed some input! 'try' fixes this behavior
   -- and allows backtracking to work:
@@ -603,17 +572,17 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
 
   lookAhead :: m a -> m a
 
-  -- | @notFollowedBy p@ only succeeds when parser @p@ fails. This parser
-  -- /never consumes/ any input and /never modifies/ parser state. It can be
-  -- used to implement the “longest match” rule.
+  -- | @notFollowedBy p@ only succeeds when the parser @p@ fails. This
+  -- parser /never consumes/ any input and /never modifies/ parser state. It
+  -- can be used to implement the “longest match” rule.
 
   notFollowedBy :: m a -> m ()
 
   -- | @withRecovery r p@ allows continue parsing even if parser @p@ fails.
-  -- In this case @r@ is called with actual 'ParseError' as its argument.
-  -- Typical usage is to return value signifying failure to parse this
-  -- particular object and to consume some part of input up to start of next
-  -- object.
+  -- In this case @r@ is called with the actual 'ParseError' as its
+  -- argument. Typical usage is to return a value signifying failure to
+  -- parse this particular object and to consume some part of the input up
+  -- to the point where the next object starts.
   --
   -- Note that if @r@ fails, original error message is reported as if
   -- without 'withRecovery'. In no way recovering parser @r@ can influence
@@ -626,8 +595,8 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     -> m a             -- ^ Original parser
     -> m a             -- ^ Parser that can recover from failures
 
-  -- | @observing p@ allows to “observe” failure of @p@ parser, should it
-  -- happen, without actually ending parsing, but instead getting the
+  -- | @observing p@ allows to “observe” failure of the @p@ parser, should
+  -- it happen, without actually ending parsing, but instead getting the
   -- 'ParseError' in 'Left'. On success parsed value is returned in 'Right'
   -- as usual. Note that this primitive just allows you to observe parse
   -- errors as they happen, it does not backtrack or change how the @p@
@@ -668,7 +637,7 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
     -> Maybe (Token s) -- ^ Token to report when input stream is empty
     -> m a
 
-  -- | The parser @tokens test@ parses list of tokens and returns it.
+  -- | The parser @tokens test@ parses a list of tokens and returns it.
   -- Supplied predicate @test@ is used to check equality of given and parsed
   -- tokens.
   --
@@ -699,11 +668,11 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
        -- ^ List of tokens to parse
     -> m [Token s]
 
-  -- | Returns the full parser state as a 'State' record.
+  -- | Return the full parser state as a 'State' record.
 
   getParserState :: m (State s)
 
-  -- | @updateParserState f@ applies function @f@ to the parser state.
+  -- | @updateParserState f@ applies the function @f@ to the parser state.
 
   updateParserState :: (State s -> State s) -> m ()
 
@@ -892,8 +861,8 @@ infix 0 <?>
 (<?>) :: MonadParsec e s m => m a -> String -> m a
 (<?>) = flip label
 
--- | The parser @unexpected item@ always fails with an error message telling
--- about unexpected item @item@ without consuming any input.
+-- | The parser @unexpected item@ fails with an error message telling about
+-- unexpected item @item@ without consuming any input.
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (E.singleton item) E.empty E.empty
@@ -914,9 +883,9 @@ match p = do
   return (streamTake (tp' - tp) s, r)
 
 -- | Specify how to process 'ParseError's that happen inside of this
--- wrapper. As a side effect of current implementation changing 'errorPos'
--- with this combinator will also change the final 'statePos' in parser
--- state.
+-- wrapper. As a side effect of the current implementation changing
+-- 'errorPos' with this combinator will also change the final 'statePos' in
+-- the parser state.
 --
 -- @since 5.3.0
 
@@ -961,8 +930,8 @@ setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 getPosition :: MonadParsec e s m => m SourcePos
 getPosition = NE.head . statePos <$> getParserState
 
--- | Get position where the next token in the stream begins. If the stream
--- is empty, return 'Nothing'.
+-- | Get the position where the next token in the stream begins. If the
+-- stream is empty, return 'Nothing'.
 --
 -- @since 5.3.0
 
@@ -980,9 +949,8 @@ setPosition :: MonadParsec e s m => SourcePos -> m ()
 setPosition pos = updateParserState $ \(State s (_:|z) tp w) ->
   State s (pos:|z) tp w
 
--- | Push given position into stack of positions and continue parsing
--- working with this position. Useful for working with include files and the
--- like.
+-- | Push a position into stack of positions and continue parsing working
+-- with this position. Useful for working with include files and the like.
 --
 -- See also: 'getPosition', 'setPosition', 'popPosition', and 'SourcePos'.
 --
@@ -992,9 +960,9 @@ pushPosition :: MonadParsec e s m => SourcePos -> m ()
 pushPosition pos = updateParserState $ \(State s z tp w) ->
   State s (NE.cons pos z) tp w
 
--- | Pop a position from stack of positions unless it only contains one
--- element (in that case stack of positions remains the same). This is how
--- to return to previous source file after 'pushPosition'.
+-- | Pop a position from the stack of positions unless it only contains one
+-- element (in that case the stack of positions remains the same). This is
+-- how to return to previous source file after 'pushPosition'.
 --
 -- See also: 'getPosition', 'setPosition', 'pushPosition', and 'SourcePos'.
 --
@@ -1006,14 +974,14 @@ popPosition = updateParserState $ \(State s z tp w) ->
     Nothing -> State s z  tp w
     Just z' -> State s z' tp w
 
--- | Get number of tokens processed so far.
+-- | Get the number of tokens processed so far.
 --
 -- @since 5.2.0
 
 getTokensProcessed :: MonadParsec e s m => m Word
 getTokensProcessed = stateTokensProcessed <$> getParserState
 
--- | Set number of tokens processed so far.
+-- | Set the number of tokens processed so far.
 --
 -- @since 5.2.0
 
@@ -1021,20 +989,21 @@ setTokensProcessed :: MonadParsec e s m => Word -> m ()
 setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
   State s pos tp w
 
--- | Return tab width. Default tab width is equal to 'defaultTabWidth'. You
--- can set different tab width with help of 'setTabWidth'.
+-- | Return the tab width. The default tab width is equal to
+-- 'defaultTabWidth'. You can set a different tab width with the help of
+-- 'setTabWidth'.
 
 getTabWidth :: MonadParsec e s m => m Pos
 getTabWidth = stateTabWidth <$> getParserState
 
--- | Set tab width. If argument of the function is not positive number,
--- 'defaultTabWidth' will be used.
+-- | Set tab width. If the argument of the function is not a positive
+-- number, 'defaultTabWidth' will be used.
 
 setTabWidth :: MonadParsec e s m => Pos -> m ()
 setTabWidth w = updateParserState $ \(State s pos tp _) ->
   State s pos tp w
 
--- | @setParserState st@ set the full parser state to @st@.
+-- | @setParserState st@ sets the parser state to @st@.
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
@@ -1062,14 +1031,14 @@ parse
   -> Either (ParseError (Token s) e) a
 parse = runParser
 
--- | @parseMaybe p input@ runs parser @p@ on @input@ and returns result
--- inside 'Just' on success and 'Nothing' on failure. This function also
--- parses 'eof', so if the parser doesn't consume all of its input, it will
--- fail.
+-- | @parseMaybe p input@ runs the parser @p@ on @input@ and returns the
+-- result inside 'Just' on success and 'Nothing' on failure. This function
+-- also parses 'eof', so if the parser doesn't consume all of its input, it
+-- will fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file name) are not important and entire input
--- should be parsed. For example it can be used when parsing of single
+-- should be parsed. For example it can be used when parsing of a single
 -- number according to specification of its format is desired.
 
 parseMaybe :: (ErrorComponent e, Stream s) => Parsec e s a -> s -> Maybe a
@@ -1078,7 +1047,7 @@ parseMaybe p s =
     Left  _ -> Nothing
     Right x -> Just x
 
--- | The expression @parseTest p input@ applies a parser @p@ against input
+-- | The expression @parseTest p input@ applies the parser @p@ against input
 -- @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
@@ -1093,7 +1062,7 @@ parseTest p input =
     Left  e -> putStr (parseErrorPretty e)
     Right x -> print x
 
--- | @runParser p file input@ runs parser @p@ on the input list of tokens
+-- | @runParser p file input@ runs parser @p@ on the input stream of tokens
 -- @input@, obtained from source @file@. The @file@ is only used in error
 -- messages and may be the empty string. Returns either a 'ParseError'
 -- ('Left') or a value of type @a@ ('Right').
@@ -1330,7 +1299,7 @@ fixs' _ (Right (b,s,w)) = (Right b, s, w)
 -- Debugging
 
 -- | @dbg label p@ parser works exactly like @p@, but when it's evaluated it
--- prints information useful for debugging. The @label@ is only used to
+-- also prints information useful for debugging. The @label@ is only used to
 -- refer to this parser in the debugging output. This combinator uses the
 -- 'trace' function from "Debug.Trace" under the hood.
 --
@@ -1339,17 +1308,17 @@ fixs' _ (Right (b,s,w)) = (Right b, s, w)
 -- print-out. As of current version, this combinator prints all available
 -- information except for /hints/, which are probably only interesting to
 -- the maintainer of Megaparsec itself and may be quite verbose to output in
--- general. Let me know if you would like to be able to see hints as part of
+-- general. Let me know if you would like to be able to see hints in the
 -- debugging output.
 --
 -- The output itself is pretty self-explanatory, although the following
--- abbreviations should be clarified (they are derived from low-level source
--- code):
+-- abbreviations should be clarified (they are derived from the low-level
+-- source code):
 --
---     * @COK@ — “consumed OK”. The parser consumed input and succeeded.
---     * @CERR@ — “consumed error”. The parser consumed input and failed.
---     * @EOK@ — “empty OK”. The parser succeeded without consuming input.
---     * @EERR@ — “empty error”. The parser failed without consuming input.
+--     * @COK@—“consumed OK”. The parser consumed input and succeeded.
+--     * @CERR@—“consumed error”. The parser consumed input and failed.
+--     * @EOK@—“empty OK”. The parser succeeded without consuming input.
+--     * @EERR@—“empty error”. The parser failed without consuming input.
 --
 -- Finally, it's not possible to lift this function into some monad
 -- transformers without introducing surprising behavior (e.g. unexpected
@@ -1383,7 +1352,7 @@ dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
         l (DbgEERR (streamTake (streamDelta s s') (stateInput s)) err)
   in unParser p s cok' cerr' eok' eerr'
 
--- | Single piece of info to be rendered with 'dbgLog'.
+-- | A single piece of info to be rendered with 'dbgLog'.
 
 data DbgItem s e a
   = DbgIn   [Token s]
@@ -1432,13 +1401,13 @@ streamDelta
   -> Word              -- ^ Number of consumed tokens
 streamDelta s0 s1 = stateTokensProcessed s1 - stateTokensProcessed s0
 
--- | Extract given number of tokens from the stream.
+-- | Extract a given number of tokens from the stream.
 
 streamTake :: Stream s => Word -> s -> [Token s]
 streamTake n s = genericTake n (unfold s)
 
--- | Custom version of 'unfold' that matches signature of 'uncons' method in
--- 'Stream' type class we use.
+-- | A custom version of 'unfold' that matches signature of the 'uncons'
+-- method in the 'Stream' type class we use.
 
 unfold :: Stream s => s -> [Token s]
 unfold s = case uncons s of

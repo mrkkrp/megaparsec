@@ -35,7 +35,7 @@ data Operator m a
 
 -- | @makeExprParser term table@ builds an expression parser for terms
 -- @term@ with operators from @table@, taking the associativity and
--- precedence specified in @table@ into account.
+-- precedence specified in the @table@ into account.
 --
 -- @table@ is a list of @[Operator m a]@ lists. The list is ordered in
 -- descending precedence. All operators in one list have the same precedence
@@ -46,13 +46,13 @@ data Operator m a
 --
 -- Unary operators of the same precedence can only occur once (i.e. @--2@ is
 -- not allowed if @-@ is prefix negate). If you need to parse several prefix
--- or postfix operators in a row, (like C pointers — @**i@) you can use this
+-- or postfix operators in a row, (like C pointers—@**i@) you can use this
 -- approach:
 --
 -- > manyUnaryOp = foldr1 (.) <$> some singleUnaryOp
 --
--- This is not done by default because in some cases you don't want to allow
--- repeating prefix or postfix operators.
+-- This is not done by default because in some cases allowing repeating
+-- prefix or postfix operators is not desirable.
 --
 -- If you want to have an operator that is a prefix of another operator in
 -- the table, use the following (or similar) wrapper instead of plain
@@ -98,9 +98,9 @@ addPrecLevel term ops =
         las'  = pInfixL (choice las) term'
         nas'  = pInfixN (choice nas) term'
 
--- | @pTerm prefix term postfix@ parses a term with @term@ surrounded by
--- optional prefix and postfix unary operators. Parsers @prefix@ and
--- @postfix@ are allowed to fail, in this case 'id' is used.
+-- | @pTerm prefix term postfix@ parses a @term@ surrounded by optional
+-- prefix and postfix unary operators. Parsers @prefix@ and @postfix@ are
+-- allowed to fail, in this case 'id' is used.
 
 pTerm :: MonadParsec e s m => m (a -> a) -> m a -> m (a -> a) -> m a
 pTerm prefix term postfix = do

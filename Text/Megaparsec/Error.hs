@@ -52,7 +52,7 @@ import Control.Applicative
 #endif
 
 -- | Data type that is used to represent “unexpected\/expected” items in
--- parse error. The data type is parametrized over token type @t@.
+-- 'ParseError'. The data type is parametrized over the token type @t@.
 --
 -- @since 5.0.0
 
@@ -132,18 +132,18 @@ instance ErrorComponent Dec where
   representFail        = DecFail
   representIndentation = DecIndentation
 
--- | The data type @ParseError@ represents parse errors. It provides the
--- stack of source positions, set of expected and unexpected tokens as well
--- as set of custom associated data. The data type is parametrized over
--- token type @t@ and custom data @e@.
+-- | 'ParseError' represents… parse errors. It provides the stack of source
+-- positions, a set of expected and unexpected tokens as well as a set of
+-- custom associated data. The data type is parametrized over the token type
+-- @t@ and the custom data @e@.
 --
 -- Note that the stack of source positions contains current position as its
 -- head, and the rest of positions allows to track full sequence of include
 -- files with topmost source file at the end of the list.
 --
--- 'Semigroup' (or 'Monoid') instance of the data type allows to merge parse
--- errors from different branches of parsing. When merging two
--- 'ParseError's, longest match is preferred; if positions are the same,
+-- 'Semigroup' (and 'Monoid') instance of the data type allows to merge
+-- parse errors from different branches of parsing. When merging two
+-- 'ParseError's, the longest match is preferred; if positions are the same,
 -- custom data sets and collections of message items are combined.
 
 data ParseError t e = ParseError
@@ -195,10 +195,10 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
 #endif
 
 -- | Merge two error data structures into one joining their collections of
--- message items and preferring longest match. In other words, earlier error
--- message is discarded. This may seem counter-intuitive, but 'mergeError'
--- is only used to merge error messages of alternative branches of parsing
--- and in this case longest match should be preferred.
+-- message items and preferring the longest match. In other words, earlier
+-- error message is discarded. This may seem counter-intuitive, but
+-- 'mergeError' is only used to merge error messages of alternative branches
+-- of parsing and in this case longest match should be preferred.
 
 mergeError :: (Ord t, Ord e)
   => ParseError t e
@@ -302,7 +302,7 @@ instance ShowErrorComponent Dec where
                 EQ -> "equal to "
                 GT -> "greater than "
 
--- | Pretty-print 'ParseError'. The rendered 'String' always ends with a
+-- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
 --
 -- The function is defined as:
@@ -320,7 +320,7 @@ parseErrorPretty :: ( Ord t
 parseErrorPretty e =
   sourcePosStackPretty (errorPos e) ++ ":\n" ++ parseErrorTextPretty e
 
--- | Pretty-print stack of source positions.
+-- | Pretty-print a stack of source positions.
 --
 -- @since 5.0.0
 
@@ -330,7 +330,7 @@ sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
         rest           = reverse rest'
         f p = "in file included from " ++ sourcePosPretty p ++ ",\n"
 
--- | Transforms list of error messages into their textual representation.
+-- | Transforms a list of error messages into their textual representation.
 
 messageItemsPretty :: ShowErrorComponent a
   => String            -- ^ Prefix to prepend
@@ -343,16 +343,16 @@ messageItemsPretty prefix ts
     in prefix ++ f ts ++ "\n"
 
 -- | Print a pretty list where items are separated with commas and the word
--- “or” according to rules of English punctuation.
+-- “or” according to the rules of English punctuation.
 
 orList :: NonEmpty String -> String
 orList (x:|[])  = x
 orList (x:|[y]) = x ++ " or " ++ y
 orList xs       = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs
 
--- | Pretty-print textual part of a 'ParseError', that is, everything except
--- stack of source positions. The rendered staring always ends with a new
--- line.
+-- | Pretty-print a textual part of a 'ParseError', that is, everything
+-- except stack of source positions. The rendered staring always ends with a
+-- new line.
 --
 -- @since 5.1.0
 

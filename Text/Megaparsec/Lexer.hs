@@ -53,7 +53,7 @@ module Text.Megaparsec.Lexer
   , signed )
 where
 
-import Control.Applicative ((<|>), some, optional)
+import Control.Applicative
 import Control.Monad (void)
 import Data.Char (readLitChar)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -66,10 +66,6 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
 import qualified Text.Megaparsec.Char as C
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*), (*>), (<*>), pure)
-#endif
 
 ----------------------------------------------------------------------------
 -- White space
@@ -150,9 +146,9 @@ symbol' :: (MonadParsec e s m, Token s ~ Char)
 symbol' spc = lexeme spc . C.string'
 
 -- | Given comment prefix this function returns a parser that skips line
--- comments. Note that it stops just before newline character but doesn't
--- consume the newline. Newline is either supposed to be consumed by 'space'
--- parser or picked up manually.
+-- comments. Note that it stops just before the newline character but
+-- doesn't consume the newline. Newline is either supposed to be consumed by
+-- 'space' parser or picked up manually.
 
 skipLineComment :: (MonadParsec e s m, Token s ~ Char)
   => String            -- ^ Line comment prefix
@@ -189,7 +185,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 ----------------------------------------------------------------------------
 -- Indentation
 
--- | Return current indentation level.
+-- | Return the current indentation level.
 --
 -- The function is a simple shortcut defined as:
 --
@@ -218,13 +214,13 @@ incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
   where x = representIndentation ord ref actual
 
 -- | @indentGuard spaceConsumer ord ref@ first consumes all white space
--- (indentation) with @spaceConsumer@ parser, then it checks column
+-- (indentation) with @spaceConsumer@ parser, then it checks the column
 -- position. Ordering between current indentation level and the reference
 -- indentation level @ref@ should be @ord@, otherwise the parser fails. On
 -- success the current column position is returned.
 --
 -- When you want to parse a block of indentation, first run this parser with
--- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@ — this will
+-- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@—this will
 -- make sure you have some indentation. Use returned value to check
 -- indentation on every subsequent line according to syntax of your
 -- language.
@@ -305,7 +301,7 @@ indentBlock sc r = do
       f (x:xs)
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
--- part of public API.
+-- part of the public API.
 
 indentedItems :: MonadParsec e s m
   => Pos               -- ^ Reference indentation level
@@ -328,7 +324,7 @@ indentedItems ref lvl sc p = go
 -- | Create a parser that supports line-folding. The first argument is used
 -- to consume white space between components of line fold, thus it /must/
 -- consume newlines in order to work properly. The second argument is a
--- callback that receives custom space-consuming parser as argument. This
+-- callback that receives a custom space-consuming parser as argument. This
 -- parser should be used after separate components of line fold that can be
 -- put on different lines.
 --
@@ -353,8 +349,8 @@ lineFold sc action =
 ----------------------------------------------------------------------------
 -- Character and string literals
 
--- | The lexeme parser parses a single literal character without quotes.
--- Purpose of this parser is to help with parsing of conventional escape
+-- | The lexeme parser parses a single literal character without quotes. The
+-- purpose of this parser is to help with parsing of conventional escape
 -- sequences. It's your responsibility to take care of character literal
 -- syntax in your language (by surrounding it with single quotes or
 -- similar).
@@ -404,7 +400,7 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to the Haskell report
 -- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
--- It is responsibility of the programmer to parse correct prefix before
+-- It is a responsibility of the programmer to parse correct prefix before
 -- parsing the number itself.
 --
 -- For example you can make it conform to Haskell report like this:
@@ -416,7 +412,7 @@ hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
--- fact that this parser doesn't parse “0o” or “0O” prefix. It is
+-- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
 -- responsibility of the programmer to parse correct prefix before parsing
 -- the number itself.
 
@@ -430,7 +426,7 @@ octal = nump "0o" C.octDigitChar <?> "octal integer"
 nump :: MonadParsec e s m => String -> m Char -> m Integer
 nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
--- | Parse a floating point value as 'Scientific' number. 'Scientific' is
+-- | Parse a floating point value as a 'Scientific' number. 'Scientific' is
 -- great for parsing of arbitrary precision numbers coming from an untrusted
 -- source. See documentation in "Data.Scientific" for more information.
 -- Representation of the floating point value is expected to be according to

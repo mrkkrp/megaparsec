@@ -8,7 +8,7 @@
 -- Portability :  portable
 --
 -- Textual source position. The position includes name of file, line number,
--- and column number. List of such positions can be used to model stack of
+-- and column number. List of such positions can be used to model a stack of
 -- include files.
 
 {-# LANGUAGE CPP                        #-}
@@ -163,7 +163,7 @@ sourcePosPretty (SourcePos n l c)
 -- Helpers implementing default behaviors
 
 -- | Update a source position given a character. The first argument
--- specifies tab width. If the character is a newline (\'\\n\') the line
+-- specifies the tab width. If the character is a newline (\'\\n\') the line
 -- number is incremented by 1. If the character is a tab (\'\\t\') the
 -- column number is incremented to the nearest tab position. In all other
 -- cases, the column is incremented by 1.
@@ -187,8 +187,8 @@ defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
         _    -> SourcePos n l (c <> u)
 
 -- | Value of tab width used by default. Always prefer this constant when
--- you want to refer to default tab width because actual value /may/ change
--- in future. Current value is @8@.
+-- you want to refer to the default tab width because actual value /may/
+-- change in future.
 
 defaultTabWidth :: Pos
 defaultTabWidth = unsafePos 8

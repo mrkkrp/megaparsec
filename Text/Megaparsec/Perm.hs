@@ -71,7 +71,7 @@ makePermParser (Perm def xs) = choice (fmap branch xs ++ empty)
 -- | The expression @f \<$$> p@ creates a fresh permutation parser
 -- consisting of parser @p@. The the final result of the permutation parser
 -- is the function @f@ applied to the return value of @p@. The parser @p@ is
--- not allowed to accept empty input — use the optional combinator ('<$?>')
+-- not allowed to accept empty input—use the optional combinator ('<$?>')
 -- instead.
 --
 -- If the function @f@ takes more than one parameter, the type variable @b@
@@ -90,7 +90,7 @@ f <$$> p = newperm f <||> p
 -- | The expression @f \<$?> (x, p)@ creates a fresh permutation parser
 -- consisting of parser @p@. The final result of the permutation parser is
 -- the function @f@ applied to the return value of @p@. The parser @p@ is
--- optional — if it cannot be applied, the default value @x@ will be used
+-- optional—if it cannot be applied, the default value @x@ will be used
 -- instead.
 
 (<$?>) :: MonadParsec e s m
@@ -100,7 +100,7 @@ f <$$> p = newperm f <||> p
 f <$?> xp = newperm f <|?> xp
 
 -- | The expression @perm \<||> p@ adds parser @p@ to the permutation parser
--- @perm@. The parser @p@ is not allowed to accept empty input — use the
+-- @perm@. The parser @p@ is not allowed to accept empty input—use the
 -- optional combinator ('<|?>') instead. Returns a new permutation parser
 -- that includes @p@.
 
@@ -111,7 +111,7 @@ f <$?> xp = newperm f <|?> xp
 (<||>) = add
 
 -- | The expression @perm \<||> (x, p)@ adds parser @p@ to the permutation
--- parser @perm@. The parser @p@ is optional — if it cannot be applied, the
+-- parser @perm@. The parser @p@ is optional—if it cannot be applied, the
 -- default value @x@ will be used instead. Returns a new permutation parser
 -- that includes the optional parser @p@.
 

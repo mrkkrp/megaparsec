@@ -10,7 +10,7 @@
 -- Portability :  portable
 --
 -- Commonly used generic combinators. Note that all the combinators work
--- with any 'Alternative' instance.
+-- with 'Applicative' and 'Alternative' instances.
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP          #-}
@@ -66,9 +66,9 @@ count :: Applicative m => Int -> m a -> m [a]
 count n p = sequenceA (replicate n p)
 {-# INLINE count #-}
 
--- | @count\' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is
--- not positive or @m > n@, the parser equals to @return []@. Returns a list
--- of parsed values.
+-- | @count' m n p@ parses from @m@ to @n@ occurrences of @p@. If @n@ is not
+-- positive or @m > n@, the parser equals to @return []@. Returns a list of
+-- parsed values.
 --
 -- Please note that @m@ /may/ be negative, in this case effect is the same
 -- as if it were equal to zero.
@@ -125,8 +125,9 @@ someTill :: Alternative m => m a -> m end -> m [a]
 someTill p end = (:) <$> p <*> manyTill p end
 {-# INLINE someTill #-}
 
--- | @option x p@ tries to apply parser @p@. If @p@ fails without consuming
--- input, it returns the value @x@, otherwise the value returned by @p@.
+-- | @option x p@ tries to apply the parser @p@. If @p@ fails without
+-- consuming input, it returns the value @x@, otherwise the value returned
+-- by @p@.
 --
 -- > priority = option 0 (digitToInt <$> digitChar)
 

@@ -56,7 +56,7 @@ module Text.Megaparsec.Char
   , string' )
 where
 
-import Control.Applicative ((<|>))
+import Control.Applicative
 import Data.Char
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
@@ -67,7 +67,6 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Prim
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), pure)
 import Data.Foldable (Foldable (), any, elem, notElem)
 import Prelude hiding (any, elem, notElem)
 #endif
@@ -82,7 +81,7 @@ newline = char '\n'
 {-# INLINE newline #-}
 
 -- | Parse a carriage return character followed by a newline character.
--- Return sequence of characters parsed.
+-- Return the sequence of characters parsed.
 
 crlf :: (MonadParsec e s m, Token s ~ Char) => m String
 crlf = string "\r\n"
@@ -91,7 +90,7 @@ crlf = string "\r\n"
 -- | Parse a CRLF (see 'crlf') or LF (see 'newline') end of line. Return the
 -- sequence of characters parsed.
 --
--- > eol = (pure <$> newline) <|> crlf
+-- > eol = (pure <$> newline) <|> crlf <?> "end of line"
 
 eol :: (MonadParsec e s m, Token s ~ Char) => m String
 eol = (pure <$> newline) <|> crlf <?> "end of line"
@@ -240,7 +239,7 @@ charCategory :: (MonadParsec e s m, Token s ~ Char) => GeneralCategory -> m Char
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 {-# INLINE charCategory #-}
 
--- | Return human-readable name of Unicode General Category.
+-- | Return the human-readable name of Unicode General Category.
 
 categoryName :: GeneralCategory -> String
 categoryName cat =
@@ -293,8 +292,8 @@ char c = token testChar (Just c)
         else Left (f x, f c, E.empty)
 {-# INLINE char #-}
 
--- | The same as 'char' but case-insensitive. This parser returns actually
--- parsed character preserving its case.
+-- | The same as 'char' but case-insensitive. This parser returns the
+-- actually parsed character preserving its case.
 --
 -- >>> parseTest (char' 'e') "E"
 -- 'E'
@@ -320,8 +319,9 @@ anyChar = satisfy (const True) <?> "character"
 
 -- | @oneOf cs@ succeeds if the current character is in the supplied
 -- collection of characters @cs@. Returns the parsed character. Note that
--- this parser doesn't automatically generate “expected” component of error
--- message, so usually you should label it manually with 'label' or ('<?>').
+-- this parser cannot automatically generate the “expected” component of
+-- error message, so usually you should label it manually with 'label' or
+-- ('<?>').
 --
 -- See also: 'satisfy'.
 --
@@ -375,8 +375,8 @@ satisfy f = token testChar Nothing
 ----------------------------------------------------------------------------
 -- Sequence of characters
 
--- | @string s@ parses a sequence of characters given by @s@. Returns
--- the parsed string (i.e. @s@).
+-- | @string s@ parses a sequence of characters given by @s@. Returns the
+-- parsed string (i.e. @s@).
 --
 -- > divOrMod = string "div" <|> string "mod"
 
