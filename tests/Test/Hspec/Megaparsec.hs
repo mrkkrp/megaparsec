@@ -1,9 +1,9 @@
 -- |
 -- Module      :  Test.Hspec.Megaparsec
--- Copyright   :  © 2015–2017 Mark Karpov
+-- Copyright   :  © 2016–2017 Mark Karpov
 -- License     :  BSD 3 clause
 --
--- Maintainer  :  Mark Karpov <markkarpov@openmailbox.org>
+-- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
 -- Stability   :  experimental
 -- Portability :  portable
 --
@@ -96,7 +96,7 @@ r `parseSatisfies` p = case r of
   Right x -> unless (p x) . expectationFailure $
     "the value did not satisfy the predicate: " ++ show x
 
--- | Check that a parser fails on some given input.
+-- | Check that a parser fails on a given input.
 --
 -- > parse (char 'x') "" `shouldFailOn` "a"
 
@@ -107,7 +107,7 @@ shouldFailOn :: Show a
   -> Expectation
 p `shouldFailOn` s = shouldFail (p s)
 
--- | Check that a parser succeeds on some given input.
+-- | Check that a parser succeeds on a given input.
 --
 -- > parse (char 'x') "" `shouldSucceedOn` "x"
 
@@ -141,9 +141,11 @@ r `shouldFailWith` e = case r of
 ----------------------------------------------------------------------------
 -- Error message construction
 
--- $errmsg When you wish to test error message on failure, the need to
--- construct a error message for comparison arises. These helpers allow to
--- construct virtually any sort of error message easily.
+-- $errmsg
+--
+-- When you wish to test error message on failure, the need to construct a
+-- error message for comparison arises. These helpers allow to construct
+-- virtually any sort of error message easily.
 
 -- | Assemble a 'ParseErorr' from source position and @'EC' t e@ value. To
 -- create source position, two helpers are available: 'posI' and 'posN'.
@@ -204,14 +206,14 @@ instance (Ord t, Ord e) => Monoid (EC t e) where
   mempty  = EC E.empty E.empty E.empty
   mappend = (<>)
 
--- | Construct “unexpected token” error component.
+-- | Construct an “unexpected token” error component.
 --
 -- @since 0.3.0
 
 utok :: (Ord t, Ord e) => t -> EC t e
 utok t = mempty { ecUnexpected = (E.singleton . Tokens . nes) t }
 
--- | Construct “unexpected tokens” error component. Empty string produces
+-- | Construct an “unexpected tokens” error component. Empty string produces
 -- 'EndOfInput'.
 --
 -- @since 0.3.0
@@ -219,7 +221,7 @@ utok t = mempty { ecUnexpected = (E.singleton . Tokens . nes) t }
 utoks :: (Ord t, Ord e) => [t] -> EC t e
 utoks t = mempty { ecUnexpected = (E.singleton . canonicalizeTokens) t }
 
--- | Construct “unexpected label” error component. Do not use with empty
+-- | Construct an “unexpected label” error component. Do not use with empty
 -- strings (for empty strings it's bottom).
 --
 -- @since 0.3.0
@@ -227,21 +229,21 @@ utoks t = mempty { ecUnexpected = (E.singleton . canonicalizeTokens) t }
 ulabel :: (Ord t, Ord e) => String -> EC t e
 ulabel l = mempty { ecUnexpected = (E.singleton . Label . NE.fromList) l }
 
--- | Construct “unexpected end of input” error component.
+-- | Construct an “unexpected end of input” error component.
 --
 -- @since 0.3.0
 
 ueof :: (Ord t, Ord e) => EC t e
 ueof = mempty { ecUnexpected = E.singleton EndOfInput }
 
--- | Construct “expected token” error component.
+-- | Construct an “expected token” error component.
 --
 -- @since 0.3.0
 
 etok :: (Ord t, Ord e) => t -> EC t e
 etok t = mempty { ecExpected = (E.singleton . Tokens . nes) t }
 
--- | Construct “expected tokens” error component. Empty string produces
+-- | Construct an “expected tokens” error component. Empty string produces
 -- 'EndOfInput'.
 --
 -- @since 0.3.0
@@ -249,7 +251,7 @@ etok t = mempty { ecExpected = (E.singleton . Tokens . nes) t }
 etoks :: (Ord t, Ord e) => [t] -> EC t e
 etoks t = mempty { ecExpected = (E.singleton . canonicalizeTokens) t }
 
--- | Construct “expected label” error component. Do not use with empty
+-- | Construct an “expected label” error component. Do not use with empty
 -- strings.
 --
 -- @since 0.3.0
@@ -257,14 +259,14 @@ etoks t = mempty { ecExpected = (E.singleton . canonicalizeTokens) t }
 elabel :: (Ord t, Ord e) => String -> EC t e
 elabel l = mempty { ecExpected = (E.singleton . Label . NE.fromList) l }
 
--- | Construct “expected end of input” error component.
+-- | Construct an “expected end of input” error component.
 --
 -- @since 0.3.0
 
 eeof :: (Ord t, Ord e) => EC t e
 eeof = mempty { ecExpected = E.singleton EndOfInput }
 
--- | Construct custom error component.
+-- | Construct a custom error component.
 --
 -- @since 0.3.0
 
@@ -274,7 +276,7 @@ cstm e = EC E.empty E.empty (E.singleton e)
 ----------------------------------------------------------------------------
 -- Incremental parsing
 
--- | Check that a parser fails and leaves certain part of input
+-- | Check that a parser fails and leaves a certain part of input
 -- unconsumed. Use it with functions like 'runParser'' and 'runParserT''
 -- that support incremental parsing.
 --
@@ -323,7 +325,9 @@ initialState :: s -> State s
 initialState s = State
   { stateInput           = s
   , statePos             = initialPos "" :| []
+#if MIN_VERSION_megaparsec(5,2,0)
   , stateTokensProcessed = 0
+#endif
   , stateTabWidth        = defaultTabWidth }
 
 ----------------------------------------------------------------------------
@@ -331,7 +335,9 @@ initialState s = State
 
 -- | Expectation that argument is result of a failed parser.
 
-shouldFail :: Show a => Either (ParseError t e) a -> Expectation
+shouldFail :: Show a
+  => Either (ParseError t e) a
+  -> Expectation
 shouldFail r = case r of
   Left _ -> return ()
   Right v -> expectationFailure $
@@ -340,7 +346,8 @@ shouldFail r = case r of
 -- | Expectation that argument is result of a succeeded parser.
 
 shouldSucceed :: (Ord t, ShowToken t, ShowErrorComponent e, Show a)
-  => Either (ParseError t e) a -> Expectation
+  => Either (ParseError t e) a
+  -> Expectation
 shouldSucceed r = case r of
   Left e -> expectationFailure $
     "the parser is expected to succeed, but it failed with:\n" ++
@@ -357,7 +364,7 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
   "the parser is expected to leave unconsumed input: " ++ show e ++
   "\nbut it left this: " ++ show a
 
--- | Render parse error in a way that is suitable for inserting it in test
+-- | Render parse error in a way that is suitable for inserting it in a test
 -- suite report.
 
 showParseError :: (Ord t, ShowToken t, ShowErrorComponent e)
