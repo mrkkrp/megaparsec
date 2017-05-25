@@ -8,6 +8,7 @@ import Weigh
 
 main :: IO ()
 main = mainWith $ do
+  setColumns [Case, Allocated, GCs, Max]
   bparser "string"   manyAs (string . fst)
   bparser "string'"  manyAs (string' . fst)
   bparser "choice"   (const "b") (choice . fmap char . manyAsB . snd)
