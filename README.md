@@ -398,9 +398,9 @@ The following packages are designed to be used with Megaparsec:
 Here are some blog posts mainly announcing new features of the project and
 describing what sort of things are now possible:
 
-* [Latest additions to Megaparsec](https://mrkkrp.github.io/posts/latest-additions-to-megaparsec.html)
-* [Announcing Megaparsec 5](https://mrkkrp.github.io/posts/announcing-megaparsec-5.html)
-* [Megaparsec 4 and 5](https://mrkkrp.github.io/posts/megaparsec-4-and-5.html)
+* [Latest additions to Megaparsec](https://markkarpov.com/post/latest-additions-to-megaparsec.html)
+* [Announcing Megaparsec 5](https://markkarpov.com/post/announcing-megaparsec-5.html)
+* [Megaparsec 4 and 5](https://markkarpov.com/post/megaparsec-4-and-5.html)
 * [The original Megaparsec 4.0.0 announcement](https://notehub.org/w7037)
 
 ## Authors
