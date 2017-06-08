@@ -11,7 +11,7 @@
 --
 -- This module includes everything you need to get started writing a parser.
 -- If you are new to Megaparsec and don't know where to begin, take a look
--- at our tutorials <https://mrkkrp.github.io/megaparsec/tutorials.html>.
+-- at the tutorials <https://markkarpov.com/learn-haskell.html#megaparsec-tutorials>.
 --
 -- By default this module is set up to parse character data. If you'd like
 -- to parse the result of your own tokenizer you should start with the

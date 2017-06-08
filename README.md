@@ -205,13 +205,11 @@ Hackage](https://hackage.haskell.org/package/megaparsec) for yourself.
 
 ## Tutorials
 
-You can visit
-the [site of the project](https://mrkkrp.github.io/megaparsec/) which
-has [several tutorials](https://mrkkrp.github.io/megaparsec/tutorials.html)
-that should help you to start with your parsing tasks. The site also has
-instructions and tips for Parsec users who decide to migrate to Megaparsec.
-If you want to improve an existing tutorial or add your own, open a PR
-against [this repo](https://github.com/mrkkrp/megaparsec-site).
+You can find Megaparsec tutorials
+[here](https://markkarpov.com/learn-haskell.html#megaparsec-tutorials). They
+should provide sufficient guidance to help you to start with your parsing
+tasks. The site also has instructions and tips for Parsec users who decide
+to migrate to Megaparsec.
 
 ## Performance
 
@@ -222,7 +220,7 @@ faster. If you happen to have some other benchmarks, I would appreciate if
 you add Megaparsec to them and let me know how it performs.
 
 If you think your Megaparsec parser is not efficient enough, take a look
-at [these instructions](https://mrkkrp.github.io/megaparsec/tutorials/writing-a-fast-parser.html).
+at [these instructions](https://markkarpov.com/megaparsec/writing-a-fast-parser.html).
 
 ## Comparison with other solutions
 
@@ -418,9 +416,6 @@ Issues (bugs, feature requests or otherwise feedback) may be reported in
 
 Pull requests are also welcome (and yes, they will get attention and will be
 merged quickly if they are good).
-
-If you want to write a tutorial to be hosted on Megaparsec's site, open an
-issue or pull request [here](https://github.com/mrkkrp/megaparsec-site).
 
 ## License
 
