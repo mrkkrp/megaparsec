@@ -15,7 +15,8 @@ module Test.Hspec.Megaparsec.AdHoc
   , nes
     -- * Other
   , abcRow
-  , toFirstMismatch )
+  , toFirstMismatch
+  , Parser )
 where
 
 import Control.Monad
@@ -171,3 +172,7 @@ toFirstMismatch
   -> String            -- ^ Resulting prefix
 toFirstMismatch f str s = take (n + 1) s
   where n = length (takeWhile (uncurry f) (zip str s))
+
+-- | The type of parser that consumes a 'String'.
+
+type Parser = Parsec Dec String

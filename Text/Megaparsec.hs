@@ -23,17 +23,16 @@
 -- Then you can implement your own version of 'satisfy' on top of the
 -- 'token' primitive, etc.
 --
--- The typical import section looks like this:
+-- It is common to start working with the library by defining a type synonym
+-- like this:
 --
--- > import Text.Megaparsec
--- > import Text.Megaparsec.String
--- > -- import Text.Megaparsec.ByteString
--- > -- import Text.Megaparsec.ByteString.Lazy
--- > -- import Text.Megaparsec.Text
--- > -- import Text.Megaparsec.Text.Lazy
+-- > type Parser = Parsec Dec Text
+-- >                      ^   ^
+-- >                      |   |
+-- > Custom error component   Type of input
 --
--- As you can see the second import depends on the data type you want to use
--- as input stream. It just defines the useful type-synonym @Parser@.
+-- Then you can write type signatures like @Parser Int@—for a parser that
+-- returns an 'Int' for example.
 --
 -- Megaparsec 5 uses some type-level machinery to provide flexibility
 -- without compromising on type safety. Thus type signatures are sometimes
