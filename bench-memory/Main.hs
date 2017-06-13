@@ -3,8 +3,11 @@ module Main (main) where
 import Control.DeepSeq
 import Control.Monad
 import Text.Megaparsec
-import Text.Megaparsec.String
 import Weigh
+
+-- | The type of parser that consumes 'String's.
+
+type Parser = Parsec Dec String
 
 main :: IO ()
 main = mainWith $ do

@@ -53,8 +53,6 @@ library
     build-depends:    tagged       == 0.8.*
 
   exposed-modules:    Text.Megaparsec
-                    , Text.Megaparsec.ByteString
-                    , Text.Megaparsec.ByteString.Lazy
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Combinator
                     , Text.Megaparsec.Error
@@ -63,9 +61,6 @@ library
                     , Text.Megaparsec.Perm
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Prim
-                    , Text.Megaparsec.String
-                    , Text.Megaparsec.Text
-                    , Text.Megaparsec.Text.Lazy
   if flag(dev)
     ghc-options:      -Wall -Werror
   else

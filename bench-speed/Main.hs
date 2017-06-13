@@ -3,7 +3,10 @@ module Main (main) where
 import Control.DeepSeq
 import Criterion.Main
 import Text.Megaparsec
-import Text.Megaparsec.String
+
+-- | The type of parser that consumes 'String's.
+
+type Parser = Parsec Dec String
 
 main :: IO ()
 main = defaultMain
