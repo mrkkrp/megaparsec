@@ -8,6 +8,9 @@
 -- Portability :  portable
 --
 -- Megaparsec's input stream facilities.
+--
+-- You probably do not want to import this module because "Text.Megaparsec"
+-- re-exports it anyway.
 
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}

@@ -55,7 +55,6 @@ library
 
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Char
-                    , Text.Megaparsec.Combinator
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Expr
                     , Text.Megaparsec.Lexer
