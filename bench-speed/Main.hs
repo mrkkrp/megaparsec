@@ -3,6 +3,7 @@ module Main (main) where
 import Control.DeepSeq
 import Criterion.Main
 import Text.Megaparsec
+import Text.Megaparsec.Char
 
 -- | The type of parser that consumes 'String's.
 

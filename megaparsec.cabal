@@ -75,16 +75,16 @@ test-suite tests
     ghc-options:      -Wall -Werror
   else
     ghc-options:      -O2 -Wall
-  other-modules:      Test.Hspec.Megaparsec
+  other-modules:      Control.Applicative.CombinatorsSpec
+                    , Test.Hspec.Megaparsec
                     , Test.Hspec.Megaparsec.AdHoc
                     , Text.Megaparsec.CharSpec
-                    , Text.Megaparsec.CombinatorSpec
                     , Text.Megaparsec.ErrorSpec
                     , Text.Megaparsec.ExprSpec
                     , Text.Megaparsec.LexerSpec
                     , Text.Megaparsec.PermSpec
                     , Text.Megaparsec.PosSpec
-                    , Text.Megaparsec.PrimSpec
+                    , Text.MegaparsecSpec
   build-depends:      QuickCheck   >= 2.7   && < 3.0
                     , base         >= 4.7   && < 5.0
                     , bytestring   >= 0.2   && < 0.11

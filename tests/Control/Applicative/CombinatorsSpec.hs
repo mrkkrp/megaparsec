@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Text.Megaparsec.CombinatorSpec (spec) where
+module Control.Applicative.CombinatorsSpec (spec) where
 
 import Control.Applicative
 import Data.Char (isLetter, isDigit)
@@ -11,8 +11,8 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
+import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Combinator
 
 spec :: Spec
 spec = do
