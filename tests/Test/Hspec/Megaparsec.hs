@@ -57,7 +57,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics
 import Test.Hspec.Expectations
 import Text.Megaparsec
-import Text.Megaparsec.Pos (defaultTabWidth)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 

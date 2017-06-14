@@ -4,7 +4,6 @@
 
 module Text.Megaparsec.ExprSpec (spec) where
 
-import Control.Applicative (some, (<|>))
 import Data.Monoid ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec
