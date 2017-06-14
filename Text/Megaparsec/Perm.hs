@@ -26,8 +26,7 @@ module Text.Megaparsec.Perm
   , (<|?>) )
 where
 
-import Text.Megaparsec.Combinator (choice)
-import Text.Megaparsec.Prim
+import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))

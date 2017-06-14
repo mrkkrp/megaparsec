@@ -3,6 +3,7 @@ module Main (main) where
 import Control.DeepSeq
 import Criterion.Main
 import Text.Megaparsec
+import Text.Megaparsec.Char
 
 -- | The type of parser that consumes 'String's.
 
@@ -12,19 +13,23 @@ main :: IO ()
 main = defaultMain
   [ bparser "string"   manyAs (string . fst)
   , bparser "string'"  manyAs (string' . fst)
-  , bparser "choice"   (const "b") (choice . fmap char . manyAsB . snd)
   , bparser "many"     manyAs (const $ many (char 'a'))
   , bparser "some"     manyAs (const $ some (char 'a'))
+  , bparser "choice"   (const "b") (choice . fmap char . manyAsB . snd)
   , bparser "count"    manyAs (\(_,n) -> count n (char 'a'))
   , bparser "count'"   manyAs (\(_,n) -> count' 1 n (char 'a'))
   , bparser "endBy"    manyAbs' (const $ endBy (char 'a') (char 'b'))
   , bparser "endBy1"   manyAbs' (const $ endBy1 (char 'a') (char 'b'))
+  , bparser "manyTill" manyAsB (const $ manyTill (char 'a') (char 'b'))
+  , bparser "someTill" manyAsB (const $ someTill (char 'a') (char 'b'))
   , bparser "sepBy"    manyAbs (const $ sepBy (char 'a') (char 'b'))
   , bparser "sepBy1"   manyAbs (const $ sepBy1 (char 'a') (char 'b'))
   , bparser "sepEndBy"  manyAbs' (const $ sepEndBy (char 'a') (char 'b'))
   , bparser "sepEndBy1" manyAbs' (const $ sepEndBy1 (char 'a') (char 'b'))
-  , bparser "manyTill" manyAsB (const $ manyTill (char 'a') (char 'b'))
-  , bparser "someTill" manyAsB (const $ someTill (char 'a') (char 'b'))
+  , bparser "skipMany" manyAs (const $ skipMany (char 'a'))
+  , bparser "skipSome" manyAs (const $ skipSome (char 'a'))
+  , bparser "skipManyTill" manyAsB (const $ skipManyTill (char 'a') (char 'b'))
+  , bparser "skipSomeTill" manyAsB (const $ skipSomeTill (char 'a') (char 'b'))
   ]
 
 -- | Perform a series to measurements with the same parser.

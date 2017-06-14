@@ -18,10 +18,8 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
-import Text.Megaparsec.Error
+import Text.Megaparsec
 import Text.Megaparsec.Lexer
-import Text.Megaparsec.Pos
-import Text.Megaparsec.Prim
 import qualified Text.Megaparsec.Char as C
 
 spec :: Spec

@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module Text.Megaparsec.CombinatorSpec (spec) where
+module Control.Applicative.CombinatorsSpec (spec) where
 
 import Control.Applicative
 import Data.Char (isLetter, isDigit)
@@ -11,8 +11,8 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
+import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Combinator
 
 spec :: Spec
 spec = do
@@ -220,6 +220,20 @@ spec = do
         p' = some (char c) >> string a
         s = replicate n c ++ a
     prs_ p s `shouldBe` prs_ p' s
+
+  describe "skipManyTill" . it "works" . property $ \c n' a -> c /= a ==> do
+    let p = skipManyTill (char c) (char a)
+        n = getNonNegative n'
+        s = replicate n c ++ [a]
+    prs_ p s `shouldParse` a
+
+  describe "skipSomeTill" . it "works" . property $ \c n' a -> c /= a ==> do
+    let p = skipSomeTill (char c) (char a)
+        n = getNonNegative n'
+        s = replicate n c ++ [a]
+    if n == 0
+      then prs_ p s `shouldFailWith` err posI (utok a <> etok c)
+      else prs_ p s `shouldParse` a
 
 ----------------------------------------------------------------------------
 -- Helpers

@@ -11,6 +11,9 @@
 -- instead of 'String'-based ones. This gives a lot of flexibility in
 -- describing what exactly went wrong as well as a way to return arbitrary
 -- data in case of failure.
+--
+-- You probably do not want to import this module because "Text.Megaparsec"
+-- re-exports it anyway.
 
 {-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}

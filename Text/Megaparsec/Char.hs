@@ -62,9 +62,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
 import qualified Data.Set as E
 
-import Text.Megaparsec.Combinator
-import Text.Megaparsec.Error
-import Text.Megaparsec.Prim
+import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Foldable (Foldable (), any, elem, notElem)

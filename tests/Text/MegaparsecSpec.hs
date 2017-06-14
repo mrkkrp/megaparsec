@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# OPTIONS -fno-warn-orphans  #-}
 
-module Text.Megaparsec.PrimSpec (spec) where
+module Text.MegaparsecSpec (spec) where
 
 import Control.Applicative
 import Control.Monad.Cont
@@ -28,11 +28,8 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck hiding (label)
+import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Combinator
-import Text.Megaparsec.Error
-import Text.Megaparsec.Pos
-import Text.Megaparsec.Prim
 import qualified Control.Monad.RWS.Lazy      as L
 import qualified Control.Monad.RWS.Strict    as S
 import qualified Control.Monad.State.Lazy    as L

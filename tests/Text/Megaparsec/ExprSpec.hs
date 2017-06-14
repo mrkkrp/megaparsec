@@ -4,16 +4,14 @@
 
 module Text.Megaparsec.ExprSpec (spec) where
 
-import Control.Applicative (some, (<|>))
 import Data.Monoid ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
+import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Combinator
 import Text.Megaparsec.Expr
-import Text.Megaparsec.Prim
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)

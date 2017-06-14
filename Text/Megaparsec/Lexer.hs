@@ -61,10 +61,7 @@ import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
 import qualified Data.Set as E
 
-import Text.Megaparsec.Combinator
-import Text.Megaparsec.Error
-import Text.Megaparsec.Pos
-import Text.Megaparsec.Prim
+import Text.Megaparsec
 import qualified Text.Megaparsec.Char as C
 
 ----------------------------------------------------------------------------

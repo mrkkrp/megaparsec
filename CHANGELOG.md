@@ -1,3 +1,13 @@
+## Megaparsec 6.0.0
+
+* Re-organized the module hierarchy. Some modules such as
+  `Text.Megaparsec.Prim` do not exist anymore. Stream definitions were moved
+  to `Text.Megaparsec.Stream`. Generic combinators are now re-exported from
+  the `Control.Applicative.Combinators`. Just import `Text.Megaparsec` and
+  you should be setup. Then add `Text.Megaparsec.Char` if you are working
+  with a stream of `Char`s, then add qualified modules you need (permutation
+  parsing, lexing, expression parsing, etc.).
+
 ## Megaparsec 5.3.0
 
 * Added the `match` combinator that allows to get collection of consumed

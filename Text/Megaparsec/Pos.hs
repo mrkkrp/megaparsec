@@ -10,6 +10,9 @@
 -- Textual source position. The position includes name of file, line number,
 -- and column number. List of such positions can be used to model a stack of
 -- include files.
+--
+-- You probably do not want to import this module because "Text.Megaparsec"
+-- re-exports it anyway.
 
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}

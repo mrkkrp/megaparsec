@@ -11,9 +11,8 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
+import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Error
-import Text.Megaparsec.Prim
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
