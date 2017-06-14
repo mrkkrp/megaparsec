@@ -10,6 +10,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Types()
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Word (Word)

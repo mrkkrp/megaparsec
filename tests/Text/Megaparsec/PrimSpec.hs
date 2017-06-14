@@ -33,6 +33,7 @@ import Text.Megaparsec.Combinator
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
+import Text.Megaparsec.Types()
 import qualified Control.Monad.RWS.Lazy      as L
 import qualified Control.Monad.RWS.Strict    as S
 import qualified Control.Monad.State.Lazy    as L

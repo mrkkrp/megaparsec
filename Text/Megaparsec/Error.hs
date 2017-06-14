@@ -41,7 +41,6 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Prelude hiding (concat)
-import Test.QuickCheck hiding (label)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
@@ -63,18 +62,6 @@ data ErrorItem t
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance NFData t => NFData (ErrorItem t)
-
-instance Arbitrary t => Arbitrary (ErrorItem t) where
-  arbitrary = oneof
-    [
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
-    , Label  <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      Tokens <$> arbitrary
-    , Label  <$> arbitrary
-#endif
-    , return EndOfInput ]
 
 -- | The type class defines how to represent information about various
 -- exceptional situations. Data types that are used as custom data component
@@ -120,13 +107,6 @@ data Dec
 instance NFData Dec where
   rnf (DecFail str) = rnf str
   rnf (DecIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
-
-instance Arbitrary Dec where
-  arbitrary = oneof
-    [ sized (\n -> do
-        k <- choose (0, n `div` 2)
-        DecFail <$> vectorOf k arbitrary)
-    , DecIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 instance ErrorComponent Dec where
   representFail        = DecFail
@@ -174,24 +154,6 @@ instance ( Show t
   => Exception (ParseError t e) where
 #if MIN_VERSION_base(4,8,0)
   displayException = parseErrorPretty
-#endif
-
-instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
-    => Arbitrary (ParseError t e) where
-  arbitrary = ParseError
-#if MIN_VERSION_QuickCheck(2,9,0)
-    <$> arbitrary
-#else
-    <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#endif
-#if MIN_VERSION_QuickCheck(2,8,2)
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-#else
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
 #endif
 
 -- | Merge two error data structures into one joining their collections of
