@@ -13,6 +13,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Types()
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
 import qualified Data.Set           as E

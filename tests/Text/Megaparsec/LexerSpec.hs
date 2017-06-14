@@ -22,6 +22,7 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Lexer
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Prim
+import Text.Megaparsec.Types()
 import qualified Text.Megaparsec.Char as C
 
 spec :: Spec
