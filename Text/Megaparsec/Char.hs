@@ -230,8 +230,8 @@ latin1Char :: (MonadParsec e s m, Token s ~ Char) => m Char
 latin1Char = satisfy isLatin1 <?> "Latin-1 character"
 {-# INLINE latin1Char #-}
 
--- | @charCategory cat@ parses character in Unicode General Category @cat@,
--- see 'Data.Char.GeneralCategory'.
+-- | @'charCategory' cat@ parses character in Unicode General Category
+-- @cat@, see 'Data.Char.GeneralCategory'.
 
 charCategory :: (MonadParsec e s m, Token s ~ Char) => GeneralCategory -> m Char
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
@@ -275,7 +275,7 @@ categoryName = \case
 ----------------------------------------------------------------------------
 -- More general parsers
 
--- | @char c@ parses a single character @c@.
+-- | @'char' c@ parses a single character @c@.
 --
 -- > semicolon = char ';'
 
@@ -314,7 +314,7 @@ anyChar :: (MonadParsec e s m, Token s ~ Char) => m Char
 anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
 
--- | @oneOf cs@ succeeds if the current character is in the supplied
+-- | @'oneOf' cs@ succeeds if the current character is in the supplied
 -- collection of characters @cs@. Returns the parsed character. Note that
 -- this parser cannot automatically generate the “expected” component of
 -- error message, so usually you should label it manually with 'label' or
@@ -353,7 +353,7 @@ noneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
 noneOf' cs = satisfy (`notElemi` cs)
 {-# INLINE noneOf' #-}
 
--- | The parser @satisfy f@ succeeds for any character for which the
+-- | The parser @'satisfy' f@ succeeds for any character for which the
 -- supplied function @f@ returns 'True'. Returns the character that is
 -- actually parsed.
 --
@@ -372,7 +372,7 @@ satisfy f = token testChar Nothing
 ----------------------------------------------------------------------------
 -- Sequence of characters
 
--- | @string s@ parses a sequence of characters given by @s@. Returns the
+-- | @'string' s@ parses a sequence of characters given by @s@. Returns the
 -- parsed string (i.e. @s@).
 --
 -- > divOrMod = string "div" <|> string "mod"
