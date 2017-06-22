@@ -13,6 +13,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TypeFamilies     #-}
 
 module Text.Megaparsec.Char
@@ -59,7 +60,6 @@ where
 import Control.Applicative
 import Data.Char
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromJust)
 import qualified Data.Set as E
 
 import Text.Megaparsec
@@ -240,38 +240,37 @@ charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 -- | Return the human-readable name of Unicode General Category.
 
 categoryName :: GeneralCategory -> String
-categoryName cat =
-  fromJust $ lookup cat
-  [ (UppercaseLetter     , "uppercase letter")
-  , (LowercaseLetter     , "lowercase letter")
-  , (TitlecaseLetter     , "titlecase letter")
-  , (ModifierLetter      , "modifier letter")
-  , (OtherLetter         , "other letter")
-  , (NonSpacingMark      , "non-spacing mark")
-  , (SpacingCombiningMark, "spacing combining mark")
-  , (EnclosingMark       , "enclosing mark")
-  , (DecimalNumber       , "decimal number character")
-  , (LetterNumber        , "letter number character")
-  , (OtherNumber         , "other number character")
-  , (ConnectorPunctuation, "connector punctuation")
-  , (DashPunctuation     , "dash punctuation")
-  , (OpenPunctuation     , "open punctuation")
-  , (ClosePunctuation    , "close punctuation")
-  , (InitialQuote        , "initial quote")
-  , (FinalQuote          , "final quote")
-  , (OtherPunctuation    , "other punctuation")
-  , (MathSymbol          , "math symbol")
-  , (CurrencySymbol      , "currency symbol")
-  , (ModifierSymbol      , "modifier symbol")
-  , (OtherSymbol         , "other symbol")
-  , (Space               , "white space")
-  , (LineSeparator       , "line separator")
-  , (ParagraphSeparator  , "paragraph separator")
-  , (Control             , "control character")
-  , (Format              , "format character")
-  , (Surrogate           , "surrogate character")
-  , (PrivateUse          , "private-use Unicode character")
-  , (NotAssigned         , "non-assigned Unicode character") ]
+categoryName = \case
+  UppercaseLetter      -> "uppercase letter"
+  LowercaseLetter      -> "lowercase letter"
+  TitlecaseLetter      -> "titlecase letter"
+  ModifierLetter       -> "modifier letter"
+  OtherLetter          -> "other letter"
+  NonSpacingMark       -> "non-spacing mark"
+  SpacingCombiningMark -> "spacing combining mark"
+  EnclosingMark        -> "enclosing mark"
+  DecimalNumber        -> "decimal number character"
+  LetterNumber         -> "letter number character"
+  OtherNumber          -> "other number character"
+  ConnectorPunctuation -> "connector punctuation"
+  DashPunctuation      -> "dash punctuation"
+  OpenPunctuation      -> "open punctuation"
+  ClosePunctuation     -> "close punctuation"
+  InitialQuote         -> "initial quote"
+  FinalQuote           -> "final quote"
+  OtherPunctuation     -> "other punctuation"
+  MathSymbol           -> "math symbol"
+  CurrencySymbol       -> "currency symbol"
+  ModifierSymbol       -> "modifier symbol"
+  OtherSymbol          -> "other symbol"
+  Space                -> "white space"
+  LineSeparator        -> "line separator"
+  ParagraphSeparator   -> "paragraph separator"
+  Control              -> "control character"
+  Format               -> "format character"
+  Surrogate            -> "surrogate character"
+  PrivateUse           -> "private-use Unicode character"
+  NotAssigned          -> "non-assigned Unicode character"
 
 ----------------------------------------------------------------------------
 -- More general parsers
