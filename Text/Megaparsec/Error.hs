@@ -39,6 +39,7 @@ import Data.Data (Data)
 import Data.Foldable (concat)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (fromMaybe)
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -236,48 +237,59 @@ instance ShowToken Char where
 stringPretty :: NonEmpty Char -> String
 stringPretty (x:|[])      = charPretty x
 stringPretty ('\r':|"\n") = "crlf newline"
-stringPretty xs           = "\"" ++ NE.toList xs ++ "\""
+stringPretty xs           = "\"" ++ concatMap f (NE.toList xs) ++ "\""
+  where
+    f ch =
+      case charPretty' ch of
+        Nothing -> [ch]
+        Just pretty -> "<" ++ pretty ++ ">"
 
 -- | @charPretty ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages.
 
 charPretty :: Char -> String
-charPretty '\NUL' = "null (control character)"
-charPretty '\SOH' = "start of heading (control character)"
-charPretty '\STX' = "start of text (control character)"
-charPretty '\ETX' = "end of text (control character)"
-charPretty '\EOT' = "end of transmission (control character)"
-charPretty '\ENQ' = "enquiry (control character)"
-charPretty '\ACK' = "acknowledge (control character)"
-charPretty '\BEL' = "bell (control character)"
-charPretty '\BS'  = "backspace"
-charPretty '\t'   = "tab"
-charPretty '\n'   = "newline"
-charPretty '\v'   = "vertical tab"
-charPretty '\f'   = "form feed (control character)"
-charPretty '\r'   = "carriage return"
-charPretty '\SO'  = "shift out (control character)"
-charPretty '\SI'  = "shift in (control character)"
-charPretty '\DLE' = "data link escape (control character)"
-charPretty '\DC1' = "device control one (control character)"
-charPretty '\DC2' = "device control two (control character)"
-charPretty '\DC3' = "device control three (control character)"
-charPretty '\DC4' = "device control four (control character)"
-charPretty '\NAK' = "negative acknowledge (control character)"
-charPretty '\SYN' = "synchronous idle (control character)"
-charPretty '\ETB' = "end of transmission block (control character)"
-charPretty '\CAN' = "cancel (control character)"
-charPretty '\EM'  = "end of medium (control character)"
-charPretty '\SUB' = "substitute (control character)"
-charPretty '\ESC' = "escape (control character)"
-charPretty '\FS'  = "file separator (control character)"
-charPretty '\GS'  = "group separator (control character)"
-charPretty '\RS'  = "record separator (control character)"
-charPretty '\US'  = "unit separator (control character)"
-charPretty '\DEL' = "delete (control character)"
-charPretty ' '    = "space"
-charPretty '\160' = "non-breaking space"
-charPretty x    = "'" ++ [x] ++ "'"
+charPretty ' ' = "space"
+charPretty ch = fromMaybe ("'" ++ [ch] ++ "'") (charPretty' ch)
+
+-- | If the given character has a pretty representation, return that,
+-- otherwise 'Nothing'. This is an internal helper.
+
+charPretty' :: Char -> Maybe String
+charPretty' '\NUL' = pure "null (control character)"
+charPretty' '\SOH' = pure "start of heading (control character)"
+charPretty' '\STX' = pure "start of text (control character)"
+charPretty' '\ETX' = pure "end of text (control character)"
+charPretty' '\EOT' = pure "end of transmission (control character)"
+charPretty' '\ENQ' = pure "enquiry (control character)"
+charPretty' '\ACK' = pure "acknowledge (control character)"
+charPretty' '\BEL' = pure "bell (control character)"
+charPretty' '\BS'  = pure "backspace"
+charPretty' '\t'   = pure "tab"
+charPretty' '\n'   = pure "newline"
+charPretty' '\v'   = pure "vertical tab"
+charPretty' '\f'   = pure "form feed (control character)"
+charPretty' '\r'   = pure "carriage return"
+charPretty' '\SO'  = pure "shift out (control character)"
+charPretty' '\SI'  = pure "shift in (control character)"
+charPretty' '\DLE' = pure "data link escape (control character)"
+charPretty' '\DC1' = pure "device control one (control character)"
+charPretty' '\DC2' = pure "device control two (control character)"
+charPretty' '\DC3' = pure "device control three (control character)"
+charPretty' '\DC4' = pure "device control four (control character)"
+charPretty' '\NAK' = pure "negative acknowledge (control character)"
+charPretty' '\SYN' = pure "synchronous idle (control character)"
+charPretty' '\ETB' = pure "end of transmission block (control character)"
+charPretty' '\CAN' = pure "cancel (control character)"
+charPretty' '\EM'  = pure "end of medium (control character)"
+charPretty' '\SUB' = pure "substitute (control character)"
+charPretty' '\ESC' = pure "escape (control character)"
+charPretty' '\FS'  = pure "file separator (control character)"
+charPretty' '\GS'  = pure "group separator (control character)"
+charPretty' '\RS'  = pure "record separator (control character)"
+charPretty' '\US'  = pure "unit separator (control character)"
+charPretty' '\DEL' = pure "delete (control character)"
+charPretty' '\160' = pure "non-breaking space"
+charPretty' _      = Nothing
 
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
