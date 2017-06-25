@@ -15,20 +15,20 @@
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE CPP                  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
-  , ErrorComponent (..)
-  , Dec (..)
+  , ErrorData (..)
   , ParseError (..)
-  , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
   , sourcePosStackPretty
@@ -36,7 +36,6 @@ module Text.Megaparsec.Error
 where
 
 import Control.DeepSeq
-import Control.Exception
 import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
@@ -85,61 +84,33 @@ instance Arbitrary t => Arbitrary (ErrorItem t) where
 #endif
     , return EndOfInput ]
 
--- | The type class defines how to represent information about various
--- exceptional situations. Data types that are used as custom data component
--- in 'ParseError' must be instances of this type class.
+-- | Additional error data, extendable by the user.
 --
--- @since 5.0.0
+-- @since 6.0.0
 
-class Ord e => ErrorComponent e where
-
-  -- | Represent the message passed to 'fail' in parser monad.
-  --
-  -- @since 5.0.0
-
-  representFail :: String -> e
-
-  -- | Represent information about incorrect indentation.
-  --
-  -- @since 5.0.0
-
-  representIndentation
-    :: Ordering -- ^ Desired ordering between reference level and actual level
-    -> Pos 1           -- ^ Reference indentation level
-    -> Pos 1           -- ^ Actual indentation level
-    -> e
-
-instance ErrorComponent () where
-  representFail _ = ()
-  representIndentation _ _ _ = ()
-
--- | “Default error component”. This is our instance of 'ErrorComponent'
--- provided out-of-box.
---
--- @since 5.0.0
-
-data Dec
-  = DecFail String         -- ^ 'fail' has been used in parser monad
-  | DecIndentation Ordering (Pos 1) (Pos 1)
+data ErrorData a
+  = ErrorFail String
+    -- ^ 'fail' has been used in parser monad
+  | ErrorIndentation Ordering (Pos 1) (Pos 1)
     -- ^ Incorrect indentation error: desired ordering between reference
     -- level and actual level, reference indentation level, actual
     -- indentation level
-  deriving (Show, Read, Eq, Ord, Data, Typeable)
+  | ErrorCustom a
+    -- ^ Custom error data, can be conveniently disabled by indexing
+    -- 'ErrorData' by 'Data.Void.Void'
+  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
-instance NFData Dec where
-  rnf (DecFail str) = rnf str
-  rnf (DecIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
+instance NFData a => NFData (ErrorData a) where
+  rnf (ErrorFail str) = rnf str
+  rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
+  rnf (ErrorCustom a) = rnf a
 
-instance Arbitrary Dec where
+instance Arbitrary (ErrorData a) where
   arbitrary = oneof
     [ sized (\n -> do
         k <- choose (0, n `div` 2)
-        DecFail <$> vectorOf k arbitrary)
-    , DecIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
-
-instance ErrorComponent Dec where
-  representFail        = DecFail
-  representIndentation = DecIndentation
+        ErrorFail <$> vectorOf k arbitrary)
+    , ErrorIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 -- | 'ParseError' represents… parse errors. It provides the stack of source
 -- positions, a set of expected and unexpected tokens as well as a set of
@@ -173,17 +144,16 @@ instance (Ord t, Ord e) => Monoid (ParseError t e) where
   mappend = (<>)
   {-# INLINE mappend #-}
 
-instance ( Show t
-         , Typeable t
-         , Ord t
-         , ShowToken t
-         , Show e
-         , Typeable e
-         , ShowErrorComponent e )
-  => Exception (ParseError t e) where
-#if MIN_VERSION_base(4,8,0)
-  displayException = T.unpack . parseErrorPretty
-#endif
+-- instance ( Stream s
+--          , Typeable (Token s)
+--          , Show e
+--          , Typeable e
+--          , ShowErrorComponent e
+--          , t ~ Token s )
+--   => Exception (ParseError t e) where
+-- #if MIN_VERSION_base(4,8,0)
+--   displayException = T.unpack . parseErrorPretty
+-- #endif
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
@@ -252,9 +222,9 @@ instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
   showErrorComponent (Label label) = (TB.fromText . T.pack . NE.toList) label
   showErrorComponent EndOfInput    = "end of input"
 
-instance ShowErrorComponent Dec where
-  showErrorComponent (DecFail msg) = TB.fromText (T.pack msg)
-  showErrorComponent (DecIndentation ord ref actual) =
+instance ShowErrorComponent a => ShowErrorComponent (ErrorData a) where
+  showErrorComponent (ErrorFail msg) = TB.fromText (T.pack msg)
+  showErrorComponent (ErrorIndentation ord ref actual) =
     "incorrect indentation (got " <> TB.decimal (unPos actual) <>
     ", should be " <> p <> TB.decimal (unPos ref) <> ")"
     where
@@ -262,15 +232,17 @@ instance ShowErrorComponent Dec where
             LT -> "less than "
             EQ -> "equal to "
             GT -> "greater than "
+  showErrorComponent (ErrorCustom a) = showErrorComponent a
 
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
 --
 -- @since 6.0.0
 
-parseErrorPretty :: ( Ord t
-                    , ShowToken t
-                    , ShowErrorComponent e )
+parseErrorPretty
+  :: ( Ord t
+     , ShowToken t
+     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
   -> Text              -- ^ Result of rendering
 parseErrorPretty e = TL.toStrict . TB.toLazyText $
