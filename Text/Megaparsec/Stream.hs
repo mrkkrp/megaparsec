@@ -12,6 +12,7 @@
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
 
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -21,6 +22,7 @@ module Text.Megaparsec.Stream
 where
 
 import Data.Proxy
+import Data.Semigroup ((<>))
 import Text.Megaparsec.Pos
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -69,7 +71,7 @@ class Ord (Token s) => Stream s where
 
   updatePos
     :: Proxy s -- ^ Proxy clarifying stream type ('Token' is not injective)
-    -> Pos             -- ^ Tab width
+    -> Pos 1           -- ^ Tab width
     -> SourcePos       -- ^ Current position
     -> Token s         -- ^ Current token
     -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
@@ -109,3 +111,25 @@ instance Stream TL.Text where
   {-# INLINE uncons #-}
   updatePos = const defaultUpdatePos
   {-# INLINE updatePos #-}
+
+-- | Update a source position given a character. The first argument
+-- specifies the tab width. If the character is a newline (\'\\n\') the line
+-- number is incremented by 1. If the character is a tab (\'\\t\') the
+-- column number is incremented to the nearest tab position. In all other
+-- cases, the column is incremented by 1.
+
+defaultUpdatePos
+  :: Pos 1             -- ^ Tab width
+  -> SourcePos         -- ^ Current position
+  -> Char              -- ^ Current token
+  -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
+defaultUpdatePos width apos@(SourcePos n l c t) ch = (apos, npos)
+  where
+    w  = unPos width
+    c' = unPos c
+    t' = t <> pos1
+    npos =
+      case ch of
+        '\n' -> SourcePos n (l <> pos1) pos1                        t'
+        '\t' -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)) t'
+        _    -> SourcePos n l (c <> pos1)                           t'

@@ -16,10 +16,12 @@
 -- re-exports it anyway.
 
 {-# LANGUAGE CPP                #-}
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
@@ -34,20 +36,24 @@ module Text.Megaparsec.Error
 where
 
 import Control.DeepSeq
-import Control.Monad.Catch
+import Control.Exception
 import Data.Data (Data)
 import Data.Foldable (concat)
-import Data.List (intercalate)
+-- import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Semigroup
 import Data.Set (Set)
+import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Prelude hiding (concat)
 import Test.QuickCheck hiding (label)
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set           as E
+import qualified Data.List.NonEmpty         as NE
+import qualified Data.Set                   as E
+import qualified Data.Text                  as T
+import qualified Data.Text.Lazy.Builder     as TB
+import qualified Data.Text.Lazy.Builder.Int as TB
 
 import Text.Megaparsec.Pos
 
@@ -100,8 +106,8 @@ class Ord e => ErrorComponent e where
 
   representIndentation
     :: Ordering -- ^ Desired ordering between reference level and actual level
-    -> Pos             -- ^ Reference indentation level
-    -> Pos             -- ^ Actual indentation level
+    -> Pos 1           -- ^ Reference indentation level
+    -> Pos 1           -- ^ Actual indentation level
     -> e
 
 instance ErrorComponent () where
@@ -115,7 +121,7 @@ instance ErrorComponent () where
 
 data Dec
   = DecFail String         -- ^ 'fail' has been used in parser monad
-  | DecIndentation Ordering Pos Pos
+  | DecIndentation Ordering (Pos 1) (Pos 1)
     -- ^ Incorrect indentation error: desired ordering between reference
     -- level and actual level, reference indentation level, actual
     -- indentation level
@@ -331,55 +337,61 @@ parseErrorPretty :: ( Ord t
                     , ShowToken t
                     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
-  -> String            -- ^ Result of rendering
+  -> Text              -- ^ Result of rendering
 parseErrorPretty e =
-  sourcePosStackPretty (errorPos e) ++ ":\n" ++ parseErrorTextPretty e
+  sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
 
 -- | Pretty-print a stack of source positions.
 --
--- @since 5.0.0
+-- @since 6.0.0
 
-sourcePosStackPretty :: NonEmpty SourcePos -> String
-sourcePosStackPretty ms = concatMap f rest ++ sourcePosPretty pos
-  where (pos :| rest') = ms
-        rest           = reverse rest'
-        f p = "in file included from " ++ sourcePosPretty p ++ ",\n"
-
--- | Transforms a list of error messages into their textual representation.
-
-messageItemsPretty :: ShowErrorComponent a
-  => String            -- ^ Prefix to prepend
-  -> Set a             -- ^ Collection of messages
-  -> String            -- ^ Result of rendering
-messageItemsPretty prefix ts
-  | E.null ts = ""
-  | otherwise =
-    let f = orList . NE.fromList . E.toAscList . E.map showErrorComponent
-    in prefix ++ f ts ++ "\n"
-
--- | Print a pretty list where items are separated with commas and the word
--- “or” according to the rules of English punctuation.
-
-orList :: NonEmpty String -> String
-orList (x:|[])  = x
-orList (x:|[y]) = x ++ " or " ++ y
-orList xs       = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs
+sourcePosStackPretty :: NonEmpty SourcePos -> TB.Builder
+sourcePosStackPretty ms = mconcat (f <$> rest) <> sourcePosPretty pos
+  where
+    (pos :| rest') = ms
+    rest           = reverse rest'
+    f p = "in file included from " <> sourcePosPretty p <> ",\n"
 
 -- | Pretty-print a textual part of a 'ParseError', that is, everything
 -- except stack of source positions. The rendered staring always ends with a
 -- new line.
 --
--- @since 5.1.0
+-- @since 6.0.0
 
-parseErrorTextPretty :: ( Ord t
-                        , ShowToken t
-                        , ShowErrorComponent e )
+parseErrorTextPretty
+  :: ( Ord t
+     , ShowToken t
+     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
-  -> String            -- ^ Result of rendering
+  -> TB.Builder        -- ^ Result of rendering
 parseErrorTextPretty (ParseError _ us ps xs) =
   if E.null us && E.null ps && E.null xs
     then "unknown parse error\n"
-    else concat
+    else mconcat
       [ messageItemsPretty "unexpected " us
       , messageItemsPretty "expecting "  ps
       , unlines (showErrorComponent <$> E.toAscList xs) ]
+
+-- | Transforms a list of error messages into their textual representation.
+
+messageItemsPretty :: ShowErrorComponent a
+  => TB.Builder        -- ^ Prefix to prepend
+  -> Set a             -- ^ Collection of messages
+  -> TB.Builder        -- ^ Result of rendering
+messageItemsPretty prefix ts
+  | E.null ts = ""
+  | otherwise =
+    let f = orList . NE.fromList . E.toAscList . E.map showErrorComponent
+    in prefix <> f ts <> "\n"
+
+-- | Print a pretty list where items are separated with commas and the word
+-- “or” according to the rules of English punctuation.
+
+orList :: NonEmpty TB.Builder -> TB.Builder
+orList (x:|[])  = x
+orList (x:|[y]) = x <> " or " <> y
+orList xs       = intercalate (NE.init xs) <> ", or " <> NE.last xs
+  where
+    intercalate []     = ""
+    intercalate [a]    = a
+    intercalate (a:as) = a <> ", " <> intercalate as
