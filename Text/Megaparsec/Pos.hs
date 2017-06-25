@@ -159,7 +159,6 @@ data SourcePos = SourcePos
   { sourceName   :: FilePath -- ^ Name of source file
   , sourceLine   :: !(Pos 1) -- ^ Line number
   , sourceColumn :: !(Pos 1) -- ^ Column number
-  , sourceTokens :: !(Pos 0) -- ^ Number of processed tokens so far
   } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance NFData SourcePos
@@ -171,20 +170,19 @@ instance Arbitrary SourcePos where
           vectorOf k arbitrary)
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
 
 -- | Construct initial position (line 1, column 1) given name of source
 -- file.
 
 initialPos :: FilePath -> SourcePos
-initialPos n = SourcePos n pos1 pos1 mempty
+initialPos n = SourcePos n pos1 pos1
 
 -- | Pretty-print a 'SourcePos'.
 --
 -- @since 6.0.0
 
 sourcePosPretty :: SourcePos -> TB.Builder
-sourcePosPretty (SourcePos n l c _)
+sourcePosPretty (SourcePos n l c)
   | null n    = showLC
   | otherwise = TB.fromText (T.pack n) <> ":" <> showLC
   where

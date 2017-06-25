@@ -45,6 +45,7 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -135,6 +136,8 @@ import qualified Control.Monad.Trans.Writer.Lazy   as L
 import qualified Control.Monad.Trans.Writer.Strict as S
 import qualified Data.List.NonEmpty                as NE
 import qualified Data.Set                          as E
+import qualified Data.Text                         as T
+import qualified Data.Text.IO                      as TIO
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
@@ -155,11 +158,11 @@ data State s = State
     -- ^ Current input (already processed input is removed from the stream)
   , statePos :: NonEmpty SourcePos
     -- ^ Current position (column + line number) with support for include files
-  , stateTokensProcessed :: {-# UNPACK #-} !Word
+  , stateTokensProcessed :: {-# UNPACK #-} !(Pos 0)
     -- ^ Number of processed tokens so far
     --
     -- @since 5.2.0
-  , stateTabWidth :: Pos
+  , stateTabWidth :: Pos 1
     -- ^ Tab width to use
   } deriving (Show, Eq, Data, Typeable, Generic)
 
@@ -174,8 +177,8 @@ instance Arbitrary a => Arbitrary (State a) where
 #else
       arbitrary
 #endif
-    <*> choose (1, 10000)
-    <*> (unsafePos <$> choose (1, 20))
+    <*> (mkPos <$> choose (1, 10000))
+    <*> (mkPos <$> choose (1, 20))
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with returned value) or failure (with parse error), and
@@ -492,7 +495,7 @@ parseTest :: ( ShowErrorComponent e
   -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left  e -> putStr (parseErrorPretty e)
+    Left  e -> TIO.putStr (parseErrorPretty e)
     Right x -> print x
 
 -- | @runParser p file input@ runs parser @p@ on the input stream of tokens
@@ -570,7 +573,7 @@ initialState :: String -> s -> State s
 initialState name s = State
   { stateInput           = s
   , statePos             = initialPos name :| []
-  , stateTokensProcessed = 0
+  , stateTokensProcessed = mempty
   , stateTabWidth        = defaultTabWidth }
 
 ----------------------------------------------------------------------------
@@ -880,7 +883,7 @@ pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
             (ParseError (apos:|z) us ps xs)
             (State input (apos:|z) tp w)
         Right x ->
-          let newstate = State cs (npos:|z) (tp + 1) w
+          let newstate = State cs (npos:|z) (tp <> pos1) w
           in npos `seq` cok x newstate mempty
 {-# INLINE pToken #-}
 
@@ -900,7 +903,7 @@ pTokens test tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
       go _ [] is rs =
         let ris   = reverse is
             (npos, tp') = foldl'
-              (\(p, n) t -> (snd (updatePos' p t), n + 1))
+              (\(p, n) t -> (snd (updatePos' p t), n <> pos1))
               (pos, tp)
               ris
         in cok ris (State rs (npos:|z) tp' w) mempty
@@ -1120,10 +1123,10 @@ unexpected item = failure (E.singleton item) E.empty E.empty
 
 match :: MonadParsec e s m => m a -> m ([Token s], a)
 match p = do
-  tp  <- getTokensProcessed
+  tp  <- unPos <$> getTokensProcessed
   s   <- getInput
   r   <- p
-  tp' <- getTokensProcessed
+  tp' <- unPos <$> getTokensProcessed
   return (streamTake (tp' - tp) s, r)
 
 -- | Specify how to process 'ParseError's that happen inside of this
@@ -1216,14 +1219,14 @@ popPosition = updateParserState $ \(State s z tp w) ->
 --
 -- @since 5.2.0
 
-getTokensProcessed :: MonadParsec e s m => m Word
+getTokensProcessed :: MonadParsec e s m => m (Pos 0)
 getTokensProcessed = stateTokensProcessed <$> getParserState
 
 -- | Set the number of tokens processed so far.
 --
 -- @since 5.2.0
 
-setTokensProcessed :: MonadParsec e s m => Word -> m ()
+setTokensProcessed :: MonadParsec e s m => (Pos 0) -> m ()
 setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
   State s pos tp w
 
@@ -1231,13 +1234,13 @@ setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
 -- 'defaultTabWidth'. You can set a different tab width with the help of
 -- 'setTabWidth'.
 
-getTabWidth :: MonadParsec e s m => m Pos
+getTabWidth :: MonadParsec e s m => m (Pos 1)
 getTabWidth = stateTabWidth <$> getParserState
 
 -- | Set tab width. If the argument of the function is not a positive
 -- number, 'defaultTabWidth' will be used.
 
-setTabWidth :: MonadParsec e s m => Pos -> m ()
+setTabWidth :: MonadParsec e s m => Pos 1 -> m ()
 setTabWidth w = updateParserState $ \(State s pos tp _) ->
   State s pos tp w
 
@@ -1327,11 +1330,11 @@ dbgLog lbl item = prefix msg
       DbgCOK  ts a ->
         "MATCH (COK): " ++ showStream ts ++ "\nVALUE: " ++ show a
       DbgCERR ts e ->
-        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ T.unpack (parseErrorPretty e)
       DbgEOK  ts a ->
         "MATCH (EOK): " ++ showStream ts ++ "\nVALUE: " ++ show a
       DbgEERR ts e ->
-        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ T.unpack (parseErrorPretty e)
 
 -- | Pretty-print a list of tokens.
 

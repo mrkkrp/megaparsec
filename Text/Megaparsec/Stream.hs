@@ -123,13 +123,12 @@ defaultUpdatePos
   -> SourcePos         -- ^ Current position
   -> Char              -- ^ Current token
   -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
-defaultUpdatePos width apos@(SourcePos n l c t) ch = (apos, npos)
+defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
   where
     w  = unPos width
     c' = unPos c
-    t' = t <> pos1
     npos =
       case ch of
-        '\n' -> SourcePos n (l <> pos1) pos1                        t'
-        '\t' -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)) t'
-        _    -> SourcePos n l (c <> pos1)                           t'
+        '\n' -> SourcePos n (l <> pos1) pos1
+        '\t' -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+        _    -> SourcePos n l (c <> pos1)

@@ -38,8 +38,6 @@ where
 import Control.DeepSeq
 import Control.Exception
 import Data.Data (Data)
-import Data.Foldable (concat)
--- import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Semigroup
@@ -52,6 +50,7 @@ import Test.QuickCheck hiding (label)
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Set                   as E
 import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as TL
 import qualified Data.Text.Lazy.Builder     as TB
 import qualified Data.Text.Lazy.Builder.Int as TB
 
@@ -183,7 +182,7 @@ instance ( Show t
          , ShowErrorComponent e )
   => Exception (ParseError t e) where
 #if MIN_VERSION_base(4,8,0)
-  displayException = parseErrorPretty
+  displayException = T.unpack . parseErrorPretty
 #endif
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
@@ -214,10 +213,10 @@ mergeError :: (Ord t, Ord e)
   => ParseError t e
   -> ParseError t e
   -> ParseError t e
-mergeError e1@(ParseError pos1 u1 p1 x1) e2@(ParseError pos2 u2 p2 x2) =
-  case pos1 `compare` pos2 of
+mergeError e1@(ParseError s1 u1 p1 x1) e2@(ParseError s2 u2 p2 x2) =
+  case s1 `compare` s2 of
     LT -> e2
-    EQ -> ParseError pos1 (E.union u1 u2) (E.union p1 p2) (E.union x1 x2)
+    EQ -> ParseError s1 (E.union u1 u2) (E.union p1 p2) (E.union x1 x2)
     GT -> e1
 {-# INLINE mergeError #-}
 
@@ -230,72 +229,12 @@ class ShowToken a where
   -- | Pretty-print non-empty stream of tokens. This function is also used
   -- to print single tokens (represented as singleton lists).
   --
-  -- @since 5.0.0
+  -- @since 6.0.0
 
-  showTokens :: NonEmpty a -> String
+  showTokens :: NonEmpty a -> TB.Builder
 
 instance ShowToken Char where
   showTokens = stringPretty
-
--- | @stringPretty s@ returns pretty representation of string @s@. This is
--- used when printing string tokens in error messages.
-
-stringPretty :: NonEmpty Char -> String
-stringPretty (x:|[])      = charPretty x
-stringPretty ('\r':|"\n") = "crlf newline"
-stringPretty xs           = "\"" ++ concatMap f (NE.toList xs) ++ "\""
-  where
-    f ch =
-      case charPretty' ch of
-        Nothing -> [ch]
-        Just pretty -> "<" ++ pretty ++ ">"
-
--- | @charPretty ch@ returns user-friendly string representation of given
--- character @ch@, suitable for using in error messages.
-
-charPretty :: Char -> String
-charPretty ' ' = "space"
-charPretty ch = fromMaybe ("'" ++ [ch] ++ "'") (charPretty' ch)
-
--- | If the given character has a pretty representation, return that,
--- otherwise 'Nothing'. This is an internal helper.
-
-charPretty' :: Char -> Maybe String
-charPretty' '\NUL' = pure "null (control character)"
-charPretty' '\SOH' = pure "start of heading (control character)"
-charPretty' '\STX' = pure "start of text (control character)"
-charPretty' '\ETX' = pure "end of text (control character)"
-charPretty' '\EOT' = pure "end of transmission (control character)"
-charPretty' '\ENQ' = pure "enquiry (control character)"
-charPretty' '\ACK' = pure "acknowledge (control character)"
-charPretty' '\BEL' = pure "bell (control character)"
-charPretty' '\BS'  = pure "backspace"
-charPretty' '\t'   = pure "tab"
-charPretty' '\n'   = pure "newline"
-charPretty' '\v'   = pure "vertical tab"
-charPretty' '\f'   = pure "form feed (control character)"
-charPretty' '\r'   = pure "carriage return"
-charPretty' '\SO'  = pure "shift out (control character)"
-charPretty' '\SI'  = pure "shift in (control character)"
-charPretty' '\DLE' = pure "data link escape (control character)"
-charPretty' '\DC1' = pure "device control one (control character)"
-charPretty' '\DC2' = pure "device control two (control character)"
-charPretty' '\DC3' = pure "device control three (control character)"
-charPretty' '\DC4' = pure "device control four (control character)"
-charPretty' '\NAK' = pure "negative acknowledge (control character)"
-charPretty' '\SYN' = pure "synchronous idle (control character)"
-charPretty' '\ETB' = pure "end of transmission block (control character)"
-charPretty' '\CAN' = pure "cancel (control character)"
-charPretty' '\EM'  = pure "end of medium (control character)"
-charPretty' '\SUB' = pure "substitute (control character)"
-charPretty' '\ESC' = pure "escape (control character)"
-charPretty' '\FS'  = pure "file separator (control character)"
-charPretty' '\GS'  = pure "group separator (control character)"
-charPretty' '\RS'  = pure "record separator (control character)"
-charPretty' '\US'  = pure "unit separator (control character)"
-charPretty' '\DEL' = pure "delete (control character)"
-charPretty' '\160' = pure "non-breaking space"
-charPretty' _      = Nothing
 
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
@@ -306,39 +245,35 @@ class Ord a => ShowErrorComponent a where
 
   -- | Pretty-print custom data component of 'ParseError'.
 
-  showErrorComponent :: a -> String
+  showErrorComponent :: a -> TB.Builder
 
 instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
   showErrorComponent (Tokens   ts) = showTokens ts
-  showErrorComponent (Label label) = NE.toList label
+  showErrorComponent (Label label) = (TB.fromText . T.pack . NE.toList) label
   showErrorComponent EndOfInput    = "end of input"
 
 instance ShowErrorComponent Dec where
-  showErrorComponent (DecFail msg) = msg
+  showErrorComponent (DecFail msg) = TB.fromText (T.pack msg)
   showErrorComponent (DecIndentation ord ref actual) =
-    "incorrect indentation (got " ++ show (unPos actual) ++
-    ", should be " ++ p ++ show (unPos ref) ++ ")"
-    where p = case ord of
-                LT -> "less than "
-                EQ -> "equal to "
-                GT -> "greater than "
+    "incorrect indentation (got " <> TB.decimal (unPos actual) <>
+    ", should be " <> p <> TB.decimal (unPos ref) <> ")"
+    where
+      p = case ord of
+            LT -> "less than "
+            EQ -> "equal to "
+            GT -> "greater than "
 
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
 --
--- The function is defined as:
---
--- > parseErrorPretty e =
--- >   sourcePosStackPretty (errorPos e) ++ ":\n" ++ parseErrorTextPretty e
---
--- @since 5.0.0
+-- @since 6.0.0
 
 parseErrorPretty :: ( Ord t
                     , ShowToken t
                     , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
   -> Text              -- ^ Result of rendering
-parseErrorPretty e =
+parseErrorPretty e = TL.toStrict . TB.toLazyText $
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
 
 -- | Pretty-print a stack of source positions.
@@ -370,7 +305,73 @@ parseErrorTextPretty (ParseError _ us ps xs) =
     else mconcat
       [ messageItemsPretty "unexpected " us
       , messageItemsPretty "expecting "  ps
-      , unlines (showErrorComponent <$> E.toAscList xs) ]
+      , unlines' (showErrorComponent <$> E.toAscList xs) ]
+  where
+    unlines' []     = mempty
+    unlines' (l:ls) = l <> "\n" <> unlines' ls
+
+----------------------------------------------------------------------------
+-- Helpers
+
+-- | @stringPretty s@ returns pretty representation of string @s@. This is
+-- used when printing string tokens in error messages.
+
+stringPretty :: NonEmpty Char -> TB.Builder
+stringPretty (x:|[])      = charPretty x
+stringPretty ('\r':|"\n") = "crlf newline"
+stringPretty xs           = "\"" <> mconcat (f <$> NE.toList xs) <> "\""
+  where
+    f ch =
+      case charPretty' ch of
+        Nothing     -> TB.singleton ch
+        Just pretty -> "<" <> pretty <> ">"
+
+-- | @charPretty ch@ returns user-friendly string representation of given
+-- character @ch@, suitable for using in error messages.
+
+charPretty :: Char -> TB.Builder
+charPretty ' ' = "space"
+charPretty ch = fromMaybe ("'" <> TB.singleton ch <> "'") (charPretty' ch)
+
+-- | If the given character has a pretty representation, return that,
+-- otherwise 'Nothing'. This is an internal helper.
+
+charPretty' :: Char -> Maybe TB.Builder
+charPretty' '\NUL' = pure "null"
+charPretty' '\SOH' = pure "start of heading"
+charPretty' '\STX' = pure "start of text"
+charPretty' '\ETX' = pure "end of text"
+charPretty' '\EOT' = pure "end of transmission"
+charPretty' '\ENQ' = pure "enquiry"
+charPretty' '\ACK' = pure "acknowledge"
+charPretty' '\BEL' = pure "bell"
+charPretty' '\BS'  = pure "backspace"
+charPretty' '\t'   = pure "tab"
+charPretty' '\n'   = pure "newline"
+charPretty' '\v'   = pure "vertical tab"
+charPretty' '\f'   = pure "form feed"
+charPretty' '\r'   = pure "carriage return"
+charPretty' '\SO'  = pure "shift out"
+charPretty' '\SI'  = pure "shift in"
+charPretty' '\DLE' = pure "data link escape"
+charPretty' '\DC1' = pure "device control one"
+charPretty' '\DC2' = pure "device control two"
+charPretty' '\DC3' = pure "device control three"
+charPretty' '\DC4' = pure "device control four"
+charPretty' '\NAK' = pure "negative acknowledge"
+charPretty' '\SYN' = pure "synchronous idle"
+charPretty' '\ETB' = pure "end of transmission block"
+charPretty' '\CAN' = pure "cancel"
+charPretty' '\EM'  = pure "end of medium"
+charPretty' '\SUB' = pure "substitute"
+charPretty' '\ESC' = pure "escape"
+charPretty' '\FS'  = pure "file separator"
+charPretty' '\GS'  = pure "group separator"
+charPretty' '\RS'  = pure "record separator"
+charPretty' '\US'  = pure "unit separator"
+charPretty' '\DEL' = pure "delete"
+charPretty' '\160' = pure "non-breaking space"
+charPretty' _      = Nothing
 
 -- | Transforms a list of error messages into their textual representation.
 
