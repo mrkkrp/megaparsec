@@ -1501,11 +1501,7 @@ instance Arbitrary Span where
     start <- arbitrary
     end   <- arbitrary `suchThat` (> start)
     Span start end <$>
-#if !MIN_VERSION_QuickCheck(2,9,0)
       (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      arbitrary
-#endif
 
 instance ShowToken Span where
   showTokens ts = concat (NE.toList . spanBody <$> ts)

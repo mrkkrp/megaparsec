@@ -134,12 +134,7 @@ instance NFData s => NFData (State s)
 instance Arbitrary a => Arbitrary (State a) where
   arbitrary = State
     <$> arbitrary
-    <*>
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      arbitrary
-#endif
+    <*> (NE.fromList . getNonEmpty <$> arbitrary)
     <*> choose (1, 10000)
     <*> (unsafePos <$> choose (1, 20))
 

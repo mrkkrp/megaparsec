@@ -66,14 +66,8 @@ instance NFData t => NFData (ErrorItem t)
 
 instance Arbitrary t => Arbitrary (ErrorItem t) where
   arbitrary = oneof
-    [
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
+    [ Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
     , Label  <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      Tokens <$> arbitrary
-    , Label  <$> arbitrary
-#endif
     , return EndOfInput ]
 
 -- | The type class defines how to represent information about various
@@ -179,11 +173,7 @@ instance ( Show t
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
   arbitrary = ParseError
-#if MIN_VERSION_QuickCheck(2,9,0)
-    <$> arbitrary
-#else
     <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#endif
 #if MIN_VERSION_QuickCheck(2,8,2)
     <*> arbitrary
     <*> arbitrary

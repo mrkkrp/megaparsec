@@ -33,7 +33,7 @@ flag dev
   default:            False
 
 library
-  build-depends:      QuickCheck   >= 2.7   && < 3.0
+  build-depends:      QuickCheck   >= 2.7   && < 2.11
                     , base         >= 4.7   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , containers   >= 0.5   && < 0.6
@@ -90,7 +90,7 @@ test-suite tests
                     , Text.Megaparsec.PermSpec
                     , Text.Megaparsec.PosSpec
                     , Text.Megaparsec.PrimSpec
-  build-depends:      QuickCheck   >= 2.7   && < 3.0
+  build-depends:      QuickCheck   >= 2.7   && < 2.11
                     , base         >= 4.7   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , containers   >= 0.5   && < 0.6
