@@ -8,6 +8,12 @@
   with a stream of `Char`s, then add qualified modules you need (permutation
   parsing, lexing, expression parsing, etc.).
 
+## Megaparsec 5.3.1
+
+* Various updates to the docs.
+
+* Allowed `QuickCheck-2.10`.
+
 ## Megaparsec 5.3.0
 
 * Added the `match` combinator that allows to get collection of consumed
