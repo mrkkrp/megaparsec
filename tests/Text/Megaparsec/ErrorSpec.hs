@@ -140,9 +140,13 @@ spec = do
         not (isControl ch) && not (isSpace ch) ==>
           showTokens (ch :| []) === ['\'',ch,'\'']
     it "shows strings in double quotes" $
-      property $ \str ->
-        (length str > 1) && (str /= "\r\n") ==>
-          showTokens (NE.fromList str) === ("\"" ++ str ++"\"")
+      property $ \str' ->
+        let str = filter (not . g) str'
+            g x = isControl x || x `elem` ['\160']
+        in length str > 1 ==>
+             showTokens (NE.fromList str) === ("\"" ++ str ++ "\"")
+    it "shows control characters in long strings property"
+      (f "{\n" "\"{<newline>\"")
 
   describe "parseErrorPretty" $ do
     it "shows unknown ParseError correctly" $

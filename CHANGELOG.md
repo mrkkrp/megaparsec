@@ -4,9 +4,17 @@
   `Text.Megaparsec.Prim` do not exist anymore. Stream definitions were moved
   to `Text.Megaparsec.Stream`. Generic combinators are now re-exported from
   the `Control.Applicative.Combinators`. Just import `Text.Megaparsec` and
-  you should be setup. Then add `Text.Megaparsec.Char` if you are working
-  with a stream of `Char`s, then add qualified modules you need (permutation
+  you should be OK. Then add `Text.Megaparsec.Char` if you are working with
+  a stream of `Char`s, then add qualified modules you need (permutation
   parsing, lexing, expression parsing, etc.).
+
+* Dropped per-stream modules, the `Parser` type synonym is to be defined
+  manually by user.
+
+* Control characters in parse error are displayed in a readable form even
+  when they are part of strings, for example: `{<newline>` (`{` followed by
+  the newline character). Previously control characters were rendered in
+  readable form only as standalone tokens.
 
 ## Megaparsec 5.3.1
 
