@@ -71,7 +71,7 @@ class Ord (Token s) => Stream s where
 
   updatePos
     :: Proxy s -- ^ Proxy clarifying stream type ('Token' is not injective)
-    -> Pos 1           -- ^ Tab width
+    -> Pos             -- ^ Tab width
     -> SourcePos       -- ^ Current position
     -> Token s         -- ^ Current token
     -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
@@ -119,7 +119,7 @@ instance Stream TL.Text where
 -- cases, the column is incremented by 1.
 
 defaultUpdatePos
-  :: Pos 1             -- ^ Tab width
+  :: Pos               -- ^ Tab width
   -> SourcePos         -- ^ Current position
   -> Char              -- ^ Current token
   -> (SourcePos, SourcePos) -- ^ Actual position and incremented position

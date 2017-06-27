@@ -91,7 +91,7 @@ instance Arbitrary t => Arbitrary (ErrorItem t) where
 data ErrorData a
   = ErrorFail String
     -- ^ 'fail' has been used in parser monad
-  | ErrorIndentation Ordering (Pos 1) (Pos 1)
+  | ErrorIndentation Ordering Pos Pos
     -- ^ Incorrect indentation error: desired ordering between reference
     -- level and actual level, reference indentation level, actual
     -- indentation level
