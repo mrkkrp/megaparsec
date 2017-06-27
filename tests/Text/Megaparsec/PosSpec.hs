@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module Text.Megaparsec.PosSpec (spec) where
 
 import Control.Exception (evaluate)
@@ -11,10 +9,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Stream (defaultUpdatePos)
-
-#if !MIN_VERSION_base(4,8,0)
-import Data.Word (Word)
-#endif
 
 spec :: Spec
 spec = do

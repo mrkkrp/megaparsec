@@ -45,6 +45,8 @@ library
   if !impl(ghc >= 8.0)
     build-depends:    fail         == 4.9.*
                     , semigroups   == 0.18.*
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Error
@@ -91,6 +93,8 @@ test-suite tests
 
   if !impl(ghc >= 8.0)
     build-depends:    semigroups     == 0.18.*
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   default-language:   Haskell2010
 
 benchmark bench-speed
@@ -101,6 +105,8 @@ benchmark bench-speed
                     , criterion    >= 0.6.2.1 && < 1.3
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else
@@ -115,6 +121,8 @@ benchmark bench-memory
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
                     , weigh        >= 0.0.4
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else

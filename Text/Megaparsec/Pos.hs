@@ -41,7 +41,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
 import Data.Word (Word)
 #endif
 

@@ -17,6 +17,7 @@
 
 {-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
@@ -62,7 +63,7 @@ data ErrorItem t
   = Tokens (NonEmpty t)      -- ^ Non-empty stream of tokens
   | Label (NonEmpty Char)    -- ^ Label (cannot be empty)
   | EndOfInput               -- ^ End of input
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
 
 instance NFData t => NFData (ErrorItem t)
 
@@ -82,7 +83,7 @@ data ErrorFancy e
   | ErrorCustom e
     -- ^ Custom error data, can be conveniently disabled by indexing
     -- 'ErrorFancy' by 'Void'
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
 
 instance NFData a => NFData (ErrorFancy a) where
   rnf (ErrorFail str) = rnf str
