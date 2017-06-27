@@ -59,6 +59,7 @@ import Test.Hspec.Expectations
 import Text.Megaparsec
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
+import qualified Data.Text          as T
 
 ----------------------------------------------------------------------------
 -- Basic expectations
@@ -194,7 +195,7 @@ posN n see = f (initialPos "") see n :| []
 data EC t e = EC
   { ecUnexpected :: Set (ErrorItem t) -- ^ Unexpected items
   , ecExpected   :: Set (ErrorItem t) -- ^ Expected items
-  , _ecCustom    :: Set e             -- ^ Custom items
+  , _ecFancy     :: Set (ErrorFancy e) -- ^ Custom items
   } deriving (Eq, Data, Typeable, Generic)
 
 instance (Ord t, Ord e) => Semigroup (EC t e) where
@@ -269,7 +270,7 @@ eeof = mempty { ecExpected = E.singleton EndOfInput }
 --
 -- @since 0.3.0
 
-cstm :: e -> EC t e
+cstm :: ErrorFancy e -> EC t e
 cstm e = EC E.empty E.empty (E.singleton e)
 
 ----------------------------------------------------------------------------
@@ -367,8 +368,9 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
 -- suite report.
 
 showParseError :: (Ord t, ShowToken t, ShowErrorComponent e)
-  => ParseError t e -> String
-showParseError = unlines . fmap ("  " ++) . lines . parseErrorPretty
+  => ParseError t e
+  -> String
+showParseError = unlines . fmap ("  " ++) . lines . T.unpack . parseErrorPretty
 
 -- | Make a singleton non-empty list from a value.
 

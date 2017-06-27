@@ -7,12 +7,15 @@ import Control.Monad
 import Data.Char
 import Data.List (partition, isPrefixOf)
 import Data.Monoid ((<>))
+import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified Data.Text.Lazy         as TL
+import qualified Data.Text.Lazy.Builder as TB
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -338,7 +341,7 @@ spec = do
 ----------------------------------------------------------------------------
 -- Helpers
 
-checkStrLit :: String -> String -> Parsec Dec String String -> SpecWith ()
+checkStrLit :: String -> String -> Parsec Void String String -> SpecWith ()
 checkStrLit name ts p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -356,7 +359,7 @@ checkStrLit name ts p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> etoks ts)
 
-checkCharPred :: String -> (Char -> Bool) -> Parsec Dec String Char -> SpecWith ()
+checkCharPred :: String -> (Char -> Bool) -> Parsec Void String Char -> SpecWith ()
 checkCharPred name f p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -374,11 +377,12 @@ checkCharPred name f p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> elabel name)
 
-checkCharRange :: String -> String -> Parsec Dec String Char -> SpecWith ()
+checkCharRange :: String -> String -> Parsec Void String Char -> SpecWith ()
 checkCharRange name tchs p = do
+  let showTokens' = TL.unpack . TB.toLazyText . showTokens
   forM_ tchs $ \tch ->
-    context ("when stream begins with " ++ showTokens (nes tch)) $
-      it ("parses the " ++ showTokens (nes tch)) $
+    context ("when stream begins with " ++ showTokens' (nes tch)) $
+      it ("parses the " ++ showTokens' (nes tch)) $
         property $ \s -> do
           let s' = tch : s
           prs  p s' `shouldParse`     tch

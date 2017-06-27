@@ -18,7 +18,8 @@
 {-# LANGUAGE TypeFamilies      #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..) )
+  ( Stream (..)
+  , defaultUpdatePos )
 where
 
 import Data.Proxy

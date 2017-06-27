@@ -3,13 +3,17 @@
 
 module Text.Megaparsec.PosSpec (spec) where
 
+import Control.Exception (evaluate)
 import Data.Function (on)
-import Data.List (isInfixOf)
 import Data.Semigroup ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Stream (defaultUpdatePos)
+import qualified Data.Text.Lazy             as TL
+import qualified Data.Text.Lazy.Builder     as TB
+import qualified Data.Text.Lazy.Builder.Int as TB
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Word (Word)
@@ -21,17 +25,11 @@ spec = do
   describe "mkPos" $ do
     context "when the argument is 0" $
       it "throws InvalidPosException" $
-        mkPos (0 :: Word) `shouldThrow` (== InvalidPosException)
+        evaluate (mkPos 0) `shouldThrow` (== InvalidPosException)
     context "when the argument is not 0" $
       it "returns Pos with the given value" $
         property $ \n ->
-          (n > 0) ==> (mkPos n >>= shouldBe n . unPos)
-
-  describe "unsafePos" $
-    context "when the argument is a positive integer" $
-      it "returns Pos with the given value" $
-        property $ \n ->
-          (n > 0) ==> (unPos (unsafePos n) === n)
+          (n > 0) ==> (unPos (mkPos n) `shouldBe` n)
 
   describe "Read and Show instances of Pos" $
     it "printed representation of Pos is isomorphic to its value" $
@@ -46,16 +44,16 @@ spec = do
   describe "Semigroup instance of Pos" $
     it "works like addition" $
       property $ \x y ->
-        x <> y === unsafePos (unPos x + unPos y) .&&.
+        x <> y === mkPos (unPos x + unPos y) .&&.
         unPos (x <> y) === unPos x + unPos y
 
   describe "initialPos" $
-    it "consturcts initial position correctly" $
+    it "constructs initial position correctly" $
       property $ \path ->
         let x = initialPos path
-        in sourceName   x === path        .&&.
-           sourceLine   x === unsafePos 1 .&&.
-           sourceColumn x === unsafePos 1
+        in sourceName   x === path    .&&.
+           sourceLine   x === mkPos 1 .&&.
+           sourceColumn x === mkPos 1
 
   describe "Read and Show instances of SourcePos" $
     it "printed representation of SourcePos in isomorphic to its value" $
@@ -65,13 +63,16 @@ spec = do
   describe "sourcePosPretty" $ do
     it "displays file name" $
       property $ \x ->
-        sourceName x `isInfixOf` sourcePosPretty x
+        TL.pack (sourceName x) `TL.isInfixOf`
+          TB.toLazyText (sourcePosPretty x)
     it "displays line number" $
       property $ \x ->
-        (show . unPos . sourceLine) x `isInfixOf` sourcePosPretty x
+        (TB.toLazyText . TB.decimal . unPos . sourceLine) x `TL.isInfixOf`
+          TB.toLazyText (sourcePosPretty x)
     it "displays column number" $
       property $ \x ->
-        (show . unPos . sourceColumn) x `isInfixOf` sourcePosPretty x
+        (TB.toLazyText . TB.decimal . unPos . sourceColumn) x `TL.isInfixOf`
+          TB.toLazyText (sourcePosPretty x)
 
   describe "defaultUpdatePos" $ do
     it "returns actual position unchanged" $

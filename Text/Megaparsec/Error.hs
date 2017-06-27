@@ -27,8 +27,9 @@
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
-  , ErrorData (..)
+  , ErrorFancy (..)
   , ParseError (..)
+  , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
   , sourcePosStackPretty
@@ -36,6 +37,7 @@ module Text.Megaparsec.Error
 where
 
 import Control.DeepSeq
+import Control.Exception
 import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
@@ -43,6 +45,7 @@ import Data.Semigroup
 import Data.Set (Set)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Data.Void
 import GHC.Generics
 import Prelude hiding (concat)
 import Test.QuickCheck hiding (label)
@@ -74,38 +77,34 @@ instance NFData t => NFData (ErrorItem t)
 
 instance Arbitrary t => Arbitrary (ErrorItem t) where
   arbitrary = oneof
-    [
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
+    [ Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
     , Label  <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      Tokens <$> arbitrary
-    , Label  <$> arbitrary
-#endif
     , return EndOfInput ]
 
--- | Additional error data, extendable by the user.
+-- | Additional error data, extendable by user. When no custom data is
+-- necessary, the type is typically indexed by 'Data.Void.Void' to “cancel”
+-- the 'ErrorCustom' constructor.
 --
 -- @since 6.0.0
 
-data ErrorData a
+data ErrorFancy e
   = ErrorFail String
     -- ^ 'fail' has been used in parser monad
   | ErrorIndentation Ordering Pos Pos
     -- ^ Incorrect indentation error: desired ordering between reference
     -- level and actual level, reference indentation level, actual
     -- indentation level
-  | ErrorCustom a
+  | ErrorCustom e
     -- ^ Custom error data, can be conveniently disabled by indexing
-    -- 'ErrorData' by 'Data.Void.Void'
+    -- 'ErrorFancy' by 'Data.Void.Void'
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
-instance NFData a => NFData (ErrorData a) where
+instance NFData a => NFData (ErrorFancy a) where
   rnf (ErrorFail str) = rnf str
   rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
   rnf (ErrorCustom a) = rnf a
 
-instance Arbitrary (ErrorData a) where
+instance Arbitrary (ErrorFancy a) where
   arbitrary = oneof
     [ sized (\n -> do
         k <- choose (0, n `div` 2)
@@ -130,7 +129,7 @@ data ParseError t e = ParseError
   { errorPos        :: NonEmpty SourcePos -- ^ Stack of source positions
   , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
   , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
-  , errorCustom     :: Set e              -- ^ Associated data, if any
+  , errorFancy      :: Set (ErrorFancy e) -- ^ Fancier errors @since 6.0.0
   } deriving (Show, Read, Eq, Data, Typeable, Generic)
 
 instance (NFData t, NFData e) => NFData (ParseError t e)
@@ -144,34 +143,25 @@ instance (Ord t, Ord e) => Monoid (ParseError t e) where
   mappend = (<>)
   {-# INLINE mappend #-}
 
--- instance ( Stream s
---          , Typeable (Token s)
---          , Show e
---          , Typeable e
---          , ShowErrorComponent e
---          , t ~ Token s )
---   => Exception (ParseError t e) where
--- #if MIN_VERSION_base(4,8,0)
---   displayException = T.unpack . parseErrorPretty
--- #endif
+instance ( Show t
+         , Ord t
+         , ShowToken t
+         , Typeable t
+         , Show e
+         , ShowErrorComponent e
+         , Typeable e )
+  => Exception (ParseError t e) where
+#if MIN_VERSION_base(4,8,0)
+  displayException = T.unpack . parseErrorPretty
+#endif
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
   arbitrary = ParseError
-#if MIN_VERSION_QuickCheck(2,9,0)
-    <$> arbitrary
-#else
     <$> (NE.fromList . getNonEmpty <$> arbitrary)
-#endif
-#if MIN_VERSION_QuickCheck(2,8,2)
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-#else
     <*> (E.fromList <$> arbitrary)
     <*> (E.fromList <$> arbitrary)
     <*> (E.fromList <$> arbitrary)
-#endif
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring the longest match. In other words, earlier
@@ -222,7 +212,7 @@ instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
   showErrorComponent (Label label) = (TB.fromText . T.pack . NE.toList) label
   showErrorComponent EndOfInput    = "end of input"
 
-instance ShowErrorComponent a => ShowErrorComponent (ErrorData a) where
+instance ShowErrorComponent e => ShowErrorComponent (ErrorFancy e) where
   showErrorComponent (ErrorFail msg) = TB.fromText (T.pack msg)
   showErrorComponent (ErrorIndentation ord ref actual) =
     "incorrect indentation (got " <> TB.decimal (unPos actual) <>
@@ -233,6 +223,9 @@ instance ShowErrorComponent a => ShowErrorComponent (ErrorData a) where
             EQ -> "equal to "
             GT -> "greater than "
   showErrorComponent (ErrorCustom a) = showErrorComponent a
+
+instance ShowErrorComponent Void where
+  showErrorComponent = absurd
 
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.

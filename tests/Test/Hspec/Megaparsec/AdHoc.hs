@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes       #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Hspec.Megaparsec.AdHoc
   ( -- * Helpers to run parsers
@@ -24,8 +25,10 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
+import Test.QuickCheck (Arbitrary (..))
 import Text.Megaparsec
 import qualified Control.Monad.RWS.Lazy      as L
 import qualified Control.Monad.RWS.Strict    as S
@@ -45,18 +48,18 @@ import Control.Applicative
 -- that assumes empty file name.
 
 prs
-  :: Parsec Dec String a -- ^ Parser to run
+  :: Parser a          -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> Either (ParseError Char Dec) a -- ^ Result of parsing
+  -> Either (ParseError Char Void) a -- ^ Result of parsing
 prs p = parse p ""
 {-# INLINE prs #-}
 
 -- | Just like 'prs', but allows to inspect final state of the parser.
 
 prs'
-  :: Parsec Dec String a -- ^ Parser to run
+  :: Parser a          -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> (State String, Either (ParseError Char Dec) a) -- ^ Result of parsing
+  -> (State String, Either (ParseError Char Void) a) -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 {-# INLINE prs' #-}
 
@@ -66,9 +69,9 @@ prs' p s = runParser' p (initialState s)
 -- > prs_ p = parse (p <* eof) ""
 
 prs_
-  :: Parsec Dec String a -- ^ Parser to run
+  :: Parser a          -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> Either (ParseError Char Dec) a -- ^ Result of parsing
+  -> Either (ParseError Char Void) a -- ^ Result of parsing
 prs_ p = parse (p <* eof) ""
 {-# INLINE prs_ #-}
 
@@ -76,9 +79,9 @@ prs_ p = parse (p <* eof) ""
 -- all supported monads transformers in turn).
 
 grs
-  :: (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
+  :: (forall m. MonadParsec Void String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> (Either (ParseError Char Dec) a -> Expectation)
+  -> (Either (ParseError Char Void) a -> Expectation)
     -- ^ How to check result of parsing
   -> Expectation
 grs p s r = do
@@ -92,12 +95,12 @@ grs p s r = do
   r (prs (evalRWSTL    p)    s)
   r (prs (evalRWSTS    p)    s)
 
--- | 'grs'' to 'grs' as 'prs'' to 'prs'.
+-- | 'grs'' to 'grs' is as 'prs'' to 'prs'.
 
 grs'
-  :: (forall m. MonadParsec Dec String m => m a) -- ^ Parser to run
+  :: (forall m. MonadParsec Void String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> ((State String, Either (ParseError Char Dec) a) -> Expectation)
+  -> ((State String, Either (ParseError Char Void) a) -> Expectation)
     -- ^ How to check result of parsing
   -> Expectation
 grs' p s r = do
@@ -139,11 +142,6 @@ updatePosString
 updatePosString w = foldl' f
   where f p t = snd (defaultUpdatePos w p t)
 
--- | Position with minimal value.
-
-pos1 :: Pos
-pos1 = unsafePos 1
-
 -- | Make a singleton non-empty list from a value.
 
 nes :: a -> NonEmpty a
@@ -173,4 +171,10 @@ toFirstMismatch f str s = take (n + 1) s
 
 -- | The type of parser that consumes a 'String'.
 
-type Parser = Parsec Dec String
+type Parser = Parsec Void String
+
+----------------------------------------------------------------------------
+-- Arbitrary instances
+
+instance Arbitrary Void where
+  arbitrary = error "Arbitrary Void"

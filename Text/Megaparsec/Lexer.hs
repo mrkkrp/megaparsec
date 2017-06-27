@@ -208,7 +208,8 @@ incorrectIndent :: MonadParsec e s m
   -> Pos               -- ^ Actual indentation level
   -> m a
 incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
-  where x = representIndentation ord ref actual
+  where
+    x = ErrorIndentation ord ref actual
 
 -- | @indentGuard spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks the column
@@ -244,7 +245,7 @@ nonIndented :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
   -> m a               -- ^ How to parse actual data
   -> m a
-nonIndented sc p = indentGuard sc EQ (unsafePos 1) *> p
+nonIndented sc p = indentGuard sc EQ pos1 *> p
 
 -- | The data type represents available behaviors for parsing of indented
 -- tokens. This is used in 'indentBlock', which see.
