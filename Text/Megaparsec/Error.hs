@@ -48,7 +48,6 @@ import Data.Typeable (Typeable)
 import Data.Void
 import GHC.Generics
 import Prelude hiding (concat)
-import Test.QuickCheck hiding (label)
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Set                   as E
 import qualified Data.Text                  as T
@@ -75,12 +74,6 @@ data ErrorItem t
 
 instance NFData t => NFData (ErrorItem t)
 
-instance Arbitrary t => Arbitrary (ErrorItem t) where
-  arbitrary = oneof
-    [ Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
-    , Label  <$> (NE.fromList . getNonEmpty <$> arbitrary)
-    , return EndOfInput ]
-
 -- | Additional error data, extendable by user. When no custom data is
 -- necessary, the type is typically indexed by 'Data.Void.Void' to “cancel”
 -- the 'ErrorCustom' constructor.
@@ -103,13 +96,6 @@ instance NFData a => NFData (ErrorFancy a) where
   rnf (ErrorFail str) = rnf str
   rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
   rnf (ErrorCustom a) = rnf a
-
-instance Arbitrary (ErrorFancy a) where
-  arbitrary = oneof
-    [ sized (\n -> do
-        k <- choose (0, n `div` 2)
-        ErrorFail <$> vectorOf k arbitrary)
-    , ErrorIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 -- | 'ParseError' represents… parse errors. It provides the stack of source
 -- positions, a set of expected and unexpected tokens as well as a set of
@@ -154,14 +140,6 @@ instance ( Show t
 #if MIN_VERSION_base(4,8,0)
   displayException = T.unpack . parseErrorPretty
 #endif
-
-instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
-    => Arbitrary (ParseError t e) where
-  arbitrary = ParseError
-    <$> (NE.fromList . getNonEmpty <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring the longest match. In other words, earlier

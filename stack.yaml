@@ -3,4 +3,3 @@ packages:
 - '.'
 extra-deps:
 - parser-combinators-0.1.0
-- QuickCheck-2.10

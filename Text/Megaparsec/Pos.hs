@@ -40,7 +40,6 @@ import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
-import Test.QuickCheck
 import qualified Data.Text                  as T
 import qualified Data.Text.Lazy.Builder     as TB
 import qualified Data.Text.Lazy.Builder.Int as TB
@@ -62,9 +61,6 @@ import Data.Word (Word)
 
 newtype Pos = Pos Word
   deriving (Show, Eq, Ord, Data, Typeable, NFData)
-
-instance Arbitrary Pos where
-  arbitrary = mkPos <$> (getSmall <$> arbitrary `suchThat` (> 0))
 
 -- | Construction of 'Pos' from 'Word'. The function throws
 -- 'InvalidPosException' when given a non-positive argument.
@@ -143,14 +139,6 @@ data SourcePos = SourcePos
   } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance NFData SourcePos
-
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos
-    <$> sized (\n -> do
-          k <- choose (0, n `div` 2)
-          vectorOf k arbitrary)
-    <*> arbitrary
-    <*> arbitrary
 
 -- | Construct initial position (line 1, column 1) given name of source
 -- file.

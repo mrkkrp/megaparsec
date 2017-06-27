@@ -1,6 +1,6 @@
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE CPP                  #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE RankNTypes           #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Hspec.Megaparsec.AdHoc
@@ -28,7 +28,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
-import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck
 import Text.Megaparsec
 import qualified Control.Monad.RWS.Lazy      as L
 import qualified Control.Monad.RWS.Strict    as S
@@ -36,6 +36,8 @@ import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
+import qualified Data.List.NonEmpty          as NE
+import qualified Data.Set                    as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -52,7 +54,6 @@ prs
   -> String            -- ^ Input for the parser
   -> Either (ParseError Char Void) a -- ^ Result of parsing
 prs p = parse p ""
-{-# INLINE prs #-}
 
 -- | Just like 'prs', but allows to inspect final state of the parser.
 
@@ -61,7 +62,6 @@ prs'
   -> String            -- ^ Input for the parser
   -> (State String, Either (ParseError Char Void) a) -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
-{-# INLINE prs' #-}
 
 -- | Just like 'prs', but forces the parser to consume all input by adding
 -- 'eof':
@@ -73,7 +73,6 @@ prs_
   -> String            -- ^ Input for the parser
   -> Either (ParseError Char Void) a -- ^ Result of parsing
 prs_ p = parse (p <* eof) ""
-{-# INLINE prs_ #-}
 
 -- | Just like 'prs', but interprets given parser as various monads (tries
 -- all supported monads transformers in turn).
@@ -146,7 +145,6 @@ updatePosString w = foldl' f
 
 nes :: a -> NonEmpty a
 nes x = x :| []
-{-# INLINE nes #-}
 
 ----------------------------------------------------------------------------
 -- Other
@@ -178,3 +176,42 @@ type Parser = Parsec Void String
 
 instance Arbitrary Void where
   arbitrary = error "Arbitrary Void"
+
+instance Arbitrary Pos where
+  arbitrary = mkPos <$> (getSmall <$> arbitrary `suchThat` (> 0))
+
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos
+    <$> sized (\n -> do
+          k <- choose (0, n `div` 2)
+          vectorOf k arbitrary)
+    <*> arbitrary
+    <*> arbitrary
+
+instance Arbitrary t => Arbitrary (ErrorItem t) where
+  arbitrary = oneof
+    [ Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary)
+    , Label  <$> (NE.fromList . getNonEmpty <$> arbitrary)
+    , return EndOfInput ]
+
+instance Arbitrary (ErrorFancy a) where
+  arbitrary = oneof
+    [ sized (\n -> do
+        k <- choose (0, n `div` 2)
+        ErrorFail <$> vectorOf k arbitrary)
+    , ErrorIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
+
+instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
+    => Arbitrary (ParseError t e) where
+  arbitrary = ParseError
+    <$> (NE.fromList . getNonEmpty <$> arbitrary)
+    <*> (E.fromList <$> arbitrary)
+    <*> (E.fromList <$> arbitrary)
+    <*> (E.fromList <$> arbitrary)
+
+instance Arbitrary a => Arbitrary (State a) where
+  arbitrary = State
+    <$> arbitrary
+    <*> (NE.fromList . getNonEmpty <$> arbitrary)
+    <*> choose (1, 10000)
+    <*> (mkPos <$> choose (1, 20))
