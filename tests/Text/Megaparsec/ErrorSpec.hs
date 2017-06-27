@@ -1,11 +1,10 @@
-{-# LANGUAGE CPP               #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS -fno-warn-orphans  #-}
+{-# LANGUAGE CPP #-}
 
 module Text.Megaparsec.ErrorSpec (spec) where
 
 import Data.Char (isControl, isSpace)
 import Data.Function (on)
+import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid
 import Data.Set (Set)
@@ -15,12 +14,9 @@ import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
-import qualified Data.List.NonEmpty     as NE
-import qualified Data.Semigroup         as S
-import qualified Data.Set               as E
-import qualified Data.Text              as T
-import qualified Data.Text.Lazy         as TL
-import qualified Data.Text.Lazy.Builder as TB
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Semigroup     as S
+import qualified Data.Set           as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Foldable (Foldable, all)
@@ -143,14 +139,13 @@ spec = do
     it "shows other single characters in single quotes" $
       property $ \ch ->
         not (isControl ch) && not (isSpace ch) ==>
-          showTokens (ch :| []) === "\'" <> TB.singleton ch <> "\'"
+          showTokens (ch :| []) === "\'" <> [ch] <> "\'"
     it "shows strings in double quotes" $
       property $ \str' ->
         let str = filter (not . g) str'
             g x = isControl x || x `elem` ['\160']
-            toB = TB.fromText . T.pack
         in length str > 1 ==>
-             showTokens (NE.fromList str) === ("\"" <> toB str <> "\"")
+             showTokens (NE.fromList str) === ("\"" <> str <> "\"")
     it "shows control characters in long strings property"
       (f "{\n" "\"{<newline>\"")
 
@@ -159,7 +154,7 @@ spec = do
       parseErrorPretty (mempty :: PE) `shouldBe` "1:1:\nunknown parse error\n"
     it "result always ends with a newline" $
       property $ \x ->
-        parseErrorPretty (x :: PE) `shouldSatisfy` ("\n" `T.isSuffixOf`)
+        parseErrorPretty (x :: PE) `shouldSatisfy` ("\n" `isSuffixOf`)
     it "result contains representation of source pos stack" $
       property (contains errorPos sourcePosPretty)
     it "result contains representation of unexpected items" $
@@ -173,22 +168,21 @@ spec = do
     it "result never ends with a newline " $
       property $ \x ->
         let pos = errorPos (x :: PE)
-        in TB.toLazyText (sourcePosStackPretty pos)
-           `shouldNotSatisfy` ("\n" `TL.isSuffixOf`)
+        in sourcePosStackPretty pos `shouldNotSatisfy` ("\n" `isSuffixOf`)
 
   describe "parseErrorTextPretty" $ do
     it "shows unknown ParseError correctly" $
       parseErrorTextPretty (mempty :: PE) `shouldBe` "unknown parse error\n"
     it "result always ends with a newline" $
       property $ \x ->
-        TB.toLazyText (parseErrorTextPretty (x :: PE))
-          `shouldSatisfy` ("\n" `TL.isSuffixOf`)
+        parseErrorTextPretty (x :: PE)
+          `shouldSatisfy` ("\n" `isSuffixOf`)
 
 #if MIN_VERSION_base(4,8,0)
   describe "displayException" $
     it "produces the same result as parseErrorPretty" $
       property $ \x ->
-        displayException x `shouldBe` T.unpack (parseErrorPretty (x :: PE))
+        displayException x `shouldBe` parseErrorPretty (x :: PE)
 #endif
 
 ----------------------------------------------------------------------------
@@ -202,8 +196,8 @@ checkMergedItems f e1 e2 = f (e1 <> e2) === r
           EQ -> (E.union `on` f) e1 e2
           GT -> f e1
 
-contains :: Foldable t => (PE -> t a) -> (a -> TB.Builder) -> PE -> Property
+contains :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
 contains g r e = property (all f (g e))
   where
     rendered = parseErrorPretty e
-    f x = (TL.toStrict . TB.toLazyText . r) x `T.isInfixOf` rendered
+    f x = r x `isInfixOf` rendered

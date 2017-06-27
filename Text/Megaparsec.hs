@@ -45,7 +45,6 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -53,7 +52,6 @@
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -136,10 +134,6 @@ import qualified Control.Monad.Trans.Writer.Lazy   as L
 import qualified Control.Monad.Trans.Writer.Strict as S
 import qualified Data.List.NonEmpty                as NE
 import qualified Data.Set                          as E
-import qualified Data.Text                         as T
-import qualified Data.Text.IO                      as TIO
-import qualified Data.Text.Lazy                    as TL
-import qualified Data.Text.Lazy.Builder            as TB
 
 import Text.Megaparsec.Error
 import Text.Megaparsec.Pos
@@ -475,7 +469,7 @@ parseTest :: ( ShowErrorComponent e
   -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left  e -> TIO.putStr (parseErrorPretty e)
+    Left  e -> putStr (parseErrorPretty e)
     Right x -> print x
 
 -- | @runParser p file input@ runs parser @p@ on the input stream of tokens
@@ -1310,11 +1304,11 @@ dbgLog lbl item = prefix msg
       DbgCOK  ts a ->
         "MATCH (COK): " ++ showStream ts ++ "\nVALUE: " ++ show a
       DbgCERR ts e ->
-        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ T.unpack (parseErrorPretty e)
+        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
       DbgEOK  ts a ->
         "MATCH (EOK): " ++ showStream ts ++ "\nVALUE: " ++ show a
       DbgEERR ts e ->
-        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ T.unpack (parseErrorPretty e)
+        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
 
 -- | Pretty-print a list of tokens.
 
@@ -1323,7 +1317,7 @@ showStream ts =
   case NE.nonEmpty ts of
     Nothing -> "<EMPTY>"
     Just ne ->
-      let (h, r) = splitAt 40 (TL.unpack . TB.toLazyText $ showTokens ne)
+      let (h, r) = splitAt 40 (showTokens ne)
       in if null r then h else h ++ " <…>"
 
 -- | Calculate number of consumed tokens given 'State' of parser before and

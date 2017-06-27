@@ -15,15 +15,11 @@
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
 
-{-# LANGUAGE CPP                  #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveDataTypeable   #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
@@ -39,21 +35,17 @@ where
 import Control.DeepSeq
 import Control.Exception
 import Data.Data (Data)
+import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Semigroup
 import Data.Set (Set)
-import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Data.Void
 import GHC.Generics
 import Prelude hiding (concat)
-import qualified Data.List.NonEmpty         as NE
-import qualified Data.Set                   as E
-import qualified Data.Text                  as T
-import qualified Data.Text.Lazy             as TL
-import qualified Data.Text.Lazy.Builder     as TB
-import qualified Data.Text.Lazy.Builder.Int as TB
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Set           as E
 
 import Text.Megaparsec.Pos
 
@@ -75,8 +67,8 @@ data ErrorItem t
 instance NFData t => NFData (ErrorItem t)
 
 -- | Additional error data, extendable by user. When no custom data is
--- necessary, the type is typically indexed by 'Data.Void.Void' to “cancel”
--- the 'ErrorCustom' constructor.
+-- necessary, the type is typically indexed by 'Void' to “cancel” the
+-- 'ErrorCustom' constructor.
 --
 -- @since 6.0.0
 
@@ -89,7 +81,7 @@ data ErrorFancy e
     -- indentation level
   | ErrorCustom e
     -- ^ Custom error data, can be conveniently disabled by indexing
-    -- 'ErrorFancy' by 'Data.Void.Void'
+    -- 'ErrorFancy' by 'Void'
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance NFData a => NFData (ErrorFancy a) where
@@ -138,7 +130,7 @@ instance ( Show t
          , Typeable e )
   => Exception (ParseError t e) where
 #if MIN_VERSION_base(4,8,0)
-  displayException = T.unpack . parseErrorPretty
+  displayException = parseErrorPretty
 #endif
 
 -- | Merge two error data structures into one joining their collections of
@@ -161,15 +153,15 @@ mergeError e1@(ParseError s1 u1 p1 x1) e2@(ParseError s2 u2 p2 x2) =
 -- | Type class 'ShowToken' includes methods that allow to pretty-print
 -- single token as well as stream of tokens. This is used for rendering of
 -- error messages.
+--
+-- @since 5.0.0
 
 class ShowToken a where
 
   -- | Pretty-print non-empty stream of tokens. This function is also used
   -- to print single tokens (represented as singleton lists).
-  --
-  -- @since 6.0.0
 
-  showTokens :: NonEmpty a -> TB.Builder
+  showTokens :: NonEmpty a -> String
 
 instance ShowToken Char where
   showTokens = stringPretty
@@ -183,18 +175,18 @@ class Ord a => ShowErrorComponent a where
 
   -- | Pretty-print custom data component of 'ParseError'.
 
-  showErrorComponent :: a -> TB.Builder
+  showErrorComponent :: a -> String
 
 instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
   showErrorComponent (Tokens   ts) = showTokens ts
-  showErrorComponent (Label label) = (TB.fromText . T.pack . NE.toList) label
+  showErrorComponent (Label label) = NE.toList label
   showErrorComponent EndOfInput    = "end of input"
 
 instance ShowErrorComponent e => ShowErrorComponent (ErrorFancy e) where
-  showErrorComponent (ErrorFail msg) = TB.fromText (T.pack msg)
+  showErrorComponent (ErrorFail msg) = msg
   showErrorComponent (ErrorIndentation ord ref actual) =
-    "incorrect indentation (got " <> TB.decimal (unPos actual) <>
-    ", should be " <> p <> TB.decimal (unPos ref) <> ")"
+    "incorrect indentation (got " <> show (unPos actual) <>
+    ", should be " <> p <> show (unPos ref) <> ")"
     where
       p = case ord of
             LT -> "less than "
@@ -208,22 +200,22 @@ instance ShowErrorComponent Void where
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
 --
--- @since 6.0.0
+-- @since 5.0.0
 
 parseErrorPretty
   :: ( Ord t
      , ShowToken t
      , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
-  -> Text              -- ^ Result of rendering
-parseErrorPretty e = TL.toStrict . TB.toLazyText $
+  -> String            -- ^ Result of rendering
+parseErrorPretty e =
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
 
 -- | Pretty-print a stack of source positions.
 --
--- @since 6.0.0
+-- @since 5.0.0
 
-sourcePosStackPretty :: NonEmpty SourcePos -> TB.Builder
+sourcePosStackPretty :: NonEmpty SourcePos -> String
 sourcePosStackPretty ms = mconcat (f <$> rest) <> sourcePosPretty pos
   where
     (pos :| rest') = ms
@@ -234,24 +226,21 @@ sourcePosStackPretty ms = mconcat (f <$> rest) <> sourcePosPretty pos
 -- except stack of source positions. The rendered staring always ends with a
 -- new line.
 --
--- @since 6.0.0
+-- @since 5.1.0
 
 parseErrorTextPretty
   :: ( Ord t
      , ShowToken t
      , ShowErrorComponent e )
   => ParseError t e    -- ^ Parse error to render
-  -> TB.Builder        -- ^ Result of rendering
+  -> String            -- ^ Result of rendering
 parseErrorTextPretty (ParseError _ us ps xs) =
   if E.null us && E.null ps && E.null xs
     then "unknown parse error\n"
     else mconcat
       [ messageItemsPretty "unexpected " us
       , messageItemsPretty "expecting "  ps
-      , unlines' (showErrorComponent <$> E.toAscList xs) ]
-  where
-    unlines' []     = mempty
-    unlines' (l:ls) = l <> "\n" <> unlines' ls
+      , unlines (showErrorComponent <$> E.toAscList xs) ]
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -259,27 +248,27 @@ parseErrorTextPretty (ParseError _ us ps xs) =
 -- | @stringPretty s@ returns pretty representation of string @s@. This is
 -- used when printing string tokens in error messages.
 
-stringPretty :: NonEmpty Char -> TB.Builder
+stringPretty :: NonEmpty Char -> String
 stringPretty (x:|[])      = charPretty x
 stringPretty ('\r':|"\n") = "crlf newline"
-stringPretty xs           = "\"" <> mconcat (f <$> NE.toList xs) <> "\""
+stringPretty xs           = "\"" <> concatMap f (NE.toList xs) <> "\""
   where
     f ch =
       case charPretty' ch of
-        Nothing     -> TB.singleton ch
+        Nothing     -> [ch]
         Just pretty -> "<" <> pretty <> ">"
 
 -- | @charPretty ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages.
 
-charPretty :: Char -> TB.Builder
+charPretty :: Char -> String
 charPretty ' ' = "space"
-charPretty ch = fromMaybe ("'" <> TB.singleton ch <> "'") (charPretty' ch)
+charPretty ch = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
 
 -- | If the given character has a pretty representation, return that,
 -- otherwise 'Nothing'. This is an internal helper.
 
-charPretty' :: Char -> Maybe TB.Builder
+charPretty' :: Char -> Maybe String
 charPretty' '\NUL' = pure "null"
 charPretty' '\SOH' = pure "start of heading"
 charPretty' '\STX' = pure "start of text"
@@ -319,9 +308,9 @@ charPretty' _      = Nothing
 -- | Transforms a list of error messages into their textual representation.
 
 messageItemsPretty :: ShowErrorComponent a
-  => TB.Builder        -- ^ Prefix to prepend
+  => String            -- ^ Prefix to prepend
   -> Set a             -- ^ Collection of messages
-  -> TB.Builder        -- ^ Result of rendering
+  -> String            -- ^ Result of rendering
 messageItemsPretty prefix ts
   | E.null ts = ""
   | otherwise =
@@ -331,11 +320,7 @@ messageItemsPretty prefix ts
 -- | Print a pretty list where items are separated with commas and the word
 -- “or” according to the rules of English punctuation.
 
-orList :: NonEmpty TB.Builder -> TB.Builder
+orList :: NonEmpty String -> String
 orList (x:|[])  = x
 orList (x:|[y]) = x <> " or " <> y
-orList xs       = intercalate (NE.init xs) <> ", or " <> NE.last xs
-  where
-    intercalate []     = ""
-    intercalate [a]    = a
-    intercalate (a:as) = a <> ", " <> intercalate as
+orList xs       = intercalate ", " (NE.init xs) <> ", or " <> NE.last xs

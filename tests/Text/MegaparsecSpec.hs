@@ -15,7 +15,7 @@ import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Char (toUpper, chr)
-import Data.Foldable (asum)
+import Data.Foldable (asum, concat)
 import Data.Function (on)
 import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
@@ -44,7 +44,6 @@ import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
-import qualified Data.Text.Lazy.Builder      as TB
 
 #if !MIN_VERSION_QuickCheck(2,8,2)
 instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
@@ -1502,8 +1501,7 @@ instance Arbitrary Span where
       (NE.fromList . getNonEmpty <$> arbitrary)
 
 instance ShowToken Span where
-  showTokens ts = mconcat $
-    TB.fromText . T.pack . NE.toList . spanBody <$> NE.toList ts
+  showTokens ts = concat (NE.toList . spanBody <$> ts)
 
 type CustomParser = Parsec Void [Span]
 

@@ -18,7 +18,6 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
 
 module Text.Megaparsec.Pos
   ( -- * Abstract position
@@ -40,9 +39,6 @@ import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
-import qualified Data.Text                  as T
-import qualified Data.Text.Lazy.Builder     as TB
-import qualified Data.Text.Lazy.Builder.Int as TB
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -129,8 +125,6 @@ instance NFData    InvalidPosException
 -- name of the source file, a line number, and a column number. Source line
 -- and column positions change intensively during parsing, so we need to
 -- make them strict to avoid memory leaks.
---
--- @since 6.0.0
 
 data SourcePos = SourcePos
   { sourceName   :: FilePath -- ^ Name of source file
@@ -150,9 +144,9 @@ initialPos n = SourcePos n pos1 pos1
 --
 -- @since 6.0.0
 
-sourcePosPretty :: SourcePos -> TB.Builder
+sourcePosPretty :: SourcePos -> String
 sourcePosPretty (SourcePos n l c)
   | null n    = showLC
-  | otherwise = TB.fromText (T.pack n) <> ":" <> showLC
+  | otherwise = n <> ":" <> showLC
   where
-    showLC = TB.decimal (unPos l) <> ":" <> TB.decimal (unPos c)
+    showLC = show (unPos l) <> ":" <> show (unPos c)

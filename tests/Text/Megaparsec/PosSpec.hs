@@ -1,19 +1,16 @@
-{-# LANGUAGE CPP              #-}
-{-# OPTIONS -fno-warn-orphans #-}
+{-# LANGUAGE CPP #-}
 
 module Text.Megaparsec.PosSpec (spec) where
 
 import Control.Exception (evaluate)
 import Data.Function (on)
+import Data.List (isInfixOf)
 import Data.Semigroup ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Pos
 import Text.Megaparsec.Stream (defaultUpdatePos)
-import qualified Data.Text.Lazy             as TL
-import qualified Data.Text.Lazy.Builder     as TB
-import qualified Data.Text.Lazy.Builder.Int as TB
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Word (Word)
@@ -63,16 +60,13 @@ spec = do
   describe "sourcePosPretty" $ do
     it "displays file name" $
       property $ \x ->
-        TL.pack (sourceName x) `TL.isInfixOf`
-          TB.toLazyText (sourcePosPretty x)
+        sourceName x `isInfixOf` sourcePosPretty x
     it "displays line number" $
       property $ \x ->
-        (TB.toLazyText . TB.decimal . unPos . sourceLine) x `TL.isInfixOf`
-          TB.toLazyText (sourcePosPretty x)
+        (show . unPos . sourceLine) x `isInfixOf` sourcePosPretty x
     it "displays column number" $
       property $ \x ->
-        (TB.toLazyText . TB.decimal . unPos . sourceColumn) x `TL.isInfixOf`
-          TB.toLazyText (sourcePosPretty x)
+        (show . unPos . sourceColumn) x `isInfixOf` sourcePosPretty x
 
   describe "defaultUpdatePos" $ do
     it "returns actual position unchanged" $

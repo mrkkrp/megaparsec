@@ -14,8 +14,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import qualified Data.Text.Lazy         as TL
-import qualified Data.Text.Lazy.Builder as TB
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -379,10 +377,9 @@ checkCharPred name f p = do
 
 checkCharRange :: String -> String -> Parsec Void String Char -> SpecWith ()
 checkCharRange name tchs p = do
-  let showTokens' = TL.unpack . TB.toLazyText . showTokens
   forM_ tchs $ \tch ->
-    context ("when stream begins with " ++ showTokens' (nes tch)) $
-      it ("parses the " ++ showTokens' (nes tch)) $
+    context ("when stream begins with " ++ showTokens (nes tch)) $
+      it ("parses the " ++ showTokens (nes tch)) $
         property $ \s -> do
           let s' = tch : s
           prs  p s' `shouldParse`     tch

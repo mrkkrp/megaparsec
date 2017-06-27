@@ -59,7 +59,6 @@ import Test.Hspec.Expectations
 import Text.Megaparsec
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-import qualified Data.Text          as T
 
 ----------------------------------------------------------------------------
 -- Basic expectations
@@ -370,7 +369,7 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
 showParseError :: (Ord t, ShowToken t, ShowErrorComponent e)
   => ParseError t e
   -> String
-showParseError = unlines . fmap ("  " ++) . lines . T.unpack . parseErrorPretty
+showParseError = unlines . fmap ("  " ++) . lines . parseErrorPretty
 
 -- | Make a singleton non-empty list from a value.
 
