@@ -123,7 +123,6 @@ import Data.Typeable (Typeable)
 import Debug.Trace
 import GHC.Generics
 import Prelude hiding (all)
-import Test.QuickCheck hiding (Result (..), label)
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
 import qualified Control.Monad.RWS.Lazy            as L
@@ -164,18 +163,6 @@ data State s = State
   } deriving (Show, Eq, Data, Typeable, Generic)
 
 instance NFData s => NFData (State s)
-
-instance Arbitrary a => Arbitrary (State a) where
-  arbitrary = State
-    <$> arbitrary
-    <*>
-#if !MIN_VERSION_QuickCheck(2,9,0)
-      (NE.fromList . getNonEmpty <$> arbitrary)
-#else
-      arbitrary
-#endif
-    <*> choose (1, 10000)
-    <*> (unsafePos <$> choose (1, 20))
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with returned value) or failure (with parse error), and
@@ -287,13 +274,11 @@ newtype ParsecT e s m a = ParsecT
       -> (ParseError (Token s) e -> State s -> m b) -- empty-error
       -> m b }
 
-instance (ErrorComponent e, Stream s, Semigroup a)
-    => Semigroup (ParsecT e s m a) where
+instance (Stream s, Semigroup a) => Semigroup (ParsecT e s m a) where
   (<>) = A.liftA2 (<>)
   {-# INLINE (<>) #-}
 
-instance (ErrorComponent e, Stream s, Monoid a)
-    => Monoid (ParsecT e s m a) where
+instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   mempty = pure mempty
   {-# INLINE mempty #-}
   mappend = A.liftA2 mappend
@@ -307,7 +292,7 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
   unParser p s (cok . f) cerr (eok . f) eerr
 {-# INLINE pMap #-}
 
-instance (ErrorComponent e, Stream s) => A.Applicative (ParsecT e s m) where
+instance Stream s => A.Applicative (ParsecT e s m) where
   pure     = pPure
   (<*>)    = pAp
   p1 *> p2 = p1 `pBind` const p2
@@ -325,12 +310,11 @@ pAp m k = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s mcok cerr meok eerr
 {-# INLINE pAp #-}
 
-instance (ErrorComponent e, Stream s) => A.Alternative (ParsecT e s m) where
+instance (Ord e, Stream s) => A.Alternative (ParsecT e s m) where
   empty  = mzero
   (<|>)  = mplus
 
-instance (ErrorComponent e, Stream s)
-    => Monad (ParsecT e s m) where
+instance Stream s => Monad (ParsecT e s m) where
   return = pure
   (>>=)  = pBind
   fail   = Fail.fail
@@ -351,14 +335,13 @@ pBind m k = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s mcok cerr meok eerr
 {-# INLINE pBind #-}
 
-instance (ErrorComponent e, Stream s)
-    => Fail.MonadFail (ParsecT e s m) where
+instance Stream s => Fail.MonadFail (ParsecT e s m) where
   fail = pFail
 
-pFail :: ErrorComponent e => String -> ParsecT e s m a
+pFail :: String -> ParsecT e s m a
 pFail msg = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos E.empty E.empty d) s
-  where d = E.singleton (representFail msg)
+  where d = E.singleton (ErrorFail msg)
 {-# INLINE pFail #-}
 
 mkPT :: Monad m => (State s -> m (Reply e s a)) -> ParsecT e s m a
@@ -374,36 +357,30 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
         OK    x -> eok x s' mempty
         Error e -> eerr e s'
 
-instance (ErrorComponent e, Stream s, MonadIO m)
-    => MonadIO (ParsecT e s m) where
+instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
   liftIO = lift . liftIO
 
-instance (ErrorComponent e, Stream s, MonadReader r m)
-    => MonadReader r (ParsecT e s m) where
+instance (Stream s, MonadReader r m) => MonadReader r (ParsecT e s m) where
   ask       = lift ask
   local f p = mkPT $ \s -> local f (runParsecT p s)
 
-instance (ErrorComponent e, Stream s, MonadState st m)
-    => MonadState st (ParsecT e s m) where
+instance (Stream s, MonadState st m) => MonadState st (ParsecT e s m) where
   get = lift get
   put = lift . put
 
-instance (ErrorComponent e, Stream s, MonadCont m)
-    => MonadCont (ParsecT e s m) where
+instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
   callCC f = mkPT $ \s ->
     callCC $ \c ->
       runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
     where pack s a = Reply s Virgin (OK a)
 
-instance (ErrorComponent e, Stream s, MonadError e' m)
-    => MonadError e' (ParsecT e s m) where
+instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
   throwError = lift . throwError
   p `catchError` h = mkPT $ \s ->
     runParsecT p s `catchError` \e ->
       runParsecT (h e) s
 
-instance (ErrorComponent e, Stream s)
-    => MonadPlus (ParsecT e s m) where
+instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
   mzero = pZero
   mplus = pPlus
 
@@ -412,7 +389,7 @@ pZero = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos E.empty E.empty E.empty) s
 {-# INLINE pZero #-}
 
-pPlus :: (ErrorComponent e, Stream s)
+pPlus :: (Ord e, Stream s)
   => ParsecT e s m a
   -> ParsecT e s m a
   -> ParsecT e s m a
@@ -474,7 +451,7 @@ parse = runParser
 -- should be parsed. For example it can be used when parsing of a single
 -- number according to specification of its format is desired.
 
-parseMaybe :: (ErrorComponent e, Stream s) => Parsec e s a -> s -> Maybe a
+parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
 parseMaybe p s =
   case parse (p <* eof) "" s of
     Left  _ -> Nothing
@@ -578,7 +555,7 @@ initialState name s = State
 
 -- | Type class describing parsers independent of input type.
 
-class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
+class (Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
   -- | The most general way to stop parsing and report a 'ParseError'.
@@ -587,12 +564,12 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   --
   -- > unexpected item = failure (Set.singleton item) Set.empty Set.empty
   --
-  -- @since 4.2.0
+  -- @since 6.0.0
 
   failure
     :: Set (ErrorItem (Token s)) -- ^ Unexpected items
     -> Set (ErrorItem (Token s)) -- ^ Expected items
-    -> Set e                     -- ^ Custom data
+    -> Set (ErrorFancy e)        -- ^ Fancy error components
     -> m a
 
   -- | The parser @label name p@ behaves as parser @p@, but whenever the
@@ -713,7 +690,7 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
   token
     :: (Token s -> Either ( Set (ErrorItem (Token s))
                           , Set (ErrorItem (Token s))
-                          , Set e ) a)
+                          , Set (ErrorFancy e) ) a)
        -- ^ Matching function for the token to parse, it allows to construct
        -- arbitrary error message on failure as well; sets in three-tuple
        -- are: unexpected items, expected items, and custom data pieces
@@ -759,7 +736,7 @@ class (ErrorComponent e, Stream s, A.Alternative m, MonadPlus m)
 
   updateParserState :: (State s -> State s) -> m ()
 
-instance (ErrorComponent e, Stream s) => MonadParsec e s (ParsecT e s m) where
+instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   failure           = pFailure
   label             = pLabel
   try               = pTry
@@ -776,7 +753,7 @@ instance (ErrorComponent e, Stream s) => MonadParsec e s (ParsecT e s m) where
 pFailure
   :: Set (ErrorItem (Token s))
   -> Set (ErrorItem (Token s))
-  -> Set e
+  -> Set (ErrorFancy e)
   -> ParsecT e s m a
 pFailure us ps xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (ParseError pos us ps xs) s
@@ -855,14 +832,14 @@ pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
           { errorPos        = apos:|z
           , errorUnexpected = (E.singleton . Tokens . nes) x
           , errorExpected   = E.singleton EndOfInput
-          , errorCustom     = E.empty }
+          , errorFancy      = E.empty }
           (State input (apos:|z) tp w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
   => (Token s -> Either ( Set (ErrorItem (Token s))
                         , Set (ErrorItem (Token s))
-                        , Set e ) a)
+                        , Set (ErrorFancy e) ) a)
   -> Maybe (Token s)
   -> ParsecT e s m a
 pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
@@ -871,7 +848,7 @@ pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
       { errorPos        = pos:|z
       , errorUnexpected = E.singleton EndOfInput
       , errorExpected   = maybe E.empty (E.singleton . Tokens . nes) mtoken
-      , errorCustom     = E.empty } s
+      , errorFancy      = E.empty } s
     Just (c,cs) ->
       let (apos, npos) = updatePos (Proxy :: Proxy s) w pos c
       in case test c of
@@ -896,7 +873,7 @@ pTokens test tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
         { errorPos        = pos'
         , errorUnexpected = E.singleton u
         , errorExpected   = (E.singleton . Tokens . NE.fromList) tts
-        , errorCustom     = E.empty }
+        , errorFancy      = E.empty }
       go _ [] is rs =
         let ris   = reverse is
             (npos, tp') = foldl'
@@ -1144,7 +1121,7 @@ region f m = do
     Left err -> do
       let ParseError {..} = f err
       updateParserState $ \st -> st { statePos = errorPos }
-      failure errorUnexpected errorExpected errorCustom
+      failure errorUnexpected errorExpected errorFancy
     Right x -> return x
 
 ----------------------------------------------------------------------------

@@ -17,10 +17,12 @@
 {-# LANGUAGE TypeFamilies      #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..) )
+  ( Stream (..)
+  , defaultUpdatePos )
 where
 
 import Data.Proxy
+import Data.Semigroup ((<>))
 import Text.Megaparsec.Pos
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -109,3 +111,24 @@ instance Stream TL.Text where
   {-# INLINE uncons #-}
   updatePos = const defaultUpdatePos
   {-# INLINE updatePos #-}
+
+-- | Update a source position given a character. The first argument
+-- specifies the tab width. If the character is a newline (\'\\n\') the line
+-- number is incremented by 1. If the character is a tab (\'\\t\') the
+-- column number is incremented to the nearest tab position. In all other
+-- cases, the column is incremented by 1.
+
+defaultUpdatePos
+  :: Pos               -- ^ Tab width
+  -> SourcePos         -- ^ Current position
+  -> Char              -- ^ Current token
+  -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
+defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
+  where
+    w  = unPos width
+    c' = unPos c
+    npos =
+      case ch of
+        '\n' -> SourcePos n (l <> pos1) pos1
+        '\t' -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+        _    -> SourcePos n l (c <> pos1)

@@ -33,26 +33,20 @@ flag dev
   default:            False
 
 library
-  build-depends:      QuickCheck   >= 2.7   && < 2.10
-                    , base         >= 4.7   && < 5.0
+  build-depends:      base         >= 4.7   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , containers   >= 0.5   && < 0.6
                     , deepseq      >= 1.3   && < 1.5
-                    , exceptions   >= 0.6   && < 0.9
                     , mtl          >= 2.0   && < 3.0
                     , parser-combinators >= 0.1 && < 0.2
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2   && < 1.3
                     , transformers >= 0.4   && < 0.6
-
   if !impl(ghc >= 8.0)
-    -- packages providing modules that moved into base-4.9.0.0
     build-depends:    fail         == 4.9.*
                     , semigroups   == 0.18.*
-
-  if !impl(ghc >= 7.8)
-    build-depends:    tagged       == 0.8.*
-
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Error
@@ -85,11 +79,10 @@ test-suite tests
                     , Text.Megaparsec.PermSpec
                     , Text.Megaparsec.PosSpec
                     , Text.MegaparsecSpec
-  build-depends:      QuickCheck   >= 2.7   && < 2.10
+  build-depends:      QuickCheck   >= 2.7   && < 2.11
                     , base         >= 4.7   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , containers   >= 0.5   && < 0.6
-                    , exceptions   >= 0.6   && < 0.9
                     , hspec        >= 2.0   && < 3.0
                     , hspec-expectations >= 0.5 && < 0.9
                     , megaparsec
@@ -99,12 +92,9 @@ test-suite tests
                     , transformers >= 0.4   && < 0.6
 
   if !impl(ghc >= 8.0)
-    -- packages providing modules that moved into base-4.9.0.0
     build-depends:    semigroups     == 0.18.*
-
-  if !impl(ghc >= 7.8)
-    build-depends:    tagged       == 0.8.*
-
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   default-language:   Haskell2010
 
 benchmark bench-speed
@@ -115,6 +105,8 @@ benchmark bench-speed
                     , criterion    >= 0.6.2.1 && < 1.3
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else
@@ -129,6 +121,8 @@ benchmark bench-memory
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
                     , weigh        >= 0.0.4
+  if !impl(ghc >= 7.10)
+    build-depends:    void         == 0.7.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else

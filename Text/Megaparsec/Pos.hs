@@ -18,77 +18,56 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TupleSections              #-}
 
 module Text.Megaparsec.Pos
   ( -- * Abstract position
     Pos
   , mkPos
   , unPos
-  , unsafePos
+  , pos1
+  , defaultTabWidth
   , InvalidPosException (..)
     -- * Source position
   , SourcePos (..)
   , initialPos
-  , sourcePosPretty
-    -- * Helpers implementing default behaviors
-  , defaultUpdatePos
-  , defaultTabWidth )
+  , sourcePosPretty )
 where
 
 import Control.DeepSeq
-import Control.Monad.Catch
+import Control.Exception
 import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
-import Test.QuickCheck
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
 import Data.Word (Word)
 #endif
 
 ----------------------------------------------------------------------------
 -- Abstract position
 
--- | Positive integer that is used to represent line number, column number,
--- and similar things like indentation level. 'Semigroup' instance can be
--- used to safely and purely add 'Pos'es together.
+-- | 'Pos' is the type for positive integers. This is used to represent line
+-- number, column number, and similar things like indentation level.
+-- 'Semigroup' instance can be used to safely and efficiently add 'Pos'es
+-- together.
 --
 -- @since 5.0.0
 
 newtype Pos = Pos Word
   deriving (Show, Eq, Ord, Data, Typeable, NFData)
 
-instance Arbitrary Pos where
-  arbitrary = unsafePos <$> (getSmall <$> arbitrary `suchThat` (> 0))
-
--- | Construction of 'Pos' from an instance of 'Integral'. The function
--- throws 'InvalidPosException' when given non-positive argument. Note that
--- the function is polymorphic with respect to 'MonadThrow' @m@, so you can
--- get result inside of 'Maybe', for example.
+-- | Construction of 'Pos' from 'Word'. The function throws
+-- 'InvalidPosException' when given a non-positive argument.
 --
--- @since 5.0.0
+-- @since 6.0.0
 
-mkPos :: (Integral a, MonadThrow m) => a -> m Pos
-mkPos x =
-  if x < 1
-    then throwM InvalidPosException
-    else (return . Pos . fromIntegral) x
+mkPos :: Word -> Pos
+mkPos a =
+  if a == 0
+    then throw InvalidPosException
+    else Pos a
 {-# INLINE mkPos #-}
-
--- | Dangerous construction of 'Pos'. Use when you know for sure that
--- argument is positive.
---
--- @since 5.0.0
-
-unsafePos :: Word -> Pos
-unsafePos x =
-  if x < 1
-    then error "Text.Megaparsec.Pos.unsafePos"
-    else Pos x
-{-# INLINE unsafePos #-}
 
 -- | Extract 'Word' from 'Pos'.
 --
@@ -97,6 +76,22 @@ unsafePos x =
 unPos :: Pos -> Word
 unPos (Pos w) = w
 {-# INLINE unPos #-}
+
+-- | Position with value 1.
+--
+-- @since 6.0.0
+
+pos1 :: Pos
+pos1 = mkPos 1
+
+-- | Value of tab width used by default. Always prefer this constant when
+-- you want to refer to the default tab width because actual value /may/
+-- change in future.
+--
+-- @since 5.0.0
+
+defaultTabWidth :: Pos
+defaultTabWidth = mkPos 8
 
 instance Semigroup Pos where
   (Pos x) <> (Pos y) = Pos (x + y)
@@ -107,15 +102,7 @@ instance Read Pos where
     readParen (d > 10) $ \r1 -> do
       ("Pos", r2) <- lex r1
       (x,     r3) <- readsPrec 11 r2
-      (,r3) <$> mkPos (x :: Integer)
-
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos
-    <$> sized (\n -> do
-          k <- choose (0, n `div` 2)
-          vectorOf k arbitrary)
-    <*> (unsafePos <$> choose (1, 1000))
-    <*> (unsafePos <$> choose (1,  100))
+      return (mkPos (x :: Word) ,r3)
 
 -- | The exception is thrown by 'mkPos' when its argument is not a positive
 -- number.
@@ -123,6 +110,8 @@ instance Arbitrary SourcePos where
 -- @since 5.0.0
 
 data InvalidPosException = InvalidPosException
+  -- ^ The first value is the minimal allowed value, the second value is the
+  -- actual value that was passed to 'mkPos'.
   deriving (Eq, Show, Data, Typeable, Generic)
 
 instance Exception InvalidPosException
@@ -147,10 +136,8 @@ instance NFData SourcePos
 -- | Construct initial position (line 1, column 1) given name of source
 -- file.
 
-initialPos :: String -> SourcePos
-initialPos n = SourcePos n u u
-  where u = unsafePos 1
-{-# INLINE initialPos #-}
+initialPos :: FilePath -> SourcePos
+initialPos n = SourcePos n pos1 pos1
 
 -- | Pretty-print a 'SourcePos'.
 --
@@ -159,39 +146,6 @@ initialPos n = SourcePos n u u
 sourcePosPretty :: SourcePos -> String
 sourcePosPretty (SourcePos n l c)
   | null n    = showLC
-  | otherwise = n ++ ":" ++ showLC
-  where showLC = show (unPos l) ++ ":" ++ show (unPos c)
-
-----------------------------------------------------------------------------
--- Helpers implementing default behaviors
-
--- | Update a source position given a character. The first argument
--- specifies the tab width. If the character is a newline (\'\\n\') the line
--- number is incremented by 1. If the character is a tab (\'\\t\') the
--- column number is incremented to the nearest tab position. In all other
--- cases, the column is incremented by 1.
---
--- @since 5.0.0
-
-defaultUpdatePos
-  :: Pos               -- ^ Tab width
-  -> SourcePos         -- ^ Current position
-  -> Char              -- ^ Current token
-  -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
-defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
+  | otherwise = n <> ":" <> showLC
   where
-    u = unsafePos 1
-    w = unPos width
-    c' = unPos c
-    npos =
-      case ch of
-        '\n' -> SourcePos n (l <> u) u
-        '\t' -> SourcePos n l (unsafePos $ c' + w - ((c' - 1) `rem` w))
-        _    -> SourcePos n l (c <> u)
-
--- | Value of tab width used by default. Always prefer this constant when
--- you want to refer to the default tab width because actual value /may/
--- change in future.
-
-defaultTabWidth :: Pos
-defaultTabWidth = unsafePos 8
+    showLC = show (unPos l) <> ":" <> show (unPos c)

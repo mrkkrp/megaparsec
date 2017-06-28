@@ -13,6 +13,7 @@ import Data.List (isInfixOf)
 import Data.Maybe
 import Data.Monoid ((<>))
 import Data.Scientific (fromFloatDigits)
+import Data.Void (Void)
 import Numeric (showInt, showHex, showOct)
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -122,7 +123,7 @@ spec = do
               return (l0,l1,l2,l3,l4)
             ib  = fromMaybe 2 mn'
             mn' = getSmall . getPositive <$> mn''
-            mn  = unsafePos . fromIntegral <$> mn'
+            mn  = mkPos . fromIntegral <$> mn'
         forAll mkBlock $ \(l0,l1,l2,l3,l4) -> do
           let (col0, col1, col2, col3, col4) =
                 (getCol l0, getCol l1, getCol l2, getCol l3, getCol l4)
@@ -135,7 +136,7 @@ spec = do
               lvlc = indentBlock scn $ IndentNone                  sblc <$ b sblc
               b    = symbol sc
               l x  = return . (x,)
-              ib'  = unsafePos (fromIntegral ib)
+              ib'  = mkPos (fromIntegral ib)
           if | col1 <= col0 -> prs p s `shouldFailWith`
                err (posN (getIndent l1 + g 1) s) (utok (head sblb) <> eeof)
              | isJust mn && col1 /= ib' -> prs p s `shouldFailWith`
@@ -483,5 +484,5 @@ sbla = "aaa"
 sblb = "bbb"
 sblc = "ccc"
 
-ii :: Ordering -> Pos -> Pos -> EC Char Dec
-ii ord ref actual = cstm (DecIndentation ord ref actual)
+ii :: Ordering -> Pos -> Pos -> EC Char Void
+ii ord ref actual = cstm (ErrorIndentation ord ref actual)

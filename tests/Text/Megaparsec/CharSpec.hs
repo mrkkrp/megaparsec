@@ -7,6 +7,7 @@ import Control.Monad
 import Data.Char
 import Data.List (partition, isPrefixOf)
 import Data.Monoid ((<>))
+import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -338,7 +339,7 @@ spec = do
 ----------------------------------------------------------------------------
 -- Helpers
 
-checkStrLit :: String -> String -> Parsec Dec String String -> SpecWith ()
+checkStrLit :: String -> String -> Parsec Void String String -> SpecWith ()
 checkStrLit name ts p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -356,7 +357,7 @@ checkStrLit name ts p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> etoks ts)
 
-checkCharPred :: String -> (Char -> Bool) -> Parsec Dec String Char -> SpecWith ()
+checkCharPred :: String -> (Char -> Bool) -> Parsec Void String Char -> SpecWith ()
 checkCharPred name f p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -374,7 +375,7 @@ checkCharPred name f p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> elabel name)
 
-checkCharRange :: String -> String -> Parsec Dec String Char -> SpecWith ()
+checkCharRange :: String -> String -> Parsec Void String Char -> SpecWith ()
 checkCharRange name tchs p = do
   forM_ tchs $ \tch ->
     context ("when stream begins with " ++ showTokens (nes tch)) $
