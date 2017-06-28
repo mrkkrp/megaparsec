@@ -141,7 +141,7 @@ initialPos n = SourcePos n pos1 pos1
 
 -- | Pretty-print a 'SourcePos'.
 --
--- @since 6.0.0
+-- @since 5.0.0
 
 sourcePosPretty :: SourcePos -> String
 sourcePosPretty (SourcePos n l c)

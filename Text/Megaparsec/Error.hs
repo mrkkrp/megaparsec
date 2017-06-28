@@ -99,16 +99,19 @@ instance NFData a => NFData (ErrorFancy a) where
 -- head, and the rest of positions allows to track full sequence of include
 -- files with topmost source file at the end of the list.
 --
--- 'Semigroup' (and 'Monoid') instance of the data type allows to merge
--- parse errors from different branches of parsing. When merging two
+-- 'Semigroup' and 'Monoid' instances of the data type allows to merge parse
+-- errors from different branches of parsing. When merging two
 -- 'ParseError's, the longest match is preferred; if positions are the same,
 -- custom data sets and collections of message items are combined.
+--
+-- __Note__ changes in version 6.0.0: @errorCustom@ record selector has been
+-- dropped and 'errorFancy' record selector has been added.
 
 data ParseError t e = ParseError
   { errorPos        :: NonEmpty SourcePos -- ^ Stack of source positions
   , errorUnexpected :: Set (ErrorItem t)  -- ^ Unexpected items
   , errorExpected   :: Set (ErrorItem t)  -- ^ Expected items
-  , errorFancy      :: Set (ErrorFancy e) -- ^ Fancier errors @since 6.0.0
+  , errorFancy      :: Set (ErrorFancy e) -- ^ Fancier errors
   } deriving (Show, Read, Eq, Data, Typeable, Generic)
 
 instance (NFData t, NFData e) => NFData (ParseError t e)
