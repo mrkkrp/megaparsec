@@ -12,7 +12,6 @@
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
 
-{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies      #-}
