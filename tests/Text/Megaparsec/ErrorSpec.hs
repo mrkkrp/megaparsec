@@ -3,11 +3,9 @@
 module Text.Megaparsec.ErrorSpec (spec) where
 
 import Data.Char (isControl, isSpace)
-import Data.Function (on)
 import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid
-import Data.Set (Set)
 import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
@@ -55,12 +53,33 @@ spec = do
     it "selects greater source position" $
       property $ \x y ->
         errorPos (x <> y :: PE) === max (errorPos x) (errorPos y)
-    it "merges unexpected items correctly" $
-      property (checkMergedItems errorUnexpected)
-    it "merges expected items correctly" $
-      property (checkMergedItems errorExpected)
-    it "merges custom items correctly" $
-      property (checkMergedItems errorFancy)
+    context "when combining two trivial parse errors at the same position" $
+      it "merges their unexpected and expected items" $
+        property $ \pos us0 ps0 us1 ps1 ->
+          TrivialError pos us0 ps0 <> TrivialError pos us1 ps1 `shouldBe`
+            (TrivialError pos (E.union us0 us1) (E.union ps0 ps1) :: PE)
+    context "when combining two fancy parse errors at the same position" $
+      it "merges their custom items" $
+        property $ \pos xs0 xs1 ->
+          FancyError pos xs0 <> FancyError pos xs1 `shouldBe`
+            (FancyError pos (E.union xs0 xs1) :: PE)
+    context "when combining trivial error with fancy error" $ do
+      it "fancy has precedence (left)" $
+        property $ \pos us ps xs ->
+          FancyError pos xs <> TrivialError pos us ps `shouldBe`
+            (FancyError pos xs :: PE)
+      it "fancy has precedence (right)" $
+        property $ \pos us ps xs ->
+          TrivialError pos us ps <> FancyError pos xs `shouldBe`
+            (FancyError pos xs :: PE)
+
+  describe "errorPos" $
+    it "returns error position" $
+      property $ \e ->
+        errorPos e `shouldBe`
+          (case e :: PE of
+            TrivialError pos _ _ -> pos
+            FancyError   pos _   -> pos)
 
   describe "showTokens (Char instance)" $ do
     let f x y = showTokens (NE.fromList x) `shouldBe` y
@@ -157,12 +176,18 @@ spec = do
         parseErrorPretty (x :: PE) `shouldSatisfy` ("\n" `isSuffixOf`)
     it "result contains representation of source pos stack" $
       property (contains errorPos sourcePosPretty)
-    it "result contains representation of unexpected items" $
-      property (contains errorUnexpected showErrorComponent)
-    it "result contains representation of expected items" $
-      property (contains errorExpected showErrorComponent)
-    it "result contains representation of custom items" $
-      property (contains errorFancy showErrorComponent)
+    it "result contains representation of unexpected items" $ do
+      let f (TrivialError _ us _) = us
+          f _                     = E.empty
+      property (contains f showErrorComponent)
+    it "result contains representation of expected items" $ do
+      let f (TrivialError _ _ ps) = ps
+          f _                     = E.empty
+      property (contains f showErrorComponent)
+    it "result contains representation of custom items" $ do
+      let f (FancyError _ xs) = xs
+          f _                 = E.empty
+      property (contains f showErrorComponent)
 
   describe "sourcePosStackPretty" $
     it "result never ends with a newline " $
@@ -187,14 +212,6 @@ spec = do
 
 ----------------------------------------------------------------------------
 -- Helpers
-
-checkMergedItems :: (Ord a, Show a) => (PE -> Set a) -> PE -> PE -> Property
-checkMergedItems f e1 e2 = f (e1 <> e2) === r
-  where
-    r = case (compare `on` errorPos) e1 e2 of
-          LT -> f e2
-          EQ -> (E.union `on` f) e1 e2
-          GT -> f e1
 
 contains :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
 contains g r e = property (all f (g e))

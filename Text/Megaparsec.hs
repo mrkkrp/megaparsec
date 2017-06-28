@@ -211,16 +211,14 @@ newtype Hints t = Hints [Set (ErrorItem t)] deriving (Semigroup, Monoid)
 -- | Convert 'ParseError' record into 'Hints'.
 
 toHints :: ParseError t e -> Hints t
-toHints err = Hints hints
-  where hints = if E.null msgs then [] else [msgs]
-        msgs  = errorExpected err
+toHints (TrivialError _ _ ps) = Hints (if E.null ps then [] else [ps])
+toHints (FancyError   _ _)    = mempty
 {-# INLINE toHints #-}
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
 --
--- Note that if resulting continuation gets 'ParseError' that has only
--- custom data in it (no “unexpected” or “expected” items), hints are
--- ignored.
+-- Note that if resulting continuation gets 'ParseError' that has custom
+-- data in it, hints are ignored.
 
 withHints :: Ord (Token s)
   => Hints (Token s)   -- ^ Hints to use
@@ -228,10 +226,10 @@ withHints :: Ord (Token s)
   -> ParseError (Token s) e -- ^ First argument of resulting continuation
   -> State s           -- ^ Second argument of resulting continuation
   -> m b
-withHints (Hints ps') c e@(ParseError pos us ps xs) =
-  if E.null us && E.null ps && not (E.null xs)
-    then c e
-    else c (ParseError pos us (E.unions (ps : ps')) xs)
+withHints (Hints ps') c e =
+  case e of
+    TrivialError pos us ps -> c (TrivialError pos us (E.unions (ps : ps')))
+    _ -> c e
 {-# INLINE withHints #-}
 
 -- | @accHints hs c@ results in “OK” continuation that will add given hints
@@ -340,8 +338,8 @@ instance Stream s => Fail.MonadFail (ParsecT e s m) where
 
 pFail :: String -> ParsecT e s m a
 pFail msg = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (ParseError pos E.empty E.empty d) s
-  where d = E.singleton (ErrorFail msg)
+  let d = E.singleton (ErrorFail msg)
+  in eerr (FancyError pos d) s
 {-# INLINE pFail #-}
 
 mkPT :: Monad m => (State s -> m (Reply e s a)) -> ParsecT e s m a
@@ -386,7 +384,7 @@ instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
 
 pZero :: ParsecT e s m a
 pZero = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (ParseError pos E.empty E.empty E.empty) s
+  eerr (TrivialError pos E.empty E.empty) s
 {-# INLINE pZero #-}
 
 pPlus :: (Ord e, Stream s)
@@ -558,18 +556,26 @@ initialState name s = State
 class (Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
-  -- | The most general way to stop parsing and report a 'ParseError'.
+  -- | The most general way to stop parsing and report a trivial
+  -- 'ParseError'.
   --
   -- 'unexpected' is defined in terms of this function:
   --
-  -- > unexpected item = failure (Set.singleton item) Set.empty Set.empty
+  -- > unexpected item = trivialFailure (Set.singleton item) Set.empty
   --
   -- @since 6.0.0
 
-  failure
+  trivialFailure
     :: Set (ErrorItem (Token s)) -- ^ Unexpected items
     -> Set (ErrorItem (Token s)) -- ^ Expected items
-    -> Set (ErrorFancy e)        -- ^ Fancy error components
+    -> m a
+
+  -- | The most general way to stop parsing and report a fancy 'ParseError'.
+  --
+  -- @since 6.0.0
+
+  fancyFailure
+    :: Set (ErrorFancy e) -- ^ Fancy error components
     -> m a
 
   -- | The parser @label name p@ behaves as parser @p@, but whenever the
@@ -685,12 +691,11 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- >     testChar x =
   -- >       if f x
   -- >         then Right x
-  -- >         else Left (Set.singleton (Tokens (x:|[])), Set.empty, Set.empty)
+  -- >         else Left (Set.singleton (Tokens (x:|[])), Set.empty)
 
   token
     :: (Token s -> Either ( Set (ErrorItem (Token s))
-                          , Set (ErrorItem (Token s))
-                          , Set (ErrorFancy e) ) a)
+                          , Set (ErrorItem (Token s)) ) a)
        -- ^ Matching function for the token to parse, it allows to construct
        -- arbitrary error message on failure as well; sets in three-tuple
        -- are: unexpected items, expected items, and custom data pieces
@@ -737,7 +742,8 @@ class (Stream s, A.Alternative m, MonadPlus m)
   updateParserState :: (State s -> State s) -> m ()
 
 instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
-  failure           = pFailure
+  trivialFailure    = pTrivialFailure
+  fancyFailure      = pFancyFailure
   label             = pLabel
   try               = pTry
   lookAhead         = pLookAhead
@@ -750,14 +756,20 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
-pFailure
+pTrivialFailure
   :: Set (ErrorItem (Token s))
   -> Set (ErrorItem (Token s))
-  -> Set (ErrorFancy e)
   -> ParsecT e s m a
-pFailure us ps xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (ParseError pos us ps xs) s
-{-# INLINE pFailure #-}
+pTrivialFailure us ps = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
+  eerr (TrivialError pos us ps) s
+{-# INLINE pTrivialFailure #-}
+
+pFancyFailure
+  :: Set (ErrorFancy e)
+  -> ParsecT e s m a
+pFancyFailure xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
+  eerr (FancyError pos xs) s
+{-# INLINE pFancyFailure #-}
 
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
@@ -765,8 +777,11 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
       cl = Label . (NE.fromList "the rest of " <>) <$> NE.nonEmpty l
       cok' x s' hs = cok x s' (refreshLastHint hs cl)
       eok' x s' hs = eok x s' (refreshLastHint hs el)
-      eerr'    err = eerr err
-        { errorExpected = maybe E.empty E.singleton el }
+      eerr'    err = eerr $
+        case err of
+          (TrivialError pos us _) ->
+            TrivialError pos us (maybe E.empty E.singleton el)
+          _ -> err
   in unParser p s cok' cerr eok' eerr'
 {-# INLINE pLabel #-}
 
@@ -785,7 +800,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (uncons input)
-      unexpect u = ParseError pos (E.singleton u) E.empty E.empty
+      unexpect u = TrivialError pos (E.singleton u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
       eok' _ _ _ = eerr (unexpect what) s
@@ -828,33 +843,29 @@ pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let !apos = fst (updatePos (Proxy :: Proxy s) w pos x)
-      in eerr ParseError
-          { errorPos        = apos:|z
-          , errorUnexpected = (E.singleton . Tokens . nes) x
-          , errorExpected   = E.singleton EndOfInput
-          , errorFancy      = E.empty }
+          us    = (E.singleton . Tokens . nes) x
+          ps    = E.singleton EndOfInput
+      in eerr (TrivialError (apos:|z) us ps)
           (State input (apos:|z) tp w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
   => (Token s -> Either ( Set (ErrorItem (Token s))
-                        , Set (ErrorItem (Token s))
-                        , Set (ErrorFancy e) ) a)
+                        , Set (ErrorItem (Token s)) ) a)
   -> Maybe (Token s)
   -> ParsecT e s m a
 pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   case uncons input of
-    Nothing -> eerr ParseError
-      { errorPos        = pos:|z
-      , errorUnexpected = E.singleton EndOfInput
-      , errorExpected   = maybe E.empty (E.singleton . Tokens . nes) mtoken
-      , errorFancy      = E.empty } s
+    Nothing ->
+      let us = E.singleton EndOfInput
+          ps = maybe E.empty (E.singleton . Tokens . nes) mtoken
+      in eerr (TrivialError (pos:|z) us ps) s
     Just (c,cs) ->
       let (apos, npos) = updatePos (Proxy :: Proxy s) w pos c
       in case test c of
-        Left (us, ps, xs) ->
+        Left (us, ps) ->
           apos `seq` eerr
-            (ParseError (apos:|z) us ps xs)
+            (TrivialError (apos:|z) us ps)
             (State input (apos:|z) tp w)
         Right x ->
           let newstate = State cs (npos:|z) (tp + 1) w
@@ -869,11 +880,10 @@ pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
 pTokens test tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   let updatePos' = updatePos (Proxy :: Proxy s) w
       toTokens   = Tokens . NE.fromList . reverse
-      unexpect pos' u = ParseError
-        { errorPos        = pos'
-        , errorUnexpected = E.singleton u
-        , errorExpected   = (E.singleton . Tokens . NE.fromList) tts
-        , errorFancy      = E.empty }
+      unexpect pos' u =
+        let us = E.singleton u
+            ps = (E.singleton . Tokens . NE.fromList) tts
+        in TrivialError pos' us ps
       go _ [] is rs =
         let ris   = reverse is
             (npos, tp') = foldl'
@@ -921,7 +931,8 @@ nes x = x :| []
 {-# INLINE nes #-}
 
 instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
-  failure us ps xs           = lift (failure us ps xs)
+  trivialFailure us ps       = lift (trivialFailure us ps)
+  fancyFailure xs            = lift (fancyFailure xs)
   label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
   lookAhead     (L.StateT m) = L.StateT $ \s ->
@@ -939,7 +950,8 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
-  failure us ps xs           = lift (failure us ps xs)
+  trivialFailure us ps       = lift (trivialFailure us ps)
+  fancyFailure xs            = lift (fancyFailure xs)
   label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
@@ -957,7 +969,8 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
@@ -972,7 +985,8 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
   lookAhead     (L.WriterT m) = L.WriterT $
@@ -990,7 +1004,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
   lookAhead     (S.WriterT m) = S.WriterT $
@@ -1008,7 +1023,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n          (L.RWST m) = L.RWST $ \r s -> label n (m r s)
   try              (L.RWST m) = L.RWST $ \r s -> try (m r s)
   lookAhead        (L.RWST m) = L.RWST $ \r s -> do
@@ -1028,7 +1044,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n          (S.RWST m) = S.RWST $ \r s -> label n (m r s)
   try              (S.RWST m) = S.RWST $ \r s -> try (m r s)
   lookAhead        (S.RWST m) = S.RWST $ \r s -> do
@@ -1048,7 +1065,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   updateParserState f         = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
-  failure us ps xs            = lift (failure us ps xs)
+  trivialFailure us ps        = lift (trivialFailure us ps)
+  fancyFailure xs             = lift (fancyFailure xs)
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m
@@ -1086,7 +1104,7 @@ infix 0 <?>
 -- unexpected item @item@ without consuming any input.
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
-unexpected item = failure (E.singleton item) E.empty E.empty
+unexpected item = trivialFailure (E.singleton item) E.empty
 {-# INLINE unexpected #-}
 
 -- | Return both the result of a parse and the list of tokens that were
@@ -1118,10 +1136,14 @@ region :: MonadParsec e s m
 region f m = do
   r <- observing m
   case r of
-    Left err -> do
-      let ParseError {..} = f err
-      updateParserState $ \st -> st { statePos = errorPos }
-      failure errorUnexpected errorExpected errorFancy
+    Left err ->
+      case f err of
+        TrivialError pos us ps -> do
+          updateParserState $ \st -> st { statePos = pos }
+          trivialFailure us ps
+        FancyError pos xs -> do
+          updateParserState $ \st -> st { statePos = pos }
+          fancyFailure xs
     Right x -> return x
 
 ----------------------------------------------------------------------------

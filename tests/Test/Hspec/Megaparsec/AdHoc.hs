@@ -203,11 +203,14 @@ instance Arbitrary (ErrorFancy a) where
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
-  arbitrary = ParseError
-    <$> (NE.fromList . getNonEmpty <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
-    <*> (E.fromList <$> arbitrary)
+  arbitrary = oneof
+    [ TrivialError
+      <$> (NE.fromList . getNonEmpty <$> arbitrary)
+      <*> (E.fromList <$> arbitrary)
+      <*> (E.fromList <$> arbitrary)
+    , FancyError
+      <$> (NE.fromList . getNonEmpty <$> arbitrary)
+      <*> (E.fromList <$> arbitrary) ]
 
 instance Arbitrary a => Arbitrary (State a) where
   arbitrary = State

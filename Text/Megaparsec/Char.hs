@@ -286,7 +286,7 @@ char c = token testChar (Just c)
     testChar x =
       if x == c
         then Right x
-        else Left (f x, f c, E.empty)
+        else Left (f x, f c)
 {-# INLINE char #-}
 
 -- | The same as 'char' but case-insensitive. This parser returns the
@@ -366,7 +366,7 @@ satisfy f = token testChar Nothing
     testChar x =
       if f x
         then Right x
-        else Left (E.singleton (Tokens (x:|[])), E.empty, E.empty)
+        else Left (E.singleton (Tokens (x:|[])), E.empty)
 {-# INLINE satisfy #-}
 
 ----------------------------------------------------------------------------

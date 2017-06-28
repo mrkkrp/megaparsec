@@ -40,7 +40,7 @@ module Test.Hspec.Megaparsec
   , etoks
   , elabel
   , eeof
-  , cstm
+  , fancy
     -- * Incremental parsing
   , failsLeaving
   , succeedsLeaving
@@ -157,7 +157,8 @@ err
   :: NonEmpty SourcePos -- ^ 'ParseError' position
   -> EC t e             -- ^ Error components
   -> ParseError t e     -- ^ Resulting 'ParseError'
-err pos (EC u e c) = ParseError pos u e c
+err pos (ETrivial us ps) = TrivialError pos us ps
+err pos (EFancy   xs)    = FancyError   pos xs
 
 -- | Initial source position with empty file name.
 --
@@ -191,18 +192,20 @@ posN n see = f (initialPos "") see n :| []
 --
 -- @since 0.3.0
 
-data EC t e = EC
-  { ecUnexpected :: Set (ErrorItem t) -- ^ Unexpected items
-  , ecExpected   :: Set (ErrorItem t) -- ^ Expected items
-  , _ecFancy     :: Set (ErrorFancy e) -- ^ Custom items
-  } deriving (Eq, Data, Typeable, Generic)
+data EC t e
+  = ETrivial (Set (ErrorItem t)) (Set (ErrorItem t))
+  | EFancy   (Set (ErrorFancy e))
+  deriving (Eq, Data, Typeable, Generic)
 
 instance (Ord t, Ord e) => Semigroup (EC t e) where
-  (EC u0 e0 c0) <> (EC u1 e1 c1) =
-    EC (E.union u0 u1) (E.union e0 e1) (E.union c0 c1)
+  (ETrivial u0 e0) <> (ETrivial u1 e1) =
+    ETrivial (E.union u0 u1) (E.union e0 e1)
+  (EFancy x0) <> (ETrivial _ _) = EFancy x0
+  (ETrivial _ _) <> (EFancy x0) = EFancy x0
+  (EFancy x0) <> (EFancy x1)    = EFancy (E.union x0 x1)
 
 instance (Ord t, Ord e) => Monoid (EC t e) where
-  mempty  = EC E.empty E.empty E.empty
+  mempty  = ETrivial E.empty E.empty
   mappend = (<>)
 
 -- | Construct an “unexpected token” error component.
@@ -210,7 +213,7 @@ instance (Ord t, Ord e) => Monoid (EC t e) where
 -- @since 0.3.0
 
 utok :: (Ord t, Ord e) => t -> EC t e
-utok t = mempty { ecUnexpected = (E.singleton . Tokens . nes) t }
+utok = unexp . Tokens . nes
 
 -- | Construct an “unexpected tokens” error component. Empty string produces
 -- 'EndOfInput'.
@@ -218,7 +221,7 @@ utok t = mempty { ecUnexpected = (E.singleton . Tokens . nes) t }
 -- @since 0.3.0
 
 utoks :: (Ord t, Ord e) => [t] -> EC t e
-utoks t = mempty { ecUnexpected = (E.singleton . canonicalizeTokens) t }
+utoks = unexp . canonicalizeTokens
 
 -- | Construct an “unexpected label” error component. Do not use with empty
 -- strings (for empty strings it's bottom).
@@ -226,21 +229,21 @@ utoks t = mempty { ecUnexpected = (E.singleton . canonicalizeTokens) t }
 -- @since 0.3.0
 
 ulabel :: (Ord t, Ord e) => String -> EC t e
-ulabel l = mempty { ecUnexpected = (E.singleton . Label . NE.fromList) l }
+ulabel = unexp . Label . NE.fromList
 
 -- | Construct an “unexpected end of input” error component.
 --
 -- @since 0.3.0
 
 ueof :: (Ord t, Ord e) => EC t e
-ueof = mempty { ecUnexpected = E.singleton EndOfInput }
+ueof = unexp EndOfInput
 
 -- | Construct an “expected token” error component.
 --
 -- @since 0.3.0
 
 etok :: (Ord t, Ord e) => t -> EC t e
-etok t = mempty { ecExpected = (E.singleton . Tokens . nes) t }
+etok = expe . Tokens . nes
 
 -- | Construct an “expected tokens” error component. Empty string produces
 -- 'EndOfInput'.
@@ -248,7 +251,7 @@ etok t = mempty { ecExpected = (E.singleton . Tokens . nes) t }
 -- @since 0.3.0
 
 etoks :: (Ord t, Ord e) => [t] -> EC t e
-etoks t = mempty { ecExpected = (E.singleton . canonicalizeTokens) t }
+etoks = expe . canonicalizeTokens
 
 -- | Construct an “expected label” error component. Do not use with empty
 -- strings.
@@ -256,21 +259,21 @@ etoks t = mempty { ecExpected = (E.singleton . canonicalizeTokens) t }
 -- @since 0.3.0
 
 elabel :: (Ord t, Ord e) => String -> EC t e
-elabel l = mempty { ecExpected = (E.singleton . Label . NE.fromList) l }
+elabel = expe . Label . NE.fromList
 
 -- | Construct an “expected end of input” error component.
 --
 -- @since 0.3.0
 
 eeof :: (Ord t, Ord e) => EC t e
-eeof = mempty { ecExpected = E.singleton EndOfInput }
+eeof = expe EndOfInput
 
 -- | Construct a custom error component.
 --
 -- @since 0.3.0
 
-cstm :: ErrorFancy e -> EC t e
-cstm e = EC E.empty E.empty (E.singleton e)
+fancy :: ErrorFancy e -> EC t e
+fancy = EFancy . E.singleton
 
 ----------------------------------------------------------------------------
 -- Incremental parsing
@@ -385,3 +388,13 @@ canonicalizeTokens ts =
   case NE.nonEmpty ts of
     Nothing -> EndOfInput
     Just xs -> Tokens xs
+
+-- | Lift an unexpected item into 'EC'.
+
+unexp :: ErrorItem t -> EC t e
+unexp u = ETrivial (E.singleton u) E.empty
+
+-- | Lift an expected item into 'EC'.
+
+expe :: ErrorItem t -> EC t e
+expe p = ETrivial E.empty (E.singleton p)

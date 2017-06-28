@@ -207,9 +207,8 @@ incorrectIndent :: MonadParsec e s m
   -> Pos               -- ^ Reference indentation level
   -> Pos               -- ^ Actual indentation level
   -> m a
-incorrectIndent ord ref actual = failure E.empty E.empty (E.singleton x)
-  where
-    x = ErrorIndentation ord ref actual
+incorrectIndent ord ref actual = fancyFailure . E.singleton $
+  ErrorIndentation ord ref actual
 
 -- | @indentGuard spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks the column
