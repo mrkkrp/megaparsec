@@ -16,6 +16,29 @@
   the newline character). Previously control characters were rendered in
   readable form only as standalone tokens.
 
+* Removed the `ErrorComponent` type class, added `ErrorFancy` instead.
+  `ErrorFancy` is a sum type which can represent `fail` messages, incorrect
+  indentation, and custom data (we use `Void` for that by default to
+  “disable” it). This is better than the type class-based approach because
+  every instance of `ErrorComponent` needed to have constructors for `fail`
+  and indentation massages anyway, leading to duplication of code.
+  Signatures of some functions (`failure`, `token`) have been changed
+  accordingly. Record selector in `ParseError` has been renamed from
+  `errorCustom` to `errorFancy`.
+
+* Added `Functor` instances for `ErrorItem` and `ErrorFancy`.
+
+* Dropped `unsafePos` and changed type of `mkPos` so it throws from pure
+  code if its argument is not a positive `Word`.
+
+* Added `pos1` constant that represents the `Pos` with value 1 inside.
+
+* `defaultUpdatePos` has been moved from `Text.Megaparsec.Pos` to
+  `Text.Megaparsec.Stream`.
+
+* More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
+  dependencies.
+
 ## Megaparsec 5.3.1
 
 * Various updates to the docs.
