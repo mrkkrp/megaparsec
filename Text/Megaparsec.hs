@@ -557,15 +557,13 @@ class (Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
   -- | The most general way to stop parsing and report a trivial
-  -- 'ParseError'.
+  -- 'ParseError', that is, collection of unexpected and expected items.
   --
   -- 'unexpected' is defined in terms of this function:
   --
-  -- > unexpected item = trivialFailure (Set.singleton item) Set.empty
-  --
   -- @since 6.0.0
 
-  trivialFailure
+  failure
     :: Set (ErrorItem (Token s)) -- ^ Unexpected items
     -> Set (ErrorItem (Token s)) -- ^ Expected items
     -> m a
@@ -742,7 +740,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   updateParserState :: (State s -> State s) -> m ()
 
 instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
-  trivialFailure    = pTrivialFailure
+  failure           = pTrivialFailure
   fancyFailure      = pFancyFailure
   label             = pLabel
   try               = pTry
@@ -931,7 +929,7 @@ nes x = x :| []
 {-# INLINE nes #-}
 
 instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
-  trivialFailure us ps       = lift (trivialFailure us ps)
+  failure us ps              = lift (failure us ps)
   fancyFailure xs            = lift (fancyFailure xs)
   label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
@@ -950,7 +948,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
-  trivialFailure us ps       = lift (trivialFailure us ps)
+  failure us ps              = lift (failure us ps)
   fancyFailure xs            = lift (fancyFailure xs)
   label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
@@ -969,7 +967,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
@@ -985,7 +983,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
@@ -1004,7 +1002,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
@@ -1023,7 +1021,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n          (L.RWST m) = L.RWST $ \r s -> label n (m r s)
   try              (L.RWST m) = L.RWST $ \r s -> try (m r s)
@@ -1044,7 +1042,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n          (S.RWST m) = S.RWST $ \r s -> label n (m r s)
   try              (S.RWST m) = S.RWST $ \r s -> try (m r s)
@@ -1065,7 +1063,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   updateParserState f         = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
-  trivialFailure us ps        = lift (trivialFailure us ps)
+  failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
@@ -1102,9 +1100,11 @@ infix 0 <?>
 
 -- | The parser @unexpected item@ fails with an error message telling about
 -- unexpected item @item@ without consuming any input.
+--
+-- > unexpected item = failure (Set.singleton item) Set.empty
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
-unexpected item = trivialFailure (E.singleton item) E.empty
+unexpected item = failure (E.singleton item) E.empty
 {-# INLINE unexpected #-}
 
 -- | Return both the result of a parse and the list of tokens that were
@@ -1140,7 +1140,7 @@ region f m = do
       case f err of
         TrivialError pos us ps -> do
           updateParserState $ \st -> st { statePos = pos }
-          trivialFailure us ps
+          failure us ps
         FancyError pos xs -> do
           updateParserState $ \st -> st { statePos = pos }
           fancyFailure xs

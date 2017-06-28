@@ -535,7 +535,7 @@ spec = do
             let p :: Parsec Int String Int
                 p = region f $
                   case e of
-                    TrivialError _ us ps -> trivialFailure us ps
+                    TrivialError _ us ps -> failure us ps
                     FancyError   _ xs    -> fancyFailure   xs
                 f (TrivialError pos us ps) = FancyError
                   (max pos pos')
@@ -553,11 +553,11 @@ spec = do
                 st = st' { statePos = errorPos e }
             runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
 
-    describe "trivialFailure" $
+    describe "failure" $
       it "signals correct parse error" $
         property $ \us ps -> do
           let p :: MonadParsec Void String m => m ()
-              p = void (trivialFailure us ps)
+              p = void (failure us ps)
           grs p "" (`shouldFailWith` TrivialError posI us ps)
 
     describe "fancyFailure" $
