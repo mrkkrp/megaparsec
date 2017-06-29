@@ -9,10 +9,7 @@
 --
 -- Utility functions for testing Megaparsec parsers with Hspec.
 
-{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,39 +23,19 @@ module Test.Hspec.Megaparsec
   , shouldFailOn
     -- * Testing of error messages
   , shouldFailWith
-    -- * Error message construction
-    -- $errmsg
-  , err
-  , posI
-  , posN
-  , EC
-  , utok
-  , utoks
-  , ulabel
-  , ueof
-  , etok
-  , etoks
-  , elabel
-  , eeof
-  , fancy
     -- * Incremental parsing
   , failsLeaving
   , succeedsLeaving
-  , initialState )
+  , initialState
+    -- * Re-exports
+  , module Text.Megaparsec.Error.Builder )
 where
 
 import Control.Monad (unless)
-import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Proxy
-import Data.Semigroup
-import Data.Set (Set)
-import Data.Typeable (Typeable)
-import GHC.Generics
 import Test.Hspec.Expectations
 import Text.Megaparsec
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set           as E
+import Text.Megaparsec.Error.Builder
 
 ----------------------------------------------------------------------------
 -- Basic expectations
@@ -136,144 +113,6 @@ r `shouldFailWith` e = case r of
     "but it failed with:\n" ++ showParseError e'
   Right v -> expectationFailure $
     "the parser is expected to fail, but it parsed: " ++ show v
-
-----------------------------------------------------------------------------
--- Error message construction
-
--- $errmsg
---
--- When you wish to test error message on failure, the need to construct a
--- error message for comparison arises. These helpers allow to construct
--- virtually any sort of error message easily.
-
--- | Assemble a 'ParseErorr' from source position and @'EC' t e@ value. To
--- create source position, two helpers are available: 'posI' and 'posN'.
--- @'EC' t e@ is a monoid and can be built from primitives provided by this
--- module, see below.
---
--- @since 0.3.0
-
-err
-  :: NonEmpty SourcePos -- ^ 'ParseError' position
-  -> EC t e             -- ^ Error components
-  -> ParseError t e     -- ^ Resulting 'ParseError'
-err pos (ETrivial us ps) = TrivialError pos us ps
-err pos (EFancy   xs)    = FancyError   pos xs
-
--- | Initial source position with empty file name.
---
--- @since 0.3.0
-
-posI :: NonEmpty SourcePos
-posI = initialPos "" :| []
-
--- | @posN n s@ returns source position achieved by applying 'updatePos'
--- method corresponding to type of stream @s@ @n@ times.
---
--- @since 0.3.0
-
-posN :: forall s n. (Stream s, Integral n)
-  => n
-  -> s
-  -> NonEmpty SourcePos
-posN n see = f (initialPos "") see n :| []
-  where
-    f p s !i =
-      if i > 0
-        then case uncons s of
-          Nothing -> p
-          Just (t,s') ->
-            let p' = snd $ updatePos (Proxy :: Proxy s) defaultTabWidth p t
-            in f p' s' (i - 1)
-        else p
-
--- | Auxiliary type for construction of 'ParseError's. Note that it's a
--- monoid.
---
--- @since 0.3.0
-
-data EC t e
-  = ETrivial (Set (ErrorItem t)) (Set (ErrorItem t))
-  | EFancy   (Set (ErrorFancy e))
-  deriving (Eq, Data, Typeable, Generic)
-
-instance (Ord t, Ord e) => Semigroup (EC t e) where
-  (ETrivial u0 e0) <> (ETrivial u1 e1) =
-    ETrivial (E.union u0 u1) (E.union e0 e1)
-  (EFancy x0) <> (ETrivial _ _) = EFancy x0
-  (ETrivial _ _) <> (EFancy x0) = EFancy x0
-  (EFancy x0) <> (EFancy x1)    = EFancy (E.union x0 x1)
-
-instance (Ord t, Ord e) => Monoid (EC t e) where
-  mempty  = ETrivial E.empty E.empty
-  mappend = (<>)
-
--- | Construct an “unexpected token” error component.
---
--- @since 0.3.0
-
-utok :: (Ord t, Ord e) => t -> EC t e
-utok = unexp . Tokens . nes
-
--- | Construct an “unexpected tokens” error component. Empty string produces
--- 'EndOfInput'.
---
--- @since 0.3.0
-
-utoks :: (Ord t, Ord e) => [t] -> EC t e
-utoks = unexp . canonicalizeTokens
-
--- | Construct an “unexpected label” error component. Do not use with empty
--- strings (for empty strings it's bottom).
---
--- @since 0.3.0
-
-ulabel :: (Ord t, Ord e) => String -> EC t e
-ulabel = unexp . Label . NE.fromList
-
--- | Construct an “unexpected end of input” error component.
---
--- @since 0.3.0
-
-ueof :: (Ord t, Ord e) => EC t e
-ueof = unexp EndOfInput
-
--- | Construct an “expected token” error component.
---
--- @since 0.3.0
-
-etok :: (Ord t, Ord e) => t -> EC t e
-etok = expe . Tokens . nes
-
--- | Construct an “expected tokens” error component. Empty string produces
--- 'EndOfInput'.
---
--- @since 0.3.0
-
-etoks :: (Ord t, Ord e) => [t] -> EC t e
-etoks = expe . canonicalizeTokens
-
--- | Construct an “expected label” error component. Do not use with empty
--- strings.
---
--- @since 0.3.0
-
-elabel :: (Ord t, Ord e) => String -> EC t e
-elabel = expe . Label . NE.fromList
-
--- | Construct an “expected end of input” error component.
---
--- @since 0.3.0
-
-eeof :: (Ord t, Ord e) => EC t e
-eeof = expe EndOfInput
-
--- | Construct a custom error component.
---
--- @since 0.3.0
-
-fancy :: ErrorFancy e -> EC t e
-fancy = EFancy . E.singleton
 
 ----------------------------------------------------------------------------
 -- Incremental parsing
@@ -373,28 +212,3 @@ showParseError :: (Ord t, ShowToken t, ShowErrorComponent e)
   => ParseError t e
   -> String
 showParseError = unlines . fmap ("  " ++) . lines . parseErrorPretty
-
--- | Make a singleton non-empty list from a value.
-
-nes :: a -> NonEmpty a
-nes x = x :| []
-{-# INLINE nes #-}
-
--- | Construct appropriate 'ErrorItem' representation for given token
--- stream. Empty string produces 'EndOfInput'.
-
-canonicalizeTokens :: [t] -> ErrorItem t
-canonicalizeTokens ts =
-  case NE.nonEmpty ts of
-    Nothing -> EndOfInput
-    Just xs -> Tokens xs
-
--- | Lift an unexpected item into 'EC'.
-
-unexp :: ErrorItem t -> EC t e
-unexp u = ETrivial (E.singleton u) E.empty
-
--- | Lift an expected item into 'EC'.
-
-expe :: ErrorItem t -> EC t e
-expe p = ETrivial E.empty (E.singleton p)

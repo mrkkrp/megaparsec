@@ -49,6 +49,11 @@
 * `defaultUpdatePos` has been moved from `Text.Megaparsec.Pos` to
   `Text.Megaparsec.Stream`.
 
+* Added `Text.Megaparsec.Error.Builder` module to help construct
+  `ParseError`s easily. Useful for testing and debugging, previously we had
+  something like that in the `hspec-megaparsec` package, but it does not
+  hurt to ship it with the library.
+
 * More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
   dependencies.
 

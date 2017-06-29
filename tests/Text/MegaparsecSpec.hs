@@ -429,7 +429,7 @@ spec = do
     it "fails signals correct parse error" $
       property $ \msg -> do
         let p = fail msg :: Parsec Void String ()
-        prs p "" `shouldFailWith` err posI (fancy $ ErrorFail msg)
+        prs p "" `shouldFailWith` errFancy posI (fancy $ ErrorFail msg)
     it "pure is the same as return" $
       property $ \n ->
         prs (pure (n :: Int)) "" `shouldBe` prs (return n) ""
@@ -444,7 +444,7 @@ spec = do
       it "signals correct parse error" $
         property $ \s msg -> do
           let p = void (fail msg)
-          prs  p s `shouldFailWith` err posI (fancy $ ErrorFail msg)
+          prs  p s `shouldFailWith` errFancy posI (fancy $ ErrorFail msg)
           prs' p s `failsLeaving` s
 
   describe "ParsecT MonadIO instance" $
