@@ -5,6 +5,7 @@
 {-# LANGUAGE Rank2Types        #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-orphans  #-}
 
 module Text.MegaparsecSpec (spec) where
@@ -452,6 +453,28 @@ spec = do
       property $ \n -> do
         let p = liftIO (return n) :: ParsecT Void String IO Integer
         runParserT p "" "" `shouldReturn` Right n
+
+  describe "ParsecT MonadFix instance" $
+    it "withRange works" $ do
+      let
+        withRange
+          :: (MonadParsec e s m, MonadFix m)
+          => ((SourcePos,SourcePos) -> m a)
+          -> m a
+        withRange f = do
+          Just p1 <- getNextTokenPosition
+          rec
+            r <- f (p1, p2)
+            p2 <- getPosition
+          return r
+        p :: Parsec Void String (SourcePos,SourcePos)
+        p = withRange $ \pp -> pp <$ string "ab"
+      runParser p "" "abcd"
+        `shouldBe` Right
+        ( SourcePos "" (mkPos 1) (mkPos 1)
+        , SourcePos "" (mkPos 1) (mkPos 3)
+        )
+
 
   describe "ParsecT MonadReader instance" $ do
 
