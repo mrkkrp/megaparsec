@@ -4,8 +4,8 @@
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE Rank2Types        #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE RecursiveDo       #-}
 {-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS -fno-warn-orphans  #-}
 
 module Text.MegaparsecSpec (spec) where
@@ -474,7 +474,6 @@ spec = do
         ( SourcePos "" (mkPos 1) (mkPos 1)
         , SourcePos "" (mkPos 1) (mkPos 3)
         )
-
 
   describe "ParsecT MonadReader instance" $ do
 
