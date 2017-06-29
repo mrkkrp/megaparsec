@@ -582,20 +582,21 @@ class (Stream s, A.Alternative m, MonadPlus m)
     :: Set (ErrorFancy e) -- ^ Fancy error components
     -> m a
 
-  -- | The parser @label name p@ behaves as parser @p@, but whenever the
+  -- | The parser @'label' name p@ behaves as parser @p@, but whenever the
   -- parser @p@ fails /without consuming any input/, it replaces names of
   -- “expected” tokens with the name @name@.
 
   label :: String -> m a -> m a
 
-  -- | @hidden p@ behaves just like parser @p@, but it doesn't show any
+  -- | @'hidden' p@ behaves just like parser @p@, but it doesn't show any
   -- “expected” tokens in error message when @p@ fails.
 
   hidden :: m a -> m a
   hidden = label ""
 
-  -- | The parser @try p@ behaves like parser @p@, except that it backtracks
-  -- the parser state when @p@ fails (either consuming input or not).
+  -- | The parser @'try' p@ behaves like parser @p@, except that it
+  -- backtracks the parser state when @p@ fails (either consuming input or
+  -- not).
   --
   -- This combinator is used whenever arbitrary look ahead is needed. Since
   -- it pretends that it hasn't consumed any input when @p@ fails, the
@@ -634,22 +635,22 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   try :: m a -> m a
 
-  -- | If @p@ in @lookAhead p@ succeeds (either consuming input or not) the
-  -- whole parser behaves like @p@ succeeded without consuming anything
-  -- (parser state is not updated as well). If @p@ fails, @lookAhead@ has no
+  -- | If @p@ in @'lookAhead' p@ succeeds (either consuming input or not)
+  -- the whole parser behaves like @p@ succeeded without consuming anything
+  -- (parser state is not updated as well). If @p@ fails, 'lookAhead' has no
   -- effect, i.e. it will fail consuming input if @p@ fails consuming input.
   -- Combine with 'try' if this is undesirable.
 
   lookAhead :: m a -> m a
 
-  -- | @notFollowedBy p@ only succeeds when the parser @p@ fails. This
+  -- | @'notFollowedBy' p@ only succeeds when the parser @p@ fails. This
   -- parser /never consumes/ any input and /never modifies/ parser state. It
   -- can be used to implement the “longest match” rule.
 
   notFollowedBy :: m a -> m ()
 
-  -- | @withRecovery r p@ allows continue parsing even if parser @p@ fails.
-  -- In this case @r@ is called with the actual 'ParseError' as its
+  -- | @'withRecovery' r p@ allows continue parsing even if parser @p@
+  -- fails. In this case @r@ is called with the actual 'ParseError' as its
   -- argument. Typical usage is to return a value signifying failure to
   -- parse this particular object and to consume some part of the input up
   -- to the point where the next object starts.
@@ -665,7 +666,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
     -> m a             -- ^ Original parser
     -> m a             -- ^ Parser that can recover from failures
 
-  -- | @observing p@ allows to “observe” failure of the @p@ parser, should
+  -- | @'observing' p@ allows to “observe” failure of the @p@ parser, should
   -- it happen, without actually ending parsing, but instead getting the
   -- 'ParseError' in 'Left'. On success parsed value is returned in 'Right'
   -- as usual. Note that this primitive just allows you to observe parse
@@ -675,15 +676,15 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- @since 5.1.0
 
   observing
-    :: m a
+    :: m a             -- ^ The parser to run
     -> m (Either (ParseError (Token s) e) a)
 
   -- | This parser only succeeds at the end of the input.
 
   eof :: m ()
 
-  -- | The parser @token test mrep@ accepts a token @t@ with result @x@ when
-  -- the function @test t@ returns @'Right' x@. @mrep@ may provide
+  -- | The parser @'token' test mrep@ accepts a token @t@ with result @x@
+  -- when the function @test t@ returns @'Right' x@. @mrep@ may provide
   -- representation of the token to report in error messages when input
   -- stream in empty.
   --
@@ -701,12 +702,12 @@ class (Stream s, A.Alternative m, MonadPlus m)
     :: (Token s -> Either ( Set (ErrorItem (Token s))
                           , Set (ErrorItem (Token s)) ) a)
        -- ^ Matching function for the token to parse, it allows to construct
-       -- arbitrary error message on failure as well; sets in three-tuple
-       -- are: unexpected items, expected items, and custom data pieces
+       -- arbitrary error message on failure as well; sets in the tuple are:
+       -- unexpected and expected items
     -> Maybe (Token s) -- ^ Token to report when input stream is empty
     -> m a
 
-  -- | The parser @tokens test@ parses a list of tokens and returns it.
+  -- | The parser @'tokens' test@ parses a list of tokens and returns it.
   -- Supplied predicate @test@ is used to check equality of given and parsed
   -- tokens.
   --
