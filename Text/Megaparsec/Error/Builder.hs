@@ -68,7 +68,7 @@ instance Ord t => Monoid (ET t) where
   mempty  = ET E.empty E.empty
   mappend = (<>)
 
--- | Auxiliary type for construction of fancyc parse errors.
+-- | Auxiliary type for construction of fancy parse errors.
 
 data EF e = EF (Set (ErrorFancy e))
   deriving (Eq, Ord, Data, Typeable, Generic)
