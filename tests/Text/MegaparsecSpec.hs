@@ -16,7 +16,6 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Char (toUpper, chr)
 import Data.Foldable (asum, concat)
-import Data.Function (on)
 import Data.List (isPrefixOf, foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
@@ -430,7 +429,7 @@ spec = do
     it "fails signals correct parse error" $
       property $ \msg -> do
         let p = fail msg :: Parsec Void String ()
-        prs p "" `shouldFailWith` err posI (cstm $ ErrorFail msg)
+        prs p "" `shouldFailWith` err posI (fancy $ ErrorFail msg)
     it "pure is the same as return" $
       property $ \n ->
         prs (pure (n :: Int)) "" `shouldBe` prs (return n) ""
@@ -445,7 +444,7 @@ spec = do
       it "signals correct parse error" $
         property $ \s msg -> do
           let p = void (fail msg)
-          prs  p s `shouldFailWith` err posI (cstm $ ErrorFail msg)
+          prs  p s `shouldFailWith` err posI (fancy $ ErrorFail msg)
           prs' p s `failsLeaving` s
 
   describe "ParsecT MonadIO instance" $
@@ -514,11 +513,7 @@ spec = do
         property $ \item -> do
           let p :: MonadParsec Void String m => m ()
               p = void (unexpected item)
-          grs p "" (`shouldFailWith` ParseError
-            { errorPos        = posI
-            , errorUnexpected = E.singleton item
-            , errorExpected   = E.empty
-            , errorFancy      = E.empty })
+          grs p "" (`shouldFailWith` TrivialError posI (E.singleton item) E.empty)
 
     describe "match" $
       it "return consumed tokens along with the result" $
@@ -536,35 +531,41 @@ spec = do
             runParser' p st `shouldBe` (st, Right (n :: Int))
       context "when inner parser fails" $
         it "the given function is used on the parse error" $
-          property $ \st e0 e1 -> do
-            let p :: Parser Int
-                p = region f $ failure
-                  (errorUnexpected e0)
-                  (errorExpected   e0)
-                  (errorFancy      e0)
-                f x = ParseError
-                  { errorPos        = ((G.<>)  `on` errorPos)        x e1
-                  , errorUnexpected = (E.union `on` errorUnexpected) x e1
-                  , errorExpected   = (E.union `on` errorExpected)   x e1
-                  , errorFancy      = (E.union `on` errorFancy)      x e1 }
-                r = ParseError
-                  { errorPos        = finalPos
-                  , errorUnexpected = (E.union `on` errorUnexpected) e0 e1
-                  , errorExpected   = (E.union `on` errorExpected)   e0 e1
-                  , errorFancy      = (E.union `on` errorFancy)      e0 e1 }
-                finalPos = statePos st G.<> errorPos e1
+          property $ \st' e pos' -> do
+            let p :: Parsec Int String Int
+                p = region f $
+                  case e of
+                    TrivialError _ us ps -> failure us ps
+                    FancyError   _ xs    -> fancyFailure   xs
+                f (TrivialError pos us ps) = FancyError
+                  (max pos pos')
+                  (E.singleton . ErrorCustom $ E.size us + E.size ps)
+                f (FancyError pos xs) = FancyError
+                  (max pos pos')
+                  (E.singleton . ErrorCustom $ E.size xs)
+                r = FancyError
+                  (max (errorPos e) pos')
+                  (E.singleton . ErrorCustom $
+                    case e of
+                      TrivialError _ us ps -> E.size us + E.size ps
+                      FancyError   _ xs    -> E.size xs )
+                finalPos = max (errorPos e) pos'
+                st = st' { statePos = errorPos e }
             runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
 
     describe "failure" $
       it "signals correct parse error" $
-        property $ \us ps xs -> do
+        property $ \us ps -> do
           let p :: MonadParsec Void String m => m ()
-              p = void (failure us ps xs)
-          grs p "" (`shouldFailWith` ParseError
-            { errorPos        = posI
-            , errorUnexpected = us
-            , errorExpected   = ps
-            , errorFancy      = xs })
+              p = void (failure us ps)
+          grs p "" (`shouldFailWith` TrivialError posI us ps)
+
+    describe "fancyFailure" $
+      it "singals correct parse error" $
+        property $ \xs -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (fancyFailure xs)
+          grs p "" (`shouldFailWith` FancyError posI xs)
 
     describe "label" $ do
       context "when inner parser succeeds consuming input" $ do
@@ -975,7 +976,7 @@ spec = do
 
     describe "token" $ do
       let f x = E.singleton (Tokens $ nes x)
-          testChar a x = if x == a then Right x else Left (f x, f a, E.empty)
+          testChar a x = if x == a then Right x else Left (f x, f a)
       context "when supplied predicate is satisfied" $
         it "succeeds" $
           property $ \a as mtok -> do
@@ -990,22 +991,18 @@ spec = do
             let p :: MonadParsec Void String m => m Char
                 p = token (testChar b) mtok
                 s = a : as
-            grs  p s (`shouldFailWith` ParseError
-              { errorPos        = posI
-              , errorUnexpected = E.singleton (Tokens $ nes a)
-              , errorExpected   = E.singleton (Tokens $ nes b)
-              , errorFancy      = E.empty })
+                us = E.singleton (Tokens $ nes a)
+                ps = E.singleton (Tokens $ nes b)
+            grs  p s (`shouldFailWith` TrivialError posI us ps)
             grs' p s (`failsLeaving` s)
       context "when stream is empty" $
         it "signals correct parse error" $
           property $ \a mtok -> do
             let p :: MonadParsec Void String m => m Char
                 p = token (testChar a) mtok
-            grs p "" (`shouldFailWith` ParseError
-              { errorPos        = posI
-              , errorUnexpected = E.singleton EndOfInput
-              , errorExpected   = maybe E.empty (E.singleton . Tokens . nes) mtok
-              , errorFancy      = E.empty })
+                us = E.singleton EndOfInput
+                ps = maybe E.empty (E.singleton . Tokens . nes) mtok
+            grs p "" (`shouldFailWith` TrivialError posI us ps)
 
     describe "tokens" $ do
       context "when stream is prefixed with given string" $
@@ -1512,7 +1509,7 @@ pSpan span = token testToken (Just span)
     testToken x =
       if spanBody x == spanBody span
         then Right span
-        else Left (f x, f span , E.empty)
+        else Left (f x, f span)
 
 incCoincidence :: State [Span] -> [Span] -> Gen (State [Span])
 incCoincidence st ts = do

@@ -22,9 +22,22 @@
   “disable” it). This is better than the type class-based approach because
   every instance of `ErrorComponent` needed to have constructors for `fail`
   and indentation massages anyway, leading to duplication of code.
+
+* Changed the definition of `ParseError` to have separate data constructors
+  for “trivial” errors (unexpected/expected tokens) and “fancy” errors
+  (everything else).
+
+* Added the function `errorPos` to get error positions from `ParseError`
+  (previously it was a record selector in `ParseError`).
+
+* Changed signatures of `failure` and `token`, they only can signal trivial
+  errors now.
+
+* Added a new method of `MonadParsec` type class called `fancyFailure` for
+  signalling non-trivial failures.
+
   Signatures of some functions (`failure`, `token`) have been changed
-  accordingly. Record selector in `ParseError` has been renamed from
-  `errorCustom` to `errorFancy`.
+  accordingly.
 
 * Added `Functor` instances for `ErrorItem` and `ErrorFancy`.
 

@@ -485,4 +485,4 @@ sblb = "bbb"
 sblc = "ccc"
 
 ii :: Ordering -> Pos -> Pos -> EC Char Void
-ii ord ref actual = cstm (ErrorIndentation ord ref actual)
+ii ord ref actual = fancy (ErrorIndentation ord ref actual)
