@@ -400,6 +400,14 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
 
+instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
+  mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
+    let
+      a = case result of
+        OK a' -> a'
+        Error _ -> error "mfix ParsecT"
+    runParsecT (f a) s
+
 -- | From two states, return the one with the greater number of processed
 -- tokens. If the numbers of processed tokens are equal, prefer the second
 -- state.

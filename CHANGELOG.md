@@ -57,6 +57,8 @@
 * More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
   dependencies.
 
+* Added a `MonadFix` instance for `ParsecT`
+
 ## Megaparsec 5.3.1
 
 * Various updates to the docs.
