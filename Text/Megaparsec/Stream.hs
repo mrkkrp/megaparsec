@@ -1,7 +1,7 @@
 -- |
 -- Module      :  Text.Megaparsec.Stream
--- Copyright   :  © 2017 Mark Karpov
--- License     :  BSD 3 clause
+-- Copyright   :  © 2015–2017 Megaparsec contributors
+-- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
 -- Stability   :  experimental
