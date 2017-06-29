@@ -63,7 +63,10 @@ Let's enumerate methods of the `MonadParsec` type class. The class abstracts
 primitive functions of Megaparsec parsing. The rest of the library is built
 via combination of these primitives:
 
-* `failure` allows to fail reporting an arbitrary parse error.
+* `failure` allows to fail reporting a parse error with unexpected and
+  expected items.
+
+* `fancyFailure` allows to fail reporting custom error messages.
 
 * `label` allows to add a “label” to a parser, so if it fails the user will
   see the label instead of an automatically deduced expected token.
@@ -305,8 +308,8 @@ original Parsec, open an issue.
 ### Megaparsec vs Trifecta
 
 [Trifecta](https://hackage.haskell.org/package/trifecta) is another Haskell
-library featuring good error messages. Like some other projects of Edward
-Kmett, it's probably good, but also under-documented, and has
+library featuring good error messages. It's probably good, but also
+under-documented, and has
 unfixed [bugs and flaws](https://github.com/ekmett/trifecta/issues) that
 Edward is too busy to fix (simply a fact, no offense intended). Other
 reasons one may question choice of Trifecta is his/her parsing library:

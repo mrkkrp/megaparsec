@@ -14,28 +14,28 @@
 -- at the tutorials <https://markkarpov.com/learn-haskell.html#megaparsec-tutorials>.
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
--- most everything that you'll need, we advise to import
+-- most everything that you may need, we advise to import
 -- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char'
 -- tokens.
 --
 -- It is common to start working with the library by defining a type synonym
 -- like this:
 --
--- > type Parser = Parsec Dec Text
--- >                      ^   ^
--- >                      |   |
--- > Custom error component   Type of input
+-- > type Parser = Parsec Void Text
+-- >                      ^    ^
+-- >                      |    |
+-- > Custom error component    Type of input
 --
 -- Then you can write type signatures like @Parser Int@—for a parser that
 -- returns an 'Int' for example.
 --
--- Megaparsec 5 uses some type-level machinery to provide flexibility
+-- Megaparsec 6 uses some type-level machinery to provide flexibility
 -- without compromising on type safety. Thus type signatures are sometimes
 -- necessary to avoid ambiguous types. If you're seeing a error message that
 -- reads like “Ambiguous type variable @e0@ arising from … prevents the
--- constraint @(ErrorComponent e0)@ from being resolved”, you need to give
--- an explicit signature to your parser to resolve the ambiguity. It's a
--- good idea to provide type signatures for all top-level definitions.
+-- constraint … from being resolved”, you need to give an explicit signature
+-- to your parser to resolve the ambiguity. It's a good idea to provide type
+-- signatures for all top-level definitions.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm",
@@ -558,8 +558,6 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   -- | The most general way to stop parsing and report a trivial
   -- 'ParseError', that is, collection of unexpected and expected items.
-  --
-  -- 'unexpected' is defined in terms of this function:
   --
   -- @since 6.0.0
 
