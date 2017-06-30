@@ -1,5 +1,7 @@
 ## Megaparsec 6.0.0
 
+### General
+
 * Re-organized the module hierarchy. Some modules such as
   `Text.Megaparsec.Prim` do not exist anymore. Stream definitions were moved
   to `Text.Megaparsec.Stream`. Generic combinators are now re-exported from
@@ -11,10 +13,30 @@
 * Dropped per-stream modules, the `Parser` type synonym is to be defined
   manually by user.
 
-* Control characters in parse error are displayed in a readable form even
-  when they are part of strings, for example: `{<newline>` (`{` followed by
-  the newline character). Previously control characters were rendered in
-  readable form only as standalone tokens.
+* Added a `MonadFix` instance for `ParsecT`.
+
+* More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
+  dependencies.
+
+* Added dependency on `case-insensitive`.
+
+### Source positions
+
+* Now `Pos` contains an `Int` inside, not `Word`.
+
+* Dropped `unsafePos` and changed type of `mkPos` so it throws from pure
+  code if its argument is not a positive `Int`.
+
+* Added `pos1` constant that represents the `Pos` with value 1 inside.
+
+* Made `InvalidPosException` contain the invalid `Int` value that was passed
+  to `mkPos`.
+
+### Parse errors
+
+* Changed the definition of `ParseError` to have separate data constructors
+  for “trivial” errors (unexpected/expected tokens) and “fancy” errors
+  (everything else).
 
 * Removed the `ErrorComponent` type class, added `ErrorFancy` instead.
   `ErrorFancy` is a sum type which can represent `fail` messages, incorrect
@@ -23,41 +45,38 @@
   every instance of `ErrorComponent` needed to have constructors for `fail`
   and indentation massages anyway, leading to duplication of code.
 
-* Changed the definition of `ParseError` to have separate data constructors
-  for “trivial” errors (unexpected/expected tokens) and “fancy” errors
-  (everything else).
+* Added `Functor` instances for `ErrorItem` and `ErrorFancy`.
 
 * Added the function `errorPos` to get error positions from `ParseError`
   (previously it was a record selector in `ParseError`).
 
-* Changed signatures of `failure` and `token`, they only can signal trivial
-  errors now.
-
-* Added a new method of `MonadParsec` type class called `fancyFailure` for
-  signalling non-trivial failures.
-
-  Signatures of some functions (`failure`, `token`) have been changed
-  accordingly.
-
-* Added `Functor` instances for `ErrorItem` and `ErrorFancy`.
-
-* Dropped `unsafePos` and changed type of `mkPos` so it throws from pure
-  code if its argument is not a positive `Word`.
-
-* Added `pos1` constant that represents the `Pos` with value 1 inside.
-
-* `defaultUpdatePos` has been moved from `Text.Megaparsec.Pos` to
-  `Text.Megaparsec.Stream`.
+* Control characters in parse error are displayed in a readable form even
+  when they are part of strings, for example: `{<newline>` (`{` followed by
+  the newline character). Previously control characters were rendered in
+  readable form only as standalone tokens.
 
 * Added `Text.Megaparsec.Error.Builder` module to help construct
   `ParseError`s easily. Useful for testing and debugging, previously we had
   something like that in the `hspec-megaparsec` package, but it does not
   hurt to ship it with the library.
 
-* More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
-  dependencies.
+### Stream
 
-* Added a `MonadFix` instance for `ParsecT`.
+* Introduced the new `Text.Megaparsec.Stream` module that is the home of
+  `Stream` type class. In version 6, the type class has been extended
+  significantly.
+
+### Combinators
+
+* Changed signatures of `failure` and `token`, they only can signal trivial
+  errors now.
+
+* Added a new method of `MonadParsec` type class called `fancyFailure` for
+  signalling non-trivial failures. Signatures of some functions (`failure`,
+  `token`) have been changed accordingly.
+
+* Added `takeWhileP` and `takeWhile1P` to `MonadParsec`. Added `skipWhileP`,
+  `skipWhile1P` as derivatives from those primitive combinators.
 
 ## Megaparsec 5.3.1
 

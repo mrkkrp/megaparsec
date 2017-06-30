@@ -54,7 +54,7 @@ import Data.Word (Word)
 --
 -- @since 5.0.0
 
-newtype Pos = Pos Word
+newtype Pos = Pos Int
   deriving (Show, Eq, Ord, Data, Typeable, NFData)
 
 -- | Construction of 'Pos' from 'Word'. The function throws
@@ -62,18 +62,18 @@ newtype Pos = Pos Word
 --
 -- @since 6.0.0
 
-mkPos :: Word -> Pos
+mkPos :: Int -> Pos
 mkPos a =
-  if a == 0
-    then throw InvalidPosException
+  if a <= 0
+    then throw (InvalidPosException a)
     else Pos a
 {-# INLINE mkPos #-}
 
--- | Extract 'Word' from 'Pos'.
+-- | Extract 'Int' from 'Pos'.
 --
--- @since 5.0.0
+-- @since 6.0.0
 
-unPos :: Pos -> Word
+unPos :: Pos -> Int
 unPos (Pos w) = w
 {-# INLINE unPos #-}
 
@@ -102,14 +102,14 @@ instance Read Pos where
     readParen (d > 10) $ \r1 -> do
       ("Pos", r2) <- lex r1
       (x,     r3) <- readsPrec 11 r2
-      return (mkPos (x :: Word) ,r3)
+      return (mkPos x, r3)
 
 -- | The exception is thrown by 'mkPos' when its argument is not a positive
 -- number.
 --
 -- @since 5.0.0
 
-data InvalidPosException = InvalidPosException
+data InvalidPosException = InvalidPosException Int
   -- ^ The first value is the minimal allowed value, the second value is the
   -- actual value that was passed to 'mkPos'.
   deriving (Eq, Show, Data, Typeable, Generic)

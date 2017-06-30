@@ -13,7 +13,6 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -113,20 +112,15 @@ posI = initialPos "" :| []
 -- | @posN n s@ returns source position achieved by applying 'updatePos'
 -- method corresponding to type of stream @s@ @n@ times.
 
-posN :: forall s n. (Stream s, Integral n)
-  => n
+posN :: forall s. Stream s
+  => Int
   -> s
   -> NonEmpty SourcePos
-posN n see = f (initialPos "") see n :| []
-  where
-    f p s !i =
-      if i > 0
-        then case uncons s of
-          Nothing -> p
-          Just (t,s') ->
-            let p' = snd $ updatePos (Proxy :: Proxy s) defaultTabWidth p t
-            in f p' s' (i - 1)
-        else p
+posN n s =
+  case takeN_ n s of
+    Nothing -> posI
+    Just (ts, _) ->
+      advanceN (Proxy :: Proxy s) defaultTabWidth (initialPos "") ts :| []
 
 ----------------------------------------------------------------------------
 -- Error components

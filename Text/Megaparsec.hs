@@ -84,6 +84,8 @@ module Text.Megaparsec
   , unexpected
   , match
   , region
+  , skipWhileP
+  , skipWhile1P
     -- * Parser state combinators
   , getInput
   , setInput
@@ -112,17 +114,14 @@ import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
 import Data.Data (Data)
-import Data.Foldable (foldl')
-import Data.List (genericTake)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Monoid hiding ((<>))
+import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Debug.Trace
 import GHC.Generics
-import Prelude hiding (all)
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
 import qualified Control.Monad.RWS.Lazy            as L
@@ -141,7 +140,6 @@ import Text.Megaparsec.Stream
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
-import Data.Word (Word)
 #endif
 
 ----------------------------------------------------------------------------
@@ -154,7 +152,7 @@ data State s = State
     -- ^ Current input (already processed input is removed from the stream)
   , statePos :: NonEmpty SourcePos
     -- ^ Current position (column + line number) with support for include files
-  , stateTokensProcessed :: {-# UNPACK #-} !Word
+  , stateTokensProcessed :: {-# UNPACK #-} !Int
     -- ^ Number of processed tokens so far
     --
     -- @since 5.2.0
@@ -732,11 +730,37 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- performance in any way.
 
   tokens
-    :: (Token s -> Token s -> Bool)
+    :: (Tokens s -> Tokens s -> Bool)
        -- ^ Predicate to check equality of tokens
-    -> [Token s]
+    -> Tokens s
        -- ^ List of tokens to parse
-    -> m [Token s]
+    -> m (Tokens s)
+
+  -- | Parse /zero/ or more tokens for which the supplied predicate holds.
+  -- Try to use this as much as possible because for many streams the
+  -- combinator is much faster than parsers built with 'many' and @satisfy@.
+  --
+  -- The following equations should clarify the behavior:
+  --
+  -- > takeWhileP (Just "foo") f = many (satisfy f <?> "foo")
+  -- > takeWhileP Nothing f      = many (satisfy f)
+  --
+  -- The combinator never fails, although it may parse an empty chunk.
+  --
+  -- @since 6.0.0
+
+  takeWhileP
+    :: Maybe String    -- ^ Name for a single token in the row
+    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+    -> m (Tokens s)    -- ^ A chunk of matching tokens
+
+  -- | Similar to 'takeWhileP', but fails if it can't parse at least one
+  -- token.
+
+  takeWhile1P
+    :: Maybe String    -- ^ Name for a single token in the row
+    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+    -> m (Tokens s)    -- ^ A chunk of matching tokens
 
   -- | Return the full parser state as a 'State' record.
 
@@ -758,6 +782,8 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   eof               = pEof
   token             = pToken
   tokens            = pTokens
+  takeWhileP        = pTakeWhileP
+  takeWhile1P       = pTakeWhile1P
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
@@ -804,7 +830,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
-  let what = maybe EndOfInput (Tokens . nes . fst) (uncons input)
+  let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
       unexpect u = TrivialError pos (E.singleton u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
@@ -844,10 +870,10 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
 pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
-  case uncons input of
+  case take1_ input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
-      let !apos = fst (updatePos (Proxy :: Proxy s) w pos x)
+      let !apos = positionAt1 (Proxy :: Proxy s) pos x
           us    = (E.singleton . Tokens . nes) x
           ps    = E.singleton EndOfInput
       in eerr (TrivialError (apos:|z) us ps)
@@ -860,66 +886,89 @@ pToken :: forall e s m a. Stream s
   -> Maybe (Token s)
   -> ParsecT e s m a
 pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
-  case uncons input of
+  case take1_ input of
     Nothing ->
       let us = E.singleton EndOfInput
           ps = maybe E.empty (E.singleton . Tokens . nes) mtoken
       in eerr (TrivialError (pos:|z) us ps) s
     Just (c,cs) ->
-      let (apos, npos) = updatePos (Proxy :: Proxy s) w pos c
-      in case test c of
+      case test c of
         Left (us, ps) ->
-          apos `seq` eerr
-            (TrivialError (apos:|z) us ps)
-            (State input (apos:|z) tp w)
+          let !apos = positionAt1 (Proxy :: Proxy s) pos c
+          in eerr (TrivialError (apos:|z) us ps)
+                  (State input (apos:|z) tp w)
         Right x ->
-          let newstate = State cs (npos:|z) (tp + 1) w
-          in npos `seq` cok x newstate mempty
+          let !npos = advance1 (Proxy :: Proxy s) w pos c
+              newstate = State cs (npos:|z) (tp + 1) w
+          in cok x newstate mempty
 {-# INLINE pToken #-}
 
 pTokens :: forall e s m. Stream s
-  => (Token s -> Token s -> Bool)
-  -> [Token s]
-  -> ParsecT e s m [Token s]
-pTokens _ [] = ParsecT $ \s _ _ eok _ -> eok [] s mempty
-pTokens test tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
-  let updatePos' = updatePos (Proxy :: Proxy s) w
-      toTokens   = Tokens . NE.fromList . reverse
+  => (Tokens s -> Tokens s -> Bool)
+  -> Tokens s
+  -> ParsecT e s m (Tokens s)
+pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+  let pxy = Proxy :: Proxy s
       unexpect pos' u =
         let us = E.singleton u
-            ps = (E.singleton . Tokens . NE.fromList) tts
+            ps = (E.singleton . Tokens . NE.fromList . chunkToTokens pxy) tts
         in TrivialError pos' us ps
-      go _ [] is rs =
-        let ris   = reverse is
-            (npos, tp') = foldl'
-              (\(p, n) t -> (snd (updatePos' p t), n + 1))
-              (pos, tp)
-              ris
-        in cok ris (State rs (npos:|z) tp' w) mempty
-      go apos (t:ts) is rs =
-        case uncons rs of
-          Nothing ->
-            apos `seq` eerr
-              (unexpect (apos:|z) (toTokens is))
-              (State input (apos:|z) tp w)
-          Just (x,xs) ->
-            if test t x
-              then go apos ts (x:is) xs
-              else apos `seq` eerr
-                     (unexpect (apos:|z) . toTokens $ x:is)
-                     (State input (apos:|z) tp w)
-  in case uncons input of
-       Nothing ->
-         eerr (unexpect (pos:|z) EndOfInput) s
-       Just (x,xs) ->
-         let t:ts = tts
-             apos = fst (updatePos' pos x)
-         in if test t x
-              then go apos ts [x] xs
-              else apos `seq` eerr
-                     (unexpect (apos:|z) $ Tokens (nes x))
-                     (State input (apos:|z) tp w)
+      len = chunkLength pxy tts
+  in case takeN_ len input of
+    Nothing ->
+      eerr (unexpect (pos:|z) EndOfInput) s
+    Just (tts', input') ->
+      if f tts tts'
+        then let !npos = advanceN pxy w pos tts'
+             in cok tts' (State input' (npos:|z) (tp + len) w) mempty
+        else let !apos = positionAtN pxy pos tts'
+                 ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
+             in eerr (unexpect (apos:|z) ps) (State input (apos:|z) tp w)
 {-# INLINE pTokens #-}
+
+pTakeWhileP :: forall e s m. Stream s
+  => Maybe String
+  -> (Token s -> Bool)
+  -> ParsecT e s m (Tokens s)
+pTakeWhileP ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ eok _ ->
+  let pxy = Proxy :: Proxy s
+      (ts, input') = takeWhile_ f input
+      !npos = advanceN pxy w pos ts
+      len = chunkLength pxy ts
+      hs =
+        case ml >>= NE.nonEmpty of
+          Nothing -> mempty
+          Just l -> (Hints . pure . E.singleton . Label) l
+  in if chunkEmpty pxy ts
+       then eok ts (State input' (npos:|z) (tp + len) w) hs
+       else cok ts (State input' (npos:|z) (tp + len) w) hs
+{-# INLINE pTakeWhileP #-}
+
+pTakeWhile1P :: forall e s m. Stream s
+  => Maybe String
+  -> (Token s -> Bool)
+  -> ParsecT e s m (Tokens s)
+pTakeWhile1P ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ _ eerr ->
+  let pxy = Proxy :: Proxy s
+      (ts, input') = takeWhile_ f input
+      len = chunkLength pxy ts
+      el = Label <$> (ml >>= NE.nonEmpty)
+      hs =
+        case el of
+          Nothing -> mempty
+          Just l -> (Hints . pure . E.singleton) l
+  in if chunkEmpty pxy ts
+       then let !apos = positionAtN pxy pos ts
+                us    = E.singleton $
+                  case take1_ input of
+                    Nothing -> EndOfInput
+                    Just (t,_) -> Tokens (nes t)
+                ps    = maybe E.empty E.singleton el
+            in eerr (TrivialError (apos:|z) us ps)
+                    (State input (apos:|z) tp w)
+       else let !npos = advanceN pxy w pos ts
+            in cok ts (State input' (npos:|z) (tp + len) w) hs
+{-# INLINE pTakeWhile1P #-}
 
 pGetParserState :: ParsecT e s m (State s)
 pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
@@ -951,6 +1000,8 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   eof                        = lift eof
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
+  takeWhileP l f             = lift (takeWhileP l f)
+  takeWhile1P l f            = lift (takeWhile1P l f)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
 
@@ -970,6 +1021,8 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   eof                        = lift eof
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
+  takeWhileP l f             = lift (takeWhileP l f)
+  takeWhile1P l f            = lift (takeWhile1P l f)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
 
@@ -986,6 +1039,8 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1005,6 +1060,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1024,6 +1081,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1045,6 +1104,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1066,6 +1127,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1082,6 +1145,8 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   eof                         = lift eof
   token test mt               = lift (token test mt)
   tokens e ts                 = lift $ tokens e ts
+  takeWhileP l f              = lift (takeWhileP l f)
+  takeWhile1P l f             = lift (takeWhile1P l f)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
@@ -1104,6 +1169,7 @@ infix 0 <?>
 
 (<?>) :: MonadParsec e s m => m a -> String -> m a
 (<?>) = flip label
+{-# INLINE (<?>) #-}
 
 -- | The parser @unexpected item@ fails with an error message telling about
 -- unexpected item @item@ without consuming any input.
@@ -1120,13 +1186,19 @@ unexpected item = failure (E.singleton item) E.empty
 --
 -- @since 5.3.0
 
-match :: MonadParsec e s m => m a -> m ([Token s], a)
+match :: MonadParsec e s m => m a -> m (Tokens s, a)
 match p = do
   tp  <- getTokensProcessed
   s   <- getInput
   r   <- p
   tp' <- getTokensProcessed
-  return (streamTake (tp' - tp) s, r)
+  -- NOTE The 'fromJust' call here should never fail because if the stream
+  -- is empty before 'p' (the only case when 'takeN_' can return 'Nothing'
+  -- as per its invariants), (tp' - tp) won't be greater than 0, and in that
+  -- case 'Just' is guaranteed to be returned as per another invariant of
+  -- 'takeN_'.
+  return ((fst . fromJust) (takeN_ (tp' - tp) s), r)
+{-# INLINEABLE match #-}
 
 -- | Specify how to process 'ParseError's that happen inside of this
 -- wrapper. As a side effect of the current implementation changing
@@ -1152,6 +1224,25 @@ region f m = do
           updateParserState $ \st -> st { statePos = pos }
           fancyFailure xs
     Right x -> return x
+{-# INLINEABLE region #-}
+
+-- | The same as 'takeWhileP', but discards the result.
+
+skipWhileP :: MonadParsec e s m
+  => Maybe String      -- ^ Name of a single token in the row
+  -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+  -> m ()
+skipWhileP l f = void (takeWhileP l f)
+{-# INLINE skipWhileP #-}
+
+-- | The same as 'takeWhile1P', but discards the result.
+
+skipWhile1P :: MonadParsec e s m
+  => Maybe String      -- ^ Name of a single token in the row
+  -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+  -> m ()
+skipWhile1P l f = void (takeWhile1P l f)
+{-# INLINE skipWhile1P #-}
 
 ----------------------------------------------------------------------------
 -- Parser state combinators
@@ -1182,8 +1273,9 @@ getPosition = NE.head . statePos <$> getParserState
 getNextTokenPosition :: forall e s m. MonadParsec e s m => m (Maybe SourcePos)
 getNextTokenPosition = do
   State {..} <- getParserState
-  let f = fst . updatePos (Proxy :: Proxy s) stateTabWidth (NE.head statePos)
-  return (f . fst <$> uncons stateInput)
+  let f = positionAt1 (Proxy :: Proxy s) (NE.head statePos)
+  return (f . fst <$> take1_ stateInput)
+{-# INLINEABLE getNextTokenPosition #-}
 
 -- | @setPosition pos@ sets the current source position to @pos@.
 --
@@ -1220,16 +1312,16 @@ popPosition = updateParserState $ \(State s z tp w) ->
 
 -- | Get the number of tokens processed so far.
 --
--- @since 5.2.0
+-- @since 6.0.0
 
-getTokensProcessed :: MonadParsec e s m => m Word
+getTokensProcessed :: MonadParsec e s m => m Int
 getTokensProcessed = stateTokensProcessed <$> getParserState
 
 -- | Set the number of tokens processed so far.
 --
--- @since 5.2.0
+-- @since 6.0.0
 
-setTokensProcessed :: MonadParsec e s m => Word -> m ()
+setTokensProcessed :: MonadParsec e s m => Int -> m ()
 setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
   State s pos tp w
 
@@ -1251,6 +1343,7 @@ setTabWidth w = updateParserState $ \(State s pos tp _) ->
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
+{-# INLINE setParserState #-}
 
 ----------------------------------------------------------------------------
 -- Debugging
@@ -1295,6 +1388,7 @@ dbg :: forall e s m a.
   -> ParsecT e s m a   -- ^ Parser that prints debugging messages
 dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
   let l = dbgLog lbl :: DbgItem s e a -> String
+      unfold = streamTake 40
       cok' x s' hs = flip trace (cok x s' hs) $
         l (DbgIn (unfold (stateInput s))) ++
         l (DbgCOK (streamTake (streamDelta s s') (stateInput s)) x)
@@ -1355,18 +1449,13 @@ showStream ts =
 streamDelta
   :: State s           -- ^ State of parser before consumption
   -> State s           -- ^ State of parser after consumption
-  -> Word              -- ^ Number of consumed tokens
+  -> Int               -- ^ Number of consumed tokens
 streamDelta s0 s1 = stateTokensProcessed s1 - stateTokensProcessed s0
 
 -- | Extract a given number of tokens from the stream.
 
-streamTake :: Stream s => Word -> s -> [Token s]
-streamTake n s = genericTake n (unfold s)
-
--- | A custom version of 'unfold' that matches signature of the 'uncons'
--- method in the 'Stream' type class we use.
-
-unfold :: Stream s => s -> [Token s]
-unfold s = case uncons s of
-  Nothing -> []
-  Just (t, s') -> t : unfold s'
+streamTake :: forall s. Stream s => Int -> s -> [Token s]
+streamTake n s =
+  case fst <$> takeN_ n s of
+    Nothing -> []
+    Just chunk -> chunkToTokens (Proxy :: Proxy s) chunk

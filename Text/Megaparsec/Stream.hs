@@ -11,124 +11,270 @@
 --
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
+--
+-- @since 6.0.0
 
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies      #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..)
-  , defaultUpdatePos )
+  ( Stream (..) )
 where
 
+import Data.List (foldl')
 import Data.Proxy
 import Data.Semigroup ((<>))
+import Data.Word (Word8)
 import Text.Megaparsec.Pos
-import qualified Data.ByteString.Char8      as B
-import qualified Data.ByteString.Lazy.Char8 as BL
-import qualified Data.Text                  as T
-import qualified Data.Text.Lazy             as TL
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text            as T
+import qualified Data.Text.Lazy       as TL
 
--- | An instance of @Stream s@ has stream type @s@. Token type is determined
--- by the stream and can be found via 'Token' type function.
+-- | Type class for inputs that can be consumed by the library.
 
-class Ord (Token s) => Stream s where
+class (Ord (Token s), Ord (Tokens s)) => Stream s where
 
-  -- | Type of token in stream.
-  --
-  -- @since 5.0.0
+  -- | Type of token in the stream.
 
   type Token s :: *
 
-  -- | Get next token from the stream. If the stream is empty, return
-  -- 'Nothing'.
+  -- | Type of “chunk” of the stream.
 
-  uncons :: s -> Maybe (Token s, s)
+  type Tokens s :: *
 
-  -- | Update position in stream given tab width, current position, and
-  -- current token. The result is a tuple where the first element will be
-  -- used to report parse errors for current token, while the second element
-  -- is the incremented position that will be stored in the parser's state.
-  -- The stored (incremented) position is used whenever position can't
-  -- be\/shouldn't be updated by consuming a token. For example, when using
-  -- 'failure', we don't grab a new token (we need to fail right were we are
-  -- now), so error position will be taken from parser's state.
+  -- | Lift a single token to chunk to the stream. The default
+  -- implementation is:
   --
-  -- When you work with streams where elements do not contain information
-  -- about their position in input, the result is usually consists of the
-  -- third argument unchanged and incremented position calculated with
-  -- respect to current token. This is how default instances of 'Stream'
-  -- work (they use 'defaultUpdatePos', which may be a good starting point
-  -- for your own position-advancing function).
+  -- > tokenToChunk pxy = tokensToChunk pxy . pure
   --
-  -- When you wish to deal with a stream of tokens where every token “knows”
-  -- its start and end position in input (for example, you have produced the
-  -- stream with Happy\/Alex), then the best strategy is to use the start
-  -- position as the actual element position and provide the end position of
-  -- the token as the incremented one.
-  --
-  -- @since 5.0.0
+  -- However for some types of stream there may be a more efficient way to
+  -- lift.
 
-  updatePos
-    :: Proxy s -- ^ Proxy clarifying stream type ('Token' is not injective)
+  tokenToChunk  :: Proxy s -> Token s -> Tokens s
+  tokenToChunk pxy = tokensToChunk pxy . pure
+
+  -- | The first method that establishes isomorphism between list of tokens
+  -- and chunk of the stream. Valid implementation should satisfy:
+  --
+  -- > chunkToTokens pxy (tokensToChunk pxy ts) == ts
+
+  tokensToChunk :: Proxy s -> [Token s] -> Tokens s
+
+  -- | The second method that establishes isomorphism between list of tokens
+  -- and chunk of the stream. Valid implementation should satisfy:
+  --
+  -- > tokensToChunk pxy (chunkToTokens pxy chunk) == chunk
+
+  chunkToTokens :: Proxy s -> Tokens s -> [Token s]
+
+  -- | Return length of a chunk of the stream.
+
+  chunkLength :: Proxy s -> Tokens s -> Int
+
+  -- | Check if a chunk of the stream is empty. The default implementation
+  -- is in terms of the more general 'chunkLength':
+  --
+  -- > chunkEmpty pxy ts = chunkLength pxy ts <= 0
+  --
+  -- However for many streams there may be a more efficient implementation.
+
+  chunkEmpty :: Proxy s -> Tokens s -> Bool
+  chunkEmpty pxy ts = chunkLength pxy ts <= 0
+  {-# INLINE chunkEmpty #-}
+
+  -- | Set source position for a given token. By default, the given
+  -- 'SourcePos' (second argument) is just returned without looking at the
+  -- token. This method is important when your stream is a collection of
+  -- tokens where every token knows where it begins in the original input.
+
+  positionAt1
+    :: Proxy s         -- ^ 'Proxy' clarifying the type of stream
+    -> SourcePos       -- ^ Current position
+    -> Token s         -- ^ Current token
+    -> SourcePos       -- ^ Position of the token
+  positionAt1 Proxy = defaultPositionTo
+  {-# INLINE positionAt1 #-}
+
+  -- | The same as 'positionAt1', but for chunks of the stream. The function
+  -- should return the position where the entire chunk begins. Again, by
+  -- default the second argument is returned without modifications and the
+  -- chunk is not looked at.
+
+  positionAtN
+    :: Proxy s         -- ^ 'Proxy' clarifying the type of stream
+    -> SourcePos       -- ^ Current position
+    -> Tokens s        -- ^ Current chunk
+    -> SourcePos       -- ^ Position of the chunk
+  positionAtN Proxy = defaultPositionTo
+  {-# INLINE positionAtN #-}
+
+  -- | Advance position given a single token. The returned position is the
+  -- position right after the token, or position where the token ends.
+
+  advance1
+    :: Proxy s         -- ^ 'Proxy' clarifying the type of stream
     -> Pos             -- ^ Tab width
     -> SourcePos       -- ^ Current position
     -> Token s         -- ^ Current token
-    -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
+    -> SourcePos       -- ^ Advanced position
+
+  -- | Advance position given a chunk of stream. The returned position is
+  -- the position right after the chunk, or position where the chunk ends.
+
+  advanceN
+    :: Proxy s         -- ^ 'Proxy' clarifying the type of stream
+    -> Pos             -- ^ Tab width
+    -> SourcePos       -- ^ Current position
+    -> Tokens s        -- ^ Current token
+    -> SourcePos       -- ^ Advanced position
+
+  -- | Extract a single token form the stream. Return 'Nothing' if the
+  -- stream is empty.
+
+  take1_ :: s -> Maybe (Token s, s)
+
+  -- | @'takeN_' n s@ should try to extract a chunk of length @n@, or if the
+  -- stream is too short, the rest of the stream. Valid implementation
+  -- should follow the rules:
+  --
+  --     * If the requested length @n@ is 0 (or less), 'Nothing' should
+  --       never be returned, instead @'Just' (\"\", s)@ should be returned,
+  --       where @\"\"@ stands for the empty chunk, and @s@ is the original
+  --       stream (second argument).
+  --     * If the requested length is greater than 0 and the stream is
+  --       empty, 'Nothing' should be returned indicating end of input.
+  --     * In other cases, take chunk of length @n@ (or shorter if the
+  --       stream is not long enough) from the input stream and return the
+  --       chunk along with the rest of the stream.
+
+  takeN_ :: Int -> s -> Maybe (Tokens s, s)
+
+  -- | Extract chunk of the stream taking tokens while the supplied
+  -- predicate returns 'True'. Return the chunk and the rest of the stream.
+  --
+  -- For many types of streams, the method allows for significant
+  -- performance improvements, although it is not strictly necessary from
+  -- conceptual point of view.
+
+  takeWhile_ :: (Token s -> Bool) -> s -> (Tokens s, s)
 
 instance Stream String where
   type Token String = Char
-  uncons [] = Nothing
-  uncons (t:ts) = Just (t, ts)
-  {-# INLINE uncons #-}
-  updatePos = const defaultUpdatePos
-  {-# INLINE updatePos #-}
+  type Tokens String = String
+  tokenToChunk Proxy = pure
+  tokensToChunk Proxy = id
+  chunkToTokens Proxy = id
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+  advance1 Proxy = defaultAdvance1
+  advanceN Proxy w = foldl' (defaultAdvance1 w)
+  take1_ [] = Nothing
+  take1_ (t:ts) = Just (t, ts)
+  takeN_ n s
+    | n <= 0    = Just ("", s)
+    | null s    = Nothing
+    | otherwise = Just (splitAt n s)
+  takeWhile_ = span
 
 instance Stream B.ByteString where
-  type Token B.ByteString = Char
-  uncons = B.uncons
-  {-# INLINE uncons #-}
-  updatePos = const defaultUpdatePos
-  {-# INLINE updatePos #-}
+  type Token B.ByteString = Word8
+  type Tokens B.ByteString = B.ByteString
+  tokenToChunk Proxy = B.singleton
+  tokensToChunk Proxy = B.pack
+  chunkToTokens Proxy = B.unpack
+  chunkLength Proxy = B.length
+  chunkEmpty Proxy = B.null
+  advance1 Proxy = defaultAdvance1
+  advanceN Proxy w = B.foldl' (defaultAdvance1 w)
+  take1_ = B.uncons
+  takeN_ n s
+    | n <= 0    = Just (B.empty, s)
+    | B.null s  = Nothing
+    | otherwise = Just (B.splitAt n s)
+  takeWhile_ = B.span
 
 instance Stream BL.ByteString where
-  type Token BL.ByteString = Char
-  uncons = BL.uncons
-  {-# INLINE uncons #-}
-  updatePos = const defaultUpdatePos
-  {-# INLINE updatePos #-}
+  type Token BL.ByteString = Word8
+  type Tokens BL.ByteString = BL.ByteString
+  tokenToChunk Proxy = BL.singleton
+  tokensToChunk Proxy = BL.pack
+  chunkToTokens Proxy = BL.unpack
+  chunkLength Proxy = fromIntegral . BL.length
+  chunkEmpty Proxy = BL.null
+  advance1 Proxy = defaultAdvance1
+  advanceN Proxy w = BL.foldl' (defaultAdvance1 w)
+  take1_ = BL.uncons
+  takeN_ n s
+    | n <= 0    = Just (BL.empty, s)
+    | BL.null s = Nothing
+    | otherwise = Just (BL.splitAt (fromIntegral n) s)
+  takeWhile_ = BL.span
 
 instance Stream T.Text where
   type Token T.Text = Char
-  uncons = T.uncons
-  {-# INLINE uncons #-}
-  updatePos = const defaultUpdatePos
-  {-# INLINE updatePos #-}
+  type Tokens T.Text = T.Text
+  tokenToChunk Proxy = T.singleton
+  tokensToChunk Proxy = T.pack
+  chunkToTokens Proxy = T.unpack
+  chunkLength Proxy = T.length
+  chunkEmpty Proxy = T.null
+  advance1 Proxy = defaultAdvance1
+  advanceN Proxy w = T.foldl' (defaultAdvance1 w)
+  take1_ = T.uncons
+  takeN_ n s
+    | n <= 0    = Just (T.empty, s)
+    | T.null s  = Nothing
+    | otherwise = Just (T.splitAt n s)
+  takeWhile_ = T.span
 
 instance Stream TL.Text where
-  type Token TL.Text = Char
-  uncons = TL.uncons
-  {-# INLINE uncons #-}
-  updatePos = const defaultUpdatePos
-  {-# INLINE updatePos #-}
+  type Token TL.Text  = Char
+  type Tokens TL.Text = TL.Text
+  tokenToChunk Proxy = TL.singleton
+  tokensToChunk Proxy = TL.pack
+  chunkToTokens Proxy = TL.unpack
+  chunkLength Proxy = fromIntegral . TL.length
+  chunkEmpty Proxy = TL.null
+  advance1 Proxy = defaultAdvance1
+  advanceN Proxy w = TL.foldl' (defaultAdvance1 w)
+  take1_ = TL.uncons
+  takeN_ n s
+    | n <= 0    = Just (TL.empty, s)
+    | TL.null s = Nothing
+    | otherwise = Just (TL.splitAt (fromIntegral n) s)
+  takeWhile_ = TL.span
 
--- | Update a source position given a character. The first argument
--- specifies the tab width. If the character is a newline (\'\\n\') the line
--- number is incremented by 1. If the character is a tab (\'\\t\') the
--- column number is incremented to the nearest tab position. In all other
--- cases, the column is incremented by 1.
+----------------------------------------------------------------------------
+-- Helpers
 
-defaultUpdatePos
-  :: Pos               -- ^ Tab width
+-- | Default positioning function designed to work with simple streams where
+-- tokens do not contain info about their position in the stream. Thus it
+-- just returns the given 'SourcePos' without re-positioning.
+
+defaultPositionTo :: SourcePos -> a -> SourcePos
+defaultPositionTo pos _ = pos
+{-# INLINE defaultPositionTo #-}
+
+-- | Update a source position given a token. The first argument specifies
+-- the tab width. If the character is a newline (\'\\n\') the line number is
+-- incremented by 1 and column number is reset to 1. If the character is a
+-- tab (\'\\t\') the column number is incremented to the nearest tab
+-- position. In all other cases, the column is incremented by 1.
+
+defaultAdvance1 :: Enum t
+  => Pos               -- ^ Tab width
   -> SourcePos         -- ^ Current position
-  -> Char              -- ^ Current token
-  -> (SourcePos, SourcePos) -- ^ Actual position and incremented position
-defaultUpdatePos width apos@(SourcePos n l c) ch = (apos, npos)
+  -> t                 -- ^ Current token
+  -> SourcePos         -- ^ Incremented position
+defaultAdvance1 width (SourcePos n l c) t = npos
   where
     w  = unPos width
     c' = unPos c
     npos =
-      case ch of
-        '\n' -> SourcePos n (l <> pos1) pos1
-        '\t' -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
-        _    -> SourcePos n l (c <> pos1)
+      case fromEnum t of
+        10 -> SourcePos n (l <> pos1) pos1
+        9  -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+        _   -> SourcePos n l (c <> pos1)
+{-# INLINE defaultAdvance1 #-}
