@@ -361,14 +361,6 @@ lineFold sc action =
 -- string literals:
 --
 -- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
---
--- If you want to write @stringLiteral@ that adheres to the Haskell report
--- though, you'll need to take care of the @\\&@ combination which is not a
--- character, but can be used to separate characters (as in @\"\\291\\&4\"@
--- which is two characters long):
---
--- > stringLiteral = catMaybes <$> (char '"' >> manyTill ch (char '"'))
--- >   where ch = (Just <$> L.charLiteral) <|> (Nothing <$ string "\\&")
 
 charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do
