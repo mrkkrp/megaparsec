@@ -32,10 +32,9 @@
 -- Megaparsec 6 uses some type-level machinery to provide flexibility
 -- without compromising on type safety. Thus type signatures are sometimes
 -- necessary to avoid ambiguous types. If you're seeing a error message that
--- reads like “Ambiguous type variable @e0@ arising from … prevents the
--- constraint … from being resolved”, you need to give an explicit signature
--- to your parser to resolve the ambiguity. It's a good idea to provide type
--- signatures for all top-level definitions.
+-- reads like “Type variable @e0@ is ambiguous …”, you need to give an
+-- explicit signature to your parser to resolve the ambiguity. It's a good
+-- idea to provide type signatures for all top-level definitions.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm",
@@ -705,9 +704,10 @@ class (Stream s, A.Alternative m, MonadPlus m)
     -> Maybe (Token s) -- ^ Token to report when input stream is empty
     -> m a
 
-  -- | The parser @'tokens' test@ parses a list of tokens and returns it.
+  -- | The parser @'tokens' test@ parses a chunk of input and returns it.
   -- Supplied predicate @test@ is used to check equality of given and parsed
-  -- tokens.
+  -- chunks after a candidate chunk of correct length is fetched from the
+  -- stream.
   --
   -- This can be used for example to write 'Text.Megaparsec.Char.string':
   --
