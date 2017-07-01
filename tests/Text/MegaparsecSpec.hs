@@ -15,15 +15,15 @@ import Control.Monad.Cont
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
-import Data.Char (toUpper, chr)
+import Data.Char (toUpper)
 import Data.Foldable (asum, concat)
-import Data.List (isPrefixOf, foldl')
+import Data.Function (on)
+import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Monoid
 import Data.Proxy
 import Data.Void
-import Data.Word (Word8)
 import Prelude hiding (span, concat)
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -37,13 +37,10 @@ import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
-import qualified Data.ByteString.Char8       as B
-import qualified Data.ByteString.Lazy.Char8  as BL
+import qualified Data.List                   as DL
 import qualified Data.List.NonEmpty          as NE
 import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
-import qualified Data.Text                   as T
-import qualified Data.Text.Lazy              as TL
 
 #if !MIN_VERSION_QuickCheck(2,8,2)
 instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
@@ -54,49 +51,51 @@ instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
 spec :: Spec
 spec = do
 
-  describe "non-String instances of Stream" $ do
-    context "lazy ByteString" $ do
-      it "unconses correctly" $
-        property $ \ch' n -> do
-          let p  = many (char ch) :: Parsec Void BL.ByteString String
-              s  = replicate (getNonNegative n) ch
-              ch = byteToChar ch'
-          parse p "" (BL.pack s) `shouldParse` s
-      it "updates position like with String" $
-        property $ \w pos ch ->
-          updatePos (Proxy :: Proxy BL.ByteString) w pos ch `shouldBe`
-          updatePos (Proxy :: Proxy String) w pos ch
-    context "strict ByteString" $ do
-      it "unconses correctly" $
-        property $ \ch' n -> do
-          let p  = many (char ch) :: Parsec Void B.ByteString String
-              s  = replicate (getNonNegative n) ch
-              ch = byteToChar ch'
-          parse p "" (B.pack s) `shouldParse` s
-      it "updates position like with String" $
-        property $ \w pos ch ->
-          updatePos (Proxy :: Proxy B.ByteString) w pos ch `shouldBe`
-          updatePos (Proxy :: Proxy String) w pos ch
-    context "lazy Text" $ do
-      it "unconses correctly" $
-        property $ \ch n -> do
-          let p = many (char ch) :: Parsec Void TL.Text String
-              s = replicate (getNonNegative n) ch
-          parse p "" (TL.pack s) `shouldParse` s
-      it "updates position like with String" $
-        property $ \w pos ch ->
-          updatePos (Proxy :: Proxy TL.Text) w pos ch `shouldBe`
-          updatePos (Proxy :: Proxy String) w pos ch
-    context "strict Text" $ do
-      it "unconses correctly" $
-        property $ \ch n -> do
-          let p = many (char ch) :: Parsec Void T.Text String
-              s = replicate (getNonNegative n) ch
-          parse p "" (T.pack s) `shouldParse` s
-      it "updates position like with String" $
-        property $ \w pos ch ->
-          updatePos (Proxy :: Proxy T.Text) w pos ch `shouldBe`
-          updatePos (Proxy :: Proxy String) w pos ch
+  -- TODO This should be moved in some form to Text.Megaparsec.StreamSpec
+
+  -- describe "non-String instances of Stream" $ do
+  --   context "lazy ByteString" $ do
+  --     it "unconses correctly" $
+  --       property $ \ch' n -> do
+  --         let p  = many (char ch) :: Parsec Void BL.ByteString String
+  --             s  = replicate (getNonNegative n) ch
+  --             ch = byteToChar ch'
+  --         parse p "" (BL.pack s) `shouldParse` s
+  --     it "updates position like with String" $
+  --       property $ \w pos ch ->
+  --         updatePos (Proxy :: Proxy BL.ByteString) w pos ch `shouldBe`
+  --         updatePos (Proxy :: Proxy String) w pos ch
+  --   context "strict ByteString" $ do
+  --     it "unconses correctly" $
+  --       property $ \ch' n -> do
+  --         let p  = many (char ch) :: Parsec Void B.ByteString String
+  --             s  = replicate (getNonNegative n) ch
+  --             ch = byteToChar ch'
+  --         parse p "" (B.pack s) `shouldParse` s
+  --     it "updates position like with String" $
+  --       property $ \w pos ch ->
+  --         updatePos (Proxy :: Proxy B.ByteString) w pos ch `shouldBe`
+  --         updatePos (Proxy :: Proxy String) w pos ch
+  --   context "lazy Text" $ do
+  --     it "unconses correctly" $
+  --       property $ \ch n -> do
+  --         let p = many (char ch) :: Parsec Void TL.Text String
+  --             s = replicate (getNonNegative n) ch
+  --         parse p "" (TL.pack s) `shouldParse` s
+  --     it "updates position like with String" $
+  --       property $ \w pos ch ->
+  --         updatePos (Proxy :: Proxy TL.Text) w pos ch `shouldBe`
+  --         updatePos (Proxy :: Proxy String) w pos ch
+  --   context "strict Text" $ do
+  --     it "unconses correctly" $
+  --       property $ \ch n -> do
+  --         let p = many (char ch) :: Parsec Void T.Text String
+  --             s = replicate (getNonNegative n) ch
+  --         parse p "" (T.pack s) `shouldParse` s
+  --     it "updates position like with String" $
+  --       property $ \w pos ch ->
+  --         updatePos (Proxy :: Proxy T.Text) w pos ch `shouldBe`
+  --         updatePos (Proxy :: Proxy String) w pos ch
 
   describe "position in custom stream" $ do
 
@@ -147,15 +146,19 @@ spec = do
       it "updates position is stream correctly" $
         property $ \st' ts -> forAll (incCoincidence st' ts) $ \st@State {..} -> do
           let p = tokens compareTokens ts :: CustomParser [Span]
-              compareTokens x y = spanBody x == spanBody y
-              updatePos' = updatePos (Proxy :: Proxy [Span]) stateTabWidth
-              il = length . takeWhile id $ zipWith compareTokens stateInput ts
+              compareTokens x y = and $ zipWith compareToken x y
+              compareToken = (==) `on` spanBody
+              -- updatePos' = updatePos (Proxy :: Proxy [Span]) stateTabWidth
+
+              il = length . takeWhile id $ zipWith compareToken stateInput ts
               tl = length ts
-              consumed = take il stateInput
+
+              consumed = take tl stateInput
               (apos, npos) =
                 let (pos:|z) = statePos
-                in ( spanStart (head stateInput) :| z
-                   , foldl' (\q t -> snd (updatePos' q t)) pos consumed :| z )
+                    pxy = Proxy :: Proxy [Span]
+                in ( positionAt1 pxy pos (head stateInput) :| z
+                   , advanceN pxy stateTabWidth pos consumed :| z )
           if | null ts -> runParser' p st `shouldBe` (st, Right [])
              | null stateInput -> runParser' p st `shouldBe`
                ( st
@@ -1495,9 +1498,6 @@ spec = do
 ----------------------------------------------------------------------------
 -- Helpers
 
-byteToChar :: Word8 -> Char
-byteToChar = chr . fromIntegral
-
 -- | This data type represents tokens in custom input stream.
 
 data Span = Span
@@ -1508,9 +1508,26 @@ data Span = Span
 
 instance Stream [Span] where
   type Token [Span] = Span
-  uncons [] = Nothing
-  uncons (t:ts) = Just (t, ts)
-  updatePos _ _ _ (Span start end _) = (start, end)
+  type Tokens [Span] = [Span]
+  tokenToChunk Proxy = pure
+  tokensToChunk Proxy = id
+  chunkToTokens Proxy = id
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+  positionAt1 Proxy _ (Span start _ _) = start
+  positionAtN Proxy pos [] = pos
+  positionAtN Proxy _ (Span start _ _:_) = start
+  advance1 Proxy _ _ (Span _ end _) = end
+  advanceN Proxy _ pos [] = pos
+  advanceN Proxy _ _ ts =
+    let Span _ end _ = last ts in end
+  take1_ [] = Nothing
+  take1_ (t:ts) = Just (t, ts)
+  takeN_ n s
+    | n <= 0   = Just ([], s)
+    | null s   = Nothing
+    | otherwise = Just (splitAt n s)
+  takeWhile_ = DL.span
 
 instance Arbitrary Span where
   arbitrary = do

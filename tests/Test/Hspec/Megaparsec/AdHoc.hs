@@ -23,8 +23,8 @@ where
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
-import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Proxy
 import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -138,8 +138,7 @@ updatePosString
   -> SourcePos         -- ^ Initial position
   -> String            -- ^ 'String' — collection of tokens to process
   -> SourcePos         -- ^ Final position
-updatePosString w = foldl' f
-  where f p t = snd (defaultUpdatePos w p t)
+updatePosString = advanceN (Proxy :: Proxy String)
 
 -- | Make a singleton non-empty list from a value.
 
