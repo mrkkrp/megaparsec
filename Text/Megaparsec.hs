@@ -1343,7 +1343,6 @@ setTabWidth w = updateParserState $ \(State s pos tp _) ->
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
-{-# INLINE setParserState #-}
 
 ----------------------------------------------------------------------------
 -- Debugging
