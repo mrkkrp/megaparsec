@@ -164,12 +164,34 @@ mergeError e1 e2 =
     EQ ->
       case (e1, e2) of
         (TrivialError s1 u1 p1, TrivialError _ u2 p2) ->
-          TrivialError s1 (E.union u1 u2) (E.union p1 p2)
+          TrivialError s1 (normalize $ E.union u1 u2) (E.union p1 p2)
         (FancyError {}, TrivialError {}) -> e1
         (TrivialError {}, FancyError {}) -> e2
         (FancyError s1 x1, FancyError _ x2) ->
           FancyError s1 (E.union x1 x2)
     GT -> e1
+  where
+    -- NOTE The logic behind this normalization is that since we only
+    -- combine parse errors that happen at exactly the same position, all
+    -- the unexpected items wrapped with the 'Tokens' constructor will be
+    -- prefixes of input stream at that position. Our aim here is to choose
+    -- the longest prefix and remove the rest to reduce visual noise and
+    -- confusion.
+    normalize us =
+      let mprefix = fst <$> E.foldl' f Nothing us
+          f p (Tokens ts) =
+            let len = NE.length ts
+            in if len >= maybe 0 snd p
+                 then Just (ts, len)
+                 else p
+          f p _ = p
+          nonTokens (Label _)  = True
+          nonTokens EndOfInput = True
+          nonTokens _          = False
+          clean = E.filter nonTokens us
+      in case mprefix of
+           Nothing -> clean
+           Just prefix -> E.insert (Tokens prefix) clean
 {-# INLINE mergeError #-}
 
 -- | Type class 'ShowToken' includes methods that allow to pretty-print

@@ -6,6 +6,7 @@ import Data.Char (isControl, isSpace)
 import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid
+import Data.Set (Set)
 import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
@@ -57,7 +58,7 @@ spec = do
       it "merges their unexpected and expected items" $
         property $ \pos us0 ps0 us1 ps1 ->
           TrivialError pos us0 ps0 <> TrivialError pos us1 ps1 `shouldBe`
-            (TrivialError pos (E.union us0 us1) (E.union ps0 ps1) :: PE)
+            (TrivialError pos (normalize $ E.union us0 us1) (E.union ps0 ps1) :: PE)
     context "when combining two fancy parse errors at the same position" $
       it "merges their custom items" $
         property $ \pos xs0 xs1 ->
@@ -218,3 +219,20 @@ contains g r e = property (all f (g e))
   where
     rendered = parseErrorPretty e
     f x = r x `isInfixOf` rendered
+
+normalize :: Set (ErrorItem Char) -> Set (ErrorItem Char)
+normalize us =
+  let mprefix = fst <$> E.foldl' f Nothing us
+      f p (Tokens ts) =
+        let len = NE.length ts
+        in if len >= maybe 0 snd p
+             then Just (ts, len)
+             else p
+      f p _ = p
+      nonTokens (Label _)  = True
+      nonTokens EndOfInput = True
+      nonTokens _          = False
+      clean = E.filter nonTokens us
+  in case mprefix of
+       Nothing -> clean
+       Just prefix -> E.insert (Tokens prefix) clean

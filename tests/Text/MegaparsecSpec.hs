@@ -51,52 +51,6 @@ instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
 spec :: Spec
 spec = do
 
-  -- TODO This should be moved in some form to Text.Megaparsec.StreamSpec
-
-  -- describe "non-String instances of Stream" $ do
-  --   context "lazy ByteString" $ do
-  --     it "unconses correctly" $
-  --       property $ \ch' n -> do
-  --         let p  = many (char ch) :: Parsec Void BL.ByteString String
-  --             s  = replicate (getNonNegative n) ch
-  --             ch = byteToChar ch'
-  --         parse p "" (BL.pack s) `shouldParse` s
-  --     it "updates position like with String" $
-  --       property $ \w pos ch ->
-  --         updatePos (Proxy :: Proxy BL.ByteString) w pos ch `shouldBe`
-  --         updatePos (Proxy :: Proxy String) w pos ch
-  --   context "strict ByteString" $ do
-  --     it "unconses correctly" $
-  --       property $ \ch' n -> do
-  --         let p  = many (char ch) :: Parsec Void B.ByteString String
-  --             s  = replicate (getNonNegative n) ch
-  --             ch = byteToChar ch'
-  --         parse p "" (B.pack s) `shouldParse` s
-  --     it "updates position like with String" $
-  --       property $ \w pos ch ->
-  --         updatePos (Proxy :: Proxy B.ByteString) w pos ch `shouldBe`
-  --         updatePos (Proxy :: Proxy String) w pos ch
-  --   context "lazy Text" $ do
-  --     it "unconses correctly" $
-  --       property $ \ch n -> do
-  --         let p = many (char ch) :: Parsec Void TL.Text String
-  --             s = replicate (getNonNegative n) ch
-  --         parse p "" (TL.pack s) `shouldParse` s
-  --     it "updates position like with String" $
-  --       property $ \w pos ch ->
-  --         updatePos (Proxy :: Proxy TL.Text) w pos ch `shouldBe`
-  --         updatePos (Proxy :: Proxy String) w pos ch
-  --   context "strict Text" $ do
-  --     it "unconses correctly" $
-  --       property $ \ch n -> do
-  --         let p = many (char ch) :: Parsec Void T.Text String
-  --             s = replicate (getNonNegative n) ch
-  --         parse p "" (T.pack s) `shouldParse` s
-  --     it "updates position like with String" $
-  --       property $ \w pos ch ->
-  --         updatePos (Proxy :: Proxy T.Text) w pos ch `shouldBe`
-  --         updatePos (Proxy :: Proxy String) w pos ch
-
   describe "position in custom stream" $ do
 
     describe "eof" $
@@ -143,17 +97,14 @@ spec = do
               , Left (err apos $ utok h <> etok span))
 
     describe "tokens" $
-      it "updates position is stream correctly" $
+      it "updates position in stream correctly" $
         property $ \st' ts -> forAll (incCoincidence st' ts) $ \st@State {..} -> do
           let p = tokens compareTokens ts :: CustomParser [Span]
-              compareTokens x y = and $ zipWith compareToken x y
-              compareToken = (==) `on` spanBody
-              -- updatePos' = updatePos (Proxy :: Proxy [Span]) stateTabWidth
-
+              compareTokens = (==) `on` fmap spanBody
+              compareToken  = (==) `on` spanBody
               il = length . takeWhile id $ zipWith compareToken stateInput ts
               tl = length ts
-
-              consumed = take tl stateInput
+              consumed = take il stateInput
               (apos, npos) =
                 let (pos:|z) = statePos
                     pxy = Proxy :: Proxy [Span]
@@ -166,11 +117,11 @@ spec = do
              | il == tl -> runParser' p st `shouldBe`
                ( st { statePos             = npos
                     , stateTokensProcessed = stateTokensProcessed + fromIntegral tl
-                    , stateInput           = drop (length ts) stateInput }
+                    , stateInput           = drop tl stateInput }
                , Right consumed )
              | otherwise -> runParser' p st `shouldBe`
                ( st { statePos = apos }
-               , Left (err apos $ utoks (take (il + 1) stateInput) <> etoks ts) )
+               , Left (err apos $ utoks (take tl stateInput) <> etoks ts) )
 
     describe "getNextTokenPosition" $ do
       context "when input stream is empty" $
@@ -288,14 +239,11 @@ spec = do
           it "signals correct error message" $
             property $ \s0 s1 s -> not (s0 `isPrefixOf` s) && not (s1 `isPrefixOf` s) ==> do
               let p = string s0 <|> string s1
-                  z0' = toFirstMismatch (==) s0 s
-                  z1' = toFirstMismatch (==) s1 s
+                  z = take (max (length s0) (length s1)) s
               prs  p s `shouldFailWith` err posI
                 (etoks s0 <>
                  etoks s1 <>
-                 (if null s then ueof else mempty) <>
-                 (if null z0' then mempty else utoks z0') <>
-                 (if null z1' then mempty else utoks z1'))
+                 (if null s then ueof else utoks z))
       context "with two complex parsers" $ do
         context "when stream begins with matching character" $
           it "parses it" $
@@ -1043,7 +991,7 @@ spec = do
           property $ \str s -> not (str `isPrefixOf` s) ==> do
             let p :: MonadParsec Void String m => m String
                 p = tokens (==) str
-                z = toFirstMismatch (==) str s
+                z = take (length str) s
             grs  p s (`shouldFailWith` err posI (utoks z <> etoks str))
             grs' p s (`failsLeaving` s)
 
@@ -1562,7 +1510,10 @@ emulateStrParsing
   -> String
   -> (State String, Either (ParseError Char Void) String)
 emulateStrParsing st@(State i (pos:|z) tp w) s =
-  if l == length s
-    then (State (drop l i) (updatePosString w pos s :| z) (tp + fromIntegral l) w, Right s)
-    else (st, Left $ err (pos:|z) (etoks s <> utoks (take (l + 1) i)))
-  where l = length (takeWhile id $ zipWith (==) s i)
+  if s == take l i
+    then ( State (drop l i) (updatePosString w pos s :| z) (tp + fromIntegral l) w
+         , Right s )
+    else ( st
+         , Left $ err (pos:|z) (etoks s <> utoks (take l i)) )
+  where
+    l = length s

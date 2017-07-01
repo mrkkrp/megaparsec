@@ -26,7 +26,9 @@ spec = do
     if b > 0
       then prs_ p s `shouldFailWith` err (posN (length pre + n + b) s)
         ( etoks post <> etok c <>
-          (if length post == b then ueof else utoks [post !! b]) )
+          if length post == b
+            then ueof
+            else utoks (drop b post) )
       else prs_ p s `shouldParse` z
 
   describe "choice" . it "works" . property $ \cs' s' -> do
