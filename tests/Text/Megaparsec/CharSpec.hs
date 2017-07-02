@@ -240,29 +240,6 @@ spec = do
         property $ \chs ->
           prs (oneOf (chs :: String)) "" `shouldFailWith` err posI ueof
 
-  describe "oneOf'" $ do
-    context "when stream begins with one of specified characters" $
-      it "parses the character" $
-        property $ \chs' n s -> do
-          let chs = getNonEmpty chs'
-              ch  = chs !! (getNonNegative n `rem` length chs)
-              sl  = toLower ch : s
-              su  = toUpper ch : s
-          prs  (oneOf' chs) sl `shouldParse`     toLower ch
-          prs  (oneOf' chs) su `shouldParse`     toUpper ch
-          prs' (oneOf' chs) sl `succeedsLeaving` s
-          prs' (oneOf' chs) su `succeedsLeaving` s
-    context "when stream does not begin with any of specified characters" $
-      it "signals correct parse error" $
-        property $ \chs ch s  -> ch `notElemi` (chs :: String) ==> do
-          let s' = ch : s
-          prs  (oneOf' chs) s' `shouldFailWith` err posI (utok ch)
-          prs' (oneOf' chs) s' `failsLeaving`   s'
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        property $ \chs ->
-          prs (oneOf' (chs :: String)) "" `shouldFailWith` err posI ueof
-
   describe "noneOf" $ do
     context "when stream does not begin with any of specified characters" $
       it "parses the character" $
@@ -282,29 +259,6 @@ spec = do
       it "signals correct parse error" $
         property $ \chs ->
           prs (noneOf (chs :: String)) "" `shouldFailWith` err posI ueof
-
-  describe "noneOf'" $ do
-    context "when stream does not begin with any of specified characters" $
-      it "parses the character" $
-        property $ \chs ch s  -> ch `notElemi` (chs :: String) ==> do
-          let sl  = toLower ch : s
-              su  = toUpper ch : s
-          prs  (noneOf' chs) sl `shouldParse`     toLower ch
-          prs  (noneOf' chs) su `shouldParse`     toUpper ch
-          prs' (noneOf' chs) sl `succeedsLeaving` s
-          prs' (noneOf' chs) su `succeedsLeaving` s
-    context "when stream begins with one of specified characters" $
-      it "signals correct parse error" $
-        property $ \chs' n s -> do
-          let chs = getNonEmpty chs'
-              ch  = chs !! (getNonNegative n `rem` length chs)
-              s'  = ch : s
-          prs  (noneOf' chs) s' `shouldFailWith` err posI (utok ch)
-          prs' (noneOf' chs) s' `failsLeaving`   s'
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        property $ \chs ->
-          prs (noneOf' (chs :: String)) "" `shouldFailWith` err posI ueof
 
   describe "string" $ do
     context "when stream is prefixed with given string" $
@@ -405,16 +359,6 @@ fuzzyCase s = zipWith f s <$> vector (length s)
 
 casei :: Char -> Char -> Bool
 casei x y = toUpper x == toUpper y
-
--- | Case-insensitive 'elem'.
-
-elemi :: Char -> String -> Bool
-elemi c = any (casei c)
-
--- | Case-insensitive 'notElem'.
-
-notElemi :: Char -> String -> Bool
-notElemi c = not . elemi c
 
 -- | The 'isPrefixOf' function takes two 'String's and returns 'True' iff
 -- the first list is a prefix of the second with case-insensitive

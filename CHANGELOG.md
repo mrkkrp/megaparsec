@@ -5,10 +5,11 @@
 * Re-organized the module hierarchy. Some modules such as
   `Text.Megaparsec.Prim` do not exist anymore. Stream definitions were moved
   to `Text.Megaparsec.Stream`. Generic combinators are now re-exported from
-  the `Control.Applicative.Combinators`. Just import `Text.Megaparsec` and
-  you should be OK. Then add `Text.Megaparsec.Char` if you are working with
-  a stream of `Char`s, then add qualified modules you need (permutation
-  parsing, lexing, expression parsing, etc.).
+  the `Control.Applicative.Combinators` from the package
+  `parser-combinators`. Just import `Text.Megaparsec` and you should be OK.
+  Then add `Text.Megaparsec.Char` if you are working with a stream of
+  `Char`s, then add qualified modules you need (permutation parsing, lexing,
+  expression parsing, etc.).
 
 * Dropped per-stream modules, the `Parser` type synonym is to be defined
   manually by user.
@@ -78,6 +79,9 @@
 
 * Added `takeWhileP` and `takeWhile1P` to `MonadParsec`. Added `skipWhileP`,
   `skipWhile1P` as derivatives from those primitive combinators.
+
+* Dropped `oneOf'` and `noneOf'` from `Text.Megaparsec.Char`. These were
+  seldom (if ever) used and are easily re-implemented.
 
 ## Megaparsec 5.3.1
 

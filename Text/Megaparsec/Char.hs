@@ -49,9 +49,7 @@ module Text.Megaparsec.Char
   , char'
   , anyChar
   , oneOf
-  , oneOf'
   , noneOf
-  , noneOf'
   , satisfy
     -- * Sequence of characters
   , string
@@ -306,7 +304,7 @@ char c = token testChar (Just c)
 -- expecting 'E' or 'e'
 
 char' :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
-char' c = choice [char c, char $ swapCase c]
+char' c = choice [char c, char (swapCase c)]
   where
     swapCase x
       | isUpper x = toLower x
@@ -335,17 +333,6 @@ oneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
--- | The same as 'oneOf', but case-insensitive. Returns the parsed character
--- preserving its case.
---
--- > vowel = oneOf' "aeiou" <?> "vowel"
-
-oneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s)
-  -> m (Token s)
-oneOf' cs = satisfy (`elemi` cs)
-{-# INLINE oneOf' #-}
-
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current character
 -- /not/ in the supplied list of characters @cs@. Returns the parsed
 -- character.
@@ -355,16 +342,6 @@ noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
   -> m (Token s)
 noneOf cs = satisfy (`notElem` cs)
 {-# INLINE noneOf #-}
-
--- | The same as 'noneOf', but case-insensitive.
---
--- > consonant = noneOf' "aeiou" <?> "consonant"
-
-noneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s)
-  -> m (Token s)
-noneOf' cs = satisfy (`notElemi` cs)
-{-# INLINE noneOf' #-}
 
 -- | The parser @'satisfy' f@ succeeds for any character for which the
 -- supplied function @f@ returns 'True'. Returns the character that is
@@ -409,24 +386,3 @@ string' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
   -> m (Tokens s)
 string' = tokens ((==) `on` CI.mk)
 {-# INLINE string' #-}
-
-----------------------------------------------------------------------------
--- Helpers
-
--- | Case-insensitive equality test for characters.
-
-casei :: Char -> Char -> Bool
-casei x y = toUpper x == toUpper y
-{-# INLINE casei #-}
-
--- | Case-insensitive 'elem'.
-
-elemi :: Foldable f => Char -> f Char -> Bool
-elemi = any . casei
-{-# INLINE elemi #-}
-
--- | Case-insensitive 'notElem'.
-
-notElemi :: Foldable f => Char -> f Char -> Bool
-notElemi c = not . elemi c
-{-# INLINE notElemi #-}
