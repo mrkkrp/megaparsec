@@ -12,7 +12,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Error
-import Text.Megaparsec.Error.Builder (posI)
+import Text.Megaparsec.Error.Builder
 import Text.Megaparsec.Pos
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
@@ -190,6 +190,11 @@ spec = do
       let f (FancyError _ xs) = xs
           f _                 = E.empty
       property (contains f showErrorComponent)
+    it "several fancy errors look not so bad" $ do
+      let pe :: PE
+          pe = errFancy posI $
+            mempty <> fancy (ErrorFail "foo") <> fancy (ErrorFail "bar")
+      parseErrorPretty pe `shouldBe` "1:1:\nbar\nfoo\n"
 
   describe "sourcePosStackPretty" $
     it "result never ends with a newline " $
