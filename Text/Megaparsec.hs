@@ -756,6 +756,8 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   -- | Similar to 'takeWhileP', but fails if it can't parse at least one
   -- token.
+  --
+  -- @since 6.0.0
 
   takeWhile1P
     :: Maybe String    -- ^ Name for a single token in the row
@@ -1227,6 +1229,8 @@ region f m = do
 {-# INLINEABLE region #-}
 
 -- | The same as 'takeWhileP', but discards the result.
+--
+-- @since 6.0.0
 
 skipWhileP :: MonadParsec e s m
   => Maybe String      -- ^ Name of a single token in the row
@@ -1236,6 +1240,8 @@ skipWhileP l f = void (takeWhileP l f)
 {-# INLINE skipWhileP #-}
 
 -- | The same as 'takeWhile1P', but discards the result.
+--
+-- @since 6.0.0
 
 skipWhile1P :: MonadParsec e s m
   => Maybe String      -- ^ Name of a single token in the row
