@@ -931,8 +931,11 @@ spec = do
             grs' eof s (`failsLeaving` s)
 
     describe "token" $ do
-      let f x = E.singleton (Tokens $ nes x)
-          testChar a x = if x == a then Right x else Left (f x, f a)
+      let f x = Tokens (nes x)
+          testChar a x =
+            if x == a
+              then Right x
+              else Left (pure (f x), E.singleton (f a))
       context "when supplied predicate is satisfied" $
         it "succeeds" $
           property $ \a as mtok -> do
@@ -947,7 +950,7 @@ spec = do
             let p :: MonadParsec Void String m => m Char
                 p = token (testChar b) mtok
                 s = a : as
-                us = E.singleton (Tokens $ nes a)
+                us = pure (Tokens $ nes a)
                 ps = E.singleton (Tokens $ nes b)
             grs  p s (`shouldFailWith` TrivialError posI us ps)
             grs' p s (`failsLeaving` s)
@@ -956,7 +959,7 @@ spec = do
           property $ \a mtok -> do
             let p :: MonadParsec Void String m => m Char
                 p = token (testChar a) mtok
-                us = E.singleton EndOfInput
+                us = pure EndOfInput
                 ps = maybe E.empty (E.singleton . Tokens . nes) mtok
             grs p "" (`shouldFailWith` TrivialError posI us ps)
 
@@ -1064,7 +1067,7 @@ spec = do
         property $ \item -> do
           let p :: MonadParsec Void String m => m ()
               p = void (unexpected item)
-          grs p "" (`shouldFailWith` TrivialError posI (E.singleton item) E.empty)
+          grs p "" (`shouldFailWith` TrivialError posI (pure item) E.empty)
 
     describe "match" $
       it "return consumed tokens along with the result" $
@@ -1090,7 +1093,7 @@ spec = do
                     FancyError   _ xs    -> fancyFailure   xs
                 f (TrivialError pos us ps) = FancyError
                   (max pos pos')
-                  (E.singleton . ErrorCustom $ E.size us + E.size ps)
+                  (E.singleton . ErrorCustom $ maybe 0 (const 1) us + E.size ps)
                 f (FancyError pos xs) = FancyError
                   (max pos pos')
                   (E.singleton . ErrorCustom $ E.size xs)
@@ -1098,7 +1101,7 @@ spec = do
                   (max (errorPos e) pos')
                   (E.singleton . ErrorCustom $
                     case e of
-                      TrivialError _ us ps -> E.size us + E.size ps
+                      TrivialError _ us ps -> maybe 0 (const 1) us + E.size ps
                       FancyError   _ xs    -> E.size xs )
                 finalPos = max (errorPos e) pos'
                 st = st' { statePos = errorPos e }
@@ -1641,11 +1644,11 @@ type CustomParser = Parsec Void [Span]
 pSpan :: Span -> CustomParser Span
 pSpan span = token testToken (Just span)
   where
-    f = E.singleton . Tokens . nes
+    f = Tokens . nes
     testToken x =
       if spanBody x == spanBody span
         then Right span
-        else Left (f x, f span)
+        else Left (pure (f x), E.singleton (f span))
 
 incCoincidence :: State [Span] -> [Span] -> Gen (State [Span])
 incCoincidence st ts = do

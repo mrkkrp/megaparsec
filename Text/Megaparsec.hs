@@ -381,7 +381,7 @@ instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
 
 pZero :: ParsecT e s m a
 pZero = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (TrivialError pos E.empty E.empty) s
+  eerr (TrivialError pos Nothing E.empty) s
 {-# INLINE pZero #-}
 
 pPlus :: (Ord e, Stream s)
@@ -567,7 +567,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- @since 6.0.0
 
   failure
-    :: Set (ErrorItem (Token s)) -- ^ Unexpected items
+    :: Maybe (ErrorItem (Token s)) -- ^ Unexpected item
     -> Set (ErrorItem (Token s)) -- ^ Expected items
     -> m a
 
@@ -696,11 +696,11 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- >         else Left (Set.singleton (Tokens (x:|[])), Set.empty)
 
   token
-    :: (Token s -> Either ( Set (ErrorItem (Token s))
+    :: (Token s -> Either ( Maybe (ErrorItem (Token s))
                           , Set (ErrorItem (Token s)) ) a)
        -- ^ Matching function for the token to parse, it allows to construct
-       -- arbitrary error message on failure as well; sets in the tuple are:
-       -- unexpected and expected items
+       -- arbitrary error message on failure as well; things in the tuple
+       -- are: unexpected item (if any) and expected items
     -> Maybe (Token s) -- ^ Token to report when input stream is empty
     -> m a
 
@@ -771,7 +771,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   updateParserState :: (State s -> State s) -> m ()
 
 instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
-  failure           = pTrivialFailure
+  failure           = pFailure
   fancyFailure      = pFancyFailure
   label             = pLabel
   try               = pTry
@@ -787,13 +787,13 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
-pTrivialFailure
-  :: Set (ErrorItem (Token s))
+pFailure
+  :: Maybe (ErrorItem (Token s))
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pTrivialFailure us ps = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
+pFailure us ps = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
   eerr (TrivialError pos us ps) s
-{-# INLINE pTrivialFailure #-}
+{-# INLINE pFailure #-}
 
 pFancyFailure
   :: Set (ErrorFancy e)
@@ -831,7 +831,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
-      unexpect u = TrivialError pos (E.singleton u) E.empty
+      unexpect u = TrivialError pos (pure u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
       eok' _ _ _ = eerr (unexpect what) s
@@ -874,21 +874,21 @@ pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let !apos = positionAt1 (Proxy :: Proxy s) pos x
-          us    = (E.singleton . Tokens . nes) x
+          us    = (pure . Tokens . nes) x
           ps    = E.singleton EndOfInput
       in eerr (TrivialError (apos:|z) us ps)
           (State input (apos:|z) tp w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
-  => (Token s -> Either ( Set (ErrorItem (Token s))
+  => (Token s -> Either ( Maybe (ErrorItem (Token s))
                         , Set (ErrorItem (Token s)) ) a)
   -> Maybe (Token s)
   -> ParsecT e s m a
 pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   case take1_ input of
     Nothing ->
-      let us = E.singleton EndOfInput
+      let us = pure EndOfInput
           ps = maybe E.empty (E.singleton . Tokens . nes) mtoken
       in eerr (TrivialError (pos:|z) us ps) s
     Just (c,cs) ->
@@ -910,7 +910,7 @@ pTokens :: forall e s m. Stream s
 pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       unexpect pos' u =
-        let us = E.singleton u
+        let us = pure u
             ps = (E.singleton . Tokens . NE.fromList . chunkToTokens pxy) tts
         in TrivialError pos' us ps
       len = chunkLength pxy tts
@@ -959,7 +959,7 @@ pTakeWhile1P ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ _ eerr ->
           Just l -> (Hints . pure . E.singleton) l
   in if chunkEmpty pxy ts
        then let !apos = positionAtN pxy pos ts
-                us    = E.singleton $
+                us    = pure $
                   case take1_ input of
                     Nothing -> EndOfInput
                     Just (t,_) -> Tokens (nes t)
@@ -1177,7 +1177,7 @@ infix 0 <?>
 -- > unexpected item = failure (Set.singleton item) Set.empty
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
-unexpected item = failure (E.singleton item) E.empty
+unexpected item = failure (pure item) E.empty
 {-# INLINE unexpected #-}
 
 -- | Return both the result of a parse and the list of tokens that were

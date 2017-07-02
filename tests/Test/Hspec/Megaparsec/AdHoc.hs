@@ -209,7 +209,7 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
   arbitrary = oneof
     [ TrivialError
       <$> (NE.fromList . getNonEmpty <$> arbitrary)
-      <*> (E.fromList <$> arbitrary)
+      <*> arbitrary
       <*> (E.fromList <$> arbitrary)
     , FancyError
       <$> (NE.fromList . getNonEmpty <$> arbitrary)

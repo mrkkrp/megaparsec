@@ -288,11 +288,11 @@ categoryName = \case
 char :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
 char c = token testChar (Just c)
   where
-    f x = E.singleton (Tokens (x:|[]))
+    f x = Tokens (x:|[])
     testChar x =
       if x == c
         then Right x
-        else Left (f x, f c)
+        else Left (pure (f x), E.singleton (f c))
 {-# INLINE char #-}
 
 -- | The same as 'char' but case-insensitive. This parser returns the
@@ -381,7 +381,7 @@ satisfy f = token testChar Nothing
     testChar x =
       if f x
         then Right x
-        else Left (E.singleton (Tokens (x:|[])), E.empty)
+        else Left (pure (Tokens (x:|[])), E.empty)
 {-# INLINE satisfy #-}
 
 ----------------------------------------------------------------------------

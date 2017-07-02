@@ -18,7 +18,7 @@
 * More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
   dependencies.
 
-* Added dependency `case-insensitive`.
+* Added dependency on `case-insensitive`.
 
 ### Source positions
 
@@ -64,7 +64,8 @@
 
 * Introduced the new `Text.Megaparsec.Stream` module that is the home of
   `Stream` type class. In version 6, the type class has been extended
-  significantly.
+  significantly to improve performance and make some combinators more
+  general.
 
 ### Combinators
 
