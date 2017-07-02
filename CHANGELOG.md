@@ -88,6 +88,10 @@
 * Added `space1` in `Text.Megaprasec.Char`. This parser is like `space` but
   requires at least one space character to be present to succeed.
 
+* Added new module `Text.Megaparsec.Byte`, which is similar to
+  `Text.Megaparsec.Char`, but target token type is `Word8` instead of
+  `Char`.
+
 ## Megaparsec 5.3.1
 
 * Various updates to the docs.

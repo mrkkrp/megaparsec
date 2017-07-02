@@ -15,8 +15,8 @@
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
 -- most everything that you may need, we advise to import
--- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char'
--- tokens.
+-- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char' tokens
+-- or "Text.Megaparsec.Byte" if you indend to parse binary data.
 --
 -- It is common to start working with the library by defining a type synonym
 -- like this:
