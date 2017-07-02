@@ -144,7 +144,7 @@ spec = do
              | col2 <= col1 -> prs p s `shouldFailWith`
                errFancy (posN (getIndent l2 + g 2) s) (ii GT col1 col2)
              | col3 == col2 -> prs p s `shouldFailWith`
-               err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> etoks sblc <> eeof)
+               err (posN (getIndent l3 + g 3) s) (utoks sblb <> etoks sblc <> eeof)
              | col3 <= col0 -> prs p s `shouldFailWith`
                err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> eeof)
              | col3 < col1 -> prs p s `shouldFailWith`

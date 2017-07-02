@@ -54,32 +54,13 @@ On the other hand `ParsecT` is an instance of many type classes as well. The
 most useful ones are `Monad`, `Applicative`, `Alternative`, and
 `MonadParsec`.
 
-The module
-[`Text.Megaparsec.Combinator`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Combinator.html) (its
-functions are included in `Text.Megaparsec`) contains traditional, general
-combinators that work with instances of `Applicative` and `Alternative`.
-
-Let's enumerate methods of the `MonadParsec` type class. The class abstracts
-primitive functions of Megaparsec parsing. The rest of the library is built
-via combination of these primitives:
+Megaparsec includes all functionality that is available in Parsec plus
+features some combinators that are missing in other parsing libraries:
 
 * `failure` allows to fail reporting a parse error with unexpected and
   expected items.
 
 * `fancyFailure` allows to fail reporting custom error messages.
-
-* `label` allows to add a “label” to a parser, so if it fails the user will
-  see the label instead of an automatically deduced expected token.
-
-* `hidden` hides a parser from error messages altogether. This is the
-  recommended way to hide things, prefer it to the `label ""` approach.
-
-* `try` enables backtracking in parsing.
-
-* `lookAhead` allows to parse input without consuming it.
-
-* `notFollowedBy` succeeds when its argument fails and does not consume
-  input.
 
 * `withRecovery` allows to recover from parse errors “on-the-fly” and
   continue parsing. Once parsing is finished, several parse errors may be
@@ -88,21 +69,21 @@ via combination of these primitives:
 * `observing` allows to “observe” parse errors without ending parsing (they
   are returned in `Left`, while normal results are wrapped in `Right`).
 
-* `eof` only succeeds at the end of input.
+In addition to that, Megaparsec 6 features high-performance combinators
+similar to those found in Attoparsec:
 
-* `token` is used to parse a single token.
+* `tokens` makes it easy to parse several tokens in a row. This is about 100
+  time faster than matching a string token by token. `string` and `string'`
+  are built on top of this combinator. `tokens` returns “chunk” of original
+  input, meaning that if you parse `Text`, it'll return `Text` without any
+  repacking.
 
-* `tokens` makes it easy to parse several tokens in a row.
+* `takeWhile` and `takeWhile1` are about 150 times faster than approaches
+  involving `many`, `manyTill` and other similar combinators.
 
-* `getParserState` returns the full parser state.
-
-* `updateParserState` applies a given function on the parser state.
-
-This list of core functions is longer than in some other libraries. Our goal
-is efficient, readable implementations, and rich functionality, not minimal
-number of primitive combinators. You can read the comprehensive description
-of every primitive function in
-[Megaparsec documentation](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Prim.html).
+So now that we have matched the main “performance boosters” of Attoparsec,
+Megaparsec 6 is not significantly slower than Attoparsec if you write your
+parser carefully.
 
 Megaparsec can currently work with the following types of input stream
 out-of-the-box:
@@ -120,14 +101,8 @@ Megaparsec 5 introduces well-typed error messages and the ability to use
 custom data types to adjust the library to specific domain of interest. No
 need to use a shapeless bunch of strings anymore.
 
-The default error component (`Dec`) has constructors corresponding to the
-`fail` function and indentation-related error messages. It is a decent
-option that should work out-of-box for most parsing needs, while you are
-free to use your own custom error component when necessary.
-
-This new design allowed Megaparsec 5 to have much more helpful error
-messages for indentation-sensitive parsing instead of the plain “incorrect
-indentation” phrase.
+The design of parse errors has been revised in version 6 significantly, but
+custom errors are still easy (probably even easier now).
 
 ### Alex and Happy support
 
@@ -136,6 +111,10 @@ Alex/Happy. Megaparsec 5 adds `updatePos` method to `Stream` type class that
 gives you full control over textual positions that are used to report token
 positions in error messages. You can update current position on per
 character basis or extract it from token.
+
+The design of the `Stream` type class has been changed significantly in
+version 6, but user can still work with custom streams of tokens without
+problems.
 
 ### Character parsing
 
@@ -248,6 +227,11 @@ So, if you work with something human-readable where size of input data is
 usually not huge, just go with Megaparsec, otherwise Attoparsec may be a
 better choice.
 
+Since version 6, Megaparsec features the same fast primitives that
+Attoparsec has, so in many cases the difference in speed is not that big.
+Megaparsec now aims to be “one size fits all” ultimate solution to parsing,
+so it can be used even to parse low-level binary formats.
+
 ### Megaparsec vs Parsec
 
 Since Megaparsec is a fork of Parsec, we are bound to list the main
@@ -288,7 +272,8 @@ differences between the two libraries:
   tag”, e.g. we could build a context stack like “in function definition
   foo”, “in expression x”, etc. This is not possible with Parsec.
 
-* Megaparsec is faster.
+* Megaparsec is faster and supports efficient operations on top of `tokens`,
+  `takeWhileP`, and `takeWhile1P` just like Attoparsec.
 
 * Megaparsec is ~~better~~ supported.
 

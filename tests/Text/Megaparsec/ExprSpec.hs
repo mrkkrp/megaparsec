@@ -32,9 +32,8 @@ spec =
     context "when term is missing" $
       it "signals correct parse error" $ do
         let p = expr <* eof
-            n = 1 :: Integer
-        prs p "-" `shouldFailWith` err (posN n "-") (ueof <> elabel "term")
-        prs p "(" `shouldFailWith` err (posN n "(") (ueof <> elabel "term")
+        prs p "-" `shouldFailWith` err (posN 1 "-") (ueof <> elabel "term")
+        prs p "(" `shouldFailWith` err (posN 1 "(") (ueof <> elabel "term")
         prs p "*" `shouldFailWith` err posI (utok '*' <> elabel "term")
     context "operator is missing" $
       it "signals correct parse error" $
@@ -123,16 +122,16 @@ arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
 -- Some helpers are put here since we don't want to depend on
 -- "Text.Megaparsec.Lexer".
 
-lexeme :: (MonadParsec e s m, Token s ~ Char) => m a -> m a
+lexeme :: Parser a -> Parser a
 lexeme p = p <* hidden space
 
-symbol :: (MonadParsec e s m, Token s ~ Char) => String -> m String
+symbol :: String -> Parser String
 symbol = lexeme . string
 
-parens :: (MonadParsec e s m, Token s ~ Char) => m a -> m a
+parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
+integer :: Parser Integer
 integer = lexeme (read <$> some digitChar <?> "integer")
 
 -- Here we use a table of operators that makes use of all features of
@@ -140,18 +139,19 @@ integer = lexeme (read <$> some digitChar <?> "integer")
 -- but valid expressions and render them to get their textual
 -- representation.
 
-expr :: (MonadParsec e s m, Token s ~ Char) => m Node
+expr :: Parser Node
 expr = makeExprParser term table
 
-term :: (MonadParsec e s m, Token s ~ Char) => m Node
+term :: Parser Node
 term = parens expr <|> (Val <$> integer) <?> "term"
 
-table :: (MonadParsec e s m, Token s ~ Char) => [[Operator m Node]]
-table = [ [ Prefix  (symbol "-" *> pure Neg)
-          , Postfix (symbol "!" *> pure Fac)
-          , InfixN  (symbol "%" *> pure Mod) ]
-        , [ InfixR  (symbol "^" *> pure Exp) ]
-        , [ InfixL  (symbol "*" *> pure Pro)
-          , InfixL  (symbol "/" *> pure Div) ]
-        , [ InfixL  (symbol "+" *> pure Sum)
-          , InfixL  (symbol "-" *> pure Sub)] ]
+table :: [[Operator Parser Node]]
+table =
+  [ [ Prefix  (symbol "-" *> pure Neg)
+    , Postfix (symbol "!" *> pure Fac)
+    , InfixN  (symbol "%" *> pure Mod) ]
+  , [ InfixR  (symbol "^" *> pure Exp) ]
+  , [ InfixL  (symbol "*" *> pure Pro)
+    , InfixL  (symbol "/" *> pure Div) ]
+  , [ InfixL  (symbol "+" *> pure Sum)
+    , InfixL  (symbol "-" *> pure Sub)] ]

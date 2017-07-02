@@ -11,10 +11,11 @@
 --
 -- Commonly used character parsers.
 
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
 
 module Text.Megaparsec.Char
   ( -- * Simple parsers
@@ -59,8 +60,11 @@ where
 
 import Control.Applicative
 import Data.Char
+import Data.Function (on)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Set as E
+import Data.Proxy
+import qualified Data.CaseInsensitive as CI
+import qualified Data.Set             as E
 
 import Text.Megaparsec
 
@@ -74,29 +78,29 @@ import Prelude hiding (any, elem, notElem)
 
 -- | Parse a newline character.
 
-newline :: (MonadParsec e s m, Token s ~ Char) => m Char
+newline :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 newline = char '\n'
 {-# INLINE newline #-}
 
 -- | Parse a carriage return character followed by a newline character.
 -- Return the sequence of characters parsed.
 
-crlf :: (MonadParsec e s m, Token s ~ Char) => m String
-crlf = string "\r\n"
+crlf :: forall e s m. (MonadParsec e s m, Token s ~ Char) => m (Tokens s)
+crlf = string (tokensToChunk (Proxy :: Proxy s) "\r\n")
 {-# INLINE crlf #-}
 
 -- | Parse a CRLF (see 'crlf') or LF (see 'newline') end of line. Return the
 -- sequence of characters parsed.
---
--- > eol = (pure <$> newline) <|> crlf <?> "end of line"
 
-eol :: (MonadParsec e s m, Token s ~ Char) => m String
-eol = (pure <$> newline) <|> crlf <?> "end of line"
+eol :: forall e s m. (MonadParsec e s m, Token s ~ Char) => m (Tokens s)
+eol = (tokenToChunk (Proxy :: Proxy s) <$> newline)
+  <|> crlf
+  <?> "end of line"
 {-# INLINE eol #-}
 
 -- | Parse a tab character.
 
-tab :: (MonadParsec e s m, Token s ~ Char) => m Char
+tab :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 tab = char '\t'
 {-# INLINE tab #-}
 
@@ -105,7 +109,7 @@ tab = char '\t'
 -- See also: 'skipMany' and 'spaceChar'.
 
 space :: (MonadParsec e s m, Token s ~ Char) => m ()
-space = skipMany spaceChar
+space = skipWhileP (Just "white space") isSpace
 {-# INLINE space #-}
 
 ----------------------------------------------------------------------------
@@ -114,14 +118,14 @@ space = skipMany spaceChar
 -- | Parse a control character (a non-printing character of the Latin-1
 -- subset of Unicode).
 
-controlChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+controlChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 controlChar = satisfy isControl <?> "control character"
 {-# INLINE controlChar #-}
 
 -- | Parse a Unicode space character, and the control characters: tab,
 -- newline, carriage return, form feed, and vertical tab.
 
-spaceChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+spaceChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 spaceChar = satisfy isSpace <?> "white space"
 {-# INLINE spaceChar #-}
 
@@ -129,20 +133,20 @@ spaceChar = satisfy isSpace <?> "white space"
 -- case is used by a small number of letter ligatures like the
 -- single-character form of Lj.
 
-upperChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+upperChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 upperChar = satisfy isUpper <?> "uppercase letter"
 {-# INLINE upperChar #-}
 
 -- | Parse a lower-case alphabetic Unicode character.
 
-lowerChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+lowerChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 lowerChar = satisfy isLower <?> "lowercase letter"
 {-# INLINE lowerChar #-}
 
 -- | Parse an alphabetic Unicode character: lower-case, upper-case, or
 -- title-case letter, or a letter of case-less scripts\/modifier letter.
 
-letterChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+letterChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 letterChar = satisfy isLetter <?> "letter"
 {-# INLINE letterChar #-}
 
@@ -152,88 +156,90 @@ letterChar = satisfy isLetter <?> "letter"
 -- parser but not by 'digitChar'. Such digits may be part of identifiers but
 -- are not used by the printer and reader to represent numbers.
 
-alphaNumChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+alphaNumChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 alphaNumChar = satisfy isAlphaNum <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
 -- | Parse a printable Unicode character: letter, number, mark, punctuation,
 -- symbol or space.
 
-printChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+printChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 printChar = satisfy isPrint <?> "printable character"
 {-# INLINE printChar #-}
 
 -- | Parse an ASCII digit, i.e between “0” and “9”.
 
-digitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+digitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 digitChar = satisfy isDigit <?> "digit"
 {-# INLINE digitChar #-}
 
 -- | Parse an octal digit, i.e. between “0” and “7”.
 
-octDigitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+octDigitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 octDigitChar = satisfy isOctDigit <?> "octal digit"
 {-# INLINE octDigitChar #-}
 
 -- | Parse a hexadecimal digit, i.e. between “0” and “9”, or “a” and “f”, or
 -- “A” and “F”.
 
-hexDigitChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+hexDigitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 hexDigitChar = satisfy isHexDigit <?> "hexadecimal digit"
 {-# INLINE hexDigitChar #-}
 
 -- | Parse a Unicode mark character (accents and the like), which combines
 -- with preceding characters.
 
-markChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+markChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 markChar = satisfy isMark <?> "mark character"
 {-# INLINE markChar #-}
 
 -- | Parse a Unicode numeric character, including digits from various
 -- scripts, Roman numerals, etc.
 
-numberChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+numberChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 numberChar = satisfy isNumber <?> "numeric character"
 {-# INLINE numberChar #-}
 
 -- | Parse a Unicode punctuation character, including various kinds of
 -- connectors, brackets and quotes.
 
-punctuationChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+punctuationChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 punctuationChar = satisfy isPunctuation <?> "punctuation"
 {-# INLINE punctuationChar #-}
 
 -- | Parse a Unicode symbol characters, including mathematical and currency
 -- symbols.
 
-symbolChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+symbolChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 symbolChar = satisfy isSymbol <?> "symbol"
 {-# INLINE symbolChar #-}
 
 -- | Parse a Unicode space and separator characters.
 
-separatorChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+separatorChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 separatorChar = satisfy isSeparator <?> "separator"
 {-# INLINE separatorChar #-}
 
 -- | Parse a character from the first 128 characters of the Unicode
 -- character set, corresponding to the ASCII character set.
 
-asciiChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+asciiChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 asciiChar = satisfy isAscii <?> "ASCII character"
 {-# INLINE asciiChar #-}
 
 -- | Parse a character from the first 256 characters of the Unicode
 -- character set, corresponding to the ISO 8859-1 (Latin-1) character set.
 
-latin1Char :: (MonadParsec e s m, Token s ~ Char) => m Char
+latin1Char :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 latin1Char = satisfy isLatin1 <?> "Latin-1 character"
 {-# INLINE latin1Char #-}
 
 -- | @'charCategory' cat@ parses character in Unicode General Category
 -- @cat@, see 'Data.Char.GeneralCategory'.
 
-charCategory :: (MonadParsec e s m, Token s ~ Char) => GeneralCategory -> m Char
+charCategory :: (MonadParsec e s m, Token s ~ Char)
+  => GeneralCategory
+  -> m (Token s)
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 {-# INLINE charCategory #-}
 
@@ -279,14 +285,14 @@ categoryName = \case
 --
 -- > semicolon = char ';'
 
-char :: (MonadParsec e s m, Token s ~ Char) => Char -> m Char
+char :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
 char c = token testChar (Just c)
   where
-    f x = E.singleton (Tokens (x:|[]))
+    f x = Tokens (x:|[])
     testChar x =
       if x == c
         then Right x
-        else Left (f x, f c)
+        else Left (pure (f x), E.singleton (f c))
 {-# INLINE char #-}
 
 -- | The same as 'char' but case-insensitive. This parser returns the
@@ -299,7 +305,7 @@ char c = token testChar (Just c)
 -- unexpected 'G'
 -- expecting 'E' or 'e'
 
-char' :: (MonadParsec e s m, Token s ~ Char) => Char -> m Char
+char' :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
 char' c = choice [char c, char $ swapCase c]
   where
     swapCase x
@@ -310,7 +316,7 @@ char' c = choice [char c, char $ swapCase c]
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
-anyChar :: (MonadParsec e s m, Token s ~ Char) => m Char
+anyChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
 
@@ -324,7 +330,8 @@ anyChar = satisfy (const True) <?> "character"
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
 
-oneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
+oneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+  => f (Token s) -> m (Token s)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
@@ -333,7 +340,9 @@ oneOf cs = satisfy (`elem` cs)
 --
 -- > vowel = oneOf' "aeiou" <?> "vowel"
 
-oneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
+oneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+  => f (Token s)
+  -> m (Token s)
 oneOf' cs = satisfy (`elemi` cs)
 {-# INLINE oneOf' #-}
 
@@ -341,7 +350,9 @@ oneOf' cs = satisfy (`elemi` cs)
 -- /not/ in the supplied list of characters @cs@. Returns the parsed
 -- character.
 
-noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
+noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+  => f (Token s)
+  -> m (Token s)
 noneOf cs = satisfy (`notElem` cs)
 {-# INLINE noneOf #-}
 
@@ -349,7 +360,9 @@ noneOf cs = satisfy (`notElem` cs)
 --
 -- > consonant = noneOf' "aeiou" <?> "consonant"
 
-noneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char) => f Char -> m Char
+noneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+  => f (Token s)
+  -> m (Token s)
 noneOf' cs = satisfy (`notElemi` cs)
 {-# INLINE noneOf' #-}
 
@@ -360,13 +373,15 @@ noneOf' cs = satisfy (`notElemi` cs)
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
 
-satisfy :: (MonadParsec e s m, Token s ~ Char) => (Char -> Bool) -> m Char
+satisfy :: (MonadParsec e s m, Token s ~ Char)
+  => (Token s -> Bool) -- ^ Predicate to apply
+  -> m (Token s)
 satisfy f = token testChar Nothing
   where
     testChar x =
       if f x
         then Right x
-        else Left (E.singleton (Tokens (x:|[])), E.empty)
+        else Left (pure (Tokens (x:|[])), E.empty)
 {-# INLINE satisfy #-}
 
 ----------------------------------------------------------------------------
@@ -377,7 +392,9 @@ satisfy f = token testChar Nothing
 --
 -- > divOrMod = string "div" <|> string "mod"
 
-string :: (MonadParsec e s m, Token s ~ Char) => String -> m String
+string :: MonadParsec e s m
+  => Tokens s
+  -> m (Tokens s)
 string = tokens (==)
 {-# INLINE string #-}
 
@@ -387,8 +404,10 @@ string = tokens (==)
 -- >>> parseTest (string' "foobar") "foObAr"
 -- "foObAr"
 
-string' :: (MonadParsec e s m, Token s ~ Char) => String -> m String
-string' = tokens casei
+string' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
+  => Tokens s
+  -> m (Tokens s)
+string' = tokens ((==) `on` CI.mk)
 {-# INLINE string' #-}
 
 ----------------------------------------------------------------------------

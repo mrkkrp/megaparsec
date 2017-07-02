@@ -11,6 +11,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Error
+import Text.Megaparsec.Error.Builder
 import Text.Megaparsec.Pos
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
@@ -54,10 +55,14 @@ spec = do
       property $ \x y ->
         errorPos (x <> y :: PE) === max (errorPos x) (errorPos y)
     context "when combining two trivial parse errors at the same position" $
-      it "merges their unexpected and expected items" $
+      it "merges their unexpected and expected items" $ do
+        let n Nothing  Nothing = Nothing
+            n (Just x) Nothing = Just x
+            n Nothing (Just y) = Just y
+            n (Just x) (Just y) = Just (max x y)
         property $ \pos us0 ps0 us1 ps1 ->
           TrivialError pos us0 ps0 <> TrivialError pos us1 ps1 `shouldBe`
-            (TrivialError pos (E.union us0 us1) (E.union ps0 ps1) :: PE)
+            (TrivialError pos (n us0 us1) (E.union ps0 ps1) :: PE)
     context "when combining two fancy parse errors at the same position" $
       it "merges their custom items" $
         property $ \pos xs0 xs1 ->
@@ -178,7 +183,7 @@ spec = do
       property (contains errorPos sourcePosPretty)
     it "result contains representation of unexpected items" $ do
       let f (TrivialError _ us _) = us
-          f _                     = E.empty
+          f _                     = Nothing
       property (contains f showErrorComponent)
     it "result contains representation of expected items" $ do
       let f (TrivialError _ _ ps) = ps
@@ -188,6 +193,11 @@ spec = do
       let f (FancyError _ xs) = xs
           f _                 = E.empty
       property (contains f showErrorComponent)
+    it "several fancy errors look not so bad" $ do
+      let pe :: PE
+          pe = errFancy posI $
+            mempty <> fancy (ErrorFail "foo") <> fancy (ErrorFail "bar")
+      parseErrorPretty pe `shouldBe` "1:1:\nbar\nfoo\n"
 
   describe "sourcePosStackPretty" $
     it "result never ends with a newline " $
@@ -196,8 +206,12 @@ spec = do
         in sourcePosStackPretty pos `shouldNotSatisfy` ("\n" `isSuffixOf`)
 
   describe "parseErrorTextPretty" $ do
-    it "shows unknown ParseError correctly" $
-      parseErrorTextPretty (mempty :: PE) `shouldBe` "unknown parse error\n"
+    it "shows trivial unknown ParseError correctly" $
+      parseErrorTextPretty (mempty :: PE)
+        `shouldBe` "unknown parse error\n"
+    it "shows fancy unknown ParseError correctly" $
+      parseErrorTextPretty (FancyError posI E.empty :: PE)
+        `shouldBe` "unknown fancy parse error\n"
     it "result always ends with a newline" $
       property $ \x ->
         parseErrorTextPretty (x :: PE)

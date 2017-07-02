@@ -59,7 +59,8 @@ import Data.Char (readLitChar)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
 import Data.Scientific (Scientific, toRealFloat)
-import qualified Data.Set as E
+import qualified Data.CaseInsensitive as CI
+import qualified Data.Set             as E
 
 import Text.Megaparsec
 import qualified Text.Megaparsec.Char as C
@@ -129,17 +130,17 @@ lexeme spc p = p <* spc
 
 symbol :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume white space after lexeme
-  -> String            -- ^ String to parse
-  -> m String
+  -> Tokens s          -- ^ String to parse
+  -> m (Tokens s)
 symbol spc = lexeme spc . C.string
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: (MonadParsec e s m, Token s ~ Char)
+symbol' :: (MonadParsec e s m, Token s ~ Char, CI.FoldCase (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
-  -> String            -- ^ String to parse (case-insensitive)
-  -> m String
+  -> Tokens s          -- ^ String to parse (case-insensitive)
+  -> m (Tokens s)
 symbol' spc = lexeme spc . C.string'
 
 -- | Given comment prefix this function returns a parser that skips line
@@ -148,22 +149,22 @@ symbol' spc = lexeme spc . C.string'
 -- 'space' parser or picked up manually.
 
 skipLineComment :: (MonadParsec e s m, Token s ~ Char)
-  => String            -- ^ Line comment prefix
+  => Tokens s          -- ^ Line comment prefix
   -> m ()
-skipLineComment prefix = p >> void (manyTill C.anyChar n)
-  where p = C.string prefix
-        n = lookAhead (void C.newline) <|> eof
+skipLineComment prefix =
+  C.string prefix *> skipWhileP (Just "character") (/= '\n')
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
 skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
-  => String            -- ^ Start of block comment
-  -> String            -- ^ End of block comment
+  => Tokens s          -- ^ Start of block comment
+  -> Tokens s          -- ^ End of block comment
   -> m ()
 skipBlockComment start end = p >> void (manyTill C.anyChar n)
-  where p = C.string start
-        n = C.string end
+  where
+    p = C.string start
+    n = C.string end
 
 -- | @skipBlockCommentNested start end@ skips possibly nested block comment
 -- starting with @start@ and ending with @end@.
@@ -171,13 +172,14 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
 -- @since 5.0.0
 
 skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
-  => String            -- ^ Start of block comment
-  -> String            -- ^ End of block comment
+  => Tokens s          -- ^ Start of block comment
+  -> Tokens s          -- ^ End of block comment
   -> m ()
 skipBlockCommentNested start end = p >> void (manyTill e n)
-  where e = skipBlockCommentNested start end <|> void C.anyChar
-        p = C.string start
-        n = C.string end
+  where
+    e = skipBlockCommentNested start end <|> void C.anyChar
+    p = C.string start
+    n = C.string end
 
 ----------------------------------------------------------------------------
 -- Indentation
@@ -359,14 +361,6 @@ lineFold sc action =
 -- string literals:
 --
 -- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
---
--- If you want to write @stringLiteral@ that adheres to the Haskell report
--- though, you'll need to take care of the @\\&@ combination which is not a
--- character, but can be used to separate characters (as in @\"\\291\\&4\"@
--- which is two characters long):
---
--- > stringLiteral = catMaybes <$> (char '"' >> manyTill ch (char '"'))
--- >   where ch = (Just <$> L.charLiteral) <|> (Nothing <$ string "\\&")
 
 charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do

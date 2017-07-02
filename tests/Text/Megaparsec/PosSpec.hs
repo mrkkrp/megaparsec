@@ -5,18 +5,18 @@ import Data.Function (on)
 import Data.List (isInfixOf)
 import Data.Semigroup ((<>))
 import Test.Hspec
-import Test.Hspec.Megaparsec.AdHoc
+import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Pos
-import Text.Megaparsec.Stream (defaultUpdatePos)
 
 spec :: Spec
 spec = do
 
   describe "mkPos" $ do
-    context "when the argument is 0" $
+    context "when the argument is a non-positive number" $
       it "throws InvalidPosException" $
-        evaluate (mkPos 0) `shouldThrow` (== InvalidPosException)
+        property $ \n -> n <= 0 ==>
+          evaluate (mkPos n) `shouldThrow` (== InvalidPosException n)
     context "when the argument is not 0" $
       it "returns Pos with the given value" $
         property $ \n ->
@@ -61,28 +61,3 @@ spec = do
     it "displays column number" $
       property $ \x ->
         (show . unPos . sourceColumn) x `isInfixOf` sourcePosPretty x
-
-  describe "defaultUpdatePos" $ do
-    it "returns actual position unchanged" $
-      property $ \w pos ch ->
-        fst (defaultUpdatePos w pos ch) === pos
-    it "does not change file name" $
-      property $ \w pos ch ->
-        (sourceName . snd) (defaultUpdatePos w pos ch) === sourceName pos
-    context "when given newline character" $
-      it "increments line number" $
-        property $ \w pos ->
-          (sourceLine . snd) (defaultUpdatePos w pos '\n')
-            === (sourceLine pos <> pos1)
-    context "when given tab character" $
-      it "shits column number to next tab position" $
-        property $ \w pos ->
-          let c  = sourceColumn pos
-              c' = (sourceColumn . snd) (defaultUpdatePos w pos '\t')
-          in c' > c .&&. (((unPos c' - 1) `rem` unPos w) == 0)
-    context "when given character other than newline or tab" $
-      it "increments column number by one" $
-        property $ \w pos ch ->
-          (ch /= '\n' && ch /= '\t') ==>
-          (sourceColumn . snd) (defaultUpdatePos w pos ch)
-            === (sourceColumn pos <> pos1)

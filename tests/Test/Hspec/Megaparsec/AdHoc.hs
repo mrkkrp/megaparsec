@@ -23,8 +23,8 @@ where
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
-import Data.Foldable (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Proxy
 import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -36,8 +36,12 @@ import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
+import qualified Data.ByteString             as B
+import qualified Data.ByteString.Lazy        as BL
 import qualified Data.List.NonEmpty          as NE
 import qualified Data.Set                    as E
+import qualified Data.Text                   as T
+import qualified Data.Text.Lazy              as TL
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
@@ -138,8 +142,7 @@ updatePosString
   -> SourcePos         -- ^ Initial position
   -> String            -- ^ 'String' — collection of tokens to process
   -> SourcePos         -- ^ Final position
-updatePosString w = foldl' f
-  where f p t = snd (defaultUpdatePos w p t)
+updatePosString = advanceN (Proxy :: Proxy String)
 
 -- | Make a singleton non-empty list from a value.
 
@@ -206,7 +209,7 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
   arbitrary = oneof
     [ TrivialError
       <$> (NE.fromList . getNonEmpty <$> arbitrary)
-      <*> (E.fromList <$> arbitrary)
+      <*> arbitrary
       <*> (E.fromList <$> arbitrary)
     , FancyError
       <$> (NE.fromList . getNonEmpty <$> arbitrary)
@@ -218,3 +221,15 @@ instance Arbitrary a => Arbitrary (State a) where
     <*> (NE.fromList . getNonEmpty <$> arbitrary)
     <*> choose (1, 10000)
     <*> (mkPos <$> choose (1, 20))
+
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+instance Arbitrary TL.Text where
+  arbitrary = TL.pack <$> arbitrary
+
+instance Arbitrary B.ByteString where
+  arbitrary = B.pack <$> arbitrary
+
+instance Arbitrary BL.ByteString where
+  arbitrary = BL.pack <$> arbitrary

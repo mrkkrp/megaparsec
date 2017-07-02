@@ -48,8 +48,7 @@ spec = do
       it "signals correct parse error" $
         property $ \ch -> ch /= '\n' ==> do
           let s = ['\r',ch]
-          prs eol s `shouldFailWith` err posI
-            (utoks s <> utok '\r' <> elabel "end of line")
+          prs eol s `shouldFailWith` err posI (utoks s <> elabel "end of line")
     context "when input stream is '\\r'" $
       it "signals correct parse error" $
         prs eol "\r" `shouldFailWith` err posI
@@ -59,7 +58,7 @@ spec = do
         property $ \ch s -> (ch `notElem` "\r\n") ==> do
           let s' = ch : s
           prs eol s' `shouldFailWith` err posI
-            (utok ch <> elabel "end of line")
+            (utoks (take 2 s') <> elabel "end of line")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs eol "" `shouldFailWith` err posI
@@ -317,9 +316,9 @@ spec = do
     context "when stream is not prefixed with given string" $
       it "signals correct parse error" $
         property $ \str s -> not (str `isPrefixOf` s) ==> do
-          let n = length (takeWhile (uncurry (==)) (zip str s)) + 1
-              common = take n s
-          prs  (string str) s `shouldFailWith` err posI (utoks common <> etoks str)
+          let us = take (length str) s
+          prs (string str) s `shouldFailWith`
+            err posI (utoks us <> etoks str)
 
   describe "string'" $ do
     context "when stream is prefixed with given string" $
@@ -332,9 +331,9 @@ spec = do
     context "when stream is not prefixed with given string" $
       it "signals correct parse error" $
         property $ \str s -> not (str `isPrefixOfI` s) ==> do
-          let n = length (takeWhile (uncurry casei) (zip str s)) + 1
-              common = take n s
-          prs  (string' str) s `shouldFailWith` err posI (utoks common <> etoks str)
+          let us = take (length str) s
+          prs  (string' str) s `shouldFailWith`
+            err posI (utoks us <> etoks str)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -351,7 +350,8 @@ checkStrLit name ts p = do
     it "signals correct parse error" $
       property $ \ch s -> ch /= head ts ==> do
        let s' = ch : s
-       prs  p s' `shouldFailWith` err posI (utok ch <> etoks ts)
+           us = take (length ts) s'
+       prs  p s' `shouldFailWith` err posI (utoks us <> etoks ts)
        prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $

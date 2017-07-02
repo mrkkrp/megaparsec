@@ -1,15 +1,20 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
 import Control.DeepSeq
 import Control.Monad
+import Data.Semigroup ((<>))
+import Data.Text (Text)
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Weigh
+import qualified Data.Text as T
 
 -- | The type of parser that consumes 'String's.
 
-type Parser = Parsec Void String
+type Parser = Parsec Void Text
 
 main :: IO ()
 main = mainWith $ do
@@ -18,7 +23,7 @@ main = mainWith $ do
   bparser "string'"  manyAs (string' . fst)
   bparser "many"     manyAs (const $ many (char 'a'))
   bparser "some"     manyAs (const $ some (char 'a'))
-  bparser "choice"   (const "b") (choice . fmap char . manyAsB . snd)
+  bparser "choice"   (const "b") (choice . fmap char . manyAsB' . snd)
   bparser "count"    manyAs (\(_,n) -> count n (char 'a'))
   bparser "count'"   manyAs (\(_,n) -> count' 1 n (char 'a'))
   bparser "endBy"    manyAbs' (const $ endBy (char 'a') (char 'b'))
@@ -33,13 +38,15 @@ main = mainWith $ do
   bparser "skipSome" manyAs (const $ skipSome (char 'a'))
   bparser "skipManyTill" manyAsB (const $ skipManyTill (char 'a') (char 'b'))
   bparser "skipSomeTill" manyAsB (const $ skipSomeTill (char 'a') (char 'b'))
+  bparser "takeWhileP" manyAs (const $ takeWhileP Nothing (== 'a'))
+  bparser "takeWhile1P" manyAs (const $ takeWhile1P Nothing (== 'a'))
 
 -- | Perform a series of measurements with the same parser.
 
 bparser :: NFData a
   => String            -- ^ Name of the benchmark group
-  -> (Int -> String)   -- ^ How to construct input
-  -> ((String, Int) -> Parser a) -- ^ The parser receiving its future input
+  -> (Int -> Text)     -- ^ How to construct input
+  -> ((Text, Int) -> Parser a) -- ^ The parser receiving its future input
   -> Weigh ()
 bparser name f p = forM_ stdSeries $ \i -> do
   let arg      = (f i,i)
@@ -56,20 +63,25 @@ stdSeries = [500,1000,2000,4000]
 
 -- | Generate that many \'a\' characters.
 
-manyAs :: Int -> String
-manyAs n = replicate n 'a'
+manyAs :: Int -> Text
+manyAs n = T.replicate n "a"
 
 -- | Like 'manyAs', but interspersed with \'b\'s.
 
-manyAbs :: Int -> String
-manyAbs n = take (if even n then n + 1 else n) (cycle "ab")
+manyAbs :: Int -> Text
+manyAbs n = T.take (if even n then n + 1 else n) (T.replicate n "ab")
 
 -- | Like 'manyAs', but with a \'b\' added to the end.
 
-manyAsB :: Int -> String
-manyAsB n = replicate n 'a' ++ "b"
+manyAsB :: Int -> Text
+manyAsB n = manyAs n <> "b"
+
+-- | Like 'manyAsB', but returns a 'String'.
+
+manyAsB' :: Int -> String
+manyAsB' n = replicate n 'a' ++ "b"
 
 -- | Like 'manyAbs', but ends in a \'b\'.
 
-manyAbs' :: Int -> String
-manyAbs' n = take (if even n then n else n + 1) (cycle "ab")
+manyAbs' :: Int -> Text
+manyAbs' n = T.take (if even n then n else n + 1) (T.replicate n "ab")

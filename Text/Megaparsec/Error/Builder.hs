@@ -13,7 +13,7 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -53,19 +53,28 @@ import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative
+#endif
+
 ----------------------------------------------------------------------------
 -- Data types
 
 -- | Auxiliary type for construction of trivial parse errors.
 
-data ET t = ET (Set (ErrorItem t)) (Set (ErrorItem t))
+data ET t = ET (Maybe (ErrorItem t)) (Set (ErrorItem t))
   deriving (Eq, Ord, Data, Typeable, Generic)
 
 instance Ord t => Semigroup (ET t) where
-  ET us0 ps0 <> ET us1 ps1 = ET (E.union us0 us1) (E.union ps0 ps1)
+  ET us0 ps0 <> ET us1 ps1 = ET (n us0 us1) (E.union ps0 ps1)
+    where
+      n Nothing  Nothing = Nothing
+      n (Just x) Nothing = Just x
+      n Nothing (Just y) = Just y
+      n (Just x) (Just y) = Just (max x y)
 
 instance Ord t => Monoid (ET t) where
-  mempty  = ET E.empty E.empty
+  mempty  = ET Nothing E.empty
   mappend = (<>)
 
 -- | Auxiliary type for construction of fancy parse errors.
@@ -113,20 +122,15 @@ posI = initialPos "" :| []
 -- | @posN n s@ returns source position achieved by applying 'updatePos'
 -- method corresponding to type of stream @s@ @n@ times.
 
-posN :: forall s n. (Stream s, Integral n)
-  => n
+posN :: forall s. Stream s
+  => Int
   -> s
   -> NonEmpty SourcePos
-posN n see = f (initialPos "") see n :| []
-  where
-    f p s !i =
-      if i > 0
-        then case uncons s of
-          Nothing -> p
-          Just (t,s') ->
-            let p' = snd $ updatePos (Proxy :: Proxy s) defaultTabWidth p t
-            in f p' s' (i - 1)
-        else p
+posN n s =
+  case takeN_ n s of
+    Nothing -> posI
+    Just (ts, _) ->
+      advanceN (Proxy :: Proxy s) defaultTabWidth (initialPos "") ts :| []
 
 ----------------------------------------------------------------------------
 -- Error components
@@ -195,12 +199,12 @@ canonicalizeTokens ts =
 -- | Lift an unexpected item into 'ET'.
 
 unexp :: ErrorItem t -> ET t
-unexp u = ET (E.singleton u) E.empty
+unexp u = ET (pure u) E.empty
 
 -- | Lift an expected item into 'ET'.
 
 expe :: ErrorItem t -> ET t
-expe p = ET E.empty (E.singleton p)
+expe p = ET Nothing (E.singleton p)
 
 -- | Make a singleton non-empty list from a value.
 
