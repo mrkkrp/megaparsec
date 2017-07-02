@@ -48,6 +48,7 @@ module Text.Megaparsec.Char
   , char
   , char'
   , anyChar
+  , notChar
   , oneOf
   , noneOf
   , satisfy
@@ -317,6 +318,15 @@ char' c = choice [char c, char (swapCase c)]
 anyChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
+
+-- | Match any character but the given one. It's a good idea to attach a
+-- 'label' to this parser manually.
+--
+-- @since 6.0.0
+
+notChar :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
+notChar c = satisfy (/= c)
+{-# INLINE notChar #-}
 
 -- | @'oneOf' cs@ succeeds if the current character is in the supplied
 -- collection of characters @cs@. Returns the parsed character. Note that

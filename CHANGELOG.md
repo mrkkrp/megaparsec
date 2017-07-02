@@ -83,6 +83,8 @@
 * Dropped `oneOf'` and `noneOf'` from `Text.Megaparsec.Char`. These were
   seldom (if ever) used and are easily re-implemented.
 
+* Added `notChar` in `Text.Megaparsec.Char`.
+
 ## Megaparsec 5.3.1
 
 * Various updates to the docs.

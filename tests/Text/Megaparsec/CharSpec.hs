@@ -220,6 +220,24 @@ spec = do
       it "signals correct parse error" $
         prs anyChar "" `shouldFailWith` err posI (ueof <> elabel "character")
 
+  describe "notChar" $ do
+    context "when stream begins with the character specified as argument" $
+      it "signals correct parse error" $
+        property $ \ch s' -> do
+          let p = notChar ch
+              s = ch : s'
+          prs p s `shouldFailWith` err posI (utok ch)
+          prs' p s `failsLeaving` s
+    context "when stream does not begin with the character specified as argument" $
+      it "parses first character in the stream" $
+        property $ \ch s -> not (null s) && ch /= head s ==> do
+          let p = notChar ch
+          prs  p s `shouldParse` head s
+          prs' p s `succeedsLeaving` tail s
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (notChar 'a') "" `shouldFailWith` err posI ueof
+
   describe "oneOf" $ do
     context "when stream begins with one of specified characters" $
       it "parses the character" $
