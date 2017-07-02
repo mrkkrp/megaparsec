@@ -131,7 +131,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: (MonadParsec e s m, Token s ~ Char)
+symbol :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ String to parse
   -> m (Tokens s)
@@ -140,7 +140,7 @@ symbol spc = lexeme spc . C.string
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: (MonadParsec e s m, Token s ~ Char, CI.FoldCase (Tokens s))
+symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ String to parse (case-insensitive)
   -> m (Tokens s)
