@@ -18,7 +18,7 @@
 * More lightweight dependency tree, dropped `exceptions` and `QuickCheck`
   dependencies.
 
-* Added dependency on `case-insensitive`.
+* Added dependency `case-insensitive`.
 
 ### Source positions
 

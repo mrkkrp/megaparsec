@@ -12,6 +12,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Error
+import Text.Megaparsec.Error.Builder (posI)
 import Text.Megaparsec.Pos
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
@@ -197,8 +198,12 @@ spec = do
         in sourcePosStackPretty pos `shouldNotSatisfy` ("\n" `isSuffixOf`)
 
   describe "parseErrorTextPretty" $ do
-    it "shows unknown ParseError correctly" $
-      parseErrorTextPretty (mempty :: PE) `shouldBe` "unknown parse error\n"
+    it "shows trivial unknown ParseError correctly" $
+      parseErrorTextPretty (mempty :: PE)
+        `shouldBe` "unknown parse error\n"
+    it "shows fancy unknown ParseError correctly" $
+      parseErrorTextPretty (FancyError posI E.empty :: PE)
+        `shouldBe` "unknown fancy parse error\n"
     it "result always ends with a newline" $
       property $ \x ->
         parseErrorTextPretty (x :: PE)

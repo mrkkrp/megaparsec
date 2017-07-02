@@ -285,7 +285,7 @@ parseErrorTextPretty (TrivialError _ us ps) =
          messageItemsPretty "expecting "  ps
 parseErrorTextPretty (FancyError _ xs) =
   if E.null xs
-    then "unknown parse error\n"
+    then "unknown fancy parse error\n"
     else unlines (showErrorComponent <$> E.toAscList xs)
 
 ----------------------------------------------------------------------------

@@ -15,7 +15,7 @@ import Control.Monad.Cont
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader
-import Data.Char (toUpper)
+import Data.Char (toUpper, isLetter)
 import Data.Foldable (asum, concat)
 import Data.Function (on)
 import Data.List (isPrefixOf)
@@ -122,6 +122,34 @@ spec = do
              | otherwise -> runParser' p st `shouldBe`
                ( st { statePos = apos }
                , Left (err apos $ utoks (take tl stateInput) <> etoks ts) )
+
+    describe "takeWhileP" $
+      it "updates position in stream correctly" $
+        property $ \st@State {..} -> do
+          let p = takeWhileP Nothing (const True) :: CustomParser [Span]
+              st' = st
+                { stateInput = []
+                , statePos   =
+                    case stateInput of
+                      [] -> statePos
+                      xs -> let _:|z = statePos in spanEnd (last xs) :| z
+                , stateTokensProcessed =
+                    stateTokensProcessed + length stateInput }
+          runParser' p st `shouldBe` (st', Right stateInput)
+
+    describe "takeWhile1P" $
+      it "updates position in stream correctly" $
+        property $ \st@State {..} -> not (null stateInput) ==> do
+          let p = takeWhile1P Nothing (const True) :: CustomParser [Span]
+              st' = st
+                { stateInput = []
+                , statePos   =
+                    case stateInput of
+                      [] -> statePos
+                      xs -> let _:|z = statePos in spanEnd (last xs) :| z
+                , stateTokensProcessed =
+                    stateTokensProcessed + length stateInput }
+          runParser' p st `shouldBe` (st', Right stateInput)
 
     describe "getNextTokenPosition" $ do
       context "when input stream is empty" $
@@ -480,51 +508,6 @@ spec = do
           runExcept (runParserT p "" "") `shouldBe` Right (Right $ a + b)
 
   describe "primitive combinators" $ do
-
-    describe "unexpected" $
-      it "signals correct parse error" $
-        property $ \item -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (unexpected item)
-          grs p "" (`shouldFailWith` TrivialError posI (E.singleton item) E.empty)
-
-    describe "match" $
-      it "return consumed tokens along with the result" $
-        property $ \str -> do
-          let p  = match (string str)
-          prs  p str `shouldParse`     (str,str)
-          prs' p str `succeedsLeaving` ""
-
-    describe "region" $ do
-      context "when inner parser succeeds" $
-        it "has no effect" $
-          property $ \st e n -> do
-            let p :: Parser Int
-                p = region (const e) (pure n)
-            runParser' p st `shouldBe` (st, Right (n :: Int))
-      context "when inner parser fails" $
-        it "the given function is used on the parse error" $
-          property $ \st' e pos' -> do
-            let p :: Parsec Int String Int
-                p = region f $
-                  case e of
-                    TrivialError _ us ps -> failure us ps
-                    FancyError   _ xs    -> fancyFailure   xs
-                f (TrivialError pos us ps) = FancyError
-                  (max pos pos')
-                  (E.singleton . ErrorCustom $ E.size us + E.size ps)
-                f (FancyError pos xs) = FancyError
-                  (max pos pos')
-                  (E.singleton . ErrorCustom $ E.size xs)
-                r = FancyError
-                  (max (errorPos e) pos')
-                  (E.singleton . ErrorCustom $
-                    case e of
-                      TrivialError _ us ps -> E.size us + E.size ps
-                      FancyError   _ xs    -> E.size xs )
-                finalPos = max (errorPos e) pos'
-                st = st' { statePos = errorPos e }
-            runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
 
     describe "failure" $
       it "signals correct parse error" $
@@ -994,6 +977,172 @@ spec = do
                 z = take (length str) s
             grs  p s (`shouldFailWith` err posI (utoks z <> etoks str))
             grs' p s (`failsLeaving` s)
+
+    describe "takeWhileP" $ do
+      context "when stream is not empty" $
+        it "consumes all matching tokens, zero or more" $
+          property $ \s -> not (null s) ==> do
+            let p :: MonadParsec Void String m => m String
+                p = takeWhileP Nothing isLetter
+                (z,zs) = DL.span isLetter s
+            grs  p s (`shouldParse` z)
+            grs' p s (`succeedsLeaving` zs)
+      context "when stream is empty" $
+        it "succeeds returning empty chunk" $ do
+          let p :: MonadParsec Void String m => m String
+              p = takeWhileP Nothing isLetter
+          grs  p "" (`shouldParse` "")
+          grs' p "" (`succeedsLeaving` "")
+      context "with two takeWhileP in a row (testing hints)" $ do
+        let p :: MonadParsec Void String m => m String
+            p = do
+              void $ takeWhileP (Just "foo") (== 'a')
+              void $ takeWhileP (Just "bar") (== 'b')
+              empty
+        context "when the second one does not consume" $
+          it "hints are combined properly" $ do
+            let s = "aaa"
+                pe = err (posN 3 s) (elabel "foo" <> elabel "bar")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` "")
+        context "when the second one consumes" $
+          it "only hints of the second one affect parse error" $ do
+            let s = "aaabbb"
+                pe = err (posN 6 s) (elabel "bar")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` "")
+
+    describe "takeWhile1P" $ do
+      context "when stream is prefixed with matching tokens" $
+        it "consumes the tokens" $
+          property $ \s' -> do
+            let p :: MonadParsec Void String m => m String
+                p = takeWhile1P Nothing isLetter
+                s = 'a' : s'
+                (z,zs) = DL.span isLetter s
+            grs  p s (`shouldParse` z)
+            grs' p s (`succeedsLeaving` zs)
+      context "when stream is not prefixed with at least one matching token" $
+        it "signals correct parse error" $
+          property $ \s' -> do
+            let p :: MonadParsec Void String m => m String
+                p = takeWhile1P (Just "foo") isLetter
+                s = '3' : s'
+                pe = err posI (utok '3' <> elabel "foo")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` s)
+      context "when stream is empty" $
+        it "signals correct parse error" $ do
+          let p :: MonadParsec Void String m => m String
+              p = takeWhile1P (Just "foo") isLetter
+              pe = err posI (ueof <> elabel "foo")
+          grs  p "" (`shouldFailWith` pe)
+          grs' p "" (`failsLeaving` "")
+      context "with two takeWhile1P in a row (testing hints)" $ do
+        let p :: MonadParsec Void String m => m String
+            p = do
+              void $ takeWhile1P (Just "foo") (== 'a')
+              void $ takeWhile1P (Just "bar") (== 'b')
+              empty
+        context "when the second one does not consume" $
+          it "hints are combined properly" $ do
+            let s = "aaa"
+                pe = err (posN 3 s) (ueof <> elabel "foo" <> elabel "bar")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` "")
+        context "when the second one consumes" $
+          it "only hints of the second one affect parse error" $ do
+            let s = "aaabbb"
+                pe = err (posN 6 s) (elabel "bar")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` "")
+
+  describe "derivatives from primitive combinators" $ do
+
+    describe "unexpected" $
+      it "signals correct parse error" $
+        property $ \item -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (unexpected item)
+          grs p "" (`shouldFailWith` TrivialError posI (E.singleton item) E.empty)
+
+    describe "match" $
+      it "return consumed tokens along with the result" $
+        property $ \str -> do
+          let p  = match (string str)
+          prs  p str `shouldParse`     (str,str)
+          prs' p str `succeedsLeaving` ""
+
+    describe "region" $ do
+      context "when inner parser succeeds" $
+        it "has no effect" $
+          property $ \st e n -> do
+            let p :: Parser Int
+                p = region (const e) (pure n)
+            runParser' p st `shouldBe` (st, Right (n :: Int))
+      context "when inner parser fails" $
+        it "the given function is used on the parse error" $
+          property $ \st' e pos' -> do
+            let p :: Parsec Int String Int
+                p = region f $
+                  case e of
+                    TrivialError _ us ps -> failure us ps
+                    FancyError   _ xs    -> fancyFailure   xs
+                f (TrivialError pos us ps) = FancyError
+                  (max pos pos')
+                  (E.singleton . ErrorCustom $ E.size us + E.size ps)
+                f (FancyError pos xs) = FancyError
+                  (max pos pos')
+                  (E.singleton . ErrorCustom $ E.size xs)
+                r = FancyError
+                  (max (errorPos e) pos')
+                  (E.singleton . ErrorCustom $
+                    case e of
+                      TrivialError _ us ps -> E.size us + E.size ps
+                      FancyError   _ xs    -> E.size xs )
+                finalPos = max (errorPos e) pos'
+                st = st' { statePos = errorPos e }
+            runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
+
+    describe "skipWhileP" $ do
+      context "when stream is not empty" $
+        it "consumes all matching tokens, zero or more" $
+          property $ \s -> not (null s) ==> do
+            let p :: MonadParsec Void String m => m ()
+                p = skipWhileP Nothing isLetter
+            grs  p s (`shouldParse` ())
+            grs' p s (`succeedsLeaving` dropWhile isLetter s)
+      context "when stream is empty" $
+        it "succeeds returning empty chunk" $ do
+          let p :: MonadParsec Void String m => m ()
+              p = skipWhileP Nothing isLetter
+          grs  p "" (`shouldParse` ())
+          grs' p "" (`succeedsLeaving` "")
+    describe "skipWhile1P" $ do
+      context "when stream is prefixed with matching tokens" $
+        it "consumes the tokens" $
+          property $ \s' -> do
+            let p :: MonadParsec Void String m => m ()
+                p = skipWhile1P Nothing isLetter
+                s = 'a' : s'
+            grs  p s (`shouldParse` ())
+            grs' p s (`succeedsLeaving` dropWhile isLetter s)
+      context "when stream is not prefixed with at least one matching token" $
+        it "signals correct parse error" $
+          property $ \s' -> do
+            let p :: MonadParsec Void String m => m ()
+                p = skipWhile1P (Just "foo") isLetter
+                s = '3' : s'
+                pe = err posI (utok '3' <> elabel "foo")
+            grs  p s (`shouldFailWith` pe)
+            grs' p s (`failsLeaving` s)
+      context "when stream is empty" $
+        it "signals correct parse error" $ do
+          let p :: MonadParsec Void String m => m ()
+              p = skipWhile1P (Just "foo") isLetter
+              pe = err posI (ueof <> elabel "foo")
+          grs  p "" (`shouldFailWith` pe)
+          grs' p "" (`failsLeaving` "")
 
   describe "combinators for manipulating parser state" $ do
 
