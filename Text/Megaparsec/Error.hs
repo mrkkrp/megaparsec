@@ -169,12 +169,14 @@ mergeError e1 e2 =
           FancyError s1 (E.union x1 x2)
     GT -> e1
   where
-    -- NOTE The logic behind this normalization is that since we only
-    -- combine parse errors that happen at exactly the same position, all
-    -- the unexpected items will be prefixes of input stream at that
-    -- position or labels referring to the same thing. Our aim here is to
-    -- choose the longest prefix (merging of other things is somewhat
-    -- arbitrary).
+    -- NOTE The logic behind this merging is that since we only combine
+    -- parse errors that happen at exactly the same position, all the
+    -- unexpected items will be prefixes of input stream at that position or
+    -- labels referring to the same thing. Our aim here is to choose the
+    -- longest prefix (merging with labels and end of input is somewhat
+    -- arbitrary, but is necessary because otherwise we can't make
+    -- ParseError lawful Monoid and have nice parse errors at the same
+    -- time).
     n Nothing  Nothing = Nothing
     n (Just x) Nothing = Just x
     n Nothing (Just y) = Just y
