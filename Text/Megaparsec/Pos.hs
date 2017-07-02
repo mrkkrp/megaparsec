@@ -14,7 +14,6 @@
 -- You probably do not want to import this module because "Text.Megaparsec"
 -- re-exports it anyway.
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -39,10 +38,6 @@ import Data.Data (Data)
 import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
-
-#if !MIN_VERSION_base(4,8,0)
-import Data.Word (Word)
-#endif
 
 ----------------------------------------------------------------------------
 -- Abstract position
