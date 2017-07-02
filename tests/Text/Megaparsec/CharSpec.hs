@@ -68,12 +68,31 @@ spec = do
     checkStrLit "tab" "\t" (pure <$> tab)
 
   describe "space" $
-    it "consumes it up to first non-space character" $
-      property $ \s -> do
-        let (s0,s1) = partition isSpace s
-            s' = s0 ++ s1
-        prs  space s' `shouldParse` ()
-        prs' space s' `succeedsLeaving` s1
+    it "consumes space up to first non-space character" $
+      property $ \s' -> do
+        let (s0,s1) = partition isSpace s'
+            s = s0 ++ s1
+        prs  space s `shouldParse` ()
+        prs' space s `succeedsLeaving` s1
+
+  describe "space1" $ do
+    context "when stream does not start with a space character" $
+      it "signals correct parse error" $
+        property $ \ch s' -> not (isSpace ch) ==> do
+          let (s0,s1) = partition isSpace s'
+              s = ch : s0 ++ s1
+          prs  space1 s `shouldFailWith` err posI (utok ch <> elabel "white space")
+          prs' space1 s `failsLeaving` s
+    context "when stream starts with a space character" $
+      it "consumes space up to first non-space character" $
+        property $ \s' -> do
+          let (s0,s1) = partition isSpace s'
+              s = ' ' : s0 ++ s1
+          prs  space1 s `shouldParse` ()
+          prs' space1 s `succeedsLeaving` s1
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs space1 "" `shouldFailWith` err posI (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" isControl controlChar

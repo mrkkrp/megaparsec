@@ -24,6 +24,7 @@ module Text.Megaparsec.Char
   , eol
   , tab
   , space
+  , space1
     -- * Categories of characters
   , controlChar
   , spaceChar
@@ -110,6 +111,16 @@ tab = char '\t'
 space :: (MonadParsec e s m, Token s ~ Char) => m ()
 space = skipWhileP (Just "white space") isSpace
 {-# INLINE space #-}
+
+-- | Skip /one/ or more white space characters.
+--
+-- See also: 'skipSome' and 'spaceChar'.
+--
+-- @since 6.0.0
+
+space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
+space1 = skipWhile1P (Just "white space") isSpace
+{-# INLINE space1 #-}
 
 ----------------------------------------------------------------------------
 -- Categories of characters

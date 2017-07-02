@@ -85,6 +85,9 @@
 
 * Added `notChar` in `Text.Megaparsec.Char`.
 
+* Added `space1` in `Text.Megaprasec.Char`. This parser is like `space` but
+  requires at least one space character to be present to succeed.
+
 ## Megaparsec 5.3.1
 
 * Various updates to the docs.
