@@ -36,6 +36,7 @@ where
 
 import Control.DeepSeq
 import Control.Exception
+import Data.Char (chr)
 import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -44,6 +45,7 @@ import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Void
+import Data.Word (Word8)
 import GHC.Generics
 import Prelude hiding (concat)
 import qualified Data.List.NonEmpty as NE
@@ -198,6 +200,9 @@ class ShowToken a where
 
 instance ShowToken Char where
   showTokens = stringPretty
+
+instance ShowToken Word8 where
+  showTokens = stringPretty . fmap (chr . fromIntegral)
 
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
