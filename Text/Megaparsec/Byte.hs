@@ -47,6 +47,7 @@ module Text.Megaparsec.Byte
   , C.string' )
 where
 
+import Control.Applicative
 import Data.Char
 import Data.Proxy
 import Data.Word (Word8)

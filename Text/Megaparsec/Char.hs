@@ -69,8 +69,8 @@ import qualified Data.Set             as E
 import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
-import Data.Foldable (Foldable (), any, elem, notElem)
-import Prelude hiding (any, elem, notElem)
+import Data.Foldable (Foldable (), elem, notElem)
+import Prelude hiding (elem, notElem)
 #endif
 
 ----------------------------------------------------------------------------
