@@ -68,16 +68,18 @@ import qualified Text.Megaparsec.Char as C
 ----------------------------------------------------------------------------
 -- White space
 
--- | @space spaceChar lineComment blockComment@ produces parser that can
--- parse white space in general. It's expected that you create such a parser
--- once and pass it to other functions in this module as needed (when you
--- see @spaceConsumer@ in documentation, usually it means that something
--- like 'space' is expected there).
+-- | @space sc lineComment blockComment@ produces parser that can parse
+-- white space in general. It's expected that you create such a parser once
+-- and pass it to other functions in this module as needed (when you see
+-- @spaceConsumer@ in documentation, usually it means that something like
+-- 'space' is expected there).
 --
--- @spaceChar@ is used to parse trivial space characters. You can use
--- 'C.spaceChar' from "Text.Megaparsec.Char" for this purpose as well as
--- your own parser (if you don't want to automatically consume newlines, for
--- example).
+-- @sc@ is used to parse blocks of space characters. You can use 'C.space1'
+-- from "Text.Megaparsec.Char" for this purpose as well as your own parser
+-- (if you don't want to automatically consume newlines, for example). Make
+-- sure the parser does not succeed on empty input though. In earlier
+-- version 'C.spaceChar' was recommended, but now parsers based on
+-- 'takeWhile1P' are preferred because of their speed.
 --
 -- @lineComment@ is used to parse line comments. You can use
 -- 'skipLineComment' if you don't need anything special.
@@ -94,7 +96,8 @@ import qualified Text.Megaparsec.Char as C
 -- of the file).
 
 space :: MonadParsec e s m
-  => m () -- ^ A parser for a space character (e.g. @'void' 'C.spaceChar'@)
+  => m () -- ^ A parser for space characters which does not accept empty
+          -- input (e.g. 'C.space1')
   -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
   -> m ()
@@ -128,7 +131,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: (MonadParsec e s m, Token s ~ Char)
+symbol :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ String to parse
   -> m (Tokens s)
@@ -137,7 +140,7 @@ symbol spc = lexeme spc . C.string
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: (MonadParsec e s m, Token s ~ Char, CI.FoldCase (Tokens s))
+symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ String to parse (case-insensitive)
   -> m (Tokens s)

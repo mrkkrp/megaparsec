@@ -49,6 +49,7 @@ library
   if !impl(ghc >= 7.10)
     build-depends:    void         == 0.7.*
   exposed-modules:    Text.Megaparsec
+                    , Text.Megaparsec.Byte
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Error.Builder
@@ -74,6 +75,7 @@ test-suite tests
   other-modules:      Control.Applicative.CombinatorsSpec
                     , Test.Hspec.Megaparsec
                     , Test.Hspec.Megaparsec.AdHoc
+                    , Text.Megaparsec.ByteSpec
                     , Text.Megaparsec.CharSpec
                     , Text.Megaparsec.ErrorSpec
                     , Text.Megaparsec.ExprSpec

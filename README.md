@@ -72,11 +72,11 @@ features some combinators that are missing in other parsing libraries:
 In addition to that, Megaparsec 6 features high-performance combinators
 similar to those found in Attoparsec:
 
-* `tokens` makes it easy to parse several tokens in a row. This is about 100
-  time faster than matching a string token by token. `string` and `string'`
-  are built on top of this combinator. `tokens` returns “chunk” of original
-  input, meaning that if you parse `Text`, it'll return `Text` without any
-  repacking.
+* `tokens` makes it easy to parse several tokens in a row (`string` and
+  `string'` are built on top of this primitive). This is about 100 times
+  faster than matching a string token by token. `tokens` returns “chunk” of
+  original input, meaning that if you parse `Text`, it'll return `Text`
+  without any repacking.
 
 * `takeWhile` and `takeWhile1` are about 150 times faster than approaches
   involving `many`, `manyTill` and other similar combinators.

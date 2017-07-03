@@ -24,6 +24,7 @@ module Text.Megaparsec.Char
   , eol
   , tab
   , space
+  , space1
     -- * Categories of characters
   , controlChar
   , spaceChar
@@ -48,10 +49,9 @@ module Text.Megaparsec.Char
   , char
   , char'
   , anyChar
+  , notChar
   , oneOf
-  , oneOf'
   , noneOf
-  , noneOf'
   , satisfy
     -- * Sequence of characters
   , string
@@ -69,8 +69,8 @@ import qualified Data.Set             as E
 import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
-import Data.Foldable (Foldable (), any, elem, notElem)
-import Prelude hiding (any, elem, notElem)
+import Data.Foldable (Foldable (), elem, notElem)
+import Prelude hiding (elem, notElem)
 #endif
 
 ----------------------------------------------------------------------------
@@ -111,6 +111,16 @@ tab = char '\t'
 space :: (MonadParsec e s m, Token s ~ Char) => m ()
 space = skipWhileP (Just "white space") isSpace
 {-# INLINE space #-}
+
+-- | Skip /one/ or more white space characters.
+--
+-- See also: 'skipSome' and 'spaceChar'.
+--
+-- @since 6.0.0
+
+space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
+space1 = skipWhile1P (Just "white space") isSpace
+{-# INLINE space1 #-}
 
 ----------------------------------------------------------------------------
 -- Categories of characters
@@ -285,7 +295,7 @@ categoryName = \case
 --
 -- > semicolon = char ';'
 
-char :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
+char :: MonadParsec e s m => Token s -> m (Token s)
 char c = token testChar (Just c)
   where
     f x = Tokens (x:|[])
@@ -306,7 +316,7 @@ char c = token testChar (Just c)
 -- expecting 'E' or 'e'
 
 char' :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
-char' c = choice [char c, char $ swapCase c]
+char' c = choice [char c, char (swapCase c)]
   where
     swapCase x
       | isUpper x = toLower x
@@ -316,9 +326,18 @@ char' c = choice [char c, char $ swapCase c]
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
-anyChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
+anyChar :: MonadParsec e s m => m (Token s)
 anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
+
+-- | Match any character but the given one. It's a good idea to attach a
+-- 'label' to this parser manually.
+--
+-- @since 6.0.0
+
+notChar :: MonadParsec e s m => Token s -> m (Token s)
+notChar c = satisfy (/= c)
+{-# INLINE notChar #-}
 
 -- | @'oneOf' cs@ succeeds if the current character is in the supplied
 -- collection of characters @cs@. Returns the parsed character. Note that
@@ -329,42 +348,35 @@ anyChar = satisfy (const True) <?> "character"
 -- See also: 'satisfy'.
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
+--
+-- __Performance note__: prefer 'satisfy' when you can because it's faster
+-- when you have only a couple of tokens to compare to:
+--
+-- > quoteFast = satisfy (\x -> x == '\'' || x == '\"')
+-- > quoteSlow = oneOf "'\""
 
-oneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s) -> m (Token s)
+oneOf :: (Foldable f, MonadParsec e s m)
+  => f (Token s)
+  -> m (Token s)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
--- | The same as 'oneOf', but case-insensitive. Returns the parsed character
--- preserving its case.
---
--- > vowel = oneOf' "aeiou" <?> "vowel"
-
-oneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s)
-  -> m (Token s)
-oneOf' cs = satisfy (`elemi` cs)
-{-# INLINE oneOf' #-}
-
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current character
 -- /not/ in the supplied list of characters @cs@. Returns the parsed
--- character.
+-- character. Note that this parser cannot automatically generate the
+-- “expected” component of error message, so usually you should label it
+-- manually with 'label' or ('<?>').
+--
+-- See also: 'satisfy'.
+--
+-- __Performance note__: prefer 'satisfy' and 'notChar' when you can because
+-- it's faster.
 
-noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+noneOf :: (Foldable f, MonadParsec e s m)
   => f (Token s)
   -> m (Token s)
 noneOf cs = satisfy (`notElem` cs)
 {-# INLINE noneOf #-}
-
--- | The same as 'noneOf', but case-insensitive.
---
--- > consonant = noneOf' "aeiou" <?> "consonant"
-
-noneOf' :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s)
-  -> m (Token s)
-noneOf' cs = satisfy (`notElemi` cs)
-{-# INLINE noneOf' #-}
 
 -- | The parser @'satisfy' f@ succeeds for any character for which the
 -- supplied function @f@ returns 'True'. Returns the character that is
@@ -373,7 +385,7 @@ noneOf' cs = satisfy (`notElemi` cs)
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
 
-satisfy :: (MonadParsec e s m, Token s ~ Char)
+satisfy :: MonadParsec e s m
   => (Token s -> Bool) -- ^ Predicate to apply
   -> m (Token s)
 satisfy f = token testChar Nothing
@@ -409,24 +421,3 @@ string' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
   -> m (Tokens s)
 string' = tokens ((==) `on` CI.mk)
 {-# INLINE string' #-}
-
-----------------------------------------------------------------------------
--- Helpers
-
--- | Case-insensitive equality test for characters.
-
-casei :: Char -> Char -> Bool
-casei x y = toUpper x == toUpper y
-{-# INLINE casei #-}
-
--- | Case-insensitive 'elem'.
-
-elemi :: Foldable f => Char -> f Char -> Bool
-elemi = any . casei
-{-# INLINE elemi #-}
-
--- | Case-insensitive 'notElem'.
-
-notElemi :: Foldable f => Char -> f Char -> Bool
-notElemi c = not . elemi c
-{-# INLINE notElemi #-}

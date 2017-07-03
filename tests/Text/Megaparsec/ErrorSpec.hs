@@ -7,6 +7,7 @@ import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid
 import Data.Void
+import Data.Word (Word8)
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
@@ -172,6 +173,13 @@ spec = do
              showTokens (NE.fromList str) === ("\"" <> str <> "\"")
     it "shows control characters in long strings property"
       (f "{\n" "\"{<newline>\"")
+
+  describe "showTokens (Word8 instance)" $
+    it "basically works" $ do
+      -- NOTE Currently the Word8 instance is defined via Char intance, so
+      -- the testing is rather shallow.
+      let ts = NE.fromList [10,48,49,50] :: NonEmpty Word8
+      showTokens ts `shouldBe` "\"<newline>012\""
 
   describe "parseErrorPretty" $ do
     it "shows unknown ParseError correctly" $
