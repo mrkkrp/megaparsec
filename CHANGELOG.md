@@ -77,8 +77,11 @@
   signalling non-trivial failures. Signatures of some functions (`failure`,
   `token`) have been changed accordingly.
 
-* Added `takeWhileP` and `takeWhile1P` to `MonadParsec`. Added `skipWhileP`,
-  `skipWhile1P` as derivatives from those primitive combinators.
+* Added `takeWhileP`, `takeWhile1P` and `takeP` to `MonadParsec`.
+
+* Added `takeRest` non-primitive combinator to consume the rest of input.
+
+* Added `atEnd` which returns `True` when end of input has been reached.
 
 * Dropped `oneOf'` and `noneOf'` from `Text.Megaparsec.Char`. These were
   seldom (if ever) used and are easily re-implemented.

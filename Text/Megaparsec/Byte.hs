@@ -49,6 +49,7 @@ where
 
 import Control.Applicative
 import Data.Char
+import Data.Functor (void)
 import Data.Proxy
 import Data.Word (Word8)
 import qualified Text.Megaparsec.Char as C
@@ -91,7 +92,7 @@ tab = C.char 9
 -- See also: 'skipMany' and 'spaceChar'.
 
 space :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space = skipWhileP (Just "white space") isSpace'
+space = void $ takeWhileP (Just "white space") isSpace'
 {-# INLINE space #-}
 
 -- | Skip /one/ or more white space characters.
@@ -99,7 +100,7 @@ space = skipWhileP (Just "white space") isSpace'
 -- See also: 'skipSome' and 'spaceChar'.
 
 space1 :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space1 = skipWhile1P (Just "white space") isSpace'
+space1 = void $ takeWhile1P (Just "white space") isSpace'
 {-# INLINE space1 #-}
 
 ----------------------------------------------------------------------------
