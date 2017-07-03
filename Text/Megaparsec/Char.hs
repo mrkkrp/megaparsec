@@ -295,7 +295,7 @@ categoryName = \case
 --
 -- > semicolon = char ';'
 
-char :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
+char :: MonadParsec e s m => Token s -> m (Token s)
 char c = token testChar (Just c)
   where
     f x = Tokens (x:|[])
@@ -326,7 +326,7 @@ char' c = choice [char c, char (swapCase c)]
 
 -- | This parser succeeds for any character. Returns the parsed character.
 
-anyChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
+anyChar :: MonadParsec e s m => m (Token s)
 anyChar = satisfy (const True) <?> "character"
 {-# INLINE anyChar #-}
 
@@ -335,7 +335,7 @@ anyChar = satisfy (const True) <?> "character"
 --
 -- @since 6.0.0
 
-notChar :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
+notChar :: MonadParsec e s m => Token s -> m (Token s)
 notChar c = satisfy (/= c)
 {-# INLINE notChar #-}
 
@@ -348,17 +348,31 @@ notChar c = satisfy (/= c)
 -- See also: 'satisfy'.
 --
 -- > digit = oneOf ['0'..'9'] <?> "digit"
+--
+-- __Performance note__: prefer 'satisfy' when you can because it's faster
+-- when you have only a couple of tokens to compare to:
+--
+-- > quoteFast = satisfy (\x -> x == '\'' || x == '\"')
+-- > quoteSlow = oneOf "'\""
 
-oneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
-  => f (Token s) -> m (Token s)
+oneOf :: (Foldable f, MonadParsec e s m)
+  => f (Token s)
+  -> m (Token s)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
 -- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current character
 -- /not/ in the supplied list of characters @cs@. Returns the parsed
--- character.
+-- character. Note that this parser cannot automatically generate the
+-- “expected” component of error message, so usually you should label it
+-- manually with 'label' or ('<?>').
+--
+-- See also: 'satisfy'.
+--
+-- __Performance note__: prefer 'satisfy' and 'notChar' when you can because
+-- it's faster.
 
-noneOf :: (Foldable f, MonadParsec e s m, Token s ~ Char)
+noneOf :: (Foldable f, MonadParsec e s m)
   => f (Token s)
   -> m (Token s)
 noneOf cs = satisfy (`notElem` cs)
@@ -371,7 +385,7 @@ noneOf cs = satisfy (`notElem` cs)
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
 
-satisfy :: (MonadParsec e s m, Token s ~ Char)
+satisfy :: MonadParsec e s m
   => (Token s -> Bool) -- ^ Predicate to apply
   -> m (Token s)
 satisfy f = token testChar Nothing

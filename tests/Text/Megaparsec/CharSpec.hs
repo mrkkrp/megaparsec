@@ -7,7 +7,6 @@ import Control.Monad
 import Data.Char
 import Data.List (partition, isPrefixOf)
 import Data.Monoid ((<>))
-import Data.Void
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -329,7 +328,7 @@ spec = do
 ----------------------------------------------------------------------------
 -- Helpers
 
-checkStrLit :: String -> String -> Parsec Void String String -> SpecWith ()
+checkStrLit :: String -> String -> Parser String -> SpecWith ()
 checkStrLit name ts p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -348,7 +347,7 @@ checkStrLit name ts p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> etoks ts)
 
-checkCharPred :: String -> (Char -> Bool) -> Parsec Void String Char -> SpecWith ()
+checkCharPred :: String -> (Char -> Bool) -> Parser Char -> SpecWith ()
 checkCharPred name f p = do
   context ("when stream begins with " ++ name) $
     it ("parses the " ++ name) $
@@ -366,7 +365,7 @@ checkCharPred name f p = do
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> elabel name)
 
-checkCharRange :: String -> String -> Parsec Void String Char -> SpecWith ()
+checkCharRange :: String -> String -> Parser Char -> SpecWith ()
 checkCharRange name tchs p = do
   forM_ tchs $ \tch ->
     context ("when stream begins with " ++ showTokens (nes tch)) $
@@ -375,12 +374,6 @@ checkCharRange name tchs p = do
           let s' = tch : s
           prs  p s' `shouldParse`     tch
           prs' p s' `succeedsLeaving` s
-  -- context ("when stream does not begin with " ++ name) $
-  --   it "signals correct parse error" $
-  --     property $ \ch s -> ch `notElem` tchs ==> do
-  --      let s' = ch : s
-  --      prs  p s' `shouldFailWith` err posI (utok ch <> elabel name)
-  --      prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $
       prs p "" `shouldFailWith` err posI (ueof <> elabel name)
