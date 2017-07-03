@@ -130,6 +130,29 @@ spec = do
   -- describe "asciiChar" $
   --   checkCharPred "ASCII character" (isAscii . toChar) asciiChar
 
+  describe "char'" $ do
+    context "when stream begins with the character specified as argument" $
+      it "parses the character" $
+        property $ \ch s -> do
+          let sl = B.cons (liftChar toLower ch) s
+              su = B.cons (liftChar toUpper ch) s
+          prs  (char' ch) sl `shouldParse`     liftChar toLower ch
+          prs  (char' ch) su `shouldParse`     liftChar toUpper ch
+          prs' (char' ch) sl `succeedsLeaving` s
+          prs' (char' ch) su `succeedsLeaving` s
+    context "when stream does not begin with the character specified as argument" $
+      it "signals correct parse error" $
+        property $ \ch ch' s -> liftChar toLower ch /= liftChar toLower ch' ==> do
+          let s' = B.cons ch' s
+              ms = utok ch' <> etok (liftChar toLower ch) <> etok (liftChar toUpper ch)
+          prs  (char' ch) s' `shouldFailWith` err posI ms
+          prs' (char' ch) s' `failsLeaving`   s'
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        property $ \ch -> do
+          let ms = ueof <> etok (liftChar toLower ch) <> etok (liftChar toUpper ch)
+          prs  (char' ch) "" `shouldFailWith` err posI ms
+
 ----------------------------------------------------------------------------
 -- Helpers
 
@@ -212,3 +235,13 @@ isSpace' x
 
 toChar :: Word8 -> Char
 toChar = chr . fromIntegral
+
+-- | Covert a char to byte.
+
+fromChar :: Char -> Word8
+fromChar = fromIntegral . ord
+
+-- | Lift char transformation to byte transformation.
+
+liftChar :: (Char -> Char) -> Word8 -> Word8
+liftChar f = fromChar . f . toChar
