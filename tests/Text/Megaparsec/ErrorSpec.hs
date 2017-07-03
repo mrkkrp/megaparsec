@@ -177,7 +177,7 @@ spec = do
   describe "showTokens (Word8 instance)" $
     it "basically works" $ do
       -- NOTE Currently the Word8 instance is defined via Char intance, so
-      -- the testing is rather swallow.
+      -- the testing is rather shallow.
       let ts = NE.fromList [10,48,49,50] :: NonEmpty Word8
       showTokens ts `shouldBe` "\"<newline>012\""
 
