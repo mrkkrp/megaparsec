@@ -81,6 +81,9 @@ similar to those found in Attoparsec:
 * `takeWhile` and `takeWhile1` are about 150 times faster than approaches
   involving `many`, `manyTill` and other similar combinators.
 
+* `takeP` allows to grab n tokens from the stream and returns them as a
+  “chunk” of the stream.
+
 So now that we have matched the main “performance boosters” of Attoparsec,
 Megaparsec 6 is not significantly slower than Attoparsec if you write your
 parser carefully.
@@ -273,7 +276,7 @@ differences between the two libraries:
   foo”, “in expression x”, etc. This is not possible with Parsec.
 
 * Megaparsec is faster and supports efficient operations on top of `tokens`,
-  `takeWhileP`, and `takeWhile1P` just like Attoparsec.
+  `takeWhileP`, `takeWhile1P`, `takeP` just like Attoparsec.
 
 * Megaparsec is ~~better~~ supported.
 

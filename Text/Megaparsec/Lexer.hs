@@ -155,7 +155,7 @@ skipLineComment :: (MonadParsec e s m, Token s ~ Char)
   => Tokens s          -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix =
-  C.string prefix *> skipWhileP (Just "character") (/= '\n')
+  C.string prefix *> void (takeWhileP (Just "character") (/= '\n'))
 
 -- | @skipBlockComment start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.

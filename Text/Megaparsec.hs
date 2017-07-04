@@ -83,8 +83,8 @@ module Text.Megaparsec
   , unexpected
   , match
   , region
-  , skipWhileP
-  , skipWhile1P
+  , takeRest
+  , atEnd
     -- * Parser state combinators
   , getInput
   , setInput
@@ -116,7 +116,7 @@ import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
 import Data.Proxy
-import Data.Semigroup
+import Data.Semigroup hiding (option)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Debug.Trace
@@ -693,7 +693,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- >     testChar x =
   -- >       if f x
   -- >         then Right x
-  -- >         else Left (Set.singleton (Tokens (x:|[])), Set.empty)
+  -- >         else Left (pure (Tokens (x:|[])), Set.empty)
 
   token
     :: (Token s -> Either ( Maybe (ErrorItem (Token s))
@@ -743,7 +743,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- The following equations should clarify the behavior:
   --
   -- > takeWhileP (Just "foo") f = many (satisfy f <?> "foo")
-  -- > takeWhileP Nothing f      = many (satisfy f)
+  -- > takeWhileP Nothing      f = many (satisfy f)
   --
   -- The combinator never fails, although it may parse an empty chunk.
   --
@@ -755,13 +755,35 @@ class (Stream s, A.Alternative m, MonadPlus m)
     -> m (Tokens s)    -- ^ A chunk of matching tokens
 
   -- | Similar to 'takeWhileP', but fails if it can't parse at least one
-  -- token.
+  -- token. Note that the combinator either succeeds or fails without
+  -- consuming any input, so 'try' is not necessary with it.
   --
   -- @since 6.0.0
 
   takeWhile1P
     :: Maybe String    -- ^ Name for a single token in the row
     -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+    -> m (Tokens s)    -- ^ A chunk of matching tokens
+
+  -- | Extract the specified number of tokens from the input stream and
+  -- return them packed as a chunk of stream. If there is not enough tokens
+  -- in the stream, a parse error will be signaled. It's guaranteed that if
+  -- the parser succeeds, the requested number of tokens will be returned.
+  --
+  -- The parser is roughly equivalent to:
+  --
+  -- > takeP (Just "foo") n = count n (anyChar <?> "foo")
+  -- > takeP Nothing      n = count n anyChar
+  --
+  -- Note that if the combinator fails due to insufficient number of tokens
+  -- in the input stream, it backtracks automatically. No 'try' is necessary
+  -- with 'takeP'.
+  --
+  -- @since 6.0.0
+
+  takeP
+    :: Maybe String    -- ^ Name for a single token in the row
+    -> Int             -- ^ How many tokens to extract
     -> m (Tokens s)    -- ^ A chunk of matching tokens
 
   -- | Return the full parser state as a 'State' record.
@@ -786,6 +808,7 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   tokens            = pTokens
   takeWhileP        = pTakeWhileP
   takeWhile1P       = pTakeWhile1P
+  takeP             = pTakeP
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
@@ -972,6 +995,27 @@ pTakeWhile1P ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ _ eerr ->
             in cok ts (State input' (npos:|z) (tp + len) w) hs
 {-# INLINE pTakeWhile1P #-}
 
+pTakeP :: forall e s m. Stream s
+  => Maybe String
+  -> Int
+  -> ParsecT e s m (Tokens s)
+pTakeP ml n = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+  let pxy = Proxy :: Proxy s
+      el = Label <$> (ml >>= NE.nonEmpty)
+      ps = maybe E.empty E.singleton el
+  in case takeN_ n input of
+       Nothing ->
+         eerr (TrivialError (pos:|z) (pure EndOfInput) ps) s
+       Just (ts, input') ->
+         let len   = chunkLength pxy ts
+             !apos = positionAtN pxy pos ts
+             !npos = advanceN pxy w pos ts
+         in if len /= n
+           then eerr (TrivialError (npos:|z) (pure EndOfInput) ps)
+                     (State input (apos:|z) tp w)
+           else cok ts (State input' (npos:|z) (tp + len) w) mempty
+{-# INLINE pTakeP #-}
+
 pGetParserState :: ParsecT e s m (State s)
 pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 {-# INLINE pGetParserState #-}
@@ -1004,6 +1048,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
   takeWhile1P l f            = lift (takeWhile1P l f)
+  takeP l n                  = lift (takeP l n)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
 
@@ -1025,6 +1070,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
   takeWhile1P l f            = lift (takeWhile1P l f)
+  takeP l n                  = lift (takeP l n)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
 
@@ -1043,6 +1089,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1064,6 +1111,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1085,6 +1133,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1108,6 +1157,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1131,6 +1181,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
@@ -1149,6 +1200,7 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   tokens e ts                 = lift $ tokens e ts
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
 
@@ -1228,27 +1280,24 @@ region f m = do
     Right x -> return x
 {-# INLINEABLE region #-}
 
--- | The same as 'takeWhileP', but discards the result.
+-- | Consume the rest of the input and return it as a chunk. This parser
+-- never fails, but may return an empty chunk.
+--
+-- > takeRest = takeWhileP Nothing (const True)
 --
 -- @since 6.0.0
 
-skipWhileP :: MonadParsec e s m
-  => Maybe String      -- ^ Name of a single token in the row
-  -> (Token s -> Bool) -- ^ Predicate to use to test tokens
-  -> m ()
-skipWhileP l f = void (takeWhileP l f)
-{-# INLINE skipWhileP #-}
+takeRest :: MonadParsec e s m => m (Tokens s)
+takeRest = takeWhileP Nothing (const True)
+{-# INLINE takeRest #-}
 
--- | The same as 'takeWhile1P', but discards the result.
+-- | Return 'True' when end of input has been reached.
 --
 -- @since 6.0.0
 
-skipWhile1P :: MonadParsec e s m
-  => Maybe String      -- ^ Name of a single token in the row
-  -> (Token s -> Bool) -- ^ Predicate to use to test tokens
-  -> m ()
-skipWhile1P l f = void (takeWhile1P l f)
-{-# INLINE skipWhile1P #-}
+atEnd :: MonadParsec e s m => m Bool
+atEnd = option False (True <$ eof)
+{-# INLINE atEnd #-}
 
 ----------------------------------------------------------------------------
 -- Parser state combinators

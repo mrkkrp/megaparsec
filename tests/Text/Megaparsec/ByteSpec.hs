@@ -6,6 +6,7 @@ module Text.Megaparsec.ByteSpec (spec) where
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Char
+import Data.Maybe (fromMaybe)
 import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Void
@@ -238,10 +239,13 @@ toChar = chr . fromIntegral
 
 -- | Covert a char to byte.
 
-fromChar :: Char -> Word8
-fromChar = fromIntegral . ord
+fromChar :: Char -> Maybe Word8
+fromChar x = let p = ord x in
+  if p > 0xff
+    then Nothing
+    else Just (fromIntegral p)
 
 -- | Lift char transformation to byte transformation.
 
 liftChar :: (Char -> Char) -> Word8 -> Word8
-liftChar f = fromChar . f . toChar
+liftChar f x = (fromMaybe x . fromChar . f . toChar) x

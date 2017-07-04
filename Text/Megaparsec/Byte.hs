@@ -49,6 +49,8 @@ where
 
 import Control.Applicative
 import Data.Char
+import Data.Functor (void)
+import Data.Maybe (fromMaybe)
 import Data.Proxy
 import Data.Word (Word8)
 import qualified Text.Megaparsec.Char as C
@@ -91,7 +93,7 @@ tab = C.char 9
 -- See also: 'skipMany' and 'spaceChar'.
 
 space :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space = skipWhileP (Just "white space") isSpace'
+space = void $ takeWhileP (Just "white space") isSpace'
 {-# INLINE space #-}
 
 -- | Skip /one/ or more white space characters.
@@ -99,7 +101,7 @@ space = skipWhileP (Just "white space") isSpace'
 -- See also: 'skipSome' and 'spaceChar'.
 
 space1 :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space1 = skipWhile1P (Just "white space") isSpace'
+space1 = void $ takeWhile1P (Just "white space") isSpace'
 {-# INLINE space1 #-}
 
 ----------------------------------------------------------------------------
@@ -198,12 +200,14 @@ asciiChar = C.satisfy (< 128) <?> "ASCII character"
 -- expecting 'E' or 'e'
 
 char' :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
-char' c = choice [C.char c, C.char (swapCase c)]
+char' c = choice
+  [ C.char c
+  , C.char (fromMaybe c (swapCase c)) ]
   where
     swapCase x
       | isUpper g = fromChar (toLower g)
       | isLower g = fromChar (toUpper g)
-      | otherwise = x
+      | otherwise = Nothing
       where
         g = toChar x
 {-# INLINE char' #-}
@@ -229,6 +233,9 @@ toChar = chr . fromIntegral
 
 -- | Convert a char to byte.
 
-fromChar :: Char -> Word8
-fromChar = fromIntegral . ord
+fromChar :: Char -> Maybe Word8
+fromChar x = let p = ord x in
+  if p > 0xff
+    then Nothing
+    else Just (fromIntegral p)
 {-# INLINE fromChar #-}
