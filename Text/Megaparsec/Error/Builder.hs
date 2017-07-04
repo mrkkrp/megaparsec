@@ -119,8 +119,8 @@ errFancy pos (EF xs) = FancyError pos xs
 posI :: NonEmpty SourcePos
 posI = initialPos "" :| []
 
--- | @posN n s@ returns source position achieved by applying 'updatePos'
--- method corresponding to type of stream @s@ @n@ times.
+-- | @'posN' n s@ returns source position achieved by applying 'advanceN'
+-- method corresponding to the type of stream @s@.
 
 posN :: forall s. Stream s
   => Int

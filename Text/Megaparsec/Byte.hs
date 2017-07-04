@@ -107,8 +107,7 @@ space1 = void $ takeWhile1P (Just "white space") isSpace'
 ----------------------------------------------------------------------------
 -- Categories of characters
 
--- | Parse a control character (a non-printing character of the Latin-1
--- subset of Unicode).
+-- | Parse a control character.
 
 controlChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 controlChar = C.satisfy (isControl . toChar) <?> "control character"
@@ -139,11 +138,7 @@ letterChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 letterChar = C.satisfy (isLetter . toChar) <?> "letter"
 {-# INLINE letterChar #-}
 
--- | Parse an alphabetic or numeric digit Unicode characters.
---
--- Note that the numeric digits outside the ASCII range are parsed by this
--- parser but not by 'digitChar'. Such digits may be part of identifiers but
--- are not used by the printer and reader to represent numbers.
+-- | Parse an alphabetic or digit characters.
 
 alphaNumChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 alphaNumChar = C.satisfy (isAlphaNum . toChar) <?> "alphanumeric character"
@@ -192,9 +187,9 @@ asciiChar = C.satisfy (< 128) <?> "ASCII character"
 -- | The same as 'char' but case-insensitive. This parser returns the
 -- actually parsed character preserving its case.
 --
--- >>> parseTest (char' 'e') "E"
--- 'E'
--- >>> parseTest (char' 'e') "G"
+-- >>> parseTest (char' 101) "E"
+-- 69 -- 'E'
+-- >>> parseTest (char' 101) "G"
 -- 1:1:
 -- unexpected 'G'
 -- expecting 'E' or 'e'

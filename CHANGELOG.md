@@ -8,8 +8,9 @@
   the `Control.Applicative.Combinators` from the package
   `parser-combinators`. Just import `Text.Megaparsec` and you should be OK.
   Then add `Text.Megaparsec.Char` if you are working with a stream of
-  `Char`s, then add qualified modules you need (permutation parsing, lexing,
-  expression parsing, etc.).
+  `Char`s or `Text.Megaparsec.Byte` if you intend to parse binary data, then
+  add qualified modules you need (permutation parsing, lexing, expression
+  parsing, etc.).
 
 * Dropped per-stream modules, the `Parser` type synonym is to be defined
   manually by user.

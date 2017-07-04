@@ -16,7 +16,7 @@
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
 -- most everything that you may need, we advise to import
 -- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char' tokens
--- or "Text.Megaparsec.Byte" if you indend to parse binary data.
+-- or "Text.Megaparsec.Byte" if you intend to parse binary data.
 --
 -- It is common to start working with the library by defining a type synonym
 -- like this:
@@ -29,18 +29,18 @@
 -- Then you can write type signatures like @Parser Int@—for a parser that
 -- returns an 'Int' for example.
 --
--- Megaparsec 6 uses some type-level machinery to provide flexibility
--- without compromising on type safety. Thus type signatures are sometimes
--- necessary to avoid ambiguous types. If you're seeing a error message that
--- reads like “Type variable @e0@ is ambiguous …”, you need to give an
--- explicit signature to your parser to resolve the ambiguity. It's a good
--- idea to provide type signatures for all top-level definitions.
+-- Megaparsec uses some type-level machinery to provide flexibility without
+-- compromising on type safety. Thus type signatures are sometimes necessary
+-- to avoid ambiguous types. If you're seeing a error message that reads
+-- like “Type variable @e0@ is ambiguous …”, you need to give an explicit
+-- signature to your parser to resolve the ambiguity. It's a good idea to
+-- provide type signatures for all top-level definitions.
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm",
 -- expressions with "Text.Megaparsec.Expr", and even entire languages with
--- "Text.Megaparsec.Lexer". These modules should be imported explicitly
--- along with the two modules mentioned above.
+-- "Text.Megaparsec.Char.Lexer". These modules should be imported explicitly
+-- along with the modules mentioned above.
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
@@ -424,7 +424,7 @@ instance MonadTrans (ParsecT e s) where
 ----------------------------------------------------------------------------
 -- Running a parser
 
--- | @parse p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
+-- | @'parse' p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
 -- if you're using the 'ParsecT' monad transformer; 'parse' itself is just a
 -- synonym for 'runParser'). It returns either a 'ParseError' ('Left') or a
 -- value of type @a@ ('Right'). 'parseErrorPretty' can be used to turn
@@ -444,14 +444,14 @@ parse
   -> Either (ParseError (Token s) e) a
 parse = runParser
 
--- | @parseMaybe p input@ runs the parser @p@ on @input@ and returns the
+-- | @'parseMaybe' p input@ runs the parser @p@ on @input@ and returns the
 -- result inside 'Just' on success and 'Nothing' on failure. This function
 -- also parses 'eof', so if the parser doesn't consume all of its input, it
 -- will fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file name) are not important and entire input
--- should be parsed. For example it can be used when parsing of a single
+-- should be parsed. For example, it can be used when parsing of a single
 -- number according to specification of its format is desired.
 
 parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
@@ -460,8 +460,8 @@ parseMaybe p s =
     Left  _ -> Nothing
     Right x -> Just x
 
--- | The expression @parseTest p input@ applies the parser @p@ against input
--- @input@ and prints the result to stdout. Useful for testing.
+-- | The expression @'parseTest' p input@ applies the parser @p@ against
+-- input @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
              , Ord (Token s)
@@ -475,9 +475,9 @@ parseTest p input =
     Left  e -> putStr (parseErrorPretty e)
     Right x -> print x
 
--- | @runParser p file input@ runs parser @p@ on the input stream of tokens
--- @input@, obtained from source @file@. The @file@ is only used in error
--- messages and may be the empty string. Returns either a 'ParseError'
+-- | @'runParser' p file input@ runs parser @p@ on the input stream of
+-- tokens @input@, obtained from source @file@. The @file@ is only used in
+-- error messages and may be the empty string. Returns either a 'ParseError'
 -- ('Left') or a value of type @a@ ('Right').
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
@@ -502,7 +502,7 @@ runParser'
   -> (State s, Either (ParseError (Token s) e) a)
 runParser' p = runIdentity . runParserT' p
 
--- | @runParserT p file input@ runs parser @p@ on the input list of tokens
+-- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
 -- @input@, obtained from source @file@. The @file@ is only used in error
 -- messages and may be the empty string. Returns a computation in the
 -- underlying monad @m@ that returns either a 'ParseError' ('Left') or a
@@ -556,18 +556,23 @@ initialState name s = State
 ----------------------------------------------------------------------------
 -- Primitive combinators
 
--- | Type class describing parsers independent of input type.
+-- | Type class describing monads that implement the full set of primitive
+-- parsers.
+--
+-- Note carefully that the following primitives are “fast” and should be
+-- taken advantage of as much as possible if your aim is a fast parser:
+-- 'tokens', 'takeWhileP', 'takeWhile1P', and 'takeP'.
 
 class (Stream s, A.Alternative m, MonadPlus m)
     => MonadParsec e s m | m -> e s where
 
   -- | The most general way to stop parsing and report a trivial
-  -- 'ParseError', that is, collection of unexpected and expected items.
+  -- 'ParseError'.
   --
   -- @since 6.0.0
 
   failure
-    :: Maybe (ErrorItem (Token s)) -- ^ Unexpected item
+    :: Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
     -> Set (ErrorItem (Token s)) -- ^ Expected items
     -> m a
 
@@ -587,6 +592,8 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   -- | @'hidden' p@ behaves just like parser @p@, but it doesn't show any
   -- “expected” tokens in error message when @p@ fails.
+  --
+  -- Please use 'hidden' instead of the old @'label' ""@ idiom.
 
   hidden :: m a -> m a
   hidden = label ""
@@ -597,8 +604,8 @@ class (Stream s, A.Alternative m, MonadPlus m)
   --
   -- This combinator is used whenever arbitrary look ahead is needed. Since
   -- it pretends that it hasn't consumed any input when @p@ fails, the
-  -- ('A.<|>') combinator will try its second alternative even when the
-  -- first parser failed while consuming input.
+  -- ('A.<|>') combinator will try its second alternative even if the first
+  -- parser failed while consuming input.
   --
   -- For example, here is a parser that is supposed to parse the word “let”
   -- or the word “lexical”:
@@ -738,7 +745,8 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   -- | Parse /zero/ or more tokens for which the supplied predicate holds.
   -- Try to use this as much as possible because for many streams the
-  -- combinator is much faster than parsers built with 'many' and @satisfy@.
+  -- combinator is much faster than parsers built with 'many' and
+  -- 'Text.Megaparsec.Char.satisfy'.
   --
   -- The following equations should clarify the behavior:
   --
@@ -790,7 +798,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   getParserState :: m (State s)
 
-  -- | @updateParserState f@ applies the function @f@ to the parser state.
+  -- | @'updateParserState' f@ applies the function @f@ to the parser state.
 
   updateParserState :: (State s -> State s) -> m ()
 
@@ -1024,8 +1032,6 @@ pUpdateParserState :: (State s -> State s) -> ParsecT e s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
--- | Make a singleton non-empty list from a value.
-
 nes :: a -> NonEmpty a
 nes x = x :| []
 {-# INLINE nes #-}
@@ -1228,7 +1234,7 @@ infix 0 <?>
 -- | The parser @unexpected item@ fails with an error message telling about
 -- unexpected item @item@ without consuming any input.
 --
--- > unexpected item = failure (Set.singleton item) Set.empty
+-- > unexpected item = failure (pure item) Set.empty
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (pure item) E.empty
@@ -1237,6 +1243,8 @@ unexpected item = failure (pure item) E.empty
 -- | Return both the result of a parse and the list of tokens that were
 -- consumed during parsing. This relies on the change of the
 -- 'stateTokensProcessed' value to evaluate how many tokens were consumed.
+-- If you mess with it manually in the argument parser, prepare for
+-- troubles.
 --
 -- @since 5.3.0
 
@@ -1257,7 +1265,9 @@ match p = do
 -- | Specify how to process 'ParseError's that happen inside of this
 -- wrapper. As a side effect of the current implementation changing
 -- 'errorPos' with this combinator will also change the final 'statePos' in
--- the parser state.
+-- the parser state (try to avoid that because 'statePos' will go out of
+-- sync with factual position in the input stream, which is probably OK if
+-- you finish parsing right after that, but be warned).
 --
 -- @since 5.3.0
 
@@ -1307,7 +1317,7 @@ atEnd = option False (True <$ eof)
 getInput :: MonadParsec e s m => m s
 getInput = stateInput <$> getParserState
 
--- | @setInput input@ continues parsing with @input@. The 'getInput' and
+-- | @'setInput' input@ continues parsing with @input@. The 'getInput' and
 -- 'setInput' functions can for example be used to deal with include files.
 
 setInput :: MonadParsec e s m => s -> m ()
@@ -1332,7 +1342,7 @@ getNextTokenPosition = do
   return (f . fst <$> take1_ stateInput)
 {-# INLINEABLE getNextTokenPosition #-}
 
--- | @setPosition pos@ sets the current source position to @pos@.
+-- | @'setPosition' pos@ sets the current source position to @pos@.
 --
 -- See also: 'getPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
 
@@ -1394,7 +1404,7 @@ setTabWidth :: MonadParsec e s m => Pos -> m ()
 setTabWidth w = updateParserState $ \(State s pos tp _) ->
   State s pos tp w
 
--- | @setParserState st@ sets the parser state to @st@.
+-- | @'setParserState' st@ sets the parser state to @st@.
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
@@ -1402,9 +1412,9 @@ setParserState st = updateParserState (const st)
 ----------------------------------------------------------------------------
 -- Debugging
 
--- | @dbg label p@ parser works exactly like @p@, but when it's evaluated it
--- also prints information useful for debugging. The @label@ is only used to
--- refer to this parser in the debugging output. This combinator uses the
+-- | @'dbg' label p@ parser works exactly like @p@, but when it's evaluated
+-- it also prints information useful for debugging. The @label@ is only used
+-- to refer to this parser in the debugging output. This combinator uses the
 -- 'trace' function from "Debug.Trace" under the hood.
 --
 -- Typical usage is to wrap every sub-parser in misbehaving parser with

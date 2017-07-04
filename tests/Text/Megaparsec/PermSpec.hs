@@ -10,7 +10,7 @@ import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Char
-import Text.Megaparsec.Lexer (integer)
+import Text.Megaparsec.Char.Lexer (integer)
 import Text.Megaparsec.Perm
 
 data CharRows = CharRows

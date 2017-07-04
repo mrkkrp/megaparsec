@@ -51,10 +51,10 @@ library
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Byte
                     , Text.Megaparsec.Char
+                    , Text.Megaparsec.Char.Lexer
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Error.Builder
                     , Text.Megaparsec.Expr
-                    , Text.Megaparsec.Lexer
                     , Text.Megaparsec.Perm
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Stream
@@ -76,10 +76,10 @@ test-suite tests
                     , Test.Hspec.Megaparsec
                     , Test.Hspec.Megaparsec.AdHoc
                     , Text.Megaparsec.ByteSpec
+                    , Text.Megaparsec.Char.LexerSpec
                     , Text.Megaparsec.CharSpec
                     , Text.Megaparsec.ErrorSpec
                     , Text.Megaparsec.ExprSpec
-                    , Text.Megaparsec.LexerSpec
                     , Text.Megaparsec.PermSpec
                     , Text.Megaparsec.PosSpec
                     , Text.Megaparsec.StreamSpec

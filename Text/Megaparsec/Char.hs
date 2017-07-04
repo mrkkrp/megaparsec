@@ -362,7 +362,7 @@ oneOf :: (Foldable f, MonadParsec e s m)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
--- | As the dual of 'oneOf', @noneOf cs@ succeeds if the current character
+-- | As the dual of 'oneOf', @'noneOf' cs@ succeeds if the current character
 -- /not/ in the supplied list of characters @cs@. Returns the parsed
 -- character. Note that this parser cannot automatically generate the
 -- “expected” component of error message, so usually you should label it

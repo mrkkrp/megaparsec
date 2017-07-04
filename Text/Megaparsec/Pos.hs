@@ -11,8 +11,8 @@
 -- and column number. List of such positions can be used to model a stack of
 -- include files.
 --
--- You probably do not want to import this module because "Text.Megaparsec"
--- re-exports it anyway.
+-- You probably do not want to import this module directly because
+-- "Text.Megaparsec" re-exports it anyway.
 
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -115,7 +115,7 @@ instance NFData    InvalidPosException
 ----------------------------------------------------------------------------
 -- Source position
 
--- | The data type @SourcePos@ represents source positions. It contains the
+-- | The data type 'SourcePos' represents source positions. It contains the
 -- name of the source file, a line number, and a column number. Source line
 -- and column positions change intensively during parsing, so we need to
 -- make them strict to avoid memory leaks.

@@ -1,5 +1,5 @@
 -- |
--- Module      :  Text.Megaparsec.Lexer
+-- Module      :  Text.Megaparsec.Char.Lexer
 -- Copyright   :  © 2015–2017 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
@@ -16,14 +16,14 @@
 --
 -- This module is intended to be imported qualified:
 --
--- > import qualified Text.Megaparsec.Lexer as L
+-- > import qualified Text.Megaparsec.Char.Lexer as L
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf       #-}
 {-# LANGUAGE TypeFamilies     #-}
 
-module Text.Megaparsec.Lexer
+module Text.Megaparsec.Char.Lexer
   ( -- * White space
     space
   , lexeme
@@ -68,7 +68,7 @@ import qualified Text.Megaparsec.Char as C
 ----------------------------------------------------------------------------
 -- White space
 
--- | @space sc lineComment blockComment@ produces parser that can parse
+-- | @'space' sc lineComment blockComment@ produces parser that can parse
 -- white space in general. It's expected that you create such a parser once
 -- and pass it to other functions in this module as needed (when you see
 -- @spaceConsumer@ in documentation, usually it means that something like
@@ -85,7 +85,8 @@ import qualified Text.Megaparsec.Char as C
 -- 'skipLineComment' if you don't need anything special.
 --
 -- @blockComment@ is used to parse block (multi-line) comments. You can use
--- 'skipBlockComment' if you don't need anything special.
+-- 'skipBlockComment' or 'skipBlockCommentNested' if you don't need anything
+-- special.
 --
 -- Parsing of white space is an important part of any parser. We propose a
 -- convention where every lexeme parser assumes no spaces before the lexeme
@@ -102,6 +103,7 @@ space :: MonadParsec e s m
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
   -> m ()
 space ch line block = hidden . skipMany $ choice [ch, line, block]
+{-# INLINEABLE space #-}
 
 -- | This is a wrapper for lexemes. Typical usage is to supply the first
 -- argument (parser that consumes white space, probably defined via 'space')
@@ -115,6 +117,7 @@ lexeme :: MonadParsec e s m
   -> m a               -- ^ How to parse actual lexeme
   -> m a
 lexeme spc p = p <* spc
+{-# INLINEABLE lexeme #-}
 
 -- | This is a helper to parse symbols, i.e. verbatim strings. You pass the
 -- first argument (parser that consumes white space, probably defined via
@@ -133,18 +136,20 @@ lexeme spc p = p <* spc
 
 symbol :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
-  -> Tokens s          -- ^ String to parse
+  -> Tokens s          -- ^ Symbol to parse
   -> m (Tokens s)
 symbol spc = lexeme spc . C.string
+{-# INLINEABLE symbol #-}
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
 symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
-  -> Tokens s          -- ^ String to parse (case-insensitive)
+  -> Tokens s          -- ^ Symbol to parse (case-insensitive)
   -> m (Tokens s)
 symbol' spc = lexeme spc . C.string'
+{-# INLINEABLE symbol' #-}
 
 -- | Given comment prefix this function returns a parser that skips line
 -- comments. Note that it stops just before the newline character but
@@ -156,8 +161,9 @@ skipLineComment :: (MonadParsec e s m, Token s ~ Char)
   -> m ()
 skipLineComment prefix =
   C.string prefix *> void (takeWhileP (Just "character") (/= '\n'))
+{-# INLINEABLE skipLineComment #-}
 
--- | @skipBlockComment start end@ skips non-nested block comment starting
+-- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
 skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
@@ -168,9 +174,10 @@ skipBlockComment start end = p >> void (manyTill C.anyChar n)
   where
     p = C.string start
     n = C.string end
+{-# INLINEABLE skipBlockComment #-}
 
--- | @skipBlockCommentNested start end@ skips possibly nested block comment
--- starting with @start@ and ending with @end@.
+-- | @'skipBlockCommentNested' start end@ skips possibly nested block
+-- comment starting with @start@ and ending with @end@.
 --
 -- @since 5.0.0
 
@@ -183,6 +190,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
     e = skipBlockCommentNested start end <|> void C.anyChar
     p = C.string start
     n = C.string end
+{-# INLINEABLE skipBlockCommentNested #-}
 
 ----------------------------------------------------------------------------
 -- Indentation
@@ -197,6 +205,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 
 indentLevel :: MonadParsec e s m => m Pos
 indentLevel = sourceColumn <$> getPosition
+{-# INLINEABLE indentLevel #-}
 
 -- | Fail reporting incorrect indentation error. The error has attached
 -- information:
@@ -214,18 +223,18 @@ incorrectIndent :: MonadParsec e s m
   -> m a
 incorrectIndent ord ref actual = fancyFailure . E.singleton $
   ErrorIndentation ord ref actual
+{-# INLINEABLE incorrectIndent #-}
 
--- | @indentGuard spaceConsumer ord ref@ first consumes all white space
+-- | @'indentGuard' spaceConsumer ord ref@ first consumes all white space
 -- (indentation) with @spaceConsumer@ parser, then it checks the column
 -- position. Ordering between current indentation level and the reference
 -- indentation level @ref@ should be @ord@, otherwise the parser fails. On
 -- success the current column position is returned.
 --
 -- When you want to parse a block of indentation, first run this parser with
--- arguments like @indentGuard spaceConsumer GT (unsafePos 1)@—this will
--- make sure you have some indentation. Use returned value to check
--- indentation on every subsequent line according to syntax of your
--- language.
+-- arguments like @'indentGuard' spaceConsumer 'GT' 'pos1'@—this will make
+-- sure you have some indentation. Use returned value to check indentation
+-- on every subsequent line according to syntax of your language.
 
 indentGuard :: MonadParsec e s m
   => m ()              -- ^ How to consume indentation (white space)
@@ -238,6 +247,7 @@ indentGuard sc ord ref = do
   if compare actual ref == ord
     then return actual
     else incorrectIndent ord ref actual
+{-# INLINEABLE indentGuard #-}
 
 -- | Parse a non-indented construction. This ensures that there is no
 -- indentation before actual data. Useful, for example, as a wrapper for
@@ -250,6 +260,7 @@ nonIndented :: MonadParsec e s m
   -> m a               -- ^ How to parse actual data
   -> m a
 nonIndented sc p = indentGuard sc EQ pos1 *> p
+{-# INLINEABLE nonIndented #-}
 
 -- | The data type represents available behaviors for parsing of indented
 -- tokens. This is used in 'indentBlock', which see.
@@ -301,6 +312,7 @@ indentBlock sc r = do
       x   <- p
       xs  <- indentedItems ref (fromMaybe lvl indent) sc p
       f (x:xs)
+{-# INLINEABLE indentBlock #-}
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of the public API.
@@ -347,6 +359,7 @@ lineFold :: MonadParsec e s m
   -> m a
 lineFold sc action =
   sc >> indentLevel >>= action . void . indentGuard sc GT
+{-# INLINEABLE lineFold #-}
 
 ----------------------------------------------------------------------------
 -- Character and string literals
@@ -373,6 +386,7 @@ charLiteral = label "literal character" $ do
   case listToMaybe (readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
     Nothing      -> unexpected (Tokens (x:|[]))
+{-# INLINEABLE charLiteral #-}
 
 ----------------------------------------------------------------------------
 -- Numbers
@@ -384,12 +398,14 @@ charLiteral = label "literal character" $ do
 
 integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
 integer = decimal <?> "integer"
+{-# INLINEABLE integer #-}
 
 -- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
 -- while this parser is labeled with “decimal integer”.
 
 decimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 decimal = nump "" C.digitChar <?> "decimal integer"
+{-# INLINEABLE decimal #-}
 
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to the Haskell report
@@ -403,6 +419,7 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 
 hexadecimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
+{-# INLINEABLE hexadecimal #-}
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
@@ -412,6 +429,7 @@ hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
 
 octal :: (MonadParsec e s m, Token s ~ Char) => m Integer
 octal = nump "0o" C.octDigitChar <?> "octal integer"
+{-# INLINEABLE octal #-}
 
 -- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
 -- prepends @prefix@ to returned value and tries to interpret the result as
@@ -433,7 +451,9 @@ nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 scientific :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 scientific = label "floating point number" (read <$> f)
-  where f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
+  where
+    f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
+{-# INLINEABLE scientific #-}
 
 -- | Parse a floating point number without sign. This is a simple shortcut
 -- defined as:
@@ -442,6 +462,7 @@ scientific = label "floating point number" (read <$> f)
 
 float :: (MonadParsec e s m, Token s ~ Char) => m Double
 float = toRealFloat <$> scientific
+{-# INLINEABLE float #-}
 
 -- | This is a helper for 'float' parser. It parses fractional part of
 -- floating point number, that is, dot and everything after it.
@@ -469,9 +490,11 @@ fExp = do
 
 number :: (MonadParsec e s m, Token s ~ Char) => m Scientific
 number = label "number" (read <$> f)
-  where f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
+  where
+    f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
+{-# INLINEABLE number #-}
 
--- | @signed space p@ parser parses an optional sign, then if there is a
+-- | @'signed' space p@ parser parses an optional sign, then if there is a
 -- sign it will consume optional white space (using @space@ parser), then it
 -- runs parser @p@ which should return a number. Sign of the number is
 -- changed according to previously parsed sign.
@@ -484,6 +507,7 @@ number = label "number" (read <$> f)
 
 signed :: (MonadParsec e s m, Token s ~ Char, Num a) => m () -> m a -> m a
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
+{-# INLINEABLE signed #-}
 
 -- | Parse a sign and return either 'id' or 'negate' according to parsed
 -- sign.

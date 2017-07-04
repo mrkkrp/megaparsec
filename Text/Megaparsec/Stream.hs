@@ -9,8 +9,8 @@
 --
 -- Megaparsec's input stream facilities.
 --
--- You probably do not want to import this module because "Text.Megaparsec"
--- re-exports it anyway.
+-- You probably do not want to import this module directly because
+-- "Text.Megaparsec" re-exports it anyway.
 --
 -- @since 6.0.0
 
@@ -49,7 +49,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
 
   type Tokens s :: *
 
-  -- | Lift a single token to chunk to the stream. The default
+  -- | Lift a single token to chunk of the stream. The default
   -- implementation is:
   --
   -- > tokenToChunk pxy = tokensToChunk pxy . pure
@@ -89,7 +89,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   chunkEmpty pxy ts = chunkLength pxy ts <= 0
   {-# INLINE chunkEmpty #-}
 
-  -- | Set source position for a given token. By default, the given
+  -- | Set source position for __at__ given token. By default, the given
   -- 'SourcePos' (second argument) is just returned without looking at the
   -- token. This method is important when your stream is a collection of
   -- tokens where every token knows where it begins in the original input.

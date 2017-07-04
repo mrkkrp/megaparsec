@@ -30,7 +30,7 @@ data Operator m a
   | Prefix  (m (a -> a))      -- ^ Prefix
   | Postfix (m (a -> a))      -- ^ Postfix
 
--- | @makeExprParser term table@ builds an expression parser for terms
+-- | @'makeExprParser' term table@ builds an expression parser for terms
 -- @term@ with operators from @table@, taking the associativity and
 -- precedence specified in the @table@ into account.
 --
@@ -53,11 +53,11 @@ data Operator m a
 --
 -- If you want to have an operator that is a prefix of another operator in
 -- the table, use the following (or similar) wrapper instead of plain
--- 'symbol':
+-- 'Text.Megaparsec.Char.Lexer.symbol':
 --
 -- > op n = (lexeme . try) (string n <* notFollowedBy punctuationChar)
 --
--- @makeExprParser@ takes care of all the complexity involved in building an
+-- 'makeExprParser' takes care of all the complexity involved in building an
 -- expression parser. Here is an example of an expression parser that
 -- handles prefix signs, postfix increment and basic arithmetic:
 --
@@ -82,6 +82,7 @@ makeExprParser :: MonadParsec e s m
   -> [[Operator m a]]  -- ^ Operator table, see 'Operator'
   -> m a               -- ^ Resulting expression parser
 makeExprParser = foldl addPrecLevel
+{-# INLINEABLE makeExprParser #-}
 
 -- | @addPrecLevel p ops@ adds the ability to parse operators in table @ops@
 -- to parser @p@.

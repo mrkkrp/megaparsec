@@ -4,7 +4,7 @@
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeFamilies     #-}
 
-module Text.Megaparsec.LexerSpec (spec) where
+module Text.Megaparsec.Char.LexerSpec (spec) where
 
 import Control.Applicative
 import Control.Monad (void)
@@ -20,7 +20,7 @@ import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
-import Text.Megaparsec.Lexer
+import Text.Megaparsec.Char.Lexer
 import qualified Text.Megaparsec.Char as C
 
 spec :: Spec
