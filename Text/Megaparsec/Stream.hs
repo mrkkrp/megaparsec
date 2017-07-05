@@ -89,7 +89,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   chunkEmpty pxy ts = chunkLength pxy ts <= 0
   {-# INLINE chunkEmpty #-}
 
-  -- | Set source position for __at__ given token. By default, the given
+  -- | Set source position __at__ given token. By default, the given
   -- 'SourcePos' (second argument) is just returned without looking at the
   -- token. This method is important when your stream is a collection of
   -- tokens where every token knows where it begins in the original input.
@@ -99,7 +99,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     -> SourcePos       -- ^ Current position
     -> Token s         -- ^ Current token
     -> SourcePos       -- ^ Position of the token
-  positionAt1 Proxy = defaultPositionTo
+  positionAt1 Proxy = defaultPositionAt
   {-# INLINE positionAt1 #-}
 
   -- | The same as 'positionAt1', but for chunks of the stream. The function
@@ -112,7 +112,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     -> SourcePos       -- ^ Current position
     -> Tokens s        -- ^ Current chunk
     -> SourcePos       -- ^ Position of the chunk
-  positionAtN Proxy = defaultPositionTo
+  positionAtN Proxy = defaultPositionAt
   {-# INLINE positionAtN #-}
 
   -- | Advance position given a single token. The returned position is the
@@ -258,9 +258,9 @@ instance Stream TL.Text where
 -- tokens do not contain info about their position in the stream. Thus it
 -- just returns the given 'SourcePos' without re-positioning.
 
-defaultPositionTo :: SourcePos -> a -> SourcePos
-defaultPositionTo pos _ = pos
-{-# INLINE defaultPositionTo #-}
+defaultPositionAt :: SourcePos -> a -> SourcePos
+defaultPositionAt pos _ = pos
+{-# INLINE defaultPositionAt #-}
 
 -- | Update a source position given a token. The first argument specifies
 -- the tab width. If the character is a newline (\'\\n\') the line number is
