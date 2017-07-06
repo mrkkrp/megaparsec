@@ -25,7 +25,7 @@
     * [Megaparsec vs Earley](#megaparsec-vs-earley)
     * [Megaparsec vs Parsers](#megaparsec-vs-parsers)
 * [Related packages](#related-packages)
-* [Links to announcements](#links-to-announcements)
+* [Links to announcements and blog posts](#links-to-announcements-and-blog-posts)
 * [Authors](#authors)
 * [Contribution](#contribution)
 * [License](#license)
@@ -382,11 +382,12 @@ The following packages are designed to be used with Megaparsec:
   using [TagSoup](https://hackage.haskell.org/package/tagsoup) as a token
   type in Megaparsec.
 
-## Links to announcements
+## Links to announcements and blog posts
 
 Here are some blog posts mainly announcing new features of the project and
 describing what sort of things are now possible:
 
+* [A major upgrade to Megaparsec: more speed, more power](https://markkarpov.com/post/megaparsec-more-speed-more-power.html)
 * [Latest additions to Megaparsec](https://markkarpov.com/post/latest-additions-to-megaparsec.html)
 * [Announcing Megaparsec 5](https://markkarpov.com/post/announcing-megaparsec-5.html)
 * [Megaparsec 4 and 5](https://markkarpov.com/post/megaparsec-4-and-5.html)
