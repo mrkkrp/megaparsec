@@ -9,7 +9,8 @@ import Data.Text (Text)
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import qualified Data.Text as T
+import qualified Data.Text                  as T
+import qualified Text.Megaparsec.Char.Lexer as L
 
 -- | The type of parser that consumes 'String's.
 
@@ -38,6 +39,10 @@ main = defaultMain
   , bparser "skipSomeTill" manyAsB (const $ skipSomeTill (char 'a') (char 'b'))
   , bparser "takeWhileP" manyAs (const $ takeWhileP Nothing (== 'a'))
   , bparser "takeWhile1P" manyAs (const $ takeWhile1P Nothing (== 'a'))
+  , bparser "decimal" mkInt (const (L.decimal :: Parser Integer))
+  , bparser "octal" mkInt (const (L.octal :: Parser Integer))
+  , bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer))
+  , bparser "scientific" mkInt (const L.scientific)
   ]
 
 -- | Perform a series to measurements with the same parser.
@@ -84,3 +89,9 @@ manyAsB' n = replicate n 'a' ++ "b"
 
 manyAbs' :: Int -> Text
 manyAbs' n = T.take (if even n then n else n + 1) (T.replicate n "ab")
+
+-- | Render an 'Integer' with the number of digits linearly dependent on the
+-- argument.
+
+mkInt :: Int -> Text
+mkInt n = (T.pack . show) ((10 :: Integer) ^ (n `quot` 100))
