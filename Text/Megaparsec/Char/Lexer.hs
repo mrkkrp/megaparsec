@@ -504,6 +504,9 @@ scientific = do
 --
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
+--
+-- __Note__: before version 6.0.0 the function returned 'Double', i.e. it
+-- wasn't polymorphic in its return type.
 
 float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
 float = Sci.toRealFloat <$> scientific <?> "floating point number"
