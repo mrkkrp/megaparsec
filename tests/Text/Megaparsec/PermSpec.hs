@@ -10,7 +10,7 @@ import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec.Char
-import Text.Megaparsec.Char.Lexer (integer)
+import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Perm
 
 data CharRows = CharRows
@@ -42,7 +42,7 @@ spec = do
           prs p "" `shouldParse` succ n
     context "when supplied parser fails" $
       it "signals correct parse error" $ do
-          let p = makePermParser (succ <$$> integer)
+          let p = makePermParser (succ <$$> decimal) :: Parser Integer
           prs p "" `shouldFailWith` err posI (ueof <> elabel "integer")
 
   describe "(<$?>)" $ do
@@ -59,7 +59,7 @@ spec = do
     context "when stream in empty" $
       it "returns the default value" $
         property $ \n -> do
-          let p = makePermParser (succ <$?> (n :: Integer, integer))
+          let p = makePermParser (succ <$?> (n :: Integer, decimal))
           prs p "" `shouldParse` succ n
 
   describe "makeExprParser" $

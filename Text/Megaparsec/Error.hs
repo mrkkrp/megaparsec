@@ -48,10 +48,9 @@ import Data.Void
 import Data.Word (Word8)
 import GHC.Generics
 import Prelude hiding (concat)
+import Text.Megaparsec.Pos
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
-import Text.Megaparsec.Pos
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative

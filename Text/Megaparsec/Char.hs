@@ -64,10 +64,9 @@ import Data.Function (on)
 import Data.Functor (void)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
+import Text.Megaparsec
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Set             as E
-
-import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Foldable (Foldable (), elem, notElem)

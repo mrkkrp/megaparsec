@@ -50,6 +50,7 @@ library
     build-depends:    void         == 0.7.*
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Byte
+                    , Text.Megaparsec.Byte.Lexer
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Char.Lexer
                     , Text.Megaparsec.Error

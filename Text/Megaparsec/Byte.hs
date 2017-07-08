@@ -53,9 +53,8 @@ import Data.Functor (void)
 import Data.Maybe (fromMaybe)
 import Data.Proxy
 import Data.Word (Word8)
-import qualified Text.Megaparsec.Char as C
-
 import Text.Megaparsec
+import qualified Text.Megaparsec.Char as C
 
 ----------------------------------------------------------------------------
 -- Simple parsers

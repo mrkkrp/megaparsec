@@ -33,7 +33,7 @@ script:
  - travis_wait 60 cabal build
  - cabal test --show-details=always --test-option=--qc-max-success=1000
  - cabal sdist
- - cabal haddock | grep "100%" | wc -l | grep "10"
+ - cabal haddock | grep "100%" | wc -l | grep "11"
 
 after_script:
  - export PATH=~/.cabal/bin:$PATH
