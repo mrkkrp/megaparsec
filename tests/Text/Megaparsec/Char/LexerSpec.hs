@@ -12,7 +12,7 @@ import Data.Char hiding (ord)
 import Data.List (isInfixOf)
 import Data.Maybe
 import Data.Monoid ((<>))
--- import Data.Scientific (fromFloatDigits)
+import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void (Void)
 import Numeric (showInt, showHex, showOct)
 import Test.Hspec
@@ -259,27 +259,6 @@ spec = do
         prs (decimal :: Parser Integer) "" `shouldFailWith`
           err posI (ueof <> elabel "integer")
 
-  describe "hexadecimal" $ do
-    context "when stream begins with hexadecimal digits" $
-      it "they are parsed as an integer" $
-        property $ \n' -> do
-          let p = hexadecimal :: Parser Integer
-              n = getNonNegative n'
-              s = showHex n ""
-          prs  p s `shouldParse` n
-          prs' p s `succeedsLeaving` ""
-    context "when stream does not begin with hexadecimal digits" $
-      it "signals correct parse error" $
-        property $ \a as -> not (isHexDigit a) ==> do
-          let p = hexadecimal :: Parser Integer
-              s = a : as
-          prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "hexadecimal integer")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (hexadecimal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "hexadecimal integer")
-
   describe "octal" $ do
     context "when stream begins with octal digits" $
       it "they are parsed as an integer" $
@@ -301,6 +280,27 @@ spec = do
         prs (octal :: Parser Integer) "" `shouldFailWith`
           err posI (ueof <> elabel "octal integer")
 
+  describe "hexadecimal" $ do
+    context "when stream begins with hexadecimal digits" $
+      it "they are parsed as an integer" $
+        property $ \n' -> do
+          let p = hexadecimal :: Parser Integer
+              n = getNonNegative n'
+              s = showHex n ""
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when stream does not begin with hexadecimal digits" $
+      it "signals correct parse error" $
+        property $ \a as -> not (isHexDigit a) ==> do
+          let p = hexadecimal :: Parser Integer
+              s = a : as
+          prs  p s `shouldFailWith`
+            err posI (utok a <> elabel "hexadecimal integer")
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (hexadecimal :: Parser Integer) "" `shouldFailWith`
+          err posI (ueof <> elabel "hexadecimal integer")
+
   describe "float" $ do
     context "when stream begins with a float" $
       it "parses it" $
@@ -319,14 +319,13 @@ spec = do
             err posI (utok a <> elabel "floating point number")
           prs' p s `failsLeaving` s
     context "when stream begins with a decimal number" $
-      it "signals correct parse error" $
+      it "parses it" $
         property $ \n' -> do
           let p = float :: Parser Double
               n = getNonNegative n'
               s = show (n :: Integer)
-          prs  p s `shouldFailWith` err (posN (length s) s)
-            (ueof <> etok '.' <> etok 'E' <> etok 'e' <> elabel "digit")
-          prs' p s `failsLeaving` ""
+          prs  p s `shouldParse` fromIntegral n
+          prs' p s `succeedsLeaving` ""
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (float :: Parser Double) "" `shouldFailWith`
@@ -338,67 +337,72 @@ spec = do
         prs  p s `shouldParse` 123e3
         prs' p s `succeedsLeaving` ""
 
-  -- describe "number" $ do
-  --   context "when stream begins with a number" $
-  --     it "parses it" $
-  --       property $ \n' -> do
-  --         let p = number
-  --             s = either (show . getNonNegative) (show . getNonNegative)
-  --               (n' :: Either (NonNegative Integer) (NonNegative Double))
-  --         prs p s `shouldParse` case n' of
-  --           Left  x -> fromIntegral    (getNonNegative x)
-  --           Right x -> fromFloatDigits (getNonNegative x)
-  --         prs' p s `succeedsLeaving` ""
-  --   context "when stream is empty" $
-  --     it "signals correct parse error" $
-  --       prs number "" `shouldFailWith`
-  --         err posI (ueof <> elabel "number")
+  describe "scientific" $ do
+    context "when stream begins with a number" $
+      it "parses it" $
+        property $ \n' -> do
+          let p = scientific :: Parser Scientific
+              s = either (show . getNonNegative) (show . getNonNegative)
+                (n' :: Either (NonNegative Integer) (NonNegative Double))
+          prs p s `shouldParse` case n' of
+            Left  x -> fromIntegral    (getNonNegative x)
+            Right x -> fromFloatDigits (getNonNegative x)
+          prs' p s `succeedsLeaving` ""
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (scientific :: Parser Scientific) "" `shouldFailWith`
+          err posI (ueof <> elabel "digit")
 
-  -- describe "signed" $ do
-  --   context "with integer" $
-  --     it "parses signed integers" $
-  --       property $ \n -> do
-  --         let p = signed (hidden C.space) integer
-  --             s = show n
-  --         prs  p s `shouldParse` n
-  --         prs' p s `succeedsLeaving` ""
-  --   context "with float" $
-  --     it "parses signed floats" $
-  --       property $ \n -> do
-  --         let p = signed (hidden C.space) float
-  --             s = show n
-  --         prs  p s `shouldParse` n
-  --         prs' p s `succeedsLeaving` ""
-  --   context "with number" $
-  --     it "parses singed numbers" $
-  --       property $ \n -> do
-  --         let p = signed (hidden C.space) number
-  --             s = either show show (n :: Either Integer Double)
-  --         prs p s `shouldParse` case n of
-  --           Left  x -> fromIntegral    x
-  --           Right x -> fromFloatDigits x
-  --   context "when number is prefixed with plus sign" $
-  --     it "parses the number" $
-  --       property $ \n' -> do
-  --         let p = signed (hidden C.space) integer
-  --             n = getNonNegative n'
-  --             s = '+' : show n
-  --         prs  p s `shouldParse` n
-  --         prs' p s `succeedsLeaving` ""
-  --   context "when number is prefixed with white space" $
-  --     it "signals correct parse error" $
-  --       property $ \n -> do
-  --         let p = signed (hidden C.space) integer
-  --             s = ' ' : show (n :: Integer)
-  --         prs  p s `shouldFailWith` err posI
-  --           (utok ' ' <> etok '+' <> etok '-' <> elabel "integer")
-  --         prs' p s `failsLeaving` s
-  --   context "when there is white space between sign and digits" $
-  --     it "parses it all right" $ do
-  --       let p = signed (hidden C.space) integer
-  --           s = "- 123"
-  --       prs  p s `shouldParse` (-123)
-  --       prs' p s `succeedsLeaving` ""
+  describe "signed" $ do
+    context "with integer" $
+      it "parses signed integers" $
+        property $ \n -> do
+          let p :: Parser Integer
+              p = signed (hidden C.space) decimal
+              s = show n
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "with float" $
+      it "parses signed floats" $
+        property $ \n -> do
+          let p :: Parser Double
+              p = signed (hidden C.space) float
+              s = show n
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "with scientific" $
+      it "parses singed scientific numbers" $
+        property $ \n -> do
+          let p = signed (hidden C.space) scientific
+              s = either show show (n :: Either Integer Double)
+          prs p s `shouldParse` case n of
+            Left  x -> fromIntegral    x
+            Right x -> fromFloatDigits x
+    context "when number is prefixed with plus sign" $
+      it "parses the number" $
+        property $ \n' -> do
+          let p :: Parser Integer
+              p = signed (hidden C.space) decimal
+              n = getNonNegative n'
+              s = '+' : show n
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when number is prefixed with white space" $
+      it "signals correct parse error" $
+        property $ \n -> do
+          let p :: Parser Integer
+              p = signed (hidden C.space) decimal
+              s = ' ' : show (n :: Integer)
+          prs  p s `shouldFailWith` err posI
+            (utok ' ' <> etok '+' <> etok '-' <> elabel "integer")
+          prs' p s `failsLeaving` s
+    context "when there is white space between sign and digits" $
+      it "parses it all right" $ do
+        let p :: Parser Integer
+            p = signed (hidden C.space) decimal
+            s = "- 123"
+        prs  p s `shouldParse` (-123)
+        prs' p s `succeedsLeaving` ""
 
 ----------------------------------------------------------------------------
 -- Helpers

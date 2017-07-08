@@ -184,7 +184,7 @@ scientific = do
     return (mkNum xs, negate $ chunkLength pxy xs)
   e <- option e' $ do
     void (char' 101)
-    (`subtract` e') <$> signed (return ()) decimal_
+    (+ e') <$> signed (return ()) decimal_
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
