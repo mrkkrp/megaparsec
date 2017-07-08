@@ -19,6 +19,9 @@ module Text.Megaparsec.Byte.Lexer
   , C.lexeme
   , C.symbol
   , C.symbol'
+  , skipLineComment
+  , skipBlockComment
+  , skipBlockCommentNested
     -- * Numbers
   , decimal
   , octal
@@ -37,6 +40,50 @@ import Text.Megaparsec
 import Text.Megaparsec.Byte
 import qualified Data.Scientific            as Sci
 import qualified Text.Megaparsec.Char.Lexer as C
+
+----------------------------------------------------------------------------
+-- White space
+
+-- | Given comment prefix this function returns a parser that skips line
+-- comments. Note that it stops just before the newline character but
+-- doesn't consume the newline. Newline is either supposed to be consumed by
+-- 'space' parser or picked up manually.
+
+skipLineComment :: (MonadParsec e s m, Token s ~ Word8)
+  => Tokens s          -- ^ Line comment prefix
+  -> m ()
+skipLineComment prefix =
+  string prefix *> void (takeWhileP (Just "character") (/= 10))
+{-# INLINEABLE skipLineComment #-}
+
+-- | @'skipBlockComment' start end@ skips non-nested block comment starting
+-- with @start@ and ending with @end@.
+
+skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
+  => Tokens s          -- ^ Start of block comment
+  -> Tokens s          -- ^ End of block comment
+  -> m ()
+skipBlockComment start end = p >> void (manyTill anyChar n)
+  where
+    p = string start
+    n = string end
+{-# INLINEABLE skipBlockComment #-}
+
+-- | @'skipBlockCommentNested' start end@ skips possibly nested block
+-- comment starting with @start@ and ending with @end@.
+--
+-- @since 5.0.0
+
+skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
+  => Tokens s          -- ^ Start of block comment
+  -> Tokens s          -- ^ End of block comment
+  -> m ()
+skipBlockCommentNested start end = p >> void (manyTill e n)
+  where
+    e = skipBlockCommentNested start end <|> void anyChar
+    p = string start
+    n = string end
+{-# INLINEABLE skipBlockCommentNested #-}
 
 ----------------------------------------------------------------------------
 -- Numbers
