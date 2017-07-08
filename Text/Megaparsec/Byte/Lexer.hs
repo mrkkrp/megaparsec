@@ -31,6 +31,7 @@ module Text.Megaparsec.Byte.Lexer
   , signed )
 where
 
+import Control.Applicative
 import Data.Functor (void)
 import Data.List (foldl')
 import Data.Proxy
@@ -59,7 +60,7 @@ skipLineComment prefix =
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
+skipBlockComment :: (MonadParsec e s m, Token s ~ Word8)
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
@@ -74,7 +75,7 @@ skipBlockComment start end = p >> void (manyTill anyChar n)
 --
 -- @since 5.0.0
 
-skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
+skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Word8)
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
@@ -197,7 +198,7 @@ scientific = do
 -- see 'signed'.
 
 float :: (MonadParsec e s m, Token s ~ Word8, RealFloat a) => m a
-float = Sci.toRealFloat <$> scientific
+float = Sci.toRealFloat <$> scientific <?> "floating point number"
 {-# INLINEABLE float #-}
 
 -- | @'signed' space p@ parser parses an optional sign, then if there is a
