@@ -14,7 +14,7 @@ import Data.Maybe
 import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void (Void)
-import Numeric (showInt, showHex, showOct)
+import Numeric (showInt, showHex, showOct, showFFloatAlt)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -364,7 +364,7 @@ spec = do
       it "signals correct parse error" $
         property $ \(NonNegative n) -> do
           let p = scientific <* empty :: Parser Scientific
-              s = show (n :: Double)
+              s = showFFloatAlt Nothing (n :: Double) ""
           prs p s `shouldFailWith` err (posN (length s) s)
             (etok 'E' <> etok 'e' <> elabel "digit")
           prs' p s `failsLeaving` ""

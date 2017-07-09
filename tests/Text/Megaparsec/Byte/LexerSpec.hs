@@ -9,7 +9,7 @@ import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void
 import Data.Word (Word8)
-import Numeric (showInt, showHex, showOct)
+import Numeric (showInt, showHex, showOct, showFFloatAlt)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.QuickCheck
@@ -174,7 +174,7 @@ spec = do
       it "signals correct parse error" $
         property $ \(NonNegative n) -> do
           let p = scientific <* empty :: Parser Scientific
-              s = B8.pack (show (n :: Double))
+              s = B8.pack (showFFloatAlt Nothing (n :: Double) "")
           prs p s `shouldFailWith` err (posN (B.length s) s)
             (etok 69 <> etok 101 <> elabel "digit")
           prs' p s `failsLeaving` ""
