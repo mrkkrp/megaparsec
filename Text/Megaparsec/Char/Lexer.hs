@@ -17,11 +17,14 @@
 -- This module is intended to be imported qualified:
 --
 -- > import qualified Text.Megaparsec.Char.Lexer as L
+--
+-- To do lexing of byte streams, see "Text.Megaparsec.Byte.Lexer".
 
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiWayIf       #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE MultiWayIf          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
 
 module Text.Megaparsec.Char.Lexer
   ( -- * White space
@@ -43,26 +46,26 @@ module Text.Megaparsec.Char.Lexer
     -- * Character and string literals
   , charLiteral
     -- * Numbers
-  , integer
   , decimal
-  , hexadecimal
   , octal
+  , hexadecimal
   , scientific
   , float
-  , number
   , signed )
 where
 
 import Control.Applicative
 import Control.Monad (void)
-import Data.Char (readLitChar)
+import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, fromMaybe, isJust)
-import Data.Scientific (Scientific, toRealFloat)
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Set             as E
-
+import Data.Proxy
+import Data.Scientific (Scientific)
 import Text.Megaparsec
+import qualified Data.CaseInsensitive as CI
+import qualified Data.Char            as Char
+import qualified Data.Scientific      as Sci
+import qualified Data.Set             as E
 import qualified Text.Megaparsec.Char as C
 
 ----------------------------------------------------------------------------
@@ -110,7 +113,7 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- and use the resulting function to wrap parsers for every lexeme.
 --
 -- > lexeme  = L.lexeme spaceConsumer
--- > integer = lexeme L.integer
+-- > integer = lexeme L.decimal
 
 lexeme :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
@@ -383,7 +386,7 @@ charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
   -- and we do know that r will be non-empty if count' succeeds.
   ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
-  case listToMaybe (readLitChar r) of
+  case listToMaybe (Char.readLitChar r) of
     Just (c, r') -> count (length r - length r') C.anyChar >> return c
     Nothing      -> unexpected (Tokens (x:|[]))
 {-# INLINEABLE charLiteral #-}
@@ -391,21 +394,53 @@ charLiteral = label "literal character" $ do
 ----------------------------------------------------------------------------
 -- Numbers
 
--- | Parse an integer without sign in decimal representation (according to
--- the format of integer literals described in the Haskell report).
+-- | Parse an integer in decimal representation according to the format of
+-- integer literals described in the Haskell report.
 --
 -- If you need to parse signed integers, see 'signed' combinator.
+--
+-- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
+-- wasn't polymorphic in its return type.
 
-integer :: (MonadParsec e s m, Token s ~ Char) => m Integer
-integer = decimal <?> "integer"
-{-# INLINEABLE integer #-}
-
--- | The same as 'integer', but 'integer' is 'label'ed with “integer” label,
--- while this parser is labeled with “decimal integer”.
-
-decimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-decimal = nump "" C.digitChar <?> "decimal integer"
+decimal
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
+
+-- | A non-public helper to parse decimal integers.
+
+decimal_
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
+  where
+    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c = a * 10 + fromIntegral (Char.digitToInt c)
+
+-- | Parse an integer in octal representation. Representation of octal
+-- number is expected to be according to the Haskell report except for the
+-- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
+-- responsibility of the programmer to parse correct prefix before parsing
+-- the number itself.
+--
+-- For example you can make it conform to the Haskell report like this:
+--
+-- > octal = char '0' >> char' 'o' >> L.octal
+--
+-- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
+-- wasn't polymorphic in its return type.
+
+octal
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+octal = mkNum
+  <$> takeWhile1P Nothing Char.isOctDigit
+  <?> "octal integer"
+  where
+    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c = a * 8 + fromIntegral (Char.digitToInt c)
+{-# INLINEABLE octal #-}
 
 -- | Parse an integer in hexadecimal representation. Representation of
 -- hexadecimal number is expected to be according to the Haskell report
@@ -413,86 +448,76 @@ decimal = nump "" C.digitChar <?> "decimal integer"
 -- It is a responsibility of the programmer to parse correct prefix before
 -- parsing the number itself.
 --
--- For example you can make it conform to Haskell report like this:
+-- For example you can make it conform to the Haskell report like this:
 --
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
+--
+-- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
+-- wasn't polymorphic in its return type.
 
-hexadecimal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-hexadecimal = nump "0x" C.hexDigitChar <?> "hexadecimal integer"
+hexadecimal
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+hexadecimal = mkNum
+  <$> takeWhile1P Nothing Char.isHexDigit
+  <?> "hexadecimal integer"
+  where
+    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c = a * 16 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE hexadecimal #-}
-
--- | Parse an integer in octal representation. Representation of octal
--- number is expected to be according to the Haskell report except for the
--- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
--- responsibility of the programmer to parse correct prefix before parsing
--- the number itself.
-
-octal :: (MonadParsec e s m, Token s ~ Char) => m Integer
-octal = nump "0o" C.octDigitChar <?> "octal integer"
-{-# INLINEABLE octal #-}
-
--- | @nump prefix p@ parses /one/ or more characters with @p@ parser, then
--- prepends @prefix@ to returned value and tries to interpret the result as
--- an integer according to Haskell syntax.
-
-nump :: MonadParsec e s m => String -> m Char -> m Integer
-nump prefix baseDigit = read . (prefix ++) <$> some baseDigit
 
 -- | Parse a floating point value as a 'Scientific' number. 'Scientific' is
 -- great for parsing of arbitrary precision numbers coming from an untrusted
 -- source. See documentation in "Data.Scientific" for more information.
--- Representation of the floating point value is expected to be according to
--- the Haskell report.
+--
+-- The parser can be used to parse integers or floating point values. Use
+-- functions like 'Data.Scientific.floatingOrInteger' from "Data.Scientific"
+-- to test and extract integer or real values.
 --
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
 --
 -- @since 5.0.0
 
-scientific :: (MonadParsec e s m, Token s ~ Char) => m Scientific
-scientific = label "floating point number" (read <$> f)
-  where
-    f = (++) <$> some C.digitChar <*> (fraction <|> fExp)
+scientific
+  :: forall e s m. (MonadParsec e s m, Token s ~ Char)
+  => m Scientific
+scientific = do
+  let pxy = Proxy :: Proxy s
+  c' <- decimal_
+  SP c e' <- option (SP c' 0) $ do
+    void (C.char '.')
+    let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
+        step (SP a e') c = SP
+          (a * 10 + fromIntegral (Char.digitToInt c))
+          (e' - 1)
+    mkNum <$> takeWhile1P (Just "digit") Char.isDigit
+  e <- option e' $ do
+    void (C.char' 'e')
+    (+ e') <$> signed (return ()) decimal_
+  return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
--- | Parse a floating point number without sign. This is a simple shortcut
--- defined as:
+data SP = SP !Integer {-# UNPACK #-} !Int
+
+-- | Parse a floating point number without sign. There are differences
+-- between the syntax for floating point literals described in the Haskell
+-- report and what this function accepts. In particular, it does not quire
+-- fractional part and accepts inputs like @\"3\"@ returning @3.0@.
 --
--- > float = toRealFloat <$> scientific
+-- This is a simple short-cut defined as:
+--
+-- > float = Sci.toRealFloat <$> scientific <?> "floating point number"
+--
+-- This function does not parse sign, if you need to parse signed numbers,
+-- see 'signed'.
+--
+-- __Note__: before version 6.0.0 the function returned 'Double', i.e. it
+-- wasn't polymorphic in its return type.
 
-float :: (MonadParsec e s m, Token s ~ Char) => m Double
-float = toRealFloat <$> scientific
+float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
+float = Sci.toRealFloat <$> scientific <?> "floating point number"
 {-# INLINEABLE float #-}
-
--- | This is a helper for 'float' parser. It parses fractional part of
--- floating point number, that is, dot and everything after it.
-
-fraction :: (MonadParsec e s m, Token s ~ Char) => m String
-fraction = do
-  void (C.char '.')
-  d <- some C.digitChar
-  e <- option "" fExp
-  return ('.' : d ++ e)
-
--- | This helper parses exponent of floating point numbers.
-
-fExp :: (MonadParsec e s m, Token s ~ Char) => m String
-fExp = do
-  expChar <- C.char' 'e'
-  signStr <- option "" (pure <$> choice (C.char <$> "+-"))
-  d       <- some C.digitChar
-  return (expChar : signStr ++ d)
-
--- | Parse a number: either integer or floating point. The parser can handle
--- overlapping grammars graciously. Use functions like
--- 'Data.Scientific.floatingOrInteger' from "Data.Scientific" to test and
--- extract integer or real values.
-
-number :: (MonadParsec e s m, Token s ~ Char) => m Scientific
-number = label "number" (read <$> f)
-  where
-    f = (++) <$> some C.digitChar <*> option "" (fraction <|> fExp)
-{-# INLINEABLE number #-}
 
 -- | @'signed' space p@ parser parses an optional sign, then if there is a
 -- sign it will consume optional white space (using @space@ parser), then it
@@ -502,15 +527,14 @@ number = label "number" (read <$> f)
 -- For example, to parse signed integer you can write:
 --
 -- > lexeme        = L.lexeme spaceConsumer
--- > integer       = lexeme L.integer
+-- > integer       = lexeme L.decimal
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec e s m, Token s ~ Char, Num a) => m () -> m a -> m a
+signed :: (MonadParsec e s m, Token s ~ Char, Num a)
+  => m ()              -- ^ How to consume white space after the sign
+  -> m a               -- ^ How to parse the number itself
+  -> m a               -- ^ Parser for signed numbers
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
+  where
+    sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)
 {-# INLINEABLE signed #-}
-
--- | Parse a sign and return either 'id' or 'negate' according to parsed
--- sign.
-
-sign :: (MonadParsec e s m, Token s ~ Char, Num a) => m (a -> a)
-sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)

@@ -7,10 +7,13 @@
   to `Text.Megaparsec.Stream`. Generic combinators are now re-exported from
   the `Control.Applicative.Combinators` from the package
   `parser-combinators`. Just import `Text.Megaparsec` and you should be OK.
-  Then add `Text.Megaparsec.Char` if you are working with a stream of
-  `Char`s or `Text.Megaparsec.Byte` if you intend to parse binary data, then
-  add qualified modules you need (permutation parsing, lexing, expression
-  parsing, etc.).
+  Add `Text.Megaparsec.Char` if you are working with a stream of `Char`s or
+  `Text.Megaparsec.Byte` if you intend to parse binary data, then add
+  qualified modules you need (permutation parsing, lexing, expression
+  parsing, etc.). `Text.Megaparsec.Lexer` was renamed to
+  `Text.Megaparec.Char.Lexer` because many functions in it has the `Token s
+  ~ Char` constraint. There is also `Text.Megaparsec.Byte.Lexer` now,
+  although it has fewer functions.
 
 * Dropped per-stream modules, the `Parser` type synonym is to be defined
   manually by user.
@@ -43,9 +46,10 @@
 * Removed the `ErrorComponent` type class, added `ErrorFancy` instead.
   `ErrorFancy` is a sum type which can represent `fail` messages, incorrect
   indentation, and custom data (we use `Void` for that by default to
-  “disable” it). This is better than the type class-based approach because
+  “disable” it). This is better than the typeclass-based approach because
   every instance of `ErrorComponent` needed to have constructors for `fail`
-  and indentation massages anyway, leading to duplication of code.
+  and indentation massages anyway, leading to duplication of code (for
+  example for parse error component rendering).
 
 * Added `Functor` instances for `ErrorItem` and `ErrorFancy`.
 
@@ -58,9 +62,9 @@
   readable form only as standalone tokens.
 
 * Added `Text.Megaparsec.Error.Builder` module to help construct
-  `ParseError`s easily. Useful for testing and debugging, previously we had
-  something like that in the `hspec-megaparsec` package, but it does not
-  hurt to ship it with the library.
+  `ParseError`s easily. It is useful for testing and debugging. Previously
+  we had something like that in the `hspec-megaparsec` package, but it does
+  not hurt to ship it with the library.
 
 ### Stream
 
@@ -93,8 +97,24 @@
   requires at least one space character to be present to succeed.
 
 * Added new module `Text.Megaparsec.Byte`, which is similar to
-  `Text.Megaparsec.Char`, but target token type is `Word8` instead of
-  `Char`.
+  `Text.Megaparsec.Char`, but for token streams of the type `Word8` instead
+  of `Char`.
+
+* `integer` was dropped from `Text.Megaparec.Char.Lexer`. Use `decimal`
+  instead.
+
+* `number` was dropped from `Text.Megaparec.Char.Lexer`. Use `scientific`
+  instead.
+
+* `decimal`, `octal`, and `hexadecimal` are now polymorphic in their return
+  type and can be used to parse any instances of `Integral`.
+
+* `float` is now polymorphic in its return type and can be used to parse any
+  instance of `RealFloat`.
+
+* Added new module `Text.Megaparsec.Byte.Lexer`, which provides some
+  functions (white space and numeric helpers) from
+  `Text.Megaparsec.Char.Lexer` for streams with token type `Word8`.
 
 ## Megaparsec 5.3.1
 

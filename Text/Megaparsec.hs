@@ -121,6 +121,9 @@ import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Debug.Trace
 import GHC.Generics
+import Text.Megaparsec.Error
+import Text.Megaparsec.Pos
+import Text.Megaparsec.Stream
 import qualified Control.Applicative               as A
 import qualified Control.Monad.Fail                as Fail
 import qualified Control.Monad.RWS.Lazy            as L
@@ -132,10 +135,6 @@ import qualified Control.Monad.Trans.Writer.Lazy   as L
 import qualified Control.Monad.Trans.Writer.Strict as S
 import qualified Data.List.NonEmpty                as NE
 import qualified Data.Set                          as E
-
-import Text.Megaparsec.Error
-import Text.Megaparsec.Pos
-import Text.Megaparsec.Stream
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
