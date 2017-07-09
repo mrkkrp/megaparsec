@@ -113,7 +113,7 @@ space ch line block = hidden . skipMany $ choice [ch, line, block]
 -- and use the resulting function to wrap parsers for every lexeme.
 --
 -- > lexeme  = L.lexeme spaceConsumer
--- > integer = lexeme L.integer
+-- > integer = lexeme L.decimal
 
 lexeme :: MonadParsec e s m
   => m ()              -- ^ How to consume white space after lexeme
@@ -470,7 +470,7 @@ hexadecimal = mkNum
 -- great for parsing of arbitrary precision numbers coming from an untrusted
 -- source. See documentation in "Data.Scientific" for more information.
 --
--- The parser can be used to use integers or floating point values. Use
+-- The parser can be used to parse integers or floating point values. Use
 -- functions like 'Data.Scientific.floatingOrInteger' from "Data.Scientific"
 -- to test and extract integer or real values.
 --
@@ -497,10 +497,14 @@ scientific = do
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
--- | Parse a floating point number without sign. This is a simple shortcut
--- defined as:
+-- | Parse a floating point number without sign. There are differences
+-- between the syntax for floating point literals described in the Haskell
+-- report and what this function accepts. In particular, it does not quire
+-- fractional part and accepts inputs like @\"3\"@ returning @3.0@.
 --
--- > float = toRealFloat <$> scientific
+-- This is a simple short-cut defined as:
+--
+-- > float = Sci.toRealFloat <$> scientific <?> "floating point number"
 --
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
@@ -520,7 +524,7 @@ float = Sci.toRealFloat <$> scientific <?> "floating point number"
 -- For example, to parse signed integer you can write:
 --
 -- > lexeme        = L.lexeme spaceConsumer
--- > integer       = lexeme L.integer
+-- > integer       = lexeme L.decimal
 -- > signedInteger = L.signed spaceConsumer integer
 
 signed :: (MonadParsec e s m, Token s ~ Char, Num a)
