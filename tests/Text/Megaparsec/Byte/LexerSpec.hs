@@ -4,6 +4,7 @@ module Text.Megaparsec.Byte.LexerSpec (spec) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
+import Data.Char (toUpper)
 import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void
@@ -88,6 +89,14 @@ spec = do
           let p = hexadecimal :: Parser Integer
               n = getNonNegative n'
               s = B8.pack (showHex n "")
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when stream begins with hexadecimal digits (uppercase)" $
+      it "they are parsed as an integer" $
+        property $ \n' -> do
+          let p = hexadecimal :: Parser Integer
+              n = getNonNegative n'
+              s = B8.pack (toUpper <$> showHex n "")
           prs  p s `shouldParse` n
           prs' p s `succeedsLeaving` ""
     context "when stream does not begin with hexadecimal digits" $
