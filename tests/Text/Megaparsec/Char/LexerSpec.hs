@@ -50,13 +50,25 @@ spec = do
           prs  p s `shouldParse` y
           prs' p s `succeedsLeaving` ""
 
-  describe "skipLineComment" $
+  describe "skipLineComment" $ do
     context "when there is no newline at the end of line" $
       it "is picked up successfully" $ do
-        let p = space (void C.spaceChar) (skipLineComment "//") empty <* eof
-            s = "  // this line comment doesn't have a newline at the end "
+        let p = skipLineComment "//"
+            s = "// this line comment doesn't have a newline at the end "
         prs  p s `shouldParse` ()
         prs' p s `succeedsLeaving` ""
+    it "inner characters are labelled properly" $ do
+      let p = skipLineComment "//" <* empty
+          s = "// here we go"
+      prs  p s `shouldFailWith` err (posN (length s) s) (elabel "character")
+      prs' p s `failsLeaving` ""
+
+  describe "skipBlockComment" $
+    it "skips a simple block comment" $ do
+      let p = skipBlockComment "/*" "*/"
+          s = "/* here we go */foo!"
+      prs  p s `shouldParse` ()
+      prs' p s `succeedsLeaving` "foo!"
 
   describe "skipBlockCommentNested" $
     context "when it runs into nested block comments" $
@@ -348,6 +360,14 @@ spec = do
             Left  x -> fromIntegral    (getNonNegative x)
             Right x -> fromFloatDigits (getNonNegative x)
           prs' p s `succeedsLeaving` ""
+    context "when fractional part is interrupted" $
+      it "signals correct parse error" $
+        property $ \(NonNegative n) -> do
+          let p = scientific <* empty :: Parser Scientific
+              s = show (n :: Double)
+          prs p s `shouldFailWith` err (posN (length s) s)
+            (etok 'E' <> etok 'e' <> elabel "digit")
+          prs' p s `failsLeaving` ""
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (scientific :: Parser Scientific) "" `shouldFailWith`
