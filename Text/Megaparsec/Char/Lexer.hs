@@ -485,17 +485,20 @@ scientific
 scientific = do
   let pxy = Proxy :: Proxy s
   c' <- decimal_
-  (c, e') <- option (c', 0) $ do
+  SP c e' <- option (SP c' 0) $ do
     void (C.char '.')
-    xs <- takeWhile1P (Just "digit") Char.isDigit
-    let mkNum    = foldl' step c' . chunkToTokens pxy
-        step a c = a * 10 + fromIntegral (Char.digitToInt c)
-    return (mkNum xs, negate $ chunkLength pxy xs)
+    let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
+        step (SP a e') c = SP
+          (a * 10 + fromIntegral (Char.digitToInt c))
+          (e' - 1)
+    mkNum <$> takeWhile1P (Just "digit") Char.isDigit
   e <- option e' $ do
     void (C.char' 'e')
     (+ e') <$> signed (return ()) decimal_
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
+
+data SP = SP !Integer {-# UNPACK #-} !Int
 
 -- | Parse a floating point number without sign. There are differences
 -- between the syntax for floating point literals described in the Haskell
