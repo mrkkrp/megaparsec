@@ -72,6 +72,7 @@ module Text.Megaparsec
   , parse
   , parseMaybe
   , parseTest
+  , parseTest'
   , runParser
   , runParser'
   , runParserT
@@ -472,6 +473,24 @@ parseTest :: ( ShowErrorComponent e
 parseTest p input =
   case parse p "" input of
     Left  e -> putStr (parseErrorPretty e)
+    Right x -> print x
+
+-- | A version of 'parseTest' that also prints offending line in parse
+-- errors.
+--
+-- @since 6.0.0
+
+parseTest' :: ( ShowErrorComponent e
+              , ShowToken (Token s)
+              , LineToken (Token s)
+              , Show a
+              , Stream s )
+  => Parsec e s a -- ^ Parser to run
+  -> s            -- ^ Input for parser
+  -> IO ()
+parseTest' p input =
+  case parse p "" input of
+    Left  e -> putStr (parseErrorPretty' input e)
     Right x -> print x
 
 -- | @'runParser' p file input@ runs parser @p@ on the input stream of

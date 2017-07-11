@@ -24,6 +24,7 @@ Names below are sorted alphabetically.
 ## Contributors
 
 * Albert Netymk
+* Alex Washburn (@recursion-ninja)
 * Antoine Latter
 * Artyom (@neongreen)
 * Auke Booij
