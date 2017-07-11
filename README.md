@@ -31,7 +31,7 @@
 * [License](#license)
 
 This is an industrial-strength monadic parser combinator library. Megaparsec
-is a fork of [Parsec](https://github.com/aslatter/parsec) library originally
+is a fork of [Parsec](https://github.com/haskell/parsec) library originally
 written by Daan Leijen.
 
 ## Features
