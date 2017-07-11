@@ -15,12 +15,13 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
@@ -277,24 +278,28 @@ parseErrorPrettyWithLine stream e = mconcat messageComponents
 -- | Renders the source context to improve error message quality.
 
 renderLineMessage
-  :: ( Enum (Token s)
+  :: forall s .
+     ( Enum (Token s)
      , Stream s )
   => s -> SourcePos -> String
 renderLineMessage s p = unlines [ paddingLine, contextLine, pointingLine ]
   where
-    paddingLine   = padding <> "|\n"
-    contextLine   = " " <> lineNumberStr <> "| " <> cs
-    pointingLine  = padding <> "| " <> (replicate columnNum ' ') <> "^"
+    paddingLine   = padding <> "|"
+    contextLine   = " " <> lineNumberStr <> " | " <> cs
+    pointingLine  = padding <> "|" <> replicate columnNum ' ' <> "^"
 
     lineNumberStr = show $ unPos linePos
     padLength = length lineNumberStr + 2
     padding = replicate padLength ' '
 
-    cs = chr . fromEnum <$> ts
+    cs =
+      case ts of
+        [] -> "<empty line>"
+        xs -> chr . fromEnum <$> xs
     ts = chunkToTokens (Proxy :: Proxy s) lineVal
     lineVal = streamIter grabLine linePos s
     linePos = sourceLine p
-    columnNum = unPos (sourceColumn p) - 1
+    columnNum = unPos $ sourceColumn p
 
 -- | Applies a "taking" function @n@ number of times to a 'Stream' and returns
 -- the last result of the "tking" function, discarding previously taken chunks.
@@ -306,9 +311,9 @@ streamIter
   -> Pos                  -- ^ Number of times to apply the function.
   -> s                    -- ^ Stream to be taken from
   -> Tokens s             -- ^ The the last segment taken from the stream
-streamIter f p ts = fst $ go (n-1) (f ts)
+streamIter f p ts = fst $ go (x-1) (f ts)
   where
-    n = unPos p
+    x = unPos p
     go 0 val    = val
     go n (_,xs) = let val = f xs
                   in go (n-1) val
@@ -321,16 +326,13 @@ streamIter f p ts = fst $ go (n-1) (f ts)
 grabLine :: (Enum (Token s), Stream s) => s -> (Tokens s, s)
 grabLine ts =
   -- remove the newline from the stream
-  case take1_ ts of
+  case take1_ ts' of
       Nothing    -> (line, ts')
       Just (_,v) -> (line, v  )
   where
     -- grab the line content
     (line, ts') = takeWhile_ f ts
-    f x =
-      case fromEnum x of
-          10 -> False
-          _  -> True
+    f x = fromEnum x /= 10
 
 -- | Pretty-print a stack of source positions.
 --
