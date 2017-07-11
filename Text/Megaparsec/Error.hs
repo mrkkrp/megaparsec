@@ -252,7 +252,12 @@ parseErrorPretty
 parseErrorPretty e =
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
 
--- | 
+
+-- | Pretty-print a 'ParseError' and display the line on which the parse error
+-- occurred. The rendered 'String' always ends with a newline.
+--
+-- Assumes that the stream tokens can be coerced to an @Int@ and that the value
+-- integer value @10@ corresponds to a new-line character.
 --
 -- @since 6.0.0
 
@@ -331,8 +336,13 @@ grabLine ts =
       Just (_,v) -> (line, v  )
   where
     -- grab the line content
-    (line, ts') = takeWhile_ f ts
-    f x = fromEnum x /= 10
+    (line, ts') = takeWhile_ isNotNewLine ts
+
+    -- Maybe instead we want to corece to an @Int@, then convert to a @Char@,
+    -- then check if the character is 'LineSeparator' or 'ParagraphSeparator'.
+    -- If this approach is pursued, the change should also occur in
+    -- 'Text.Megaparsec.Stream.defaultAdvance1'.
+    isNotNewLine x = fromEnum x /= 10
 
 -- | Pretty-print a stack of source positions.
 --
