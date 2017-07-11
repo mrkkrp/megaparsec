@@ -30,6 +30,7 @@ module Text.Megaparsec.Error
   , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
+  , parseErrorPrettyWithLine
   , sourcePosStackPretty
   , parseErrorTextPretty )
 where
@@ -41,6 +42,7 @@ import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, isNothing)
+import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -49,6 +51,7 @@ import Data.Word (Word8)
 import GHC.Generics
 import Prelude hiding (concat)
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Stream 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
@@ -247,6 +250,87 @@ parseErrorPretty
   -> String            -- ^ Result of rendering
 parseErrorPretty e =
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
+
+-- | 
+--
+-- @since 6.0.0
+
+parseErrorPrettyWithLine
+  :: ( Enum (Token s)
+     , Ord t
+     , ShowToken t
+     , ShowErrorComponent e
+     , Stream s )
+  => s              -- ^ Original input stream
+  -> ParseError t e -- ^ Parse error to render
+  -> String         -- ^ Result of rendering
+parseErrorPrettyWithLine stream e = mconcat messageComponents
+  where
+    position = errorPos e
+    lineMessage = renderLineMessage stream $ NE.last position
+    messageComponents =
+      [ sourcePosStackPretty position
+      , ":\n"
+      , lineMessage 
+      , parseErrorTextPretty e ] 
+
+-- | Renders the source context to improve error message quality.
+
+renderLineMessage
+  :: ( Enum (Token s)
+     , Stream s )
+  => s -> SourcePos -> String
+renderLineMessage s p = unlines [ paddingLine, contextLine, pointingLine ]
+  where
+    paddingLine   = padding <> "|\n"
+    contextLine   = " " <> lineNumberStr <> "| " <> cs
+    pointingLine  = padding <> "| " <> (replicate columnNum ' ') <> "^"
+
+    lineNumberStr = show $ unPos linePos
+    padLength = length lineNumberStr + 2
+    padding = replicate padLength ' '
+
+    cs = chr . fromEnum <$> ts
+    ts = chunkToTokens (Proxy :: Proxy s) lineVal
+    lineVal = streamIter grabLine linePos s
+    linePos = sourceLine p
+    columnNum = unPos (sourceColumn p) - 1
+
+-- | Applies a "taking" function @n@ number of times to a 'Stream' and returns
+-- the last result of the "tking" function, discarding previously taken chunks.
+
+streamIter
+  :: ( Enum (Token s)
+     , Stream s)
+  => (s -> (Tokens s, s)) -- ^ A function which takes part of the stream
+  -> Pos                  -- ^ Number of times to apply the function.
+  -> s                    -- ^ Stream to be taken from
+  -> Tokens s             -- ^ The the last segment taken from the stream
+streamIter f p ts = fst $ go (n-1) (f ts)
+  where
+    n = unPos p
+    go 0 val    = val
+    go n (_,xs) = let val = f xs
+                  in go (n-1) val
+
+-- | Takes a line from a stream.
+--
+-- Tokens which are numericaly coercable to the integer value @10@ are considered
+-- new-line characters.
+
+grabLine :: (Enum (Token s), Stream s) => s -> (Tokens s, s)
+grabLine ts =
+  -- remove the newline from the stream
+  case take1_ ts of
+      Nothing    -> (line, ts')
+      Just (_,v) -> (line, v  )
+  where
+    -- grab the line content
+    (line, ts') = takeWhile_ f ts
+    f x =
+      case fromEnum x of
+          10 -> False
+          _  -> True
 
 -- | Pretty-print a stack of source positions.
 --
