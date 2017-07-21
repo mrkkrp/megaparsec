@@ -124,6 +124,7 @@ data SourcePos = SourcePos
   { sourceName   :: FilePath -- ^ Name of source file
   , sourceLine   :: !Pos     -- ^ Line number
   , sourceColumn :: !Pos     -- ^ Column number
+  , totalTokens  :: !Pos
   } deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
 
 instance NFData SourcePos
@@ -132,14 +133,14 @@ instance NFData SourcePos
 -- file.
 
 initialPos :: FilePath -> SourcePos
-initialPos n = SourcePos n pos1 pos1
+initialPos n = SourcePos n pos1 pos1 pos1
 
 -- | Pretty-print a 'SourcePos'.
 --
 -- @since 5.0.0
 
 sourcePosPretty :: SourcePos -> String
-sourcePosPretty (SourcePos n l c)
+sourcePosPretty (SourcePos n l c _)
   | null n    = showLC
   | otherwise = n <> ":" <> showLC
   where

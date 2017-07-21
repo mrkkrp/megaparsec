@@ -15,12 +15,14 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
+
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Megaparsec.Error
   ( ErrorItem (..)
@@ -30,6 +32,8 @@ module Text.Megaparsec.Error
   , ShowToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
+  , parseErrorPrettyWithLine
+  , parseErrorPrettyWithStreamContext
   , sourcePosStackPretty
   , parseErrorTextPretty )
 where
@@ -40,7 +44,8 @@ import Data.Char (chr)
 import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
+import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -49,6 +54,7 @@ import Data.Word (Word8)
 import GHC.Generics
 import Prelude hiding (concat)
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Stream 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
@@ -247,6 +253,142 @@ parseErrorPretty
   -> String            -- ^ Result of rendering
 parseErrorPretty e =
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
+
+
+-- | Pretty-print a 'ParseError' and display the line on which the parse error
+-- occurred. The rendered 'String' always ends with a newline.
+--
+-- Assumes that the stream tokens can be coerced to an @Int@ and that the value
+-- integer value @10@ corresponds to a new-line character.
+--
+-- @since 6.0.0
+
+parseErrorPrettyWithLine
+  :: ( Enum (Token s)
+     , Ord t
+     , ShowToken t
+     , ShowToken (Token s)
+     , ShowErrorComponent e
+     , Stream s )
+  => s              -- ^ Original input stream
+  -> ParseError t e -- ^ Parse error to render
+  -> String         -- ^ Result of rendering
+parseErrorPrettyWithLine stream = parseErrorPrettyWithStreamContext stream (mkPos 80) isNotNewLine
+  where
+    isNotNewLine x = fromEnum x /= 10
+
+-- | Pretty-print a 'ParseError' and display the line on which the parse error
+-- occurred. The rendered 'String' always ends with a newline.
+--
+-- @since 6.0.0
+
+parseErrorPrettyWithStreamContext
+  :: forall e s t.
+     ( Ord t
+     , ShowToken t
+     , ShowToken (Token s)
+     , ShowErrorComponent e
+     , Stream s )
+  => s                 -- ^ Original input stream
+  -> Pos               -- ^ Maximum number of Tokens to display
+  -> (Token s -> Bool) -- ^ Pruning function
+  -> ParseError t e    -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+parseErrorPrettyWithStreamContext stream n f e = mconcat messageComponents
+  where
+    positions     = errorPos e
+    errorPosition = NE.last positions
+    (pointer, errorContext) = getStreamContext stream n f errorPosition
+    lineMessage   = renderLineMessage errorContext errorPosition pointer
+    messageComponents =
+      [ sourcePosStackPretty positions
+      , ":\n"
+      , lineMessage 
+      , parseErrorTextPretty e ] 
+
+
+-- |
+-- Retreives the collection of tokens around where
+getStreamContext
+  :: forall s. (Stream s, ShowToken (Token s))
+  => s
+  -> Pos               -- ^ Maximum number of tokens to return
+  -> (Token s -> Bool) -- ^ A pruning function to further truncate the returned tokens
+  -> SourcePos         -- ^ Where in the stream the parse error occured
+  -> (Int, [Token s])  -- ^ The specified tokens surrounding the parse error and which token of these was unexpected
+getStreamContext stream maxTokens f errPos = (length prunnedPrefix, prunnedPrefix <> prunnedSuffix)
+  where
+    pxy = Proxy :: Proxy s
+    (     _, stream'  ) = fromJust $ takeN_ windowOpen stream
+    (prefix, stream'' ) = fromJust $ takeN_ windowPrefix stream'
+    suffix = maybe [] (chunkToTokens pxy . fst) $ takeN_ windowSuffix stream''
+    (prunnedPrefix, dropSuffix) =
+      case reverse $ chunkToTokens pxy prefix of
+        []   -> ([], False)
+        x:xs -> (reverse $ x : (takeWhile f xs), not $ f x)
+                        
+    prunnedSuffix
+      | dropSuffix = []
+      | otherwise  = takeWhile f suffix
+    streamIndex  = unPos $ totalTokens errPos
+    numTokens    = unPos maxTokens
+    radius       = numTokens `div` 2
+    radius'      = numTokens - radius -- used for handling odd maxTokens values
+    windowOpen   = max 0 (streamIndex - radius')
+    windowPrefix = min streamIndex radius'
+    windowSuffix = radius
+
+
+-- | General algorithm for rendering a collection of 'ShowToken' values to a
+-- String. Underlines the unexpected token in the output string. 
+renderLineMessage
+  :: ShowToken t
+  => [t]         -- ^ Collection of tokens, one of which is unexpected
+  -> SourcePos   -- ^ Parse error position
+  -> Int         -- ^ Index of the unexpected token 
+  -> String
+renderLineMessage ts p arrow = unlines [ paddingLine, contextLine, pointingLine ]
+  where
+    paddingLine   = mconcat [padding, "|"]
+    contextLine   = mconcat [" ", lineNumberStr, " | ", renderedTokens]
+    pointingLine  = mconcat [padding, "| ", pointingLineSpaces, pointingLinePointer]
+
+    lineNumberStr = show $ unPos linePos
+    padLength = length lineNumberStr + 2
+    padding = replicate padLength ' '
+    linePos = sourceLine p
+
+    pointingLineSpaces  = replicate (max 1 (leadingLength - 1)) ' '
+    pointingLinePointer = replicate pointingLinePointLen '^'
+
+    -- This is rather complicated, but generalized rendering algorithm.
+
+    renderedTokens =
+        case ts of
+          []   -> ""
+          x:xs -> showTokens $ x:|xs
+
+    leadingLength =
+      case take (arrow - 1) ts of
+        []   -> 0
+        x:xs -> length . showTokens $ x:|xs
+
+    trailingLength =
+      case drop arrow ts of
+        []   -> 0
+        x:xs -> length . showTokens $ x:|xs
+
+    pointingLinePointLen =
+      case (leadingLength, trailingLength) of
+        (0,0) -> length renderedTokens
+        (0,n) -> case drop (arrow - 1) ts of
+                   []   -> 0
+                   x:xs -> let len = length . showTokens $ x:|xs
+                           in  len - n
+        (n,_) -> case take arrow ts of
+                   []   -> 0
+                   x:xs -> let len = length . showTokens $ x:|xs
+                           in  len - n
 
 -- | Pretty-print a stack of source positions.
 --

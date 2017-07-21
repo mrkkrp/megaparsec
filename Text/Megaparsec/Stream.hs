@@ -273,13 +273,14 @@ defaultAdvance1 :: Enum t
   -> SourcePos         -- ^ Current position
   -> t                 -- ^ Current token
   -> SourcePos         -- ^ Incremented position
-defaultAdvance1 width (SourcePos n l c) t = npos
+defaultAdvance1 width (SourcePos n l c x) t = npos
   where
     w  = unPos width
     c' = unPos c
+    x' = x <> pos1
     npos =
       case fromEnum t of
-        10 -> SourcePos n (l <> pos1) pos1
-        9  -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
-        _   -> SourcePos n l (c <> pos1)
+        10 -> SourcePos n (l <> pos1) pos1 x'
+        9  -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)) x'
+        _  -> SourcePos n l (c <> pos1) x'
 {-# INLINE defaultAdvance1 #-}
