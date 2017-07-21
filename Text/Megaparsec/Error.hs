@@ -15,6 +15,7 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
+
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveFunctor       #-}
@@ -32,6 +33,7 @@ module Text.Megaparsec.Error
   , ShowErrorComponent (..)
   , parseErrorPretty
   , parseErrorPrettyWithLine
+  , parseErrorPrettyWithStreamContext
   , sourcePosStackPretty
   , parseErrorTextPretty )
 where
@@ -42,7 +44,7 @@ import Data.Char (chr)
 import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
@@ -55,7 +57,7 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.Stream 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
+import Debug.Trace
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
 #endif
@@ -265,84 +267,128 @@ parseErrorPrettyWithLine
   :: ( Enum (Token s)
      , Ord t
      , ShowToken t
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s )
   => s              -- ^ Original input stream
   -> ParseError t e -- ^ Parse error to render
   -> String         -- ^ Result of rendering
-parseErrorPrettyWithLine stream e = mconcat messageComponents
+parseErrorPrettyWithLine stream = parseErrorPrettyWithStreamContext stream (mkPos 80) isNotNewLine
   where
-    position = errorPos e
-    lineMessage = renderLineMessage stream $ NE.last position
+    isNotNewLine x = fromEnum x /= 10
+
+-- | Pretty-print a 'ParseError' and display the line on which the parse error
+-- occurred. The rendered 'String' always ends with a newline.
+--
+-- @since 6.0.0
+
+parseErrorPrettyWithStreamContext
+  :: forall e s t.
+     ( Ord t
+     , ShowToken t
+     , ShowToken (Token s)
+     , ShowErrorComponent e
+     , Stream s )
+  => s                 -- ^ Original input stream
+  -> Pos               -- ^ Maximum number of Tokens to display
+  -> (Token s -> Bool) -- ^ Pruning function
+  -> ParseError t e    -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+parseErrorPrettyWithStreamContext stream n f e = mconcat messageComponents
+  where
+    positions     = errorPos e
+    errorPosition = NE.last positions
+    (pointer, errorContext) = getStreamContext stream n f errorPosition
+    lineMessage   = renderLineMessage errorContext errorPosition pointer
     messageComponents =
-      [ sourcePosStackPretty position
+      [ sourcePosStackPretty positions
       , ":\n"
       , lineMessage 
       , parseErrorTextPretty e ] 
 
--- | Renders the source context to improve error message quality.
 
-renderLineMessage
-  :: forall s .
-     ( Enum (Token s)
-     , Stream s )
-  => s -> SourcePos -> String
-renderLineMessage s p = unlines [ paddingLine, contextLine, pointingLine ]
+-- |
+-- Retreives the collection of tokens around where
+getStreamContext
+  :: forall s. (Stream s, ShowToken (Token s))
+  => s
+  -> Pos               -- ^ Maximum number of tokens to return
+  -> (Token s -> Bool) -- ^ A pruning function to further truncate the returned tokens
+  -> SourcePos         -- ^ Where in the stream the parse error occured
+  -> (Int, [Token s])  -- ^ The specified tokens surrounding the parse error and which token of these was unexpected
+getStreamContext stream maxTokens f errPos = (length prunnedPrefix, prunnedPrefix <> prunnedSuffix)
   where
-    paddingLine   = padding <> "|"
-    contextLine   = " " <> lineNumberStr <> " | " <> cs
-    pointingLine  = padding <> "|" <> replicate columnNum ' ' <> "^"
+    pxy = Proxy :: Proxy s
+    (     _, stream'  ) = fromJust $ takeN_ windowOpen stream
+    (prefix, stream'' ) = fromJust $ takeN_ windowPrefix stream'
+    suffix = maybe [] (chunkToTokens pxy . fst) $ takeN_ windowSuffix stream''
+    (prunnedPrefix, dropSuffix) =
+      case reverse $ chunkToTokens pxy prefix of
+        []   -> ([], False)
+        x:xs -> (reverse $ x : (takeWhile f xs), not $ f x)
+                        
+    prunnedSuffix
+      | dropSuffix = []
+      | otherwise  = takeWhile f suffix
+    streamIndex  = unPos $ totalTokens errPos
+    numTokens    = unPos maxTokens
+    radius       = numTokens `div` 2
+    radius'      = numTokens - radius -- used for handling odd maxTokens values
+    windowOpen   = max 0 (streamIndex - radius')
+    windowPrefix = min streamIndex radius'
+    windowSuffix = radius
+
+
+-- | General algorithm for rendering a collection of 'ShowToken' values to a
+-- String. Underlines the unexpected token in the output string. 
+renderLineMessage
+  :: ShowToken t
+  => [t]         -- ^ Collection of tokens, one of which is unexpected
+  -> SourcePos   -- ^ Parse error position
+  -> Int         -- ^ Index of the unexpected token 
+  -> String
+renderLineMessage ts p arrow = unlines [ paddingLine, contextLine, pointingLine ]
+  where
+    paddingLine   = mconcat [padding, "|"]
+    contextLine   = mconcat [" ", lineNumberStr, " | ", renderedTokens]
+    pointingLine  = mconcat [padding, "| ", pointingLineSpaces, pointingLinePointer]
 
     lineNumberStr = show $ unPos linePos
     padLength = length lineNumberStr + 2
     padding = replicate padLength ' '
-
-    cs =
-      case ts of
-        [] -> "<empty line>"
-        xs -> chr . fromEnum <$> xs
-    ts = chunkToTokens (Proxy :: Proxy s) lineVal
-    lineVal = streamIter grabLine linePos s
     linePos = sourceLine p
-    columnNum = unPos $ sourceColumn p
 
--- | Applies a "taking" function @n@ number of times to a 'Stream' and returns
--- the last result of the "tking" function, discarding previously taken chunks.
+    pointingLineSpaces  = replicate (max 1 (leadingLength - 1)) ' '
+    pointingLinePointer = replicate pointingLinePointLen '^'
 
-streamIter
-  :: ( Enum (Token s)
-     , Stream s)
-  => (s -> (Tokens s, s)) -- ^ A function which takes part of the stream
-  -> Pos                  -- ^ Number of times to apply the function.
-  -> s                    -- ^ Stream to be taken from
-  -> Tokens s             -- ^ The the last segment taken from the stream
-streamIter f p ts = fst $ go (x-1) (f ts)
-  where
-    x = unPos p
-    go 0 val    = val
-    go n (_,xs) = let val = f xs
-                  in go (n-1) val
+    -- This is rather complicated, but generalized rendering algorithm.
 
--- | Takes a line from a stream.
---
--- Tokens which are numericaly coercable to the integer value @10@ are considered
--- new-line characters.
+    renderedTokens =
+        case ts of
+          []   -> ""
+          x:xs -> showTokens $ x:|xs
 
-grabLine :: (Enum (Token s), Stream s) => s -> (Tokens s, s)
-grabLine ts =
-  -- remove the newline from the stream
-  case take1_ ts' of
-      Nothing    -> (line, ts')
-      Just (_,v) -> (line, v  )
-  where
-    -- grab the line content
-    (line, ts') = takeWhile_ isNotNewLine ts
+    leadingLength =
+      case take (arrow - 1) ts of
+        []   -> 0
+        x:xs -> length . showTokens $ x:|xs
 
-    -- Maybe instead we want to corece to an @Int@, then convert to a @Char@,
-    -- then check if the character is 'LineSeparator' or 'ParagraphSeparator'.
-    -- If this approach is pursued, the change should also occur in
-    -- 'Text.Megaparsec.Stream.defaultAdvance1'.
-    isNotNewLine x = fromEnum x /= 10
+    trailingLength =
+      case drop arrow ts of
+        []   -> 0
+        x:xs -> length . showTokens $ x:|xs
+
+    pointingLinePointLen =
+      case (leadingLength, trailingLength) of
+        (0,0) -> length renderedTokens
+        (0,n) -> case drop (arrow - 1) ts of
+                   []   -> 0
+                   x:xs -> let len = length . showTokens $ x:|xs
+                           in  len - n
+        (n,_) -> case take arrow ts of
+                   []   -> 0
+                   x:xs -> let len = length . showTokens $ x:|xs
+                           in  len - n
 
 -- | Pretty-print a stack of source positions.
 --
