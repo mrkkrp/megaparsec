@@ -57,7 +57,7 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.Stream 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-import Debug.Trace
+
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
 #endif
