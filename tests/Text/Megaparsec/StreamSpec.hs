@@ -395,8 +395,8 @@ spec = do
 toNextTab :: Pos -> Pos -> Pos
 toNextTab w' c' = mkPos $ c + w - ((c - 1) `rem` w)
   where
-     w = unPos w'
-     c = unPos c'
+    w = unPos w'
+    c = unPos c'
 
 sproxy :: Proxy String
 sproxy = Proxy

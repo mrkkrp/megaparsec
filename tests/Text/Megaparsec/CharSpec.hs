@@ -382,8 +382,9 @@ checkCharRange name tchs p = do
 
 fuzzyCase :: String -> Gen String
 fuzzyCase s = zipWith f s <$> vector (length s)
-  where f k True  = if isLower k then toUpper k else toLower k
-        f k False = k
+  where
+    f k True  = if isLower k then toUpper k else toLower k
+    f k False = k
 
 -- | Case-insensitive equality test for characters.
 

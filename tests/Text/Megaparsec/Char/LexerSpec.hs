@@ -429,7 +429,8 @@ spec = do
 
 mkWhiteSpace :: Gen String
 mkWhiteSpace = concat <$> listOf whiteUnit
-  where whiteUnit = oneof [whiteChars, whiteLine, whiteBlock]
+  where
+    whiteUnit = oneof [whiteChars, whiteLine, whiteBlock]
 
 mkWhiteSpaceNl :: Gen String
 mkWhiteSpaceNl = (<>) <$> mkWhiteSpace <*> pure "\n"
@@ -439,42 +440,50 @@ mkSymbol = (++) <$> symbolName <*> whiteChars
 
 mkInterspace :: String -> Int -> Gen String
 mkInterspace x n = oneof [si, mkIndent x n]
-  where si = (++ x) <$> listOf (elements " \t")
+  where
+    si = (++ x) <$> listOf (elements " \t")
 
 mkIndent :: String -> Int -> Gen String
 mkIndent x n = (++) <$> mkIndent' x n <*> eol
-  where eol = frequency [(5, return "\n"), (1, listOf1 (return '\n'))]
+  where
+    eol = frequency [(5, return "\n"), (1, listOf1 (return '\n'))]
 
 mkIndent' :: String -> Int -> Gen String
 mkIndent' x n = concat <$> sequence [spc, sym, tra]
-  where spc = frequency [(5, vectorOf n itm), (1, listOf itm)]
-        tra = listOf itm
-        itm = elements " \t"
-        sym = return x
+  where
+    spc = frequency [(5, vectorOf n itm), (1, listOf itm)]
+    tra = listOf itm
+    itm = elements " \t"
+    sym = return x
 
 whiteChars :: Gen String
 whiteChars = listOf (elements "\t\n ")
 
 whiteLine :: Gen String
 whiteLine = commentOut <$> arbitrary `suchThat` goodEnough
-  where commentOut x = "//" ++ x ++ "\n"
-        goodEnough x = '\n' `notElem` x
+  where
+    commentOut x = "//" ++ x ++ "\n"
+    goodEnough x = '\n' `notElem` x
 
 whiteBlock :: Gen String
 whiteBlock = commentOut <$> arbitrary `suchThat` goodEnough
-  where commentOut x = "/*" ++ x ++ "*/"
-        goodEnough x = not $ "*/" `isInfixOf` x
+  where
+    commentOut x = "/*" ++ x ++ "*/"
+    goodEnough x = not $ "*/" `isInfixOf` x
 
 symbolName :: Gen String
 symbolName = listOf $ arbitrary `suchThat` isAlphaNum
 
 sc :: Parser ()
-sc = space (void $ C.oneOf " \t") empty empty
+sc = space (void $ takeWhile1P Nothing f) empty empty
+  where
+    f x = x == ' ' || x == '\t'
 
 scn :: Parser ()
-scn = space (void C.spaceChar) l b
-  where l = skipLineComment "//"
-        b = skipBlockComment "/*" "*/"
+scn = space C.space1 l b
+  where
+    l = skipLineComment "//"
+    b = skipBlockComment "/*" "*/"
 
 getIndent :: String -> Int
 getIndent = length . takeWhile isSpace
