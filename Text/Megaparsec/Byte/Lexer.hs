@@ -9,6 +9,10 @@
 --
 -- Stripped-down version of "Text.Megaparsec.Char.Lexer" for streams of
 -- bytes.
+--
+-- This module is intended to be imported qualified:
+--
+-- > import qualified Text.Megaparsec.Byte.Lexer as L
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
@@ -194,7 +198,7 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 
 -- | Parse a floating point number without sign. There are differences
 -- between the syntax for floating point literals described in the Haskell
--- report and what this function accepts. In particular, it does not quire
+-- report and what this function accepts. In particular, it does not require
 -- fractional part and accepts inputs like @\"3\"@ returning @3.0@.
 --
 -- This is a simple short-cut defined as:
@@ -208,10 +212,11 @@ float :: (MonadParsec e s m, Token s ~ Word8, RealFloat a) => m a
 float = Sci.toRealFloat <$> scientific <?> "floating point number"
 {-# INLINEABLE float #-}
 
--- | @'signed' space p@ parser parses an optional sign, then if there is a
--- sign it will consume optional white space (using @space@ parser), then it
--- runs parser @p@ which should return a number. Sign of the number is
--- changed according to previously parsed sign.
+-- | @'signed' space p@ parser parses an optional sign character (“+” or
+-- “-”), then if there is a sign it consumes optional white space (using
+-- @space@ parser), then it runs parser @p@ which should return a number.
+-- Sign of the number is changed according to the previously parsed sign
+-- character.
 --
 -- For example, to parse signed integer you can write:
 --
@@ -225,7 +230,7 @@ signed :: (MonadParsec e s m, Token s ~ Word8, Num a)
   -> m a               -- ^ Parser for signed numbers
 signed spc p = ($) <$> option id (C.lexeme spc sign) <*> p
   where
-    sign = (char 43 *> return id) <|> (char 45 *> return negate)
+    sign = (id <$ char 43) <|> (negate <$ char 45)
 {-# INLINEABLE signed #-}
 
 ----------------------------------------------------------------------------

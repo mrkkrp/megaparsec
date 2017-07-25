@@ -103,8 +103,8 @@ instance NFData a => NFData (ErrorFancy a) where
   rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
   rnf (ErrorCustom a) = rnf a
 
--- | 'ParseError' represents… parse errors. The data type is parametrized
--- over the token type @t@ and the custom data @e@.
+-- | @'ParseError' t e@ represents a parse error parametrized over the token
+-- type @t@ and the custom data @e@.
 --
 -- Note that the stack of source positions contains current position as its
 -- head, and the rest of positions allows to track full sequence of include

@@ -94,8 +94,8 @@ instance Ord e => Monoid (EF e) where
 
 -- | Assemble a 'ParseError' from source position and @'ET' t@ value. To
 -- create source position, two helpers are available: 'posI' and 'posN'.
--- @'ET' t@ is a monoid and can be built from primitives provided by this
--- module, see below.
+-- @'ET' t@ is a monoid and can be assembled by combining primitives
+-- provided by this module, see below.
 
 err
   :: NonEmpty SourcePos -- ^ 'ParseError' position
@@ -103,7 +103,7 @@ err
   -> ParseError t e    -- ^ Resulting 'ParseError'
 err pos (ET us ps) = TrivialError pos us ps
 
--- | Much like 'err', but constructs a “fancy” 'ParseError'.
+-- | Like 'err', but constructs a “fancy” 'ParseError'.
 
 errFancy
   :: NonEmpty SourcePos -- ^ 'ParseError' position

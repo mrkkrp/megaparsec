@@ -38,9 +38,10 @@
 --
 -- Megaparsec is capable of a lot. Apart from this standard functionality
 -- you can parse permutation phrases with "Text.Megaparsec.Perm",
--- expressions with "Text.Megaparsec.Expr", and even entire languages with
--- "Text.Megaparsec.Char.Lexer". These modules should be imported explicitly
--- along with the modules mentioned above.
+-- expressions with "Text.Megaparsec.Expr", do lexing with
+-- "Text.Megaparsec.Char.Lexer" and "Text.Megaparsec.Byte.Lexer". These
+-- modules should be imported explicitly along with the modules mentioned
+-- above.
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
@@ -144,11 +145,11 @@ import Control.Applicative
 ----------------------------------------------------------------------------
 -- Data types
 
--- | This is the Megaparsec's state, it's parametrized over stream type @s@.
+-- | This is the Megaparsec's state parametrized over stream type @s@.
 
 data State s = State
   { stateInput :: s
-    -- ^ Current input (already processed input is removed from the stream)
+    -- ^ The rest of input to process
   , statePos :: NonEmpty SourcePos
     -- ^ Current position (column + line number) with support for include files
   , stateTokensProcessed :: {-# UNPACK #-} !Int
@@ -252,13 +253,13 @@ refreshLastHint (Hints (_:xs)) Nothing  = Hints xs
 refreshLastHint (Hints (_:xs)) (Just m) = Hints (E.singleton m : xs)
 {-# INLINE refreshLastHint #-}
 
--- | @Parsec@ is a non-transformer variant of the more general 'ParsecT'
+-- | 'Parsec' is a non-transformer variant of the more general 'ParsecT'
 -- monad transformer.
 
 type Parsec e s = ParsecT e s Identity
 
--- | @ParsecT e s m a@ is a parser with custom data component of error @e@,
--- stream type @s@, underlying monad @m@ and return type @a@.
+-- | @'ParsecT' e s m a@ is a parser with custom data component of error
+-- @e@, stream type @s@, underlying monad @m@ and return type @a@.
 
 newtype ParsecT e s m a = ParsecT
   { unParser
@@ -452,7 +453,7 @@ parse = runParser
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file name) are not important and entire input
 -- should be parsed. For example, it can be used when parsing of a single
--- number according to specification of its format is desired.
+-- number according to a specification of its format is desired.
 
 parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
 parseMaybe p s =
@@ -577,7 +578,7 @@ initialState name s = State
 -- | Type class describing monads that implement the full set of primitive
 -- parsers.
 --
--- Note carefully that the following primitives are “fast” and should be
+-- __Note carefully__ that the following primitives are “fast” and should be
 -- taken advantage of as much as possible if your aim is a fast parser:
 -- 'tokens', 'takeWhileP', 'takeWhile1P', and 'takeP'.
 
@@ -641,7 +642,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
   -- >>> parseTest (try (string "let") <|> string "lexical") "lexical"
   -- "lexical"
   --
-  -- @try@ also improves error messages in case of overlapping alternatives,
+  -- 'try' also improves error messages in case of overlapping alternatives,
   -- because Megaparsec's hint system can be used:
   --
   -- >>> parseTest (try (string "let") <|> string "lexical") "le"
@@ -1249,8 +1250,8 @@ infix 0 <?>
 (<?>) = flip label
 {-# INLINE (<?>) #-}
 
--- | The parser @unexpected item@ fails with an error message telling about
--- unexpected item @item@ without consuming any input.
+-- | The parser @'unexpected' item@ fails with an error message telling
+-- about unexpected item @item@ without consuming any input.
 --
 -- > unexpected item = failure (pure item) Set.empty
 
@@ -1258,7 +1259,7 @@ unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (pure item) E.empty
 {-# INLINE unexpected #-}
 
--- | Return both the result of a parse and the list of tokens that were
+-- | Return both the result of a parse and a chunk of input that was
 -- consumed during parsing. This relies on the change of the
 -- 'stateTokensProcessed' value to evaluate how many tokens were consumed.
 -- If you mess with it manually in the argument parser, prepare for
@@ -1292,7 +1293,7 @@ match p = do
 region :: MonadParsec e s m
   => (ParseError (Token s) e -> ParseError (Token s) e)
      -- ^ How to process 'ParseError's
-  -> m a               -- ^ The “region” that processing applies to
+  -> m a               -- ^ The “region” that the processing applies to
   -> m a
 region f m = do
   r <- observing m

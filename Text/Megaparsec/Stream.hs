@@ -116,7 +116,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   {-# INLINE positionAtN #-}
 
   -- | Advance position given a single token. The returned position is the
-  -- position right after the token, or position where the token ends.
+  -- position right after the token, or the position where the token ends.
 
   advance1
     :: Proxy s         -- ^ 'Proxy' clarifying the type of stream
@@ -126,7 +126,8 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     -> SourcePos       -- ^ Advanced position
 
   -- | Advance position given a chunk of stream. The returned position is
-  -- the position right after the chunk, or position where the chunk ends.
+  -- the position right after the chunk, or the position where the chunk
+  -- ends.
 
   advanceN
     :: Proxy s         -- ^ 'Proxy' clarifying the type of stream

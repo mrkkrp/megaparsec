@@ -380,6 +380,9 @@ lineFold sc action =
 -- string literals:
 --
 -- > stringLiteral = char '"' >> manyTill L.charLiteral (char '"')
+--
+-- __Performance note__: the parser is not particularly efficient at the
+-- moment.
 
 charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do
@@ -502,7 +505,7 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 
 -- | Parse a floating point number without sign. There are differences
 -- between the syntax for floating point literals described in the Haskell
--- report and what this function accepts. In particular, it does not quire
+-- report and what this function accepts. In particular, it does not require
 -- fractional part and accepts inputs like @\"3\"@ returning @3.0@.
 --
 -- This is a simple short-cut defined as:
@@ -519,10 +522,11 @@ float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
 float = Sci.toRealFloat <$> scientific <?> "floating point number"
 {-# INLINEABLE float #-}
 
--- | @'signed' space p@ parser parses an optional sign, then if there is a
--- sign it will consume optional white space (using @space@ parser), then it
--- runs parser @p@ which should return a number. Sign of the number is
--- changed according to previously parsed sign.
+-- | @'signed' space p@ parser parses an optional sign character (“+” or
+-- “-”), then if there is a sign it consumes optional white space (using
+-- @space@ parser), then it runs parser @p@ which should return a number.
+-- Sign of the number is changed according to the previously parsed sign
+-- character.
 --
 -- For example, to parse signed integer you can write:
 --
@@ -536,5 +540,5 @@ signed :: (MonadParsec e s m, Token s ~ Char, Num a)
   -> m a               -- ^ Parser for signed numbers
 signed spc p = ($) <$> option id (lexeme spc sign) <*> p
   where
-    sign = (C.char '+' *> return id) <|> (C.char '-' *> return negate)
+    sign = (id <$ C.char '+') <|> (negate <$ C.char '-')
 {-# INLINEABLE signed #-}

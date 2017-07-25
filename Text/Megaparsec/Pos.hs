@@ -52,7 +52,7 @@ import GHC.Generics
 newtype Pos = Pos Int
   deriving (Show, Eq, Ord, Data, Typeable, NFData)
 
--- | Construction of 'Pos' from 'Word'. The function throws
+-- | Construction of 'Pos' from 'Int'. The function throws
 -- 'InvalidPosException' when given a non-positive argument.
 --
 -- @since 6.0.0
