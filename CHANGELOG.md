@@ -118,7 +118,7 @@
   instead.
 
 * `decimal`, `octal`, and `hexadecimal` are now polymorphic in their return
-  type and can be used to parse any instances of `Integral`.
+  type and can be used to parse any instance of `Integral`.
 
 * `float` is now polymorphic in its return type and can be used to parse any
   instance of `RealFloat`.
