@@ -15,21 +15,27 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Megaparsec.Error
-  ( ErrorItem (..)
+  ( -- * Parse error type
+    ErrorItem (..)
   , ErrorFancy (..)
   , ParseError (..)
   , errorPos
+    -- * Pretty-printing
   , ShowToken (..)
+  , LineToken (..)
   , ShowErrorComponent (..)
   , parseErrorPretty
+  , parseErrorPretty'
   , sourcePosStackPretty
   , parseErrorTextPretty )
 where
@@ -41,6 +47,7 @@ import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, isNothing)
+import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -49,12 +56,16 @@ import Data.Word (Word8)
 import GHC.Generics
 import Prelude hiding (concat)
 import Text.Megaparsec.Pos
+import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
 #endif
+
+----------------------------------------------------------------------------
+-- Parse error type
 
 -- | Data type that is used to represent “unexpected\/expected” items in
 -- 'ParseError'. The data type is parametrized over the token type @t@.
@@ -184,6 +195,9 @@ mergeError e1 e2 =
     n (Just x) (Just y) = Just (max x y)
 {-# INLINE mergeError #-}
 
+----------------------------------------------------------------------------
+-- Pretty-printing
+
 -- | Type class 'ShowToken' includes methods that allow to pretty-print
 -- single token as well as stream of tokens. This is used for rendering of
 -- error messages.
@@ -202,6 +216,30 @@ instance ShowToken Char where
 
 instance ShowToken Word8 where
   showTokens = stringPretty . fmap (chr . fromIntegral)
+
+-- | Type class for tokens that support operations necessary for selecting
+-- and displaying relevant line of input.
+--
+-- @since 6.0.0
+
+class LineToken a where
+
+  -- | Convert a token to a 'Char'. This is used to print relevant line from
+  -- input stream by turning a list of tokens into a 'String'.
+
+  tokenAsChar :: a -> Char
+
+  -- | Check if given token is a newline or contains newline.
+
+  tokenIsNewline :: a -> Bool
+
+instance LineToken Char where
+  tokenAsChar = id
+  tokenIsNewline x = x == '\n'
+
+instance LineToken Word8 where
+  tokenAsChar = chr . fromIntegral
+  tokenIsNewline x = x == 10
 
 -- | The type class defines how to print custom data component of
 -- 'ParseError'.
@@ -247,6 +285,42 @@ parseErrorPretty
   -> String            -- ^ Result of rendering
 parseErrorPretty e =
   sourcePosStackPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
+
+-- | Pretty-print a 'ParseError' and display the line on which the parse
+-- error occurred. The rendered 'String' always ends with a newline.
+--
+-- Note that if you work with include files and have a stack of
+-- 'SourcePos'es in 'ParseError', it's up to you to provide correct input
+-- stream corresponding to the file in which parse error actually happened.
+--
+-- @since 6.0.0
+
+parseErrorPretty'
+  :: forall s e.
+     ( ShowToken (Token s)
+     , LineToken (Token s)
+     , ShowErrorComponent e
+     , Stream s )
+  => s                 -- ^ Original input stream
+  -> ParseError (Token s) e -- ^ Parse error to render
+  -> String             -- ^ Result of rendering
+parseErrorPretty' s e =
+  sourcePosStackPretty (errorPos e) <> ":\n" <>
+    padding <> "|\n" <>
+    lineNumber <> " | " <> rline <> "\n" <>
+    padding <> "| " <> rpadding <> "^\n" <>
+    parseErrorTextPretty e
+  where
+    epos       = NE.last (errorPos e)
+    lineNumber = (show . unPos . sourceLine) epos
+    padding    = replicate (length lineNumber + 1) ' '
+    rpadding   = replicate (unPos (sourceColumn epos) - 1) ' '
+    rline      =
+      case rline' of
+        [] -> "<empty line>"
+        xs -> xs
+    rline'     = fmap tokenAsChar . chunkToTokens (Proxy :: Proxy s) $
+      selectLine (sourceLine epos) s
 
 -- | Pretty-print a stack of source positions.
 --
@@ -363,3 +437,18 @@ orList :: NonEmpty String -> String
 orList (x:|[])  = x
 orList (x:|[y]) = x <> " or " <> y
 orList xs       = intercalate ", " (NE.init xs) <> ", or " <> NE.last xs
+
+-- | Select a line from input stream given its number.
+
+selectLine
+  :: (LineToken (Token s), Stream s)
+  => Pos               -- ^ Number of line to select
+  -> s                 -- ^ Input stream
+  -> Tokens s          -- ^ Selected line
+selectLine l = go pos1
+  where
+    go !n !s =
+      if n == l
+        then fst (takeWhile_ notNewline s)
+        else go (n <> pos1) (snd (takeWhile_ notNewline s))
+    notNewline = not . tokenIsNewline

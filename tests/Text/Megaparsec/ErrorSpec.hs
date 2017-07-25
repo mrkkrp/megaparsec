@@ -1,7 +1,9 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.ErrorSpec (spec) where
 
+import Data.ByteString (ByteString)
 import Data.Char (isControl, isSpace)
 import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -14,6 +16,7 @@ import Test.QuickCheck
 import Text.Megaparsec.Error
 import Text.Megaparsec.Error.Builder
 import Text.Megaparsec.Pos
+import qualified Data.ByteString    as B
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
 import qualified Data.Set           as E
@@ -26,6 +29,7 @@ import Control.Exception (Exception (..))
 #endif
 
 type PE = ParseError Char Void
+type PW = ParseError Word8 Void
 
 spec :: Spec
 spec = do
@@ -88,7 +92,8 @@ spec = do
             FancyError   pos _   -> pos)
 
   describe "showTokens (Char instance)" $ do
-    let f x y = showTokens (NE.fromList x) `shouldBe` y
+    let f :: String -> String -> Expectation
+        f x y = showTokens (NE.fromList x) `shouldBe` y
     it "shows CRLF newline correctly"
       (f "\r\n" "crlf newline")
     it "shows null byte correctly"
@@ -206,6 +211,39 @@ spec = do
           pe = errFancy posI $
             mempty <> fancy (ErrorFail "foo") <> fancy (ErrorFail "bar")
       parseErrorPretty pe `shouldBe` "1:1:\nbar\nfoo\n"
+
+  describe "parseErrorPretty'" $ do
+    context "with Char tokens" $ do
+      it "shows empty line correctly" $ do
+        let s = "" :: String
+        parseErrorPretty' s (mempty :: PE) `shouldBe`
+          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
+      it "shows position on first line correctly" $ do
+        let s = "abc" :: String
+            pe = err (posN 1 s) (utok 'b' <> etok 'd') :: PE
+        parseErrorPretty' s pe `shouldBe`
+          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "shows position on 1000 line correctly" $ do
+        let s = replicate 999 '\n' ++ "abc"
+            pe :: PE
+            pe = err (posN 999 s) (utok 'a' <> etok 'd')
+        parseErrorPretty' s pe `shouldBe`
+          "1000:1:\n     |\n1000 | <empty line>\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
+    context "with Word8 tokens" $ do
+      it "shows empty line correctly" $ do
+        let s = "" :: ByteString
+        parseErrorPretty' s (mempty :: PW) `shouldBe`
+          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
+      it "shows position on first line correctly" $ do
+        let s = "abc" :: ByteString
+            pe = err (posN 1 s) (utok 98 <> etok 100) :: PW
+        parseErrorPretty' s pe `shouldBe`
+          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "shows position on 1000 line correctly" $ do
+        let s = B.replicate 999 10 <> "abc"
+            pe = err (posN 999 s) (utok 97 <> etok 100) :: PW
+        parseErrorPretty' s pe `shouldBe`
+          "1000:1:\n     |\n1000 | <empty line>\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
 
   describe "sourcePosStackPretty" $
     it "result never ends with a newline " $

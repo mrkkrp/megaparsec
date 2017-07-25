@@ -281,5 +281,5 @@ defaultAdvance1 width (SourcePos n l c) t = npos
       case fromEnum t of
         10 -> SourcePos n (l <> pos1) pos1
         9  -> SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
-        _   -> SourcePos n l (c <> pos1)
+        _  -> SourcePos n l (c <> pos1)
 {-# INLINE defaultAdvance1 #-}

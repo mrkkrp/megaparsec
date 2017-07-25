@@ -66,6 +66,17 @@
   we had something like that in the `hspec-megaparsec` package, but it does
   not hurt to ship it with the library.
 
+* Added `parseErrorPretty'` allowing to display offending line in parse
+  errors.
+
+* Added `LineToken` type class for tokens that support operations necessary
+  for selecting and displaying relevant line of input (used in
+  `parseErrorPretty'`).
+
+* Added `parseTest'` function that is just like `parseTest`, but also prints
+  offending line in parse errors. This is powered by the new
+  `parseErrorPretty'`.
+
 ### Stream
 
 * Introduced the new `Text.Megaparsec.Stream` module that is the home of
