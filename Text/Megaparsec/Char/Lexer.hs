@@ -105,7 +105,8 @@ space :: MonadParsec e s m
   -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
   -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
   -> m ()
-space ch line block = hidden . skipMany $ choice [ch, line, block]
+space sp line block = skipMany $ choice
+  [hidden sp, hidden line, hidden block]
 {-# INLINEABLE space #-}
 
 -- | This is a wrapper for lexemes. Typical usage is to supply the first
