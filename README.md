@@ -397,6 +397,7 @@ The following packages are designed to be used with Megaparsec:
 Here are some blog posts mainly announcing new features of the project and
 describing what sort of things are now possible:
 
+* [Evolution of error messages](https://markkarpov.com/post/evolution-of-error-messages.html)
 * [A major upgrade to Megaparsec: more speed, more power](https://markkarpov.com/post/megaparsec-more-speed-more-power.html)
 * [Latest additions to Megaparsec](https://markkarpov.com/post/latest-additions-to-megaparsec.html)
 * [Announcing Megaparsec 5](https://markkarpov.com/post/announcing-megaparsec-5.html)
