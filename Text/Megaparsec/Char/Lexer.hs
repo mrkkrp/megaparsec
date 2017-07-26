@@ -312,9 +312,12 @@ indentBlock sc r = do
           indentedItems ref (fromMaybe lvl indent) sc p >>= f
         _ -> sc *> f []
     IndentSome indent f p -> do
-      lvl <- C.eol *> indentGuard sc GT ref
-      x   <- p
-      xs  <- indentedItems ref (fromMaybe lvl indent) sc p
+      pos <- C.eol *> indentGuard sc GT ref
+      let lvl = fromMaybe pos indent
+      x <- if | pos <= ref -> incorrectIndent GT ref pos
+              | pos == lvl -> p
+              | otherwise  -> incorrectIndent EQ lvl pos
+      xs  <- indentedItems ref lvl sc p
       f (x:xs)
 {-# INLINEABLE indentBlock #-}
 

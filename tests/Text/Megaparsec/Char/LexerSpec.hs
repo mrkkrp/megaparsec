@@ -205,6 +205,14 @@ spec = do
         prs  (many p2) s `shouldParse` [sbla]
         prs' (many p1) s `succeedsLeaving` ""
         prs' (many p2) s `succeedsLeaving` ""
+    it "IndentSome expects the specified indentation level for first item" $ do
+      let s   = "aaa\n  bbb\n"
+          p   = indentBlock scn $
+            IndentSome (Just (mkPos 5)) (l sbla) lvlb <$ symbol sc sbla
+          lvlb = symbol sc sblb
+          l x = return . (x,)
+      prs p s `shouldFailWith` errFancy (posN 6 s)
+        (fancy $ ErrorIndentation EQ (mkPos 5) (mkPos 3))
 
   describe "lineFold" $
     it "works as intended" $
