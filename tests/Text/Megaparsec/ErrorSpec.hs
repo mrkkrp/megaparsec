@@ -223,12 +223,17 @@ spec = do
             pe = err (posN 1 s) (utok 'b' <> etok 'd') :: PE
         parseErrorPretty' s pe `shouldBe`
           "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "skips to second line correctly" $ do
+        let s = "one\ntwo\n" :: String
+            pe = err (posN 4 s) (utok 't' <> etok 'x') :: PE
+        parseErrorPretty' s pe `shouldBe`
+          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
       it "shows position on 1000 line correctly" $ do
         let s = replicate 999 '\n' ++ "abc"
             pe :: PE
             pe = err (posN 999 s) (utok 'a' <> etok 'd')
         parseErrorPretty' s pe `shouldBe`
-          "1000:1:\n     |\n1000 | <empty line>\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
+          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
     context "with Word8 tokens" $ do
       it "shows empty line correctly" $ do
         let s = "" :: ByteString
@@ -239,11 +244,16 @@ spec = do
             pe = err (posN 1 s) (utok 98 <> etok 100) :: PW
         parseErrorPretty' s pe `shouldBe`
           "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "skips to second line correctly" $ do
+        let s = "one\ntwo\n" :: ByteString
+            pe = err (posN 4 s) (utok 116 <> etok 120) :: PW
+        parseErrorPretty' s pe `shouldBe`
+          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
       it "shows position on 1000 line correctly" $ do
         let s = B.replicate 999 10 <> "abc"
             pe = err (posN 999 s) (utok 97 <> etok 100) :: PW
         parseErrorPretty' s pe `shouldBe`
-          "1000:1:\n     |\n1000 | <empty line>\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
+          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
 
   describe "sourcePosStackPretty" $
     it "result never ends with a newline " $

@@ -441,7 +441,7 @@ orList xs       = intercalate ", " (NE.init xs) <> ", or " <> NE.last xs
 -- | Select a line from input stream given its number.
 
 selectLine
-  :: (LineToken (Token s), Stream s)
+  :: forall s. (LineToken (Token s), Stream s)
   => Pos               -- ^ Number of line to select
   -> s                 -- ^ Input stream
   -> Tokens s          -- ^ Selected line
@@ -450,5 +450,9 @@ selectLine l = go pos1
     go !n !s =
       if n == l
         then fst (takeWhile_ notNewline s)
-        else go (n <> pos1) (snd (takeWhile_ notNewline s))
+        else go (n <> pos1) (stripNewline $ snd (takeWhile_ notNewline s))
     notNewline = not . tokenIsNewline
+    stripNewline s =
+      case take1_ s of
+        Nothing -> s
+        Just (_, s') -> s'
