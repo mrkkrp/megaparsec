@@ -143,7 +143,7 @@ The functions can be divided into several categories:
 ### Binary parsing
 
 Similarly, there is
-[`Text.Megaparsec.Byte`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html) module
+[`Text.Megaparsec.Byte`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Byte.html) module
 for parsing streams of bytes.
 
 ### Permutation parsing
