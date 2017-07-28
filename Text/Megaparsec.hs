@@ -29,6 +29,17 @@
 -- Then you can write type signatures like @Parser Int@—for a parser that
 -- returns an 'Int' for example.
 --
+-- Similarly (since it's known to cause confusion), you should use
+-- 'ParseError' type parametrized like this:
+--
+-- > ParseError Char Void
+-- >            ^    ^
+-- >            |    |
+-- >   Token type    Custom error component (the same you used in Parser)
+--
+-- Token type for 'String' and 'Data.Text.Text' (strict and lazy) is 'Char',
+-- for 'Data.ByteString.ByteString's it's 'Data.Word.Word8'.
+--
 -- Megaparsec uses some type-level machinery to provide flexibility without
 -- compromising on type safety. Thus type signatures are sometimes necessary
 -- to avoid ambiguous types. If you're seeing a error message that reads
