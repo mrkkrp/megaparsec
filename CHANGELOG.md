@@ -1,3 +1,9 @@
+## Megaparsec 6.0.1
+
+* Fixed a typo in `README.md`.
+
+* Added some text that clarifies how to parametrize the `ParseError` type.
+
 ## Megaparsec 6.0.0
 
 ### General
