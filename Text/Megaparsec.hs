@@ -72,6 +72,7 @@
 
 module Text.Megaparsec
   ( -- * Re-exports
+    -- $reexports
     module Text.Megaparsec.Pos
   , module Text.Megaparsec.Error
   , module Text.Megaparsec.Stream
@@ -152,6 +153,17 @@ import qualified Data.Set                          as E
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
 #endif
+
+-- $reexports
+--
+-- Also note that you can import "Control.Applicative.Combinators.NonEmpty"
+-- if you wish that combinators like 'some' return 'NonEmpty' lists. The
+-- module lives in the @parser-combinators@ package (you need at least
+-- version /0.2.0/).
+--
+-- This module is intended to be imported qualified:
+--
+-- > import qualified Control.Applicative.Combinators.NonEmpty as NE
 
 ----------------------------------------------------------------------------
 -- Data types
