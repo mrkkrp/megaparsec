@@ -38,8 +38,7 @@ script:
 after_script:
  - export PATH=~/.cabal/bin:$PATH
  - hpc-coveralls --coverage-mode=StrictlyFullLines
-                 --exclude-dir=bench-memory
-                 --exclude-dir=bench-speed
+                 --exclude-dir=bench
                  --exclude-dir=tests
                  tests
 
