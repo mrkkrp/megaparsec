@@ -1,3 +1,7 @@
+## Megaparsec 6.0.2
+
+* Allow `parser-combinators-0.2.0`.
+
 ## Megaparsec 6.0.1
 
 * Fixed a typo in `README.md`.
