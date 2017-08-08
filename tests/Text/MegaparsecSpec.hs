@@ -653,13 +653,20 @@ spec = do
                 s = [a]
             grs  p s (`shouldParse` a)
             grs' p s (`succeedsLeaving` "")
-      context "when inner parser fails consuming" $
+      context "when inner parser fails consuming" $ do
         it "backtracks, it appears as if the parser has not consumed anything" $
           property $ \a b c -> b /= c ==> do
             let p :: MonadParsec Void String m => m Char
                 p = try (char a *> char b)
                 s = [a,c]
             grs  p s (`shouldFailWith` err (posN (1 :: Int) s) (utok c <> etok b))
+            grs' p s (`failsLeaving` s)
+        it "hints from the inner parse error do not leak" $
+          property $ \a b c -> b /= c ==> do
+            let p :: MonadParsec Void String m => m (Maybe Char)
+                p = (optional . try) (char a *> char b) <* empty
+                s = [a,c]
+            grs  p s (`shouldFailWith` err posI mempty)
             grs' p s (`failsLeaving` s)
       context "when inner parser succeeds without consuming" $
         it "try has no effect" $
@@ -892,8 +899,8 @@ spec = do
               r | a == 0 && b == 0 && c == 0 = f (err posI (ueof <> etok 'a'))
                 | a == 0 && b == 0 && c >  3 = f (err posI (utok 'c' <> etok 'a'))
                 | a == 0 && b == 0           = f (err posI (utok 'c' <> etok 'a'))
-                | a == 0 && b >  3           = f (err (posN (3 :: Int) s) (utok 'b' <> etok 'a' <> etok 'c'))
-                | a == 0 &&           c == 0 = f (err (posN b s) (ueof <> etok 'a' <> etok 'c'))
+                | a == 0 && b >  3           = f (err (posN (3 :: Int) s) (utok 'b' <> etok 'c'))
+                | a == 0 &&           c == 0 = f (err (posN b s) (ueof <> etok 'c'))
                 | a == 0 &&           c >  3 = f (err (posN (b + 3) s) (utok 'c' <> eeof))
                 | a == 0                     = z (Left (err posI (utok 'b' <> etok 'a')))
                 | a >  3                     = f (err (posN (3 :: Int) s) (utok 'a' <> etok 'c'))
