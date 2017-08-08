@@ -311,6 +311,7 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
   unParser p s (cok . f) cerr (eok . f) eerr
 {-# INLINE pMap #-}
 
+-- | 'pure' will return a parser that __succeeds__ but consumes no input.
 instance Stream s => A.Applicative (ParsecT e s m) where
   pure     = pPure
   (<*>)    = pAp
@@ -329,10 +330,12 @@ pAp m k = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s mcok cerr meok eerr
 {-# INLINE pAp #-}
 
+-- | 'A.empty' will return a parser that __fails__ and consumes no input.
 instance (Ord e, Stream s) => A.Alternative (ParsecT e s m) where
   empty  = mzero
   (<|>)  = mplus
 
+-- | See comment for 'pure'.
 instance Stream s => Monad (ParsecT e s m) where
   return = pure
   (>>=)  = pBind
@@ -399,6 +402,7 @@ instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
     runParsecT p s `catchError` \e ->
       runParsecT (h e) s
 
+-- | See comment for 'A.empty'.
 instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
   mzero = pZero
   mplus = pPlus
