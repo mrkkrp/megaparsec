@@ -91,6 +91,11 @@ import qualified Text.Megaparsec.Char as C
 -- 'skipBlockComment' or 'skipBlockCommentNested' if you don't need anything
 -- special.
 --
+-- If you don't want to allow a kind of comment, simply pass 'empty' which
+-- will fail instantly when parsing of that sort of comment is attempted and
+-- 'space' will just move on or finish depending on whether there is more
+-- white space for it to consume.
+--
 -- Parsing of white space is an important part of any parser. We propose a
 -- convention where every lexeme parser assumes no spaces before the lexeme
 -- and consumes all spaces after the lexeme; this is what the 'lexeme'
