@@ -62,6 +62,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
@@ -231,9 +232,17 @@ newtype Hints t = Hints [Set (ErrorItem t)] deriving (Semigroup, Monoid)
 
 -- | Convert 'ParseError' record into 'Hints'.
 
-toHints :: ParseError t e -> Hints t
-toHints (TrivialError _ _ ps) = Hints (if E.null ps then [] else [ps])
-toHints (FancyError   _ _)    = mempty
+toHints :: NonEmpty SourcePos -> ParseError t e -> Hints t
+toHints streamPos = \case
+  TrivialError errPos _ ps ->
+    -- NOTE This is important to check here that the error indeed has
+    -- happened at the same position as current position of stream because
+    -- there might have been backtracking with 'try' and in that case we
+    -- must not convert such a parse error to hints.
+    if streamPos == errPos
+      then Hints (if E.null ps then [] else [ps])
+      else mempty
+  FancyError _ _ -> mempty
 {-# INLINE toHints #-}
 
 -- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
@@ -423,7 +432,7 @@ pPlus :: (Ord e, Stream s)
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err ms =
         let ncerr err' s' = cerr (err' <> err) (longestMatch ms s')
-            neok x s' hs  = eok x s' (toHints err <> hs)
+            neok x s' hs  = eok x s' (toHints (statePos s') err <> hs)
             neerr err' s' = eerr (err' <> err) (longestMatch ms s')
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
@@ -930,13 +939,13 @@ pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
   let mcerr err ms =
         let rcok x s' _ = cok x s' mempty
             rcerr   _ _ = cerr err ms
-            reok x s' _ = eok x s' (toHints err)
+            reok x s' _ = eok x s' (toHints (statePos s') err)
             reerr   _ _ = cerr err ms
         in unParser (r err) ms rcok rcerr reok reerr
       meerr err ms =
-        let rcok x s' _ = cok x s' (toHints err)
+        let rcok x s' _ = cok x s' (toHints (statePos s') err)
             rcerr   _ _ = eerr err ms
-            reok x s' _ = eok x s' (toHints err)
+            reok x s' _ = eok x s' (toHints (statePos s') err)
             reerr   _ _ = eerr err ms
         in unParser (r err) ms rcok rcerr reok reerr
   in unParser p s cok mcerr eok meerr
@@ -947,7 +956,7 @@ pObserving
   -> ParsecT e s m (Either (ParseError (Token s) e) a)
 pObserving p = ParsecT $ \s cok _ eok _ ->
   let cerr' err s' = cok (Left err) s' mempty
-      eerr' err s' = eok (Left err) s' (toHints err)
+      eerr' err s' = eok (Left err) s' (toHints (statePos s') err)
   in unParser p s (cok . Right) cerr' (eok . Right) eerr'
 {-# INLINE pObserving #-}
 
