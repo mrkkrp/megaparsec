@@ -14,7 +14,7 @@ import Text.Megaparsec.Char
 import Text.Megaparsec.Expr
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*), (<*>), (*>), pure)
+import Control.Applicative
 #endif
 
 spec :: Spec
@@ -149,11 +149,11 @@ term = parens expr <|> (Val <$> integer) <?> "term"
 
 table :: [[Operator Parser Node]]
 table =
-  [ [ Prefix  (symbol "-" *> pure Neg)
-    , Postfix (symbol "!" *> pure Fac)
-    , InfixN  (symbol "%" *> pure Mod) ]
-  , [ InfixR  (symbol "^" *> pure Exp) ]
-  , [ InfixL  (symbol "*" *> pure Pro)
-    , InfixL  (symbol "/" *> pure Div) ]
-  , [ InfixL  (symbol "+" *> pure Sum)
-    , InfixL  (symbol "-" *> pure Sub)] ]
+  [ [ Prefix  (Neg <$ symbol "-")
+    , Postfix (Fac <$ symbol "!")
+    , InfixN  (Mod <$ symbol "%") ]
+  , [ InfixR  (Exp <$ symbol "^") ]
+  , [ InfixL  (Pro <$ symbol "*")
+    , InfixL  (Div <$ symbol "/") ]
+  , [ InfixL  (Sum <$ symbol "+")
+    , InfixL  (Sub <$ symbol "-")] ]
