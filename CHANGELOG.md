@@ -1,3 +1,11 @@
+## Megaparsec 6.1.0
+
+* Improved rendering of offending line in `parseErrorPretty'` in the
+  presence of tab characters.
+
+* Added `parseErrorPretty_`, which is just like `parseErrorPretty'` but
+  allows to specify tab width to use.
+
 ## Megaparsec 6.0.2
 
 * Allow `parser-combinators-0.2.0`.

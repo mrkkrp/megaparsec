@@ -36,6 +36,7 @@ module Text.Megaparsec.Error
   , ShowErrorComponent (..)
   , parseErrorPretty
   , parseErrorPretty'
+  , parseErrorPretty_
   , sourcePosStackPretty
   , parseErrorTextPretty )
 where
@@ -293,18 +294,38 @@ parseErrorPretty e =
 -- 'SourcePos'es in 'ParseError', it's up to you to provide correct input
 -- stream corresponding to the file in which parse error actually happened.
 --
+-- 'parseErrorPretty'' is defined in terms of the more general
+-- 'parseErrorPretty_' function which allows to specify tab width as well:
+--
+-- > parseErrorPretty' = parseErrorPretty_ defaultTabWidth
+--
 -- @since 6.0.0
 
 parseErrorPretty'
-  :: forall s e.
-     ( ShowToken (Token s)
+  :: ( ShowToken (Token s)
      , LineToken (Token s)
      , ShowErrorComponent e
      , Stream s )
   => s                 -- ^ Original input stream
   -> ParseError (Token s) e -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+parseErrorPretty' = parseErrorPretty_ defaultTabWidth
+
+-- | Just like 'parseErrorPretty'', but allows to specify tab width.
+--
+-- @since 6.1.0
+
+parseErrorPretty_
+  :: forall s e.
+     ( ShowToken (Token s)
+     , LineToken (Token s)
+     , ShowErrorComponent e
+     , Stream s )
+  => Pos               -- ^ Tab width
+  -> s                 -- ^ Original input stream
+  -> ParseError (Token s) e -- ^ Parse error to render
   -> String             -- ^ Result of rendering
-parseErrorPretty' s e =
+parseErrorPretty_ w s e =
   sourcePosStackPretty (errorPos e) <> ":\n" <>
     padding <> "|\n" <>
     lineNumber <> " | " <> rline <> "\n" <>
@@ -318,7 +339,7 @@ parseErrorPretty' s e =
     rline      =
       case rline' of
         [] -> "<empty line>"
-        xs -> xs
+        xs -> expandTab w xs
     rline'     = fmap tokenAsChar . chunkToTokens (Proxy :: Proxy s) $
       selectLine (sourceLine epos) s
 
@@ -456,3 +477,17 @@ selectLine l = go pos1
       case take1_ s of
         Nothing -> s
         Just (_, s') -> s'
+
+-- | Replace tab characters with given number of spaces.
+
+expandTab
+  :: Pos
+  -> String
+  -> String
+expandTab w' = go 0
+  where
+    go 0 []        = []
+    go 0 ('\t':xs) = go w xs
+    go 0 (x:xs)    = x : go 0 xs
+    go !n xs       = ' ' : go (n - 1) xs
+    w              = unPos w'
