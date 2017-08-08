@@ -6,6 +6,11 @@
 * Added `parseErrorPretty_`, which is just like `parseErrorPretty'` but
   allows to specify tab width to use.
 
+* Adjusted hint generation so when we backtrack a consuming parser with
+  `try`, we do not create hints from its parse error (because it's further
+  in input stream!). This was a quite subtle bug that stayed unnoticed for
+  several years apparently.
+
 ## Megaparsec 6.0.2
 
 * Allow `parser-combinators-0.2.0`.
