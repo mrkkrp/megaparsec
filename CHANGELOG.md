@@ -1,3 +1,8 @@
+## Megaparsec 6.1.1
+
+* Fixed the bug when `tokens` used `cok` continuation even when matching an
+  empty chunk. Now it correctly uses `eok` in this case.
+
 ## Megaparsec 6.1.0
 
 * Improved rendering of offending line in `parseErrorPretty'` in the

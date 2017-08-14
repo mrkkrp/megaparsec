@@ -999,7 +999,7 @@ pTokens :: forall e s m. Stream s
   => (Tokens s -> Tokens s -> Bool)
   -> Tokens s
   -> ParsecT e s m (Tokens s)
-pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ eok eerr ->
   let pxy = Proxy :: Proxy s
       unexpect pos' u =
         let us = pure u
@@ -1012,7 +1012,10 @@ pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
     Just (tts', input') ->
       if f tts tts'
         then let !npos = advanceN pxy w pos tts'
-             in cok tts' (State input' (npos:|z) (tp + len) w) mempty
+                 st    = State input' (npos:|z) (tp + len) w
+             in if chunkEmpty pxy tts
+                  then eok tts' st mempty
+                  else cok tts' st mempty
         else let !apos = positionAtN pxy pos tts'
                  ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
              in eerr (unexpect (apos:|z) ps) (State input (apos:|z) tp w)
