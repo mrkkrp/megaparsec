@@ -1017,6 +1017,13 @@ spec = do
                 z = take (length str) s
             grs  p s (`shouldFailWith` err posI (utoks z <> etoks str))
             grs' p s (`failsLeaving` s)
+      context "when matching the empty string" $
+        it "eok continuation is used" $
+          property $ \str s -> do
+            let p :: MonadParsec Void String m => m String
+                p = (tokens (==) "" <* empty) <|> pure str
+            grs  p s (`shouldParse` str)
+            grs' p s (`succeedsLeaving` s)
 
     describe "takeWhileP" $ do
       context "when stream is not empty" $
