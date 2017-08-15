@@ -10,7 +10,7 @@
 * [Features](#features)
     * [Core features](#core-features)
     * [Error messages](#error-messages)
-    * [Alex and Happy support](#alex-and-happy-support)
+    * [Alex support](#alex-support)
     * [Character parsing](#character-parsing)
     * [Binary parsing](#binary-parsing)
     * [Permutation parsing](#permutation-parsing)
@@ -109,12 +109,12 @@ need to use a shapeless bunch of strings anymore.
 The design of parse errors has been revised in version 6 significantly, but
 custom errors are still easy (probably even easier now).
 
-### Alex and Happy support
+### Alex support
 
-Megaparsec works well with streams of tokens produced by tools like
-Alex/Happy. The design of the `Stream` type class has been changed
-significantly in version 6, but user can still work with custom streams of
-tokens without problems.
+Megaparsec works well with streams of tokens produced by tools like Alex.
+The design of the `Stream` type class has been changed significantly in
+version 6, but user can still work with custom streams of tokens without
+problems.
 
 ### Character parsing
 
