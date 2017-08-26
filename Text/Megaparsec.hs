@@ -797,9 +797,9 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   tokens
     :: (Tokens s -> Tokens s -> Bool)
-       -- ^ Predicate to check equality of tokens
+       -- ^ Predicate to check equality of chunks
     -> Tokens s
-       -- ^ List of tokens to parse
+       -- ^ Chunk of input to match against
     -> m (Tokens s)
 
   -- | Parse /zero/ or more tokens for which the supplied predicate holds.
