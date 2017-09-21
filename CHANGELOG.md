@@ -1,3 +1,9 @@
+## Megaparsec 6.2.0
+
+* `float` in `Text.Megaparsec.Char.Lexer` and `Text.Megaparsec.Byte.Lexer`
+  now does not accept plain integers. This is the behavior we had in version
+  5 of the library.
+
 ## Megaparsec 6.1.1
 
 * Fixed the bug when `tokens` used `cok` continuation even when matching an
