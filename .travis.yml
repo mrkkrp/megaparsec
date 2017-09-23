@@ -31,7 +31,7 @@ install:
 script:
  - cabal configure --enable-tests --enable-coverage -v2 -f dev
  - travis_wait 60 cabal build
- - cabal test --show-details=always --test-option=--qc-max-success=1000
+ - travis_wait 20 cabal test --show-details=always --test-option=--qc-max-success=1000
  - cabal sdist
  - cabal haddock | grep "100%" | wc -l | grep "11"
 
