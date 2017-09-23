@@ -336,26 +336,30 @@ spec = do
           let p = float :: Parser Double
               s = a : as
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "floating point number")
+            err posI (utok a <> elabel "digit")
           prs' p s `failsLeaving` s
-    context "when stream begins with a decimal number" $
-      it "parses it" $
+    context "when stream begins with an integer (decimal)" $
+      it "signals correct parse error" $
         property $ \n' -> do
           let p = float :: Parser Double
               n = getNonNegative n'
               s = show (n :: Integer)
-          prs  p s `shouldParse` fromIntegral n
-          prs' p s `succeedsLeaving` ""
+          prs  p s `shouldFailWith` err (posN (length s) s)
+            (ueof <> etok '.' <> etok 'E' <> etok 'e' <> elabel "digit")
+          prs' p s `failsLeaving` ""
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (float :: Parser Double) "" `shouldFailWith`
-          err posI (ueof <> elabel "floating point number")
-    context "when there is float with exponent without explicit sign" $
+          err posI (ueof <> elabel "digit")
+    context "when there is float with just exponent" $
       it "parses it all right" $ do
         let p = float :: Parser Double
-            s = "123e3"
-        prs  p s `shouldParse` 123e3
-        prs' p s `succeedsLeaving` ""
+        prs  p "123e3" `shouldParse` 123e3
+        prs' p "123e3" `succeedsLeaving` ""
+        prs  p "123e+3" `shouldParse` 123e+3
+        prs' p "123e+3" `succeedsLeaving` ""
+        prs  p "123e-3" `shouldParse` 123e-3
+        prs' p "123e-3" `succeedsLeaving` ""
 
   describe "scientific" $ do
     context "when stream begins with a number" $

@@ -495,41 +495,55 @@ scientific
   :: forall e s m. (MonadParsec e s m, Token s ~ Char)
   => m Scientific
 scientific = do
-  let pxy = Proxy :: Proxy s
-  c' <- decimal_
-  SP c e' <- option (SP c' 0) $ do
-    void (C.char '.')
-    let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
-        step (SP a e') c = SP
-          (a * 10 + fromIntegral (Char.digitToInt c))
-          (e' - 1)
-    mkNum <$> takeWhile1P (Just "digit") Char.isDigit
-  e <- option e' $ do
-    void (C.char' 'e')
-    (+ e') <$> signed (return ()) decimal_
+  c'      <- decimal_
+  SP c e' <- option (SP c' 0) (dotDecimal_ (Proxy :: Proxy s) c')
+  e       <- option e' (exponent_ e')
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
 data SP = SP !Integer {-# UNPACK #-} !Int
 
--- | Parse a floating point number without sign. There are differences
--- between the syntax for floating point literals described in the Haskell
--- report and what this function accepts. In particular, it does not require
--- fractional part and accepts inputs like @\"3\"@ returning @3.0@.
---
--- This is a simple short-cut defined as:
---
--- > float = Sci.toRealFloat <$> scientific <?> "floating point number"
+-- | Parse a floating point number according to the syntax for floating
+-- point literals described in the Haskell report.
 --
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
 --
 -- __Note__: before version 6.0.0 the function returned 'Double', i.e. it
 -- wasn't polymorphic in its return type.
+--
+-- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
 
 float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
-float = Sci.toRealFloat <$> scientific <?> "floating point number"
+float = do
+  c' <- decimal_
+  Sci.toRealFloat <$>
+    ((do SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
+         e       <- option e' (exponent_ e')
+         return (Sci.scientific c e))
+     <|> (Sci.scientific c' <$> exponent_ 0))
 {-# INLINEABLE float #-}
+
+dotDecimal_ :: (MonadParsec e s m, Token s ~ Char)
+  => Proxy s
+  -> Integer
+  -> m SP
+dotDecimal_ pxy c' = do
+  void (C.char '.')
+  let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
+      step (SP a e') c = SP
+        (a * 10 + fromIntegral (Char.digitToInt c))
+        (e' - 1)
+  mkNum <$> takeWhile1P (Just "digit") Char.isDigit
+{-# INLINE dotDecimal_ #-}
+
+exponent_ :: (MonadParsec e s m, Token s ~ Char)
+  => Int
+  -> m Int
+exponent_ e' = do
+  void (C.char' 'e')
+  (+ e') <$> signed (return ()) decimal_
+{-# INLINE exponent_ #-}
 
 -- | @'signed' space p@ parser parses an optional sign character (“+” or
 -- “-”), then if there is a sign it consumes optional white space (using

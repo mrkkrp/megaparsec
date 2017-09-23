@@ -60,7 +60,7 @@ library
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Stream
   if flag(dev)
-    ghc-options:      -Wall -Werror
+    ghc-options:      -O0 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
   default-language:   Haskell2010
@@ -70,7 +70,7 @@ test-suite tests
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
   if flag(dev)
-    ghc-options:      -Wall -Werror
+    ghc-options:      -O0 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
   other-modules:      Control.Applicative.CombinatorsSpec
