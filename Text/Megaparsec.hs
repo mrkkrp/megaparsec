@@ -317,6 +317,8 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   {-# INLINE mempty #-}
   mappend = A.liftA2 mappend
   {-# INLINE mappend #-}
+  mconcat = fmap mconcat . sequence
+  {-# INLINE mconcat #-}
 
 instance Functor (ParsecT e s m) where
   fmap = pMap

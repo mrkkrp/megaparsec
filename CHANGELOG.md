@@ -1,6 +1,6 @@
 ## Megaparsec 6.2.1
 
-* Made implementation of `sconcat` (`Semigroup` instance of `ParsecT`) more
+* Made implementation of `sconcat` and `mconcat` of `ParsecT` more
   efficient.
 
 ## Megaparsec 6.2.0
