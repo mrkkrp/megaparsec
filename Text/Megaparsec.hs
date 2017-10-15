@@ -305,6 +305,12 @@ newtype ParsecT e s m a = ParsecT
 instance (Stream s, Semigroup a) => Semigroup (ParsecT e s m a) where
   (<>) = A.liftA2 (<>)
   {-# INLINE (<>) #-}
+#if MIN_VERSION_base(4,8,0)
+  sconcat = fmap sconcat . sequence
+#else
+  sconcat = fmap (sconcat . NE.fromList) . sequence . NE.toList
+#endif
+  {-# INLINE sconcat #-}
 
 instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   mempty = pure mempty

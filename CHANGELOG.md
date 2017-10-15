@@ -1,3 +1,8 @@
+## Megaparsec 6.2.1
+
+* Made implementation of `sconcat` (`Semigroup` instance of `ParsecT`) more
+  efficient.
+
 ## Megaparsec 6.2.0
 
 * `float` in `Text.Megaparsec.Char.Lexer` and `Text.Megaparsec.Byte.Lexer`
