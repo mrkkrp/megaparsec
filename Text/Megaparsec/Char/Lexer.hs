@@ -14,6 +14,14 @@
 -- more elegant than others. Especially important theme is parsing of white
 -- space, comments, and indentation.
 --
+-- Parsing of white space is an important part of any parser. We propose a
+-- convention where __every lexeme parser assumes no spaces before the__
+-- __lexeme and consumes all spaces after the lexeme__; this is what the
+-- 'lexeme' combinator does, and so it's enough to wrap every lexeme parser
+-- with 'lexeme' to achieve this. Note that you'll need to call 'space'
+-- manually to consume any white space before the first lexeme (i.e. at the
+-- beginning of the file).
+--
 -- This module is intended to be imported qualified:
 --
 -- > import qualified Text.Megaparsec.Char.Lexer as L
@@ -95,14 +103,6 @@ import qualified Text.Megaparsec.Char as C
 -- will fail instantly when parsing of that sort of comment is attempted and
 -- 'space' will just move on or finish depending on whether there is more
 -- white space for it to consume.
---
--- Parsing of white space is an important part of any parser. We propose a
--- convention where every lexeme parser assumes no spaces before the lexeme
--- and consumes all spaces after the lexeme; this is what the 'lexeme'
--- combinator does, and so it's enough to wrap every lexeme parser with
--- 'lexeme' to achieve this. Note that you'll need to call 'space' manually
--- to consume any white space before the first lexeme (i.e. at the beginning
--- of the file).
 
 space :: MonadParsec e s m
   => m () -- ^ A parser for space characters which does not accept empty
