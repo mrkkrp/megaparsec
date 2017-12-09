@@ -210,9 +210,10 @@ data Result t e a
   = OK a                   -- ^ Parser succeeded
   | Error (ParseError t e) -- ^ Parser failed
 
--- | 'Hints' represent collection of strings to be included into
--- 'ParserError' as “expected” message items when a parser fails without
--- consuming input right after successful parser that produced the hints.
+-- | 'Hints' represent a collection of 'ErrorItem's to be included into
+-- 'ParserError' (when it's a 'TrivialError') as “expected” message items
+-- when a parser fails without consuming input right after successful parser
+-- that produced the hints.
 --
 -- For example, without hints you could get:
 --
@@ -228,7 +229,8 @@ data Result t e a
 -- unexpected 'a'
 -- expecting 'r' or end of input
 
-newtype Hints t = Hints [Set (ErrorItem t)] deriving (Semigroup, Monoid)
+newtype Hints t = Hints [Set (ErrorItem t)]
+  deriving (Semigroup, Monoid)
 
 -- | Convert 'ParseError' record into 'Hints'.
 
