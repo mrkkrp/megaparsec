@@ -282,8 +282,8 @@ data IndentOpt m a b
   | IndentMany (Maybe Pos) ([b] -> m a) (m b)
     -- ^ Parse many indented tokens (possibly zero), use given indentation
     -- level (if 'Nothing', use level of the first indented token); the
-    -- second argument tells how to get final result, and third argument
-    -- describes how to parse an indented token
+    -- second argument tells how to get the final result, and the third
+    -- argument describes how to parse an indented token
   | IndentSome (Maybe Pos) ([b] -> m a) (m b)
     -- ^ Just like 'IndentMany', but requires at least one indented token to
     -- be present
