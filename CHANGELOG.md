@@ -3,6 +3,9 @@
 * Added an `IsString` instance for `ParsecT`. Now it is possible to
   write `"abc"` rather than `string "abc"`.
 
+* Added a `customFailure` combinator, which is a special case of
+  `fancyFailure`.
+
 ## Megaparsec 6.2.1
 
 * Made implementation of `sconcat` and `mconcat` of `ParsecT` more

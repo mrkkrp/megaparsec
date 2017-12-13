@@ -100,6 +100,7 @@ module Text.Megaparsec
   , region
   , takeRest
   , atEnd
+  , customFailure
     -- * Parser state combinators
   , getInput
   , setInput
@@ -651,6 +652,7 @@ class (Stream s, A.Alternative m, MonadPlus m)
     -> m a
 
   -- | The most general way to stop parsing and report a fancy 'ParseError'.
+  -- To report a single custom parse error, see 'customFailure'.
   --
   -- @since 6.0.0
 
@@ -1385,6 +1387,13 @@ takeRest = takeWhileP Nothing (const True)
 atEnd :: MonadParsec e s m => m Bool
 atEnd = option False (True <$ eof)
 {-# INLINE atEnd #-}
+
+-- | Report a custom parse error. For a more general version, see
+-- 'fancyFailure'.
+--
+-- @since 6.3.0
+customFailure :: MonadParsec e s m => e -> m a
+customFailure = fancyFailure . E.singleton . ErrorCustom
 
 ----------------------------------------------------------------------------
 -- Parser state combinators
