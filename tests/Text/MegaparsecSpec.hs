@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiWayIf        #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types        #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE RecursiveDo       #-}
@@ -23,6 +24,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Monoid
 import Data.Proxy
+import Data.String
 import Data.Void
 import Prelude hiding (span, concat)
 import Test.Hspec
@@ -41,6 +43,8 @@ import qualified Data.List                   as DL
 import qualified Data.List.NonEmpty          as NE
 import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
+import qualified Data.Text                   as T
+import qualified Data.ByteString             as BS
 
 #if !MIN_VERSION_QuickCheck(2,8,2)
 instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
@@ -212,6 +216,30 @@ spec = do
         let p = pure [a] `mappend` pure [b]
         prs p "" `shouldParse` ([a,b] :: [Int])
 
+  describe "ParsecT IsString instance" $ do
+    describe "equivalence to 'string'" $ do
+      it "for String" $ property $ \s i ->
+        eqParser
+          (string s)
+          (fromString s)
+          (i :: String)
+      it "for Text" $ property $ \s i ->
+        eqParser
+          (string (T.pack s))
+          (fromString s)
+          (i :: T.Text)
+      it "for ByteString" $ property $ \s i ->
+        eqParser
+          (string (fromString s :: BS.ByteString))
+          (fromString s)
+          (i :: BS.ByteString)
+    it "can handle Unicode" $ do
+        let
+          r = "פּאַרסער 解析器" :: BS.ByteString
+          p :: Parsec Void BS.ByteString BS.ByteString
+          p = BS.concat <$> sequence ["פּאַ", "רסער", " 解析器"]
+        parse p "" r `shouldParse` r
+
   describe "ParsecT Functor instance" $ do
     it "obeys identity law" $
       property $ \n ->
@@ -370,7 +398,7 @@ spec = do
                   x <- S.get
                   if x < n then S.modify (+ 1) else empty
                 v :: S.State Integer (Either (ParseError Char Void) ())
-                v = runParserT p "" ""
+                v = runParserT p "" ("" :: String)
             S.execState v 0 `shouldBe` n
 
     describe "some" $ do
@@ -1780,3 +1808,9 @@ emulateStrParsing st@(State i (pos:|z) tp w) s =
          , Left $ err (pos:|z) (etoks s <> utoks (take l i)) )
   where
     l = length s
+
+eqParser :: (Eq a, Eq (Token i))
+  => Parsec Void i a
+  -> Parsec Void i a
+  -> i -> Bool
+eqParser p1 p2 i = runParser p1 "" i == runParser p2 "" i

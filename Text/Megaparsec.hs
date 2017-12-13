@@ -133,6 +133,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Semigroup hiding (option)
 import Data.Set (Set)
+import Data.String (IsString (..))
 import Data.Typeable (Typeable)
 import Debug.Trace
 import GHC.Generics
@@ -321,6 +322,10 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   {-# INLINE mappend #-}
   mconcat = fmap mconcat . sequence
   {-# INLINE mconcat #-}
+
+instance (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e)
+    => IsString (ParsecT e s m a) where
+  fromString s = tokens (==) (fromString s)
 
 instance Functor (ParsecT e s m) where
   fmap = pMap
