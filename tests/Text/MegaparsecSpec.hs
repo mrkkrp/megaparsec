@@ -1219,6 +1219,15 @@ spec = do
               p = void (unexpected item)
           grs p "" (`shouldFailWith` TrivialError posI (pure item) E.empty)
 
+    describe "customFailure" $
+      it "signals correct parse error" $
+        property $ \n st -> do
+          let p :: MonadParsec Int String m => m ()
+              p = void (customFailure n)
+              xs = E.singleton (ErrorCustom n)
+          runParser  p "" (stateInput st) `shouldFailWith` FancyError posI xs
+          runParser' p st `failsLeaving` stateInput st
+
     describe "match" $
       it "return consumed tokens along with the result" $
         property $ \str -> do
@@ -1777,6 +1786,9 @@ instance Arbitrary Span where
 
 instance ShowToken Span where
   showTokens ts = concat (NE.toList . spanBody <$> ts)
+
+instance ShowErrorComponent Int where
+  showErrorComponent = show
 
 type CustomParser = Parsec Void [Span]
 

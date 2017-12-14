@@ -59,7 +59,7 @@ prs
   -> Either (ParseError Char Void) a -- ^ Result of parsing
 prs p = parse p ""
 
--- | Just like 'prs', but allows to inspect final state of the parser.
+-- | Just like 'prs', but allows to inspect the final state of the parser.
 
 prs'
   :: Parser a          -- ^ Parser to run

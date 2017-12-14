@@ -96,11 +96,11 @@ module Text.Megaparsec
     -- * Derivatives of primitive combinators
   , (<?>)
   , unexpected
+  , customFailure
   , match
   , region
   , takeRest
   , atEnd
-  , customFailure
     -- * Parser state combinators
   , getInput
   , setInput
@@ -1319,6 +1319,15 @@ unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (pure item) E.empty
 {-# INLINE unexpected #-}
 
+-- | Report a custom parse error. For a more general version, see
+-- 'fancyFailure'.
+--
+-- @since 6.3.0
+
+customFailure :: MonadParsec e s m => e -> m a
+customFailure = fancyFailure . E.singleton . ErrorCustom
+{-# INLINE customFailure #-}
+
 -- | Return both the result of a parse and a chunk of input that was
 -- consumed during parsing. This relies on the change of the
 -- 'stateTokensProcessed' value to evaluate how many tokens were consumed.
@@ -1387,13 +1396,6 @@ takeRest = takeWhileP Nothing (const True)
 atEnd :: MonadParsec e s m => m Bool
 atEnd = option False (True <$ eof)
 {-# INLINE atEnd #-}
-
--- | Report a custom parse error. For a more general version, see
--- 'fancyFailure'.
---
--- @since 6.3.0
-customFailure :: MonadParsec e s m => e -> m a
-customFailure = fancyFailure . E.singleton . ErrorCustom
 
 ----------------------------------------------------------------------------
 -- Parser state combinators
