@@ -7,7 +7,7 @@
 module Text.Megaparsec.Char.LexerSpec (spec) where
 
 import Control.Applicative
-import Control.Monad (void)
+import Control.Monad
 import Data.Char hiding (ord)
 import Data.List (isInfixOf)
 import Data.Maybe
@@ -45,8 +45,14 @@ spec = do
     context "when stream begins with the symbol" $
       it "parses the symbol and trailing whitespace" $
         property $ forAll mkSymbol $ \s -> do
-          let p = symbol' scn (toUpper <$> y)
+          let p = symbol' scn y'
+              y' = toUpper <$> y
               y = takeWhile (not . isSpace) s
+          -- NOTE In some rare cases it's possible that y' will have a
+          -- different length than y due to the craziness of Unicode. We
+          -- cannot deal with those cases due to how the tokens primitive is
+          -- implemented. This is a “feature”, not a bug.
+          when (length y' /= length y) discard
           prs  p s `shouldParse` y
           prs' p s `succeedsLeaving` ""
 
