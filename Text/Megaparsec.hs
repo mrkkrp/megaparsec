@@ -306,6 +306,8 @@ newtype ParsecT e s m a = ParsecT
       -> (ParseError (Token s) e -> State s -> m b) -- empty-error
       -> m b }
 
+-- | @since 5.3.0
+
 instance (Stream s, Semigroup a) => Semigroup (ParsecT e s m a) where
   (<>) = A.liftA2 (<>)
   {-# INLINE (<>) #-}
@@ -316,6 +318,8 @@ instance (Stream s, Semigroup a) => Semigroup (ParsecT e s m a) where
 #endif
   {-# INLINE sconcat #-}
 
+-- | @since 5.3.0
+
 instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   mempty = pure mempty
   {-# INLINE mempty #-}
@@ -323,6 +327,8 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   {-# INLINE mappend #-}
   mconcat = fmap mconcat . sequence
   {-# INLINE mconcat #-}
+
+-- | @since 6.3.0
 
 instance (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e)
     => IsString (ParsecT e s m a) where
@@ -453,6 +459,8 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
+
+-- | @since 6.0.0
 
 instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
   mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
@@ -1222,6 +1230,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
 
+-- | @since 5.2.0
+
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
   failure us ps               = lift (failure us ps)
   fancyFailure xs             = lift (fancyFailure xs)
@@ -1245,6 +1255,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
+
+-- | @since 5.2.0
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
   failure us ps               = lift (failure us ps)
