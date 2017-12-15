@@ -15,7 +15,7 @@ import Text.Megaparsec.Perm
 
 data CharRows = CharRows
   { getChars :: (Char, Char, Char)
-  , getInput :: String }
+  , getRInput :: String }
   deriving (Eq, Show)
 
 instance Arbitrary CharRows where
@@ -74,7 +74,7 @@ spec = do
             preb = take (bis !! 1) s
             cis  = elemIndices c s
             prec = take (cis !! 1) s
-            s    = getInput v
+            s    = getRInput v
         if | length bis > 1 && (length cis <= 1 || head bis < head cis) ->
                prs_ p s `shouldFailWith` err (posN (bis !! 1) s)
                  ( utok b <> eeof <>
