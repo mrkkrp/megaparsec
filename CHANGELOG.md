@@ -1,3 +1,9 @@
+## Megaparsec 6.4.0
+
+* Exported combinators independent of token type from `Text.Megaparsec`,
+  re-exported `Text.Megaparsec` from `Text.Megaparsec.Char` and
+  `Text.Megaparsec.Byte`.
+
 ## Megaparsec 6.3.0
 
 * Added an `IsString` instance for `ParsecT`. Now it is possible to
