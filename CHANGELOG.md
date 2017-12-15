@@ -3,7 +3,7 @@
 * Added an `IsString` instance for `ParsecT`. Now it is possible to
   write `"abc"` rather than `string "abc"`.
 
-* Added a `customFailure` combinator, which is a special case of
+* Added the `customFailure` combinator, which is a special case of
   `fancyFailure`.
 
 * Made implementation of `sconcat` and `mconcat` of `ParsecT` more
