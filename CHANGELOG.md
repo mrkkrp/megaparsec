@@ -1,3 +1,9 @@
+## Megaparsec 6.4.0
+
+* Fix the `atEnd` parser. It now does not produce hints, so when you use it,
+  it won't contribute to the “expecting end of input” component of parse
+  error.
+
 ## Megaparsec 6.3.0
 
 * Added an `IsString` instance for `ParsecT`. Now it is possible to

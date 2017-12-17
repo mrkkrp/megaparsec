@@ -1284,16 +1284,23 @@ spec = do
           runParser' p st `shouldBe` (st', Right stateInput)
 
     describe "atEnd" $ do
-      let p :: Parser Bool
-          p = atEnd
-      context "when stream is empty" $
+      let p, p' :: Parser Bool
+          p  = atEnd
+          p' = p <* empty
+      context "when stream is empty" $ do
         it "returns True" $
           prs p "" `shouldParse` True
-      context "when stream is not empty" $
+        it "does not produce hints" $
+          prs p' "" `shouldFailWith` err posI mempty
+      context "when stream is not empty" $ do
         it "returns False" $
           property $ \s -> not (null s) ==> do
             prs  p s `shouldParse` False
             prs' p s `succeedsLeaving` s
+        it "does not produce hints" $
+          property $ \s -> not (null s) ==> do
+            prs  p' s `shouldFailWith` err posI mempty
+            prs' p' s `failsLeaving` s
 
   describe "combinators for manipulating parser state" $ do
 

@@ -1406,7 +1406,7 @@ takeRest = takeWhileP Nothing (const True)
 -- @since 6.0.0
 
 atEnd :: MonadParsec e s m => m Bool
-atEnd = option False (True <$ eof)
+atEnd = option False (True <$ hidden eof)
 {-# INLINE atEnd #-}
 
 ----------------------------------------------------------------------------
