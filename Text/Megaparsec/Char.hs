@@ -296,13 +296,10 @@ categoryName = \case
 -- > semicolon = char ';'
 
 char :: MonadParsec e s m => Token s -> m (Token s)
-char c = token testChar (Just c)
+char c = token testChar expected
   where
-    f x = Tokens (x:|[])
-    testChar x =
-      if x == c
-        then Right x
-        else Left (pure (f x), E.singleton (f c))
+    testChar x = if x == c then Just x else Nothing
+    expected   = E.singleton (Tokens (c:|[]))
 {-# INLINE char #-}
 
 -- | The same as 'char' but case-insensitive. This parser returns the
@@ -388,12 +385,9 @@ noneOf cs = satisfy (`notElem` cs)
 satisfy :: MonadParsec e s m
   => (Token s -> Bool) -- ^ Predicate to apply
   -> m (Token s)
-satisfy f = token testChar Nothing
+satisfy f = token testChar E.empty
   where
-    testChar x =
-      if f x
-        then Right x
-        else Left (pure (Tokens (x:|[])), E.empty)
+    testChar x = if f x then Just x else Nothing
 {-# INLINE satisfy #-}
 
 ----------------------------------------------------------------------------

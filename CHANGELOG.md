@@ -1,3 +1,11 @@
+## Megaparsec 7.0.0
+
+* Simplified the type of the `token` primitive. It now takes just a matching
+  function `Token s -> Maybe a` as the first argument and the collection of
+  expected items `Set (ErrorItem (Token s))` as the second argument. This
+  makes sense because the collection of expected items cannot depend on what
+  we see in the input stream.
+
 ## Megaparsec 6.4.0
 
 * Fix the `atEnd` parser. It now does not produce hints, so when you use it,

@@ -996,24 +996,21 @@ spec = do
             grs' eof s (`failsLeaving` s)
 
     describe "token" $ do
-      let f x = Tokens (nes x)
-          testChar a x =
-            if x == a
-              then Right x
-              else Left (pure (f x), E.singleton (f a))
+      let expected = E.singleton . Tokens . nes
+          testChar a x = if a == x then Just x else Nothing
       context "when supplied predicate is satisfied" $
         it "succeeds" $
-          property $ \a as mtok -> do
+          property $ \a as -> do
             let p :: MonadParsec Void String m => m Char
-                p = token (testChar a) mtok
+                p = token (testChar a) (expected a)
                 s = a : as
             grs  p s (`shouldParse` a)
             grs' p s (`succeedsLeaving` as)
       context "when supplied predicate is not satisfied" $
         it "signals correct parse error" $
-          property $ \a b as mtok -> a /= b ==> do
+          property $ \a b as -> a /= b ==> do
             let p :: MonadParsec Void String m => m Char
-                p = token (testChar b) mtok
+                p = token (testChar b) (expected b)
                 s = a : as
                 us = pure (Tokens $ nes a)
                 ps = E.singleton (Tokens $ nes b)
@@ -1021,11 +1018,11 @@ spec = do
             grs' p s (`failsLeaving` s)
       context "when stream is empty" $
         it "signals correct parse error" $
-          property $ \a mtok -> do
+          property $ \a -> do
             let p :: MonadParsec Void String m => m Char
-                p = token (testChar a) mtok
+                p = token (testChar a) ps
                 us = pure EndOfInput
-                ps = maybe E.empty (E.singleton . Tokens . nes) mtok
+                ps = expected a
             grs p "" (`shouldFailWith` TrivialError posI us ps)
 
     describe "tokens" $ do
@@ -1800,13 +1797,13 @@ instance ShowErrorComponent Int where
 type CustomParser = Parsec Void [Span]
 
 pSpan :: Span -> CustomParser Span
-pSpan span = token testToken (Just span)
+pSpan span = token testToken expected
   where
-    f = Tokens . nes
     testToken x =
       if spanBody x == spanBody span
-        then Right span
-        else Left (pure (f x), E.singleton (f span))
+        then Just x
+        else Nothing
+    expected = (E.singleton . Tokens . nes) span
 
 incCoincidence :: State [Span] -> [Span] -> Gen (State [Span])
 incCoincidence st ts = do
