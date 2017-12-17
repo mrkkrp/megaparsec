@@ -68,7 +68,7 @@ skipBlockComment :: (MonadParsec e s m, Token s ~ Word8)
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
-skipBlockComment start end = p >> void (manyTill anyChar n)
+skipBlockComment start end = p >> void (manyTill anySingle n)
   where
     p = string start
     n = string end
@@ -85,7 +85,7 @@ skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Word8)
   -> m ()
 skipBlockCommentNested start end = p >> void (manyTill e n)
   where
-    e = skipBlockCommentNested start end <|> void anyChar
+    e = skipBlockCommentNested start end <|> void anySingle
     p = string start
     n = string end
 {-# INLINEABLE skipBlockCommentNested #-}

@@ -1,5 +1,29 @@
 ## Megaparsec 7.0.0
 
+* Moved some general combinators from `Text.Megaparsec.Char` and
+  `Text.Megaparsec.Byte` to `Text.Megaparsec`, renaming some of them for
+  clarity.
+
+  Practical consequences:
+
+  * Now there is the `single` combinator that is a generalization of `char`
+    for arbitrary streams. `Text.Megaparsec.Char` and `Text.Megaparsec.Byte`
+    still contain `char` as type-constrained versions of `single`.
+
+  * Similarly, now there is the `chunk` combinator that is a generalization
+    of `string` for arbitrary streams. `Text.Megaparsec.Char` and
+    `Text.Megaparsec.Byte` still contain `string` as type-constrained
+    versions of `single`.
+
+  * `satisfy` does not depend on type of token, and so it now lives in
+    `Text.Megaparsec`.
+
+  * `anyToken` was renamed to `anySingle` and moved to `Text.Megaparsec`.
+
+  * `notChar` was renamed to `anySingleBut` and moved to `Text.Megaparsec`.
+
+  * `oneOf` and `noneOf` were moved to `Text.Megaparsec`.
+
 * Simplified the type of the `token` primitive. It now takes just a matching
   function `Token s -> Maybe a` as the first argument and the collection of
   expected items `Set (ErrorItem (Token s))` as the second argument. This

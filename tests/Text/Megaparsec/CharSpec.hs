@@ -206,7 +206,8 @@ spec = do
 
   describe "char'" $ do
     let goodChar x =
-          (toUpper x == toLower x) || (isUpper x || isLower x)
+          (toUpper x == toLower x) ||
+          (((toUpper x == x) || (toLower x == x)) && (isUpper x || isLower x))
     context "when stream begins with the character specified as argument" $
       it "parses the character" $
         property $ \ch s -> goodChar ch ==> do
@@ -228,75 +229,6 @@ spec = do
         property $ \ch -> goodChar ch ==> do
           let ms = ueof <> etok (toLower ch) <> etok (toUpper ch)
           prs  (char' ch) "" `shouldFailWith` err posI ms
-
-  describe "anyChar" $ do
-    context "when stream is not empty" $
-      it "succeeds consuming next character in the stream" $
-        property $ \ch s -> do
-          let s' = ch : s
-          prs  anyChar s' `shouldParse`     ch
-          prs' anyChar s' `succeedsLeaving` s
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs anyChar "" `shouldFailWith` err posI (ueof <> elabel "character")
-
-  describe "notChar" $ do
-    context "when stream begins with the character specified as argument" $
-      it "signals correct parse error" $
-        property $ \ch s' -> do
-          let p = notChar ch
-              s = ch : s'
-          prs p s `shouldFailWith` err posI (utok ch)
-          prs' p s `failsLeaving` s
-    context "when stream does not begin with the character specified as argument" $
-      it "parses first character in the stream" $
-        property $ \ch s -> not (null s) && ch /= head s ==> do
-          let p = notChar ch
-          prs  p s `shouldParse` head s
-          prs' p s `succeedsLeaving` tail s
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (notChar 'a') "" `shouldFailWith` err posI ueof
-
-  describe "oneOf" $ do
-    context "when stream begins with one of specified characters" $
-      it "parses the character" $
-        property $ \chs' n s -> do
-          let chs = getNonEmpty chs'
-              ch  = chs !! (getNonNegative n `rem` length chs)
-              s'  = ch : s
-          prs  (oneOf chs) s' `shouldParse`     ch
-          prs' (oneOf chs) s' `succeedsLeaving` s
-    context "when stream does not begin with any of specified characters" $
-      it "signals correct parse error" $
-        property $ \chs ch s  -> ch `notElem` (chs :: String) ==> do
-          let s' = ch : s
-          prs  (oneOf chs) s' `shouldFailWith` err posI (utok ch)
-          prs' (oneOf chs) s' `failsLeaving`   s'
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        property $ \chs ->
-          prs (oneOf (chs :: String)) "" `shouldFailWith` err posI ueof
-
-  describe "noneOf" $ do
-    context "when stream does not begin with any of specified characters" $
-      it "parses the character" $
-        property $ \chs ch s  -> ch `notElem` (chs :: String) ==> do
-          let s' = ch : s
-          prs  (noneOf chs) s' `shouldParse`     ch
-          prs' (noneOf chs) s' `succeedsLeaving` s
-    context "when stream begins with one of specified characters" $
-      it "signals correct parse error" $
-        property $ \chs' n s -> do
-          let chs = getNonEmpty chs'
-              ch  = chs !! (getNonNegative n `rem` length chs)
-              s'  = ch : s
-          prs  (noneOf chs) s' `shouldFailWith` err posI (utok ch)
-          prs' (noneOf chs) s' `failsLeaving`   s'
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        property $ \chs ->
-          prs (noneOf (chs :: String)) "" `shouldFailWith` err posI ueof
 
   describe "string" $ do
     context "when stream is prefixed with given string" $

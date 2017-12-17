@@ -28,24 +28,24 @@ spec = do
           chunkToTokens sproxy (tokensToChunk sproxy ts) === ts
     describe "chunkToTokens" $
       it "chunk is isomorphic to list of tokens" $
-        property $ \chunk ->
-          tokensToChunk sproxy (chunkToTokens sproxy chunk) === chunk
+        property $ \chk ->
+          tokensToChunk sproxy (chunkToTokens sproxy chk) === chk
     describe "chunkLength" $
       it "returns correct length of given chunk" $
-        property $ \chunk ->
-          chunkLength sproxy chunk === length chunk
+        property $ \chk ->
+          chunkLength sproxy chk === length chk
     describe "chunkEmpty" $
       it "only true when chunkLength returns 0" $
-        property $ \chunk ->
-          chunkEmpty sproxy chunk === (chunkLength sproxy chunk <= 0)
+        property $ \chk ->
+          chunkEmpty sproxy chk === (chunkLength sproxy chk <= 0)
     describe "positionAt1" $
       it "just returns the given position" $
         property $ \pos t ->
           positionAt1 sproxy pos t === pos
     describe "positionAtN" $
       it "just returns the given position" $
-        property $ \pos chunk ->
-          positionAtN sproxy pos chunk === pos
+        property $ \pos chk ->
+          positionAtN sproxy pos chk === pos
     describe "advance1" $ do
       context "when given newline" $
         it "works correctly" $
@@ -102,24 +102,24 @@ spec = do
           chunkToTokens bproxy (tokensToChunk bproxy ts) === ts
     describe "chunkToTokens" $
       it "chunk is isomorphic to list of tokens" $
-        property $ \chunk ->
-          tokensToChunk bproxy (chunkToTokens bproxy chunk) === chunk
+        property $ \chk ->
+          tokensToChunk bproxy (chunkToTokens bproxy chk) === chk
     describe "chunkLength" $
       it "returns correct length of given chunk" $
-        property $ \chunk ->
-          chunkLength bproxy chunk === B.length chunk
+        property $ \chk ->
+          chunkLength bproxy chk === B.length chk
     describe "chunkEmpty" $
       it "only true when chunkLength returns 0" $
-        property $ \chunk ->
-          chunkEmpty bproxy chunk === (chunkLength bproxy chunk <= 0)
+        property $ \chk ->
+          chunkEmpty bproxy chk === (chunkLength bproxy chk <= 0)
     describe "positionAt1" $
       it "just returns the given position" $
         property $ \pos t ->
           positionAt1 bproxy pos t === pos
     describe "positionAtN" $
       it "just returns the given position" $
-        property $ \pos chunk ->
-          positionAtN bproxy pos chunk === pos
+        property $ \pos chk ->
+          positionAtN bproxy pos chk === pos
     describe "advance1" $ do
       context "when given newline" $
         it "works correctly" $
@@ -177,24 +177,24 @@ spec = do
           chunkToTokens blproxy (tokensToChunk blproxy ts) === ts
     describe "chunkToTokens" $
       it "chunk is isomorphic to list of tokens" $
-        property $ \chunk ->
-          tokensToChunk blproxy (chunkToTokens blproxy chunk) === chunk
+        property $ \chk ->
+          tokensToChunk blproxy (chunkToTokens blproxy chk) === chk
     describe "chunkLength" $
       it "returns correct length of given chunk" $
-        property $ \chunk ->
-          chunkLength blproxy chunk === fromIntegral (BL.length chunk)
+        property $ \chk ->
+          chunkLength blproxy chk === fromIntegral (BL.length chk)
     describe "chunkEmpty" $
       it "only true when chunkLength returns 0" $
-        property $ \chunk ->
-          chunkEmpty blproxy chunk === (chunkLength blproxy chunk <= 0)
+        property $ \chk ->
+          chunkEmpty blproxy chk === (chunkLength blproxy chk <= 0)
     describe "positionAt1" $
       it "just returns the given position" $
         property $ \pos t ->
           positionAt1 blproxy pos t === pos
     describe "positionAtN" $
       it "just returns the given position" $
-        property $ \pos chunk ->
-          positionAtN blproxy pos chunk === pos
+        property $ \pos chk ->
+          positionAtN blproxy pos chk === pos
     describe "advance1" $ do
       context "when given newline" $
         it "works correctly" $
@@ -252,24 +252,24 @@ spec = do
           chunkToTokens tproxy (tokensToChunk tproxy ts) === ts
     describe "chunkToTokens" $
       it "chunk is isomorphic to list of tokens" $
-        property $ \chunk ->
-          tokensToChunk tproxy (chunkToTokens tproxy chunk) === chunk
+        property $ \chk ->
+          tokensToChunk tproxy (chunkToTokens tproxy chk) === chk
     describe "chunkLength" $
       it "returns correct length of given chunk" $
-        property $ \chunk ->
-          chunkLength tproxy chunk === T.length chunk
+        property $ \chk ->
+          chunkLength tproxy chk === T.length chk
     describe "chunkEmpty" $
       it "only true when chunkLength returns 0" $
-        property $ \chunk ->
-          chunkEmpty tproxy chunk === (chunkLength tproxy chunk <= 0)
+        property $ \chk ->
+          chunkEmpty tproxy chk === (chunkLength tproxy chk <= 0)
     describe "positionAt1" $
       it "just returns the given position" $
         property $ \pos t ->
           positionAt1 tproxy pos t === pos
     describe "positionAtN" $
       it "just returns the given position" $
-        property $ \pos chunk ->
-          positionAtN tproxy pos chunk === pos
+        property $ \pos chk ->
+          positionAtN tproxy pos chk === pos
     describe "advance1" $ do
       context "when given newline" $
         it "works correctly" $
@@ -326,24 +326,24 @@ spec = do
           chunkToTokens tlproxy (tokensToChunk tlproxy ts) === ts
     describe "chunkToTokens" $
       it "chunk is isomorphic to list of tokens" $
-        property $ \chunk ->
-          tokensToChunk tlproxy (chunkToTokens tlproxy chunk) === chunk
+        property $ \chk ->
+          tokensToChunk tlproxy (chunkToTokens tlproxy chk) === chk
     describe "chunkLength" $
       it "returns correct length of given chunk" $
-        property $ \chunk ->
-          chunkLength tlproxy chunk === fromIntegral (TL.length chunk)
+        property $ \chk ->
+          chunkLength tlproxy chk === fromIntegral (TL.length chk)
     describe "chunkEmpty" $
       it "only true when chunkLength returns 0" $
-        property $ \chunk ->
-          chunkEmpty tlproxy chunk === (chunkLength tlproxy chunk <= 0)
+        property $ \chk ->
+          chunkEmpty tlproxy chk === (chunkLength tlproxy chk <= 0)
     describe "positionAt1" $
       it "just returns the given position" $
         property $ \pos t ->
           positionAt1 tlproxy pos t === pos
     describe "positionAtN" $
       it "just returns the given position" $
-        property $ \pos chunk ->
-          positionAtN tlproxy pos chunk === pos
+        property $ \pos chk ->
+          positionAtN tlproxy pos chk === pos
     describe "advance1" $ do
       context "when given newline" $
         it "works correctly" $
