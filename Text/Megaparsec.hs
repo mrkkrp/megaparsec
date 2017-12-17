@@ -771,28 +771,22 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   eof :: m ()
 
-  -- | The parser @'token' test mrep@ accepts a token @t@ with result @x@
-  -- when the function @test t@ returns @'Right' x@. @mrep@ may provide
-  -- representation of the token to report in error messages when input
-  -- stream in empty.
+  -- | The parser @'token' test exp@ accepts a token @t@ with result @x@
+  -- when the function @test t@ returns @'Just' x@. @exp@ specifies the
+  -- collection of expected items to report in error messages.
   --
   -- This is the most primitive combinator for accepting tokens. For
   -- example, the 'Text.Megaparsec.Char.satisfy' parser is implemented as:
   --
-  -- > satisfy f = token testChar Nothing
+  -- > satisfy f = token testChar E.empty
   -- >   where
-  -- >     testChar x =
-  -- >       if f x
-  -- >         then Right x
-  -- >         else Left (pure (Tokens (x:|[])), Set.empty)
+  -- >     testChar x = if f x then Just x else Nothing
 
   token
-    :: (Token s -> Either ( Maybe (ErrorItem (Token s))
-                          , Set (ErrorItem (Token s)) ) a)
-       -- ^ Matching function for the token to parse, it allows to construct
-       -- arbitrary error message on failure as well; things in the tuple
-       -- are: unexpected item (if any) and expected items
-    -> Maybe (Token s) -- ^ Token to report when input stream is empty
+    :: (Token s -> Maybe a)
+       -- ^ Matching function for the token to parse
+    -> Set (ErrorItem (Token s))
+       -- ^ Expected items (in case of an error)
     -> m a
 
   -- | The parser @'tokens' test@ parses a chunk of input and returns it.
@@ -998,23 +992,22 @@ pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
-  => (Token s -> Either ( Maybe (ErrorItem (Token s))
-                        , Set (ErrorItem (Token s)) ) a)
-  -> Maybe (Token s)
+  => (Token s -> Maybe a)
+  -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pToken test mtoken = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+pToken test ps = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
   case take1_ input of
     Nothing ->
       let us = pure EndOfInput
-          ps = maybe E.empty (E.singleton . Tokens . nes) mtoken
       in eerr (TrivialError (pos:|z) us ps) s
     Just (c,cs) ->
       case test c of
-        Left (us, ps) ->
+        Nothing ->
           let !apos = positionAt1 (Proxy :: Proxy s) pos c
+              us    = (Just . Tokens . nes) c
           in eerr (TrivialError (apos:|z) us ps)
                   (State input (apos:|z) tp w)
-        Right x ->
+        Just x ->
           let !npos = advance1 (Proxy :: Proxy s) w pos c
               newstate = State cs (npos:|z) (tp + 1) w
           in cok x newstate mempty
