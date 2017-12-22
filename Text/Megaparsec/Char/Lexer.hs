@@ -561,7 +561,7 @@ signed :: (MonadParsec e s m, Token s ~ Char, Num a)
   => m ()              -- ^ How to consume white space after the sign
   -> m a               -- ^ How to parse the number itself
   -> m a               -- ^ Parser for signed numbers
-signed spc p = ($) <$> option id (lexeme spc sign) <*> p
+signed spc p = option id (lexeme spc sign) <*> p
   where
     sign = (id <$ C.char '+') <|> (negate <$ C.char '-')
 {-# INLINEABLE signed #-}
