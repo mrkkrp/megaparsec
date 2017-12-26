@@ -387,6 +387,8 @@ The following packages are designed to be used with Megaparsec:
 
 ## Prominent projects that use Megaparsec
 
+* [Idris](https://github.com/idris-lang/Idris-dev)—a general-purpose
+  functional programming language with dependent types
 * [Hledger](https://github.com/simonmichael/hledger)—an accounting tool
 * [Stache](https://github.com/stackbuilders/stache)—Mustache templates for Haskell
 * [Language Puppet](https://github.com/bartavelle/language-puppet)—library
