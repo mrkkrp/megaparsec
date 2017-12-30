@@ -16,8 +16,9 @@ synopsis:             Monadic parser combinators
 build-type:           Simple
 description:
 
-  This is industrial-strength monadic parser combinator library. Megaparsec
-  is a fork of Parsec library originally written by Daan Leijen.
+  This is an industrial-strength monadic parser combinator library.
+  Megaparsec is a feature-rich package that strikes a nice balance between
+  speed, flexibility, and quality of parse errors.
 
 extra-doc-files:      AUTHORS.md
                     , CHANGELOG.md
