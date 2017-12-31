@@ -22,6 +22,10 @@ import Text.Megaparsec
 import Text.Megaparsec.Char.Lexer
 import qualified Text.Megaparsec.Char as C
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative hiding (many, some)
+#endif
+
 spec :: Spec
 spec = do
 

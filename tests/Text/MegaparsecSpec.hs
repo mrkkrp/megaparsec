@@ -45,6 +45,10 @@ import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.ByteString             as BS
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative hiding (many, some)
+#endif
+
 #if !MIN_VERSION_QuickCheck(2,8,2)
 instance (Arbitrary a, Ord a) => Arbitrary (E.Set a) where
   arbitrary = E.fromList <$> arbitrary
