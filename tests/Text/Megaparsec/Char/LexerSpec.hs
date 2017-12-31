@@ -6,7 +6,6 @@
 
 module Text.Megaparsec.Char.LexerSpec (spec) where
 
-import Control.Applicative
 import Control.Monad
 import Data.Char hiding (ord)
 import Data.List (isInfixOf)

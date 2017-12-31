@@ -29,7 +29,7 @@ where
 import Text.Megaparsec
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative
 #endif
 
 infixl 1 <||>, <|?>
@@ -61,10 +61,11 @@ data Branch s m a = forall b. Branch (PermParser s m (b -> a)) (m b)
 makePermParser :: MonadParsec e s m
   => PermParser s m a -- ^ Given permutation parser
   -> m a              -- ^ Normal parser built from it
-makePermParser (Perm def xs) = choice (fmap branch xs ++ empty)
-  where empty = case def of
-                  Nothing -> []
-                  Just x  -> [return x]
+makePermParser (Perm def xs) = choice (fmap branch xs ++ empty')
+  where empty' =
+          case def of
+            Nothing -> []
+            Just x  -> [return x]
         branch (Branch perm p) = flip ($) <$> p <*> makePermParser perm
 
 -- | The expression @f \<$$> p@ creates a fresh permutation parser

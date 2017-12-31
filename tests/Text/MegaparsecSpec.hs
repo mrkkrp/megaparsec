@@ -11,7 +11,6 @@
 
 module Text.MegaparsecSpec (spec) where
 
-import Control.Applicative
 import Control.Monad.Cont
 import Control.Monad.Except
 import Control.Monad.Identity

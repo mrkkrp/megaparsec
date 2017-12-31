@@ -77,7 +77,7 @@ module Text.Megaparsec
     module Text.Megaparsec.Pos
   , module Text.Megaparsec.Error
   , module Text.Megaparsec.Stream
-  , module Control.Applicative.Combinators
+  , module Control.Monad.Combinators
     -- * Data types
   , State (..)
   , Parsec
@@ -118,9 +118,9 @@ module Text.Megaparsec
   , dbg )
 where
 
-import Control.Applicative.Combinators
 import Control.DeepSeq
 import Control.Monad
+import Control.Monad.Combinators
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
 import Control.Monad.Identity
