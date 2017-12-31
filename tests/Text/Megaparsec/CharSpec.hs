@@ -225,7 +225,7 @@ spec = do
           prs' (char' ch) s' `failsLeaving`   s'
     context "when stream is empty" $
       it "signals correct parse error" $
-        property $ \ch -> do
+        property $ \ch -> goodChar ch ==> do
           let ms = ueof <> etok (toLower ch) <> etok (toUpper ch)
           prs  (char' ch) "" `shouldFailWith` err posI ms
 
