@@ -37,6 +37,7 @@ main = mainWith $ do
   bparser "sepEndBy1" manyAbs' (const $ sepEndBy1 (char 'a') (char 'b'))
   bparser "skipMany" manyAs (const $ skipMany (char 'a'))
   bparser "skipSome" manyAs (const $ skipSome (char 'a'))
+  bparser "skipCount" manyAs (\(_,n) -> skipCount n (char 'a'))
   bparser "skipManyTill" manyAsB (const $ skipManyTill (char 'a') (char 'b'))
   bparser "skipSomeTill" manyAsB (const $ skipSomeTill (char 'a') (char 'b'))
   bparser "takeWhileP" manyAs (const $ takeWhileP Nothing (== 'a'))

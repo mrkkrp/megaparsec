@@ -205,9 +205,11 @@ spec = do
           prs  (char ch) "" `shouldFailWith` err posI (ueof <> etok ch)
 
   describe "char'" $ do
+    let goodChar x =
+          (toUpper x == toLower x) || (isUpper x || isLower x)
     context "when stream begins with the character specified as argument" $
       it "parses the character" $
-        property $ \ch s -> do
+        property $ \ch s -> goodChar ch ==> do
           let sl = toLower ch : s
               su = toUpper ch : s
           prs  (char' ch) sl `shouldParse`     toLower ch
@@ -216,7 +218,7 @@ spec = do
           prs' (char' ch) su `succeedsLeaving` s
     context "when stream does not begin with the character specified as argument" $
       it "signals correct parse error" $
-        property $ \ch ch' s -> toLower ch /= toLower ch' ==> do
+        property $ \ch ch' s -> goodChar ch && toLower ch /= toLower ch' ==> do
           let s' = ch' : s
               ms = utok ch' <> etok (toLower ch) <> etok (toUpper ch)
           prs  (char' ch) s' `shouldFailWith` err posI ms

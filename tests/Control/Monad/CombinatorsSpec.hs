@@ -1,11 +1,10 @@
 {-# LANGUAGE CPP        #-}
 {-# LANGUAGE MultiWayIf #-}
 
-module Control.Applicative.CombinatorsSpec (spec) where
+module Control.Monad.CombinatorsSpec (spec) where
 
-import Data.Char (isLetter, isDigit)
 import Data.List (intersperse)
-import Data.Maybe (fromMaybe, maybeToList, isNothing, fromJust)
+import Data.Maybe (maybeToList, isNothing, fromJust)
 import Data.Monoid
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -20,30 +19,6 @@ import Control.Applicative hiding (many, some)
 
 spec :: Spec
 spec = do
-
-  describe "between" $
-    it "works" . property $ \pre c n' post -> do
-      let p = between (string pre) (string post) (many (char c))
-          n = getNonNegative n'
-          b = length (takeWhile (== c) post)
-          z = replicate n c
-          s = pre ++ z ++ post
-      if b > 0
-        then prs_ p s `shouldFailWith` err (posN (length pre + n + b) s)
-          ( etoks post <> etok c <>
-            if length post == b
-              then ueof
-              else utoks (drop b post) )
-        else prs_ p s `shouldParse` z
-
-  describe "choice" $
-    it "works" . property $ \cs' s' -> do
-      let cs = getNonEmpty cs'
-          p = choice (char <$> cs)
-          s = [s']
-      if s' `elem` cs
-        then prs_ p s `shouldParse` s'
-        else prs_ p s `shouldFailWith` err posI (utok s' <> mconcat (etok <$> cs))
 
   describe "count" $ do
     it "works" . property $ \n x' -> do
@@ -70,15 +45,6 @@ spec = do
          | otherwise ->
            prs_ p s `shouldFailWith` err (posN n s) (utok 'x' <> eeof)
     rightOrder (count' 1 3 letterChar) "abc" "abc"
-
-  describe "eitherP" $
-    it "works" . property $ \ch -> do
-      let p = eitherP letterChar digitChar
-          s = pure ch
-      if | isLetter ch -> prs_ p s `shouldParse` Left ch
-         | isDigit  ch -> prs_ p s `shouldParse` Right ch
-         | otherwise   -> prs_ p s `shouldFailWith`
-           err posI (utok ch <> elabel "letter" <> elabel "digit")
 
   describe "endBy" $ do
     it "works" . property $ \n' c -> do
@@ -149,12 +115,6 @@ spec = do
            let (pre, post) = break (== 'c') s
            in prs_ p s `shouldParse` (pre, drop 1 post)
     rightOrder (someTill letterChar (char 'd')) "abcd" "abc"
-
-  describe "option" $
-    it "works" . property $ \d a s -> do
-      let p = option d (string a)
-          p' = fromMaybe d <$> optional (string a)
-      prs_ p s `shouldBe` prs_ p' s
 
   describe "sepBy" $ do
     it "works" . property $ \n' c' -> do
