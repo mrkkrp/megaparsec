@@ -159,14 +159,14 @@ import Control.Applicative
 
 -- $reexports
 --
--- Also note that you can import "Control.Applicative.Combinators.NonEmpty"
--- if you wish that combinators like 'some' return 'NonEmpty' lists. The
--- module lives in the @parser-combinators@ package (you need at least
--- version /0.2.0/).
+-- Also note that you can import "Control.Monad.Combinators.NonEmpty" if you
+-- wish that combinators like 'some' return 'NonEmpty' lists. The module
+-- lives in the @parser-combinators@ package (you need at least version
+-- /0.4.0/).
 --
 -- This module is intended to be imported qualified:
 --
--- > import qualified Control.Applicative.Combinators.NonEmpty as NE
+-- > import qualified Control.Monad.Combinators.NonEmpty as NE
 
 ----------------------------------------------------------------------------
 -- Data types
