@@ -17,6 +17,7 @@ module Test.Hspec.Megaparsec.AdHoc
     -- * Other
   , abcRow
   , toFirstMismatch
+  , rightOrder
   , Parser )
 where
 
@@ -169,6 +170,17 @@ toFirstMismatch
   -> String            -- ^ Resulting prefix
 toFirstMismatch f str s = take (n + 1) s
   where n = length (takeWhile (uncurry f) (zip str s))
+
+-- | Check that the given parser returns the list in the right order.
+
+rightOrder
+  :: Parser String     -- ^ The parser to test
+  -> String            -- ^ Input for the parser
+  -> String            -- ^ Expected result
+  -> Spec
+rightOrder p s s' =
+  it "produces the list in the right order" $
+    prs_ p s `shouldParse` s'
 
 -- | The type of parser that consumes a 'String'.
 

@@ -8,6 +8,25 @@
 
 ## Megaparsec 6.4.0
 
+* `Text.Megaparsec` now re-exports `Control.Monad.Combinators` instead of
+  `Control.Applicative.Combinators` from `parser-combinators` because the
+  monadic counterparts of the familiar combinators are more efficient and
+  not as leaky.
+
+  This may cause minor breakage in certain cases:
+
+  * You import `Control.Applicative` and in that case there will be a name
+    conflict between `Control.Applicative.many` and
+    `Control.Monad.Combinator.many` now (the same for `some`).
+
+  * You define a polymorphic helper in terms of combinator(s) from
+    `Control.Applicative.Combinators` and use `Applicative` or `Alternative`
+    constraint. In this case you'll have to adjust the constraint to be
+    `Monad` or `MonadPlus` respectively.
+
+  Also note that the new `Control.Monad.Combinators` module we re-export now
+  re-exports `empty` from `Control.Applicative`.
+
 * Fix the `atEnd` parser. It now does not produce hints, so when you use it,
   it won't contribute to the “expecting end of input” component of parse
   error.
