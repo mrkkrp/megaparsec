@@ -424,7 +424,7 @@ merged quickly if they are good).
 
 ## License
 
-Copyright © 2015–2017 Megaparsec contributors<br>
+Copyright © 2015–2018 Megaparsec contributors<br>
 Copyright © 2007 Paolo Martini<br>
 Copyright © 1999–2000 Daan Leijen
 
