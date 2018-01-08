@@ -104,15 +104,6 @@ spec = do
   describe "spaceChar" $
     checkCharRange "white space" [9,10,11,12,13,32,160] spaceChar
 
-  -- describe "upperChar" $
-  --   checkCharPred "uppercase letter" (isUpper . toChar) upperChar
-
-  -- describe "lowerChar" $
-  --   checkCharPred "lowercase letter" (isLower . toChar) lowerChar
-
-  -- describe "letterChar" $
-  --   checkCharPred "letter" (isAlpha . toChar) letterChar
-
   describe "alphaNumChar" $
     checkCharPred "alphanumeric character" (isAlphaNum . toChar) alphaNumChar
 
@@ -127,9 +118,6 @@ spec = do
 
   describe "hexDigitChar" $
     checkCharRange "hexadecimal digit" ([48..57] ++ [97..102] ++ [65..70]) hexDigitChar
-
-  -- describe "asciiChar" $
-  --   checkCharPred "ASCII character" (isAscii . toChar) asciiChar
 
   describe "char'" $ do
     context "when stream begins with the character specified as argument" $

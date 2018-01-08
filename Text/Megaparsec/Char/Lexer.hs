@@ -143,7 +143,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: MonadParsec e s m
+symbol :: (MonadParsec e s m, Token s ~ Char)
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ Symbol to parse
   -> m (Tokens s)
@@ -179,7 +179,7 @@ skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
-skipBlockComment start end = p >> void (manyTill C.anyChar n)
+skipBlockComment start end = p >> void (manyTill anySingle n)
   where
     p = C.string start
     n = C.string end
@@ -196,7 +196,7 @@ skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
   -> m ()
 skipBlockCommentNested start end = p >> void (manyTill e n)
   where
-    e = skipBlockCommentNested start end <|> void C.anyChar
+    e = skipBlockCommentNested start end <|> void anySingle
     p = C.string start
     n = C.string end
 {-# INLINEABLE skipBlockCommentNested #-}
@@ -397,9 +397,9 @@ charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
   -- and we do know that r will be non-empty if count' succeeds.
-  ~r@(x:_) <- lookAhead $ count' 1 8 C.anyChar
+  ~r@(x:_) <- lookAhead (count' 1 8 anySingle)
   case listToMaybe (Char.readLitChar r) of
-    Just (c, r') -> count (length r - length r') C.anyChar >> return c
+    Just (c, r') -> c <$ count (length r - length r') anySingle
     Nothing      -> unexpected (Tokens (x:|[]))
 {-# INLINEABLE charLiteral #-}
 

@@ -34,16 +34,11 @@ module Text.Megaparsec.Byte
   , octDigitChar
   , hexDigitChar
   , asciiChar
-    -- * More general parsers
-  , C.char
+    -- * Single byte
+  , char
   , char'
-  , C.anyChar
-  , C.notChar
-  , C.oneOf
-  , C.noneOf
-  , C.satisfy
     -- * Sequence of bytes
-  , C.string
+  , string
   , C.string' )
 where
 
@@ -62,14 +57,14 @@ import qualified Text.Megaparsec.Char as C
 -- | Parse a newline byte.
 
 newline :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-newline = C.char 10
+newline = char 10
 {-# INLINE newline #-}
 
 -- | Parse a carriage return character followed by a newline character.
 -- Return the sequence of characters parsed.
 
 crlf :: forall e s m. (MonadParsec e s m, Token s ~ Word8) => m (Tokens s)
-crlf = C.string (tokensToChunk (Proxy :: Proxy s) [13,10])
+crlf = string (tokensToChunk (Proxy :: Proxy s) [13,10])
 {-# INLINE crlf #-}
 
 -- | Parse a CRLF (see 'crlf') or LF (see 'newline') end of line. Return the
@@ -84,7 +79,7 @@ eol = (tokenToChunk (Proxy :: Proxy s) <$> newline)
 -- | Parse a tab character.
 
 tab :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-tab = C.char 9
+tab = char 9
 {-# INLINE tab #-}
 
 -- | Skip /zero/ or more white space characters.
@@ -109,51 +104,51 @@ space1 = void $ takeWhile1P (Just "white space") isSpace'
 -- | Parse a control character.
 
 controlChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-controlChar = C.satisfy (isControl . toChar) <?> "control character"
+controlChar = satisfy (isControl . toChar) <?> "control character"
 {-# INLINE controlChar #-}
 
 -- | Parse a space character, and the control characters: tab, newline,
 -- carriage return, form feed, and vertical tab.
 
 spaceChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-spaceChar = C.satisfy isSpace' <?> "white space"
+spaceChar = satisfy isSpace' <?> "white space"
 {-# INLINE spaceChar #-}
 
 -- | Parse an upper-case character.
 
 upperChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-upperChar = C.satisfy (isUpper . toChar) <?> "uppercase letter"
+upperChar = satisfy (isUpper . toChar) <?> "uppercase letter"
 {-# INLINE upperChar #-}
 
 -- | Parse a lower-case alphabetic character.
 
 lowerChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-lowerChar = C.satisfy (isLower . toChar) <?> "lowercase letter"
+lowerChar = satisfy (isLower . toChar) <?> "lowercase letter"
 {-# INLINE lowerChar #-}
 
 -- | Parse an alphabetic character: lower-case or upper-case.
 
 letterChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-letterChar = C.satisfy (isLetter . toChar) <?> "letter"
+letterChar = satisfy (isLetter . toChar) <?> "letter"
 {-# INLINE letterChar #-}
 
 -- | Parse an alphabetic or digit characters.
 
 alphaNumChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-alphaNumChar = C.satisfy (isAlphaNum . toChar) <?> "alphanumeric character"
+alphaNumChar = satisfy (isAlphaNum . toChar) <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
 -- | Parse a printable character: letter, number, mark, punctuation, symbol
 -- or space.
 
 printChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-printChar = C.satisfy (isPrint . toChar) <?> "printable character"
+printChar = satisfy (isPrint . toChar) <?> "printable character"
 {-# INLINE printChar #-}
 
 -- | Parse an ASCII digit, i.e between “0” and “9”.
 
 digitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-digitChar = C.satisfy isDigit' <?> "digit"
+digitChar = satisfy isDigit' <?> "digit"
   where
     isDigit' x = x >= 48 && x <= 57
 {-# INLINE digitChar #-}
@@ -161,7 +156,7 @@ digitChar = C.satisfy isDigit' <?> "digit"
 -- | Parse an octal digit, i.e. between “0” and “7”.
 
 octDigitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-octDigitChar = C.satisfy isOctDigit' <?> "octal digit"
+octDigitChar = satisfy isOctDigit' <?> "octal digit"
   where
     isOctDigit' x = x >= 48 && x <= 55
 {-# INLINE octDigitChar #-}
@@ -170,18 +165,26 @@ octDigitChar = C.satisfy isOctDigit' <?> "octal digit"
 -- “A” and “F”.
 
 hexDigitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-hexDigitChar = C.satisfy (isHexDigit . toChar) <?> "hexadecimal digit"
+hexDigitChar = satisfy (isHexDigit . toChar) <?> "hexadecimal digit"
 {-# INLINE hexDigitChar #-}
 
 -- | Parse a character from the first 128 characters of the Unicode
 -- character set, corresponding to the ASCII character set.
 
 asciiChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-asciiChar = C.satisfy (< 128) <?> "ASCII character"
+asciiChar = satisfy (< 128) <?> "ASCII character"
 {-# INLINE asciiChar #-}
 
 ----------------------------------------------------------------------------
--- More general parsers
+-- Single byte
+
+-- | A type-constrained version of 'single'.
+--
+-- > newline = char 10
+
+char :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
+char = single
+{-# INLINE char #-}
 
 -- | The same as 'char' but case-insensitive. This parser returns the
 -- actually parsed character preserving its case.
@@ -195,8 +198,8 @@ asciiChar = C.satisfy (< 128) <?> "ASCII character"
 
 char' :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
 char' c = choice
-  [ C.char c
-  , C.char (fromMaybe c (swapCase c)) ]
+  [ char c
+  , char (fromMaybe c (swapCase c)) ]
   where
     swapCase x
       | isUpper g = fromChar (toLower g)
@@ -205,6 +208,15 @@ char' c = choice
       where
         g = toChar x
 {-# INLINE char' #-}
+
+----------------------------------------------------------------------------
+-- Sequence of bytes
+
+-- | A type-constrained version of 'chunk'.
+
+string :: (MonadParsec e s m, Token s ~ Word8) => Tokens s -> m (Tokens s)
+string = chunk
+{-# INLINE string #-}
 
 ----------------------------------------------------------------------------
 -- Helpers

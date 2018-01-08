@@ -38,12 +38,12 @@ import qualified Control.Monad.State.Lazy    as L
 import qualified Control.Monad.State.Strict  as S
 import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
+import qualified Data.ByteString             as BS
 import qualified Data.List                   as DL
 import qualified Data.List.NonEmpty          as NE
 import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
-import qualified Data.ByteString             as BS
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative hiding (many, some)
@@ -223,17 +223,17 @@ spec = do
     describe "equivalence to 'string'" $ do
       it "for String" $ property $ \s i ->
         eqParser
-          (string s)
+          (chunk s)
           (fromString s)
           (i :: String)
       it "for Text" $ property $ \s i ->
         eqParser
-          (string (T.pack s))
+          (chunk (T.pack s))
           (fromString s)
           (i :: T.Text)
       it "for ByteString" $ property $ \s i ->
         eqParser
-          (string (fromString s :: BS.ByteString))
+          (chunk (fromString s :: BS.ByteString))
           (fromString s)
           (i :: BS.ByteString)
     it "can handle Unicode" $ do
@@ -314,7 +314,7 @@ spec = do
           it "parses the string" $
             property $ \s0 s1 s -> not (s1 `isPrefixOf` s0) ==> do
               let s' = s0 ++ s
-                  p = string s0 <|> string s1
+                  p = chunk s0 <|> chunk s1
               prs  p s' `shouldParse` s0
               prs' p s' `succeedsLeaving` s
         context "stream begins with the second string" $
@@ -1212,6 +1212,85 @@ spec = do
 
   describe "derivatives from primitive combinators" $ do
 
+    -- NOTE 'single' is tested via 'char' in "Text.Megaparsec.Char" and
+    -- "Text.Megaparsec.Byte".
+
+    describe "anySingle" $ do
+      let p :: MonadParsec Void String m => m Char
+          p = anySingle
+      context "when stream is not empty" $
+        it "succeeds consuming next character in the stream" $
+          property $ \ch s -> do
+            let s' = ch : s
+            grs  p s' (`shouldParse`     ch)
+            grs' p s' (`succeedsLeaving` s)
+      context "when stream is empty" $
+        it "signals correct parse error" $
+          grs p "" (`shouldFailWith` err posI ueof)
+
+    describe "anySingleBut" $ do
+      context "when stream begins with the character specified as argument" $
+        it "signals correct parse error" $
+          property $ \ch s' -> do
+            let p :: MonadParsec Void String m => m Char
+                p = anySingleBut ch
+                s = ch : s'
+            grs  p s (`shouldFailWith` err posI (utok ch))
+            grs' p s (`failsLeaving` s)
+      context "when stream does not begin with the character specified as argument" $
+        it "parses first character in the stream" $
+          property $ \ch s -> not (null s) && ch /= head s ==> do
+            let p :: MonadParsec Void String m => m Char
+                p = anySingleBut ch
+            grs  p s (`shouldParse` head s)
+            grs' p s (`succeedsLeaving` tail s)
+      context "when stream is empty" $
+        it "signals correct parse error" $
+          grs (anySingleBut 'a') "" (`shouldFailWith` err posI ueof)
+
+    describe "oneOf" $ do
+      context "when stream begins with one of specified characters" $
+        it "parses the character" $
+          property $ \chs' n s -> do
+            let chs = getNonEmpty chs'
+                ch  = chs !! (getNonNegative n `rem` length chs)
+                s'  = ch : s
+            grs  (oneOf chs) s' (`shouldParse`     ch)
+            grs' (oneOf chs) s' (`succeedsLeaving` s)
+      context "when stream does not begin with any of specified characters" $
+        it "signals correct parse error" $
+          property $ \chs ch s  -> ch `notElem` (chs :: String) ==> do
+            let s' = ch : s
+            grs  (oneOf chs) s' (`shouldFailWith` err posI (utok ch))
+            grs' (oneOf chs) s' (`failsLeaving`   s')
+      context "when stream is empty" $
+        it "signals correct parse error" $
+          property $ \chs ->
+            grs (oneOf (chs :: String)) "" (`shouldFailWith` err posI ueof)
+
+    describe "noneOf" $ do
+      context "when stream does not begin with any of specified characters" $
+        it "parses the character" $
+          property $ \chs ch s  -> ch `notElem` (chs :: String) ==> do
+            let s' = ch : s
+            grs  (noneOf chs) s' (`shouldParse`     ch)
+            grs' (noneOf chs) s' (`succeedsLeaving` s)
+      context "when stream begins with one of specified characters" $
+        it "signals correct parse error" $
+          property $ \chs' n s -> do
+            let chs = getNonEmpty chs'
+                ch  = chs !! (getNonNegative n `rem` length chs)
+                s'  = ch : s
+            grs  (noneOf chs) s' (`shouldFailWith` err posI (utok ch))
+            grs' (noneOf chs) s' (`failsLeaving`   s')
+      context "when stream is empty" $
+        it "signals correct parse error" $
+          property $ \chs ->
+            grs (noneOf (chs :: String)) "" (`shouldFailWith` err posI ueof)
+
+    -- NOTE 'chunk' is tested via 'string' in "Text.Megaparsec.Char" and
+    -- "Text.Megaparsec.Byte".
+
     describe "unexpected" $
       it "signals correct parse error" $
         property $ \item -> do
@@ -1406,7 +1485,7 @@ spec = do
     describe "notFollowedBy" $
       it "generally works" $
         property $ \a' b' c' -> do
-          let p = many (char =<< ask) <* notFollowedBy eof <* many anyChar
+          let p = many (char =<< ask) <* notFollowedBy eof <* many anySingle
               [a,b,c] = getNonNegative <$> [a',b',c']
               s = abcRow a b c
           if b > 0 || c > 0
@@ -1435,7 +1514,7 @@ spec = do
           let p = do
                 L.put n
                 let notEof = notFollowedBy (L.modify (* 2) >> eof)
-                some (try (anyChar <* notEof)) <* char 'x'
+                some (try (anySingle <* notEof)) <* char 'x'
           prs (L.runStateT p 0) "abx" `shouldParse` ("ab", n :: Integer)
 
     describe "observing" $ do
@@ -1475,7 +1554,7 @@ spec = do
           let p = do
                 S.put n
                 let notEof = notFollowedBy (S.modify (* 2) >> eof)
-                some (try (anyChar <* notEof)) <* char 'x'
+                some (try (anySingle <* notEof)) <* char 'x'
           prs (S.runStateT p 0) "abx" `shouldParse` ("ab", n :: Integer)
 
     describe "observing" $ do

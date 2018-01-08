@@ -94,6 +94,13 @@ module Text.Megaparsec
     -- * Primitive combinators
   , MonadParsec (..)
     -- * Derivatives of primitive combinators
+  , single
+  , satisfy
+  , anySingle
+  , anySingleBut
+  , oneOf
+  , noneOf
+  , chunk
   , (<?>)
   , unexpected
   , customFailure
@@ -155,6 +162,8 @@ import qualified Data.Set                          as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
+import Data.Foldable (Foldable, elem, notElem)
+import Prelude hiding (elem, notElem)
 #endif
 
 -- $reexports
@@ -771,16 +780,19 @@ class (Stream s, A.Alternative m, MonadPlus m)
 
   eof :: m ()
 
-  -- | The parser @'token' test exp@ accepts a token @t@ with result @x@
-  -- when the function @test t@ returns @'Just' x@. @exp@ specifies the
-  -- collection of expected items to report in error messages.
+  -- | The parser @'token' test expected@ accepts a token @t@ with result
+  -- @x@ when the function @test t@ returns @'Just' x@. @expected@ specifies
+  -- the collection of expected items to report in error messages.
   --
   -- This is the most primitive combinator for accepting tokens. For
   -- example, the 'Text.Megaparsec.Char.satisfy' parser is implemented as:
   --
-  -- > satisfy f = token testChar E.empty
+  -- > satisfy f = token testToken E.empty
   -- >   where
-  -- >     testChar x = if f x then Just x else Nothing
+  -- >     testToken x = if f x then Just x else Nothing
+  --
+  -- __Note__: type signature of this primitive was changed in the version
+  -- /7.0.0/.
 
   token
     :: (Token s -> Maybe a)
@@ -789,14 +801,14 @@ class (Stream s, A.Alternative m, MonadPlus m)
        -- ^ Expected items (in case of an error)
     -> m a
 
-  -- | The parser @'tokens' test@ parses a chunk of input and returns it.
-  -- Supplied predicate @test@ is used to check equality of given and parsed
-  -- chunks after a candidate chunk of correct length is fetched from the
-  -- stream.
+  -- | The parser @'tokens' test chk@ parses a chunk of input @chk@ and
+  -- returns it. The supplied predicate @test@ is used to check equality of
+  -- given and parsed chunks after a candidate chunk of correct length is
+  -- fetched from the stream.
   --
-  -- This can be used for example to write 'Text.Megaparsec.Char.string':
+  -- This can be used for example to write 'Text.Megaparsec.chunk':
   --
-  -- > string = tokens (==)
+  -- > chunk = tokens (==)
   --
   -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
   -- primitive, which means that if it fails, it never consumes any input.
@@ -1307,6 +1319,132 @@ fixs' _ (Right (b,s,w)) = (Right b, s, w)
 ----------------------------------------------------------------------------
 -- Derivatives of primitive combinators
 
+-- | @'single' t@ only matches the single token @t@.
+--
+-- > semicolon = single ';'
+--
+-- See also: 'token', 'anySingle', 'Text.Megaparsec.Byte.char',
+-- 'Text.Megaparsec.Char.char'.
+--
+-- @since 7.0.0
+
+single :: MonadParsec e s m
+  => Token s           -- ^ Token to match
+  -> m (Token s)
+single t = token testToken expected
+  where
+    testToken x = if x == t then Just x else Nothing
+    expected    = E.singleton (Tokens (t:|[]))
+{-# INLINE single #-}
+
+-- | The parser @'satisfy' f@ succeeds for any token for which the supplied
+-- function @f@ returns 'True'. Returns the character that is actually
+-- parsed.
+--
+-- > digitChar = satisfy isDigit <?> "digit"
+-- > oneOf cs  = satisfy (`elem` cs)
+--
+-- See also: 'anySingle', 'anySingleBut', 'oneOf', 'noneOf'.
+--
+-- @since 7.0.0
+
+satisfy :: MonadParsec e s m
+  => (Token s -> Bool) -- ^ Predicate to apply
+  -> m (Token s)
+satisfy f = token testChar E.empty
+  where
+    testChar x = if f x then Just x else Nothing
+{-# INLINE satisfy #-}
+
+-- | Parse and return a single token. It's a good idea to attach a 'label'
+-- to this parser manually.
+--
+-- > anySingle = satisfy (const True)
+--
+-- See also: 'satisfy', 'anySingleBut'.
+--
+-- @since 7.0.0
+
+anySingle :: MonadParsec e s m => m (Token s)
+anySingle = satisfy (const True)
+{-# INLINE anySingle #-}
+
+-- | Match any token but the given one. It's a good idea to attach a 'label'
+-- to this parser manually.
+--
+-- > anySingleBut t = satisfy (/= t)
+--
+-- See also: 'single', 'anySingle', 'satisfy'.
+--
+-- @since 7.0.0
+
+anySingleBut :: MonadParsec e s m
+  => Token s           -- ^ Token we should not match
+  -> m (Token s)
+anySingleBut t = satisfy (/= t)
+{-# INLINE anySingleBut #-}
+
+-- | @'oneOf' ts@ succeeds if the current token is in the supplied
+-- collection of tokens @ts@. Returns the parsed token. Note that this
+-- parser cannot automatically generate the “expected” component of error
+-- message, so usually you should label it manually with 'label' or ('<?>').
+--
+-- > oneOf cs = satisfy (`elem` cs)
+--
+-- See also: 'satisfy'.
+--
+-- > digit = oneOf ['0'..'9'] <?> "digit"
+--
+-- __Performance note__: prefer 'satisfy' when you can because it's faster
+-- when you have only a couple of tokens to compare to:
+--
+-- > quoteFast = satisfy (\x -> x == '\'' || x == '\"')
+-- > quoteSlow = oneOf "'\""
+--
+-- @since 7.0.0
+
+oneOf :: (Foldable f, MonadParsec e s m)
+  => f (Token s)       -- ^ Collection of matching tokens
+  -> m (Token s)
+oneOf cs = satisfy (`elem` cs)
+{-# INLINE oneOf #-}
+
+-- | As the dual of 'oneOf', @'noneOf' ts@ succeeds if the current token
+-- /not/ in the supplied list of tokens @ts@. Returns the parsed character.
+-- Note that this parser cannot automatically generate the “expected”
+-- component of error message, so usually you should label it manually with
+-- 'label' or ('<?>').
+--
+-- > noneOf cs = satisfy (`notElem` cs)
+--
+-- See also: 'satisfy'.
+--
+-- __Performance note__: prefer 'satisfy' and 'singleBut' when you can
+-- because it's faster.
+--
+-- @since 7.0.0
+
+noneOf :: (Foldable f, MonadParsec e s m)
+  => f (Token s)       -- ^ Collection of taken we should not match
+  -> m (Token s)
+noneOf cs = satisfy (`notElem` cs)
+{-# INLINE noneOf #-}
+
+-- | @'chunk' chk@ only matches the chunk @chk@.
+--
+-- > divOrMod = chunk "div" <|> chunk "mod"
+--
+-- See also: 'tokens', 'Text.Megaparsec.Char.string',
+-- 'Text.Megaparsec.Byte.string'.
+--
+-- @since 7.0.0
+
+chunk :: MonadParsec e s m
+  => Tokens s          -- ^ Chunk to match
+  -> m (Tokens s)
+chunk = tokens (==)
+{-# INLINE chunk #-}
+
 -- | A synonym for 'label' in the form of an operator.
 
 infix 0 <?>
@@ -1318,10 +1456,10 @@ infix 0 <?>
 -- | The parser @'unexpected' item@ fails with an error message telling
 -- about unexpected item @item@ without consuming any input.
 --
--- > unexpected item = failure (pure item) Set.empty
+-- > unexpected item = failure (Just item) Set.empty
 
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
-unexpected item = failure (pure item) E.empty
+unexpected item = failure (Just item) E.empty
 {-# INLINE unexpected #-}
 
 -- | Report a custom parse error. For a more general version, see
@@ -1396,6 +1534,8 @@ takeRest = takeWhileP Nothing (const True)
 
 -- | Return 'True' when end of input has been reached.
 --
+-- > atEnd = option False (True <$ hidden eof)
+--
 -- @since 6.0.0
 
 atEnd :: MonadParsec e s m => m Bool
@@ -1410,21 +1550,22 @@ atEnd = option False (True <$ hidden eof)
 getInput :: MonadParsec e s m => m s
 getInput = stateInput <$> getParserState
 
--- | @'setInput' input@ continues parsing with @input@. The 'getInput' and
--- 'setInput' functions can for example be used to deal with include files.
+-- | @'setInput' input@ continues parsing with @input@.
 
 setInput :: MonadParsec e s m => s -> m ()
 setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 
 -- | Return the current source position.
 --
--- See also: 'setPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
+-- See also: 'getNextTokenPosition'.
 
 getPosition :: MonadParsec e s m => m SourcePos
 getPosition = NE.head . statePos <$> getParserState
 
 -- | Get the position where the next token in the stream begins. If the
 -- stream is empty, return 'Nothing'.
+--
+-- See also: 'getPosition'.
 --
 -- @since 5.3.0
 
@@ -1443,10 +1584,10 @@ setPosition :: MonadParsec e s m => SourcePos -> m ()
 setPosition pos = updateParserState $ \(State s (_:|z) tp w) ->
   State s (pos:|z) tp w
 
--- | Push a position into stack of positions and continue parsing working
+-- | Push a position to the stack of positions and continue parsing working
 -- with this position. Useful for working with include files and the like.
 --
--- See also: 'getPosition', 'setPosition', 'popPosition', and 'SourcePos'.
+-- See also: 'popPosition'.
 --
 -- @since 5.0.0
 
@@ -1458,7 +1599,7 @@ pushPosition pos = updateParserState $ \(State s z tp w) ->
 -- element (in that case the stack of positions remains the same). This is
 -- how to return to previous source file after 'pushPosition'.
 --
--- See also: 'getPosition', 'setPosition', 'pushPosition', and 'SourcePos'.
+-- See also: 'pushPosition'.
 --
 -- @since 5.0.0
 
@@ -1470,12 +1611,16 @@ popPosition = updateParserState $ \(State s z tp w) ->
 
 -- | Get the number of tokens processed so far.
 --
+-- See also: 'setTokensProcessed'.
+--
 -- @since 6.0.0
 
 getTokensProcessed :: MonadParsec e s m => m Int
 getTokensProcessed = stateTokensProcessed <$> getParserState
 
 -- | Set the number of tokens processed so far.
+--
+-- See also: 'getTokensProcessed'.
 --
 -- @since 6.0.0
 
@@ -1486,18 +1631,24 @@ setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
 -- | Return the tab width. The default tab width is equal to
 -- 'defaultTabWidth'. You can set a different tab width with the help of
 -- 'setTabWidth'.
+--
+-- See also: 'setTabWidth'.
 
 getTabWidth :: MonadParsec e s m => m Pos
 getTabWidth = stateTabWidth <$> getParserState
 
 -- | Set tab width. If the argument of the function is not a positive
 -- number, 'defaultTabWidth' will be used.
+--
+-- See also: 'getTabWidth'.
 
 setTabWidth :: MonadParsec e s m => Pos -> m ()
 setTabWidth w = updateParserState $ \(State s pos tp _) ->
   State s pos tp w
 
 -- | @'setParserState' st@ sets the parser state to @st@.
+--
+-- See also: 'getParserState', 'updateParserState'.
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
@@ -1615,4 +1766,4 @@ streamTake :: forall s. Stream s => Int -> s -> [Token s]
 streamTake n s =
   case fst <$> takeN_ n s of
     Nothing -> []
-    Just chunk -> chunkToTokens (Proxy :: Proxy s) chunk
+    Just chk -> chunkToTokens (Proxy :: Proxy s) chk
