@@ -180,8 +180,8 @@ scientific
   => m Scientific
 scientific = do
   c'      <- decimal_
-  SP c e' <- option (SP c' 0) (dotDecimal_ (Proxy :: Proxy s) c')
-  e       <- option e' (exponent_ e')
+  SP c e' <- option (SP c' 0) (try $ dotDecimal_ (Proxy :: Proxy s) c')
+  e       <- option e' (try $ exponent_ e')
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
@@ -200,7 +200,7 @@ float = do
   c' <- decimal_
   Sci.toRealFloat <$>
     ((do SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
-         e       <- option e' (exponent_ e')
+         e       <- option e' (try $ exponent_ e')
          return (Sci.scientific c e))
      <|> (Sci.scientific c' <$> exponent_ 0))
 {-# INLINEABLE float #-}

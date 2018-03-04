@@ -134,7 +134,6 @@ import Control.Monad.Identity
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class hiding (state)
 import Control.Monad.Trans
-import Control.Monad.Trans.Identity
 import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
@@ -164,6 +163,10 @@ import qualified Data.Set                          as E
 import Control.Applicative
 import Data.Foldable (Foldable, elem, notElem)
 import Prelude hiding (elem, notElem)
+#endif
+
+#if !MIN_VERSION_mtl(2,2,2)
+import Control.Monad.Trans.Identity
 #endif
 
 -- $reexports

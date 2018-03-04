@@ -123,6 +123,44 @@ spec = do
         prs (hexadecimal :: Parser Integer) "" `shouldFailWith`
           err posI (ueof <> elabel "hexadecimal integer")
 
+  describe "scientific" $ do
+    context "when stream begins with a number" $
+      it "parses it" $
+        property $ \n' -> do
+          let p = scientific :: Parser Scientific
+              s = B8.pack $ either (show . getNonNegative) (show . getNonNegative)
+                (n' :: Either (NonNegative Integer) (NonNegative Double))
+          prs p s `shouldParse` case n' of
+            Left  x -> fromIntegral    (getNonNegative x)
+            Right x -> fromFloatDigits (getNonNegative x)
+          prs' p s `succeedsLeaving` ""
+    context "when fractional part is interrupted" $
+      it "signals correct parse error" $
+        property $ \(NonNegative n) -> do
+          let p = scientific <* empty :: Parser Scientific
+              s = B8.pack (showFFloatAlt Nothing (n :: Double) "")
+          prs p s `shouldFailWith` err (posN (B.length s) s)
+            (etok 69 <> etok 101 <> elabel "digit")
+          prs' p s `failsLeaving` ""
+    context "when whole part is followed by a dot without valid fractional part" $
+      it "parsing of fractional part is backtracked correctly" $
+        property $ \(NonNegative n) -> do
+          let p = scientific :: Parser Scientific
+              s = B8.pack $ showInt (n :: Integer) ".err"
+          prs  p s `shouldParse` fromIntegral n
+          prs' p s `succeedsLeaving` ".err"
+    context "when number is followed by something starting with 'e'" $
+      it "parsing of exponent part is backtracked correctly" $
+        property $ \(NonNegative n) -> do
+          let p = scientific :: Parser Scientific
+              s = B8.pack $ showFFloatAlt Nothing (n :: Double) "err!"
+          prs  p s `shouldParse` fromFloatDigits n
+          prs' p s `succeedsLeaving` "err!"
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (scientific :: Parser Scientific) "" `shouldFailWith`
+          err posI (ueof <> elabel "digit")
+
   describe "float" $ do
     context "when stream begins with a float" $
       it "parses it" $
@@ -149,6 +187,13 @@ spec = do
           prs  p s `shouldFailWith` err (posN (B.length s) s)
             (ueof <> etok 46 <> etok 69 <> etok 101 <> elabel "digit")
           prs' p s `failsLeaving` ""
+    context "when number is followed by something starting with 'e'" $
+      it "parsing of exponent part is backtracked correctly" $
+        property $ \(NonNegative n) -> do
+          let p = float :: Parser Double
+              s = B8.pack $ showFFloatAlt Nothing (n :: Double) "err!"
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` "err!"
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (float :: Parser Double) "" `shouldFailWith`
@@ -162,30 +207,6 @@ spec = do
         prs' p "123e+3" `succeedsLeaving` ""
         prs  p "123e-3" `shouldParse` 123e-3
         prs' p "123e-3" `succeedsLeaving` ""
-
-  describe "scientific" $ do
-    context "when stream begins with a number" $
-      it "parses it" $
-        property $ \n' -> do
-          let p = scientific :: Parser Scientific
-              s = B8.pack $ either (show . getNonNegative) (show . getNonNegative)
-                (n' :: Either (NonNegative Integer) (NonNegative Double))
-          prs p s `shouldParse` case n' of
-            Left  x -> fromIntegral    (getNonNegative x)
-            Right x -> fromFloatDigits (getNonNegative x)
-          prs' p s `succeedsLeaving` ""
-    context "when fractional part is interrupted" $
-      it "signals correct parse error" $
-        property $ \(NonNegative n) -> do
-          let p = scientific <* empty :: Parser Scientific
-              s = B8.pack (showFFloatAlt Nothing (n :: Double) "")
-          prs p s `shouldFailWith` err (posN (B.length s) s)
-            (etok 69 <> etok 101 <> elabel "digit")
-          prs' p s `failsLeaving` ""
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (scientific :: Parser Scientific) "" `shouldFailWith`
-          err posI (ueof <> elabel "digit")
 
   describe "signed" $ do
     context "with integer" $
