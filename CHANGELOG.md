@@ -1,3 +1,10 @@
+## Megaparsec 6.4.1
+
+* `scientific` now correctly backtracks after attempting to parse fractional
+  and exponent parts of a number. `float` correctly backtracks after
+  attempting to parse optional exponent part (when it comes after fractional
+  part, otherwise it's obligatory).
+
 ## Megaparsec 6.4.0
 
 * `Text.Megaparsec` now re-exports `Control.Monad.Combinators` instead of
