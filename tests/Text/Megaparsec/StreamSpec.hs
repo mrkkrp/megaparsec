@@ -90,6 +90,9 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === span isLetter s
+    describe "scan_" $
+      it "extracts a chunk that is a prefix consisting of filtered tokens" $
+        scan_ (\st c -> if (st /= '\\' && c == '!') then Nothing else Just c) '\0' ("aaaa\\!aaaa!" :: String) === ("aaaa\\!aaaa", "!")
 
   describe "ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -165,6 +168,9 @@ spec = do
         property $ \s ->
           let f = isLetter . chr . fromIntegral
           in takeWhile_ f s === B.span f s
+    describe "scan_" $
+      it "extracts a chunk that is a prefix consisting of filtered tokens" $
+        scan_ (\st c -> if (st /= 0x5c && c == 0x21) then Nothing else Just c) 0 ("aaaa\\!aaaa!" :: B.ByteString) === ("aaaa\\!aaaa", "!")
 
   describe "Lazy ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -240,6 +246,9 @@ spec = do
         property $ \s ->
           let f = isLetter . chr . fromIntegral
           in takeWhile_ f s === BL.span f s
+    describe "scan_" $
+      it "extracts a chunk that is a prefix consisting of filtered tokens" $
+        scan_ (\st c -> if (st /= 0x5c && c == 0x21) then Nothing else Just c) 0 ("aaaa\\!aaaa!" :: BL.ByteString) === ("aaaa\\!aaaa", "!")
 
   describe "Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -314,6 +323,9 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === T.span isLetter s
+    describe "scan_" $
+      it "extracts a chunk that is a prefix consisting of filtered tokens" $
+        scan_ (\st c -> if (st /= '\\' && c == '!') then Nothing else Just c) '\0' ("aaaa\\!aaaa!" :: T.Text) === ("aaaa\\!aaaa", "!")
 
   describe "Lazy Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -388,6 +400,9 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === TL.span isLetter s
+    describe "scan_" $
+      it "extracts a chunk that is a prefix consisting of filtered tokens" $
+        scan_ (\st c -> if (st /= '\\' && c == '!') then Nothing else Just c) '\0' ("aaaa\\!aaaa!" :: TL.Text) === ("aaaa\\!aaaa", "!")
 
 ----------------------------------------------------------------------------
 -- Helpers
