@@ -866,6 +866,20 @@ class (Stream s, A.Alternative m, MonadPlus m)
     -> (Token s -> Bool) -- ^ Predicate to use to test tokens
     -> m (Tokens s)    -- ^ A chunk of matching tokens
 
+  -- | Similar to 'takeWhileP', but with a stateful predicate.
+  -- The predicate consumes and transforms a state argument of type
+  -- @st@, and each transformed state is passed to successive iterations
+  -- of the predicate on each 'Token' of the input until one returns
+  -- 'Nothing' or the input ends.
+  --
+  -- This parser never fails, although it may parse an empty chunk.
+
+  scanP
+    :: Maybe String
+    -> st
+    -> (st -> Token s -> Maybe st)
+    -> m (Tokens s)
+
   -- | Extract the specified number of tokens from the input stream and
   -- return them packed as a chunk of stream. If there is not enough tokens
   -- in the stream, a parse error will be signaled. It's guaranteed that if
@@ -909,6 +923,7 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   tokens            = pTokens
   takeWhileP        = pTakeWhileP
   takeWhile1P       = pTakeWhile1P
+  scanP             = pScanP
   takeP             = pTakeP
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
@@ -1072,6 +1087,25 @@ pTakeWhileP ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ eok _ ->
        else cok ts (State input' (npos:|z) (tp + len) w) hs
 {-# INLINE pTakeWhileP #-}
 
+pScanP :: forall e s m st. Stream s
+    => Maybe String
+    -> st
+    -> (st -> Token s -> Maybe st)
+    -> ParsecT e s m (Tokens s)
+pScanP ml st f = ParsecT $ \(State input (pos:|z) tp w) cok _ eok _ ->
+  let pxy = Proxy :: Proxy s
+      (ts, input') = scan_ f st input
+      !npos = advanceN pxy w pos ts
+      len = chunkLength pxy ts
+      hs =
+        case ml >>= NE.nonEmpty of
+          Nothing -> mempty
+          Just l -> (Hints . pure . E.singleton . Label) l
+  in if chunkEmpty pxy ts
+       then eok ts (State input' (npos:|z) (tp + len) w) hs
+       else cok ts (State input' (npos:|z) (tp + len) w) hs
+{-# INLINE pScanP #-}
+
 pTakeWhile1P :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
@@ -1149,6 +1183,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
   takeWhile1P l f            = lift (takeWhile1P l f)
+  scanP l st f               = lift (scanP l st f)
   takeP l n                  = lift (takeP l n)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
@@ -1171,6 +1206,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
   takeWhile1P l f            = lift (takeWhile1P l f)
+  scanP l st f               = lift (scanP l st f)
   takeP l n                  = lift (takeP l n)
   getParserState             = lift getParserState
   updateParserState f        = lift (updateParserState f)
@@ -1190,6 +1226,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1212,6 +1249,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1234,6 +1272,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1260,6 +1299,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1286,6 +1326,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift (updateParserState f)
@@ -1305,6 +1346,7 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
   tokens e ts                 = lift $ tokens e ts
   takeWhileP l f              = lift (takeWhileP l f)
   takeWhile1P l f             = lift (takeWhile1P l f)
+  scanP l st f                = lift (scanP l st f)
   takeP l n                   = lift (takeP l n)
   getParserState              = lift getParserState
   updateParserState f         = lift $ updateParserState f
