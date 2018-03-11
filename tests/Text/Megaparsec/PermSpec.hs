@@ -1,10 +1,10 @@
+{-# LANGUAGE CPP        #-}
 {-# LANGUAGE MultiWayIf #-}
 
 module Text.Megaparsec.PermSpec (spec) where
 
 import Control.Applicative
 import Data.List (nub, elemIndices)
-import Data.Monoid
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -12,6 +12,10 @@ import Test.QuickCheck
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Perm
+
+#if !MIN_VERSION_base(4,11,0)
+import Data.Monoid
+#endif
 
 data CharRows = CharRows
   { getChars :: (Char, Char, Char)
