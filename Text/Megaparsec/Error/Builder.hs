@@ -43,7 +43,6 @@ where
 import Data.Data (Data)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
-import Data.Semigroup
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics
@@ -55,6 +54,9 @@ import qualified Data.Set           as E
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
+#endif
+#if !MIN_VERSION_base(4,11,0)
+import Data.Semigroup
 #endif
 
 ----------------------------------------------------------------------------
