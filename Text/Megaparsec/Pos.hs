@@ -14,6 +14,7 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -35,9 +36,12 @@ where
 import Control.DeepSeq
 import Control.Exception
 import Data.Data (Data)
-import Data.Semigroup
 import Data.Typeable (Typeable)
 import GHC.Generics
+
+#if !MIN_VERSION_base(4,11,0)
+import Data.Semigroup
+#endif
 
 ----------------------------------------------------------------------------
 -- Abstract position

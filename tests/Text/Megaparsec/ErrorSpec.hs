@@ -7,7 +7,6 @@ import Data.ByteString (ByteString)
 import Data.Char (isControl, isSpace)
 import Data.List (isInfixOf, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Monoid
 import Data.Void
 import Data.Word (Word8)
 import Test.Hspec
@@ -26,6 +25,9 @@ import Data.Foldable (Foldable, all)
 import Prelude hiding (all)
 #else
 import Control.Exception (Exception (..))
+#endif
+#if !MIN_VERSION_base(4,11,0)
+import Data.Monoid
 #endif
 
 type PE = ParseError Char Void

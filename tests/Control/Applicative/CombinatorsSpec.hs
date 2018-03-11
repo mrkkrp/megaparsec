@@ -6,7 +6,6 @@ module Control.Applicative.CombinatorsSpec (spec) where
 import Data.Char (isLetter, isDigit)
 import Data.List (intersperse)
 import Data.Maybe (fromMaybe, maybeToList, isNothing, fromJust)
-import Data.Monoid
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -16,6 +15,9 @@ import Text.Megaparsec.Char
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative hiding (many, some)
+#endif
+#if !MIN_VERSION_base(4,11,0)
+import Data.Monoid
 #endif
 
 spec :: Spec
