@@ -9,7 +9,6 @@
 --
 -- Utility functions for testing Megaparsec parsers with Hspec.
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -166,9 +165,7 @@ initialState :: s -> State s
 initialState s = State
   { stateInput           = s
   , statePos             = initialPos "" :| []
-#if MIN_VERSION_megaparsec(5,2,0)
   , stateTokensProcessed = 0
-#endif
   , stateTabWidth        = defaultTabWidth }
 
 ----------------------------------------------------------------------------
