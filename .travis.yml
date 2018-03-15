@@ -4,8 +4,8 @@ sudo: false
 
 cache:
   directories:
-    - ~/.ghc
-    - ~/.cabal
+    - ~/.cabal/packages
+    - ~/.cabal/store
 
 matrix:
   include:
@@ -24,17 +24,15 @@ before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
- - cabal --version
- - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - travis_retry cabal update
- - cabal install --only-dependencies --enable-tests
+  - cabal --version
+  - ghc --version
+  - travis_retry cabal update
 
 script:
- - cabal configure --enable-tests --enable-coverage -v2 -f dev
- - travis_wait 60 cabal build
- - travis_wait 20 cabal test --show-details=always --test-option=--qc-max-success=1000
- - cabal sdist
- - cabal haddock | grep "100%" | wc -l | grep "11"
+  - cabal new-build --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-test
+  - cabal new-haddock
+  - cabal sdist
 
 notifications:
   email: false

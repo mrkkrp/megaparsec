@@ -1,5 +1,0 @@
-resolver: lts-10.0
-packages:
-- '.'
-extra-deps:
-- parser-combinators-0.4.0
