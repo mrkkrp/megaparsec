@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
@@ -11,6 +12,10 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Data.Text                  as T
 import qualified Text.Megaparsec.Char.Lexer as L
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative hiding (many, some)
+#endif
 
 -- | The type of parser that consumes 'String's.
 

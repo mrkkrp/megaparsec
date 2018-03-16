@@ -1,6 +1,6 @@
 name:                 megaparsec
 version:              6.3.0
-cabal-version:        >= 1.18
+cabal-version:        1.18
 tested-with:          GHC==7.8.4, GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
 license:              BSD2
 license-file:         LICENSE.md
@@ -67,14 +67,15 @@ library
   default-language:   Haskell2010
 
 test-suite tests
-  main-is:            Spec.hs
+  main-is:            Main.hs
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
   if flag(dev)
     ghc-options:      -O0 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
-  other-modules:      Control.Applicative.CombinatorsSpec
+  other-modules:      Spec
+                    , Control.Applicative.CombinatorsSpec
                     , Control.Monad.CombinatorsSpec
                     , Test.Hspec.Megaparsec
                     , Test.Hspec.Megaparsec.AdHoc
@@ -99,6 +100,7 @@ test-suite tests
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2   && < 1.3
                     , transformers >= 0.4   && < 0.6
+  build-tools:        hspec-discover >= 2.0 && < 3.0
   if !impl(ghc >= 8.0)
     build-depends:    semigroups   == 0.18.*
   if !impl(ghc >= 7.10)
