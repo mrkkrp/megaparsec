@@ -71,6 +71,10 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
+#if MIN_VERSION_base(4,9,0) && !MIN_VERSION_base(4,11,0)
+{-# OPTIONS -Wno-noncanonical-monoid-instances #-}
+#endif
+
 module Text.Megaparsec
   ( -- * Re-exports
     -- $reexports
@@ -335,7 +339,11 @@ instance (Stream s, Semigroup a) => Semigroup (ParsecT e s m a) where
 instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   mempty = pure mempty
   {-# INLINE mempty #-}
+#if MIN_VERSION_base(4,11,0)
+  mappend = (<>)
+#else
   mappend = A.liftA2 mappend
+#endif
   {-# INLINE mappend #-}
   mconcat = fmap mconcat . sequence
   {-# INLINE mconcat #-}
