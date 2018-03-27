@@ -57,9 +57,12 @@ library
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Error.Builder
                     , Text.Megaparsec.Expr
+                    , Text.Megaparsec.Internal
                     , Text.Megaparsec.Perm
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Stream
+  other-modules:      Text.Megaparsec.Class
+                    , Text.Megaparsec.State
   if flag(dev)
     ghc-options:      -O0 -Wall -Werror
   else
