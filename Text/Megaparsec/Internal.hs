@@ -83,7 +83,7 @@ import qualified Data.Set            as E
 -- unexpected 'a'
 -- expecting end of input
 --
--- We're getting better error messages with help of hints:
+-- We're getting better error messages with the help of hints:
 --
 -- >>> parseTest (many (char 'r') <* eof) "ra"
 -- 1:2:
@@ -555,7 +555,10 @@ nes x = x :| []
 
 -- | Convert 'ParseError' record into 'Hints'.
 
-toHints :: NonEmpty SourcePos -> ParseError t e -> Hints t
+toHints
+  :: NonEmpty SourcePos -- ^ Current position in input stream
+  -> ParseError t e     -- ^ Parse error to convert
+  -> Hints t
 toHints streamPos = \case
   TrivialError errPos _ ps ->
     -- NOTE This is important to check here that the error indeed has
@@ -568,7 +571,7 @@ toHints streamPos = \case
   FancyError _ _ -> mempty
 {-# INLINE toHints #-}
 
--- | @withHints hs c@ makes “error” continuation @c@ use given hints @hs@.
+-- | @'withHints' hs c@ makes “error” continuation @c@ use given hints @hs@.
 --
 -- Note that if resulting continuation gets 'ParseError' that has custom
 -- data in it, hints are ignored.
@@ -585,8 +588,8 @@ withHints (Hints ps') c e =
     _ -> c e
 {-# INLINE withHints #-}
 
--- | @accHints hs c@ results in “OK” continuation that will add given hints
--- @hs@ to third argument of original continuation @c@.
+-- | @'accHints' hs c@ results in “OK” continuation that will add given
+-- hints @hs@ to third argument of original continuation @c@.
 
 accHints
   :: Hints t           -- ^ 'Hints' to add
