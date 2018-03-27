@@ -30,6 +30,11 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
+## Megaparsec 6.5.0
+
+* Added `Text.Megaparsec.Internal`, which exposes some internal data
+  structures and data constructor of `ParsecT`.
+
 ## Megaparsec 6.4.1
 
 * `scientific` now correctly backtracks after attempting to parse fractional
