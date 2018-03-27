@@ -137,12 +137,20 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
+import Control.Applicative hiding (many, some)
 import Data.Foldable (Foldable, elem, notElem)
 import Prelude hiding (elem, notElem)
 #endif
 
 -- $reexports
+--
+-- Note that we re-export monadic combinators from
+-- "Control.Monad.Combinators" because these are more efficient than
+-- 'Applicative'-based ones. Thus 'many' and 'some' may clash with the
+-- functions from "Control.Applicative". You need to hide the functions like
+-- this:
+--
+-- > import Control.Applicative hiding (many, some)
 --
 -- Also note that you can import "Control.Monad.Combinators.NonEmpty" if you
 -- wish that combinators like 'some' return 'NonEmpty' lists. The module
