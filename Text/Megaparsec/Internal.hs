@@ -72,7 +72,7 @@ import qualified Data.Set            as E
 -- Data types
 
 -- | 'Hints' represent a collection of 'ErrorItem's to be included into
--- 'ParserError' (when it's a 'TrivialError') as “expected” message items
+-- 'ParseError' (when it's a 'TrivialError') as “expected” message items
 -- when a parser fails without consuming input right after successful parser
 -- that produced the hints.
 --
