@@ -297,6 +297,14 @@ initialState name s = State
   , stateTabWidth        = defaultTabWidth }
 
 ----------------------------------------------------------------------------
+-- Combinators
+
+-- A lot of combinators such as 'some' and 'many' are re-exported from
+-- "Control.Monad.Combinators". Documentation can be found there.
+--
+-- @since 6.0.0
+
+----------------------------------------------------------------------------
 -- Derivatives of primitive combinators
 
 -- | @'single' t@ only matches the single token @t@.
