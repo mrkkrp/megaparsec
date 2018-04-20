@@ -54,6 +54,7 @@ library
                     , Text.Megaparsec.Byte.Lexer
                     , Text.Megaparsec.Char
                     , Text.Megaparsec.Char.Lexer
+                    , Text.Megaparsec.Debug
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Error.Builder
                     , Text.Megaparsec.Expr
@@ -92,6 +93,7 @@ test-suite tests
                     , Text.Megaparsec.ByteSpec
                     , Text.Megaparsec.Char.LexerSpec
                     , Text.Megaparsec.CharSpec
+                    , Text.Megaparsec.DebugSpec
                     , Text.Megaparsec.ErrorSpec
                     , Text.Megaparsec.ExprSpec
                     , Text.Megaparsec.PermSpec

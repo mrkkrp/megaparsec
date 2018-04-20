@@ -30,6 +30,9 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
+* The debugging function `dbg` has been moved from `Text.Megaparsec` to its
+  own module `Text.Megaparsec.Debug`.
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0
