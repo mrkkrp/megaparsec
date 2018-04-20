@@ -20,7 +20,7 @@ import Data.Foldable (asum, concat)
 import Data.Function (on)
 import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe, listToMaybe, isJust)
+import Data.Maybe (listToMaybe, isJust)
 import Data.Monoid
 import Data.Proxy
 import Data.String
@@ -61,7 +61,7 @@ spec = do
         property $ \st -> (not . null . stateInput) st ==> do
           let p = eof :: CustomParser ()
               h = head (stateInput st)
-              apos = let (_:|z) = statePos st in spanStart h :| z
+              apos = spanStart h
           runParser' p st `shouldBe`
             ( st { statePos = apos }
             , Left (err apos $ utok h <> eeof) )
@@ -80,7 +80,7 @@ spec = do
           property $ \st'@State {..} span -> do
             let p = pSpan span
                 st = st' { stateInput = span : stateInput }
-                npos = spanEnd span :| NE.tail statePos
+                npos = spanEnd span
             runParser' p st `shouldBe`
               ( st { statePos             = npos
                    , stateTokensProcessed = stateTokensProcessed + 1
@@ -94,7 +94,7 @@ spec = do
           property $ \st@State {..} span -> checkIt stateInput span ==> do
             let p = pSpan span
                 h = head stateInput
-                apos = spanStart h :| NE.tail statePos
+                apos = spanStart h
             runParser' p st `shouldBe`
               ( st { statePos = apos }
               , Left (err apos $ utok h <> etok span))
@@ -109,10 +109,9 @@ spec = do
               tl = length ts
               consumed = take il stateInput
               (apos, npos) =
-                let (pos:|z) = statePos
-                    pxy = Proxy :: Proxy [Span]
-                in ( positionAt1 pxy pos (head stateInput) :| z
-                   , advanceN pxy stateTabWidth pos consumed :| z )
+                let pxy = Proxy :: Proxy [Span]
+                in ( positionAt1 pxy statePos (head stateInput)
+                   , advanceN pxy stateTabWidth statePos consumed )
           if | null ts -> runParser' p st `shouldBe` (st, Right [])
              | null stateInput -> runParser' p st `shouldBe`
                ( st
@@ -135,7 +134,7 @@ spec = do
                 , statePos   =
                     case stateInput of
                       [] -> statePos
-                      xs -> let _:|z = statePos in spanEnd (last xs) :| z
+                      xs -> spanEnd (last xs)
                 , stateTokensProcessed =
                     stateTokensProcessed + length stateInput }
           runParser' p st `shouldBe` (st', Right stateInput)
@@ -150,7 +149,7 @@ spec = do
                   , statePos   =
                       case stateInput of
                         [] -> statePos
-                        xs -> let _:|z = statePos in spanEnd (last xs) :| z
+                        xs -> spanEnd (last xs)
                   , stateTokensProcessed =
                       stateTokensProcessed + length stateInput }
             runParser' p st `shouldBe` (st', Right stateInput)
@@ -170,7 +169,7 @@ spec = do
                   , statePos   =
                       case stateInput of
                         [] -> statePos
-                        xs -> let _:|z = statePos in spanEnd (last xs) :| z
+                        xs -> spanEnd (last xs)
                   , stateTokensProcessed =
                       stateTokensProcessed + length stateInput }
             runParser' p st `shouldBe` (st', Right stateInput)
@@ -178,10 +177,9 @@ spec = do
         it "updates position in stream correctly" $
           property $ \st@State {..} -> not (null stateInput) ==> do
             let p = takeP Nothing (1 + length stateInput) :: CustomParser [Span]
-                (pos:|z) = statePos
                 st' = st
                   { statePos = positionAtN
-                      (Proxy :: Proxy [Span]) pos stateInput :| z }
+                      (Proxy :: Proxy [Span]) statePos stateInput }
             fst (runParser' p st) `shouldBe` st'
 
     describe "getNextTokenPosition" $ do
@@ -1346,14 +1344,13 @@ spec = do
         property $ \st@State {..} -> do
           let p :: Parser String
               p = takeRest
-              (pos:|z) = statePos
               st' = st
                 { stateInput = []
                 , statePos   = advanceN
                     (Proxy :: Proxy String)
                     stateTabWidth
-                    pos
-                    stateInput :| z
+                    statePos
+                    stateInput
                 , stateTokensProcessed =
                     stateTokensProcessed + length stateInput }
           runParser' p st `shouldBe` (st', Right stateInput)
@@ -1397,25 +1394,8 @@ spec = do
         property $ \st pos -> do
           let p :: Parser SourcePos
               p = setPosition pos >> getPosition
-              f (State s (_:|xs) tp w) y = State s (y:|xs) tp w
+              f (State s _ tp w) y = State s y tp w
           runParser' p st `shouldBe` (f st pos, Right pos)
-
-    describe "pushPosition" $
-      it "adds a layer to position stack and parser continues on that level" $
-        property $ \st pos ->  do
-          let p :: Parser ()
-              p = pushPosition pos
-          fst (runParser' p st) `shouldBe`
-            st { statePos = NE.cons pos (statePos st) }
-
-    describe "popPosition" $
-      it "removes a layer from position stack" $
-        property $ \st -> do
-          let p :: Parser ()
-              p = popPosition
-              pos = statePos st
-          fst (runParser' p st) `shouldBe`
-            st { statePos = fromMaybe pos (snd (NE.uncons pos)) }
 
     describe "setTokensProcessed and getTokensProcessed" $
       it "sets number of processed toknes and gets it back" $
@@ -1856,12 +1836,12 @@ emulateStrParsing
   :: State String
   -> String
   -> (State String, Either (ParseError Char Void) String)
-emulateStrParsing st@(State i (pos:|z) tp w) s =
+emulateStrParsing st@(State i pos tp w) s =
   if s == take l i
-    then ( State (drop l i) (updatePosString w pos s :| z) (tp + fromIntegral l) w
+    then ( State (drop l i) (updatePosString w pos s) (tp + fromIntegral l) w
          , Right s )
     else ( st
-         , Left $ err (pos:|z) (etoks s <> utoks (take l i)) )
+         , Left $ err pos (etoks s <> utoks (take l i)) )
   where
     l = length s
 

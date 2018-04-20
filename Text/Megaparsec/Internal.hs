@@ -409,36 +409,36 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
 {-# INLINE pObserving #-}
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
-pEof = ParsecT $ \s@(State input (pos:|z) tp w) _ _ eok eerr ->
+pEof = ParsecT $ \s@(State input pos tp w) _ _ eok eerr ->
   case take1_ input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let !apos = positionAt1 (Proxy :: Proxy s) pos x
           us    = (pure . Tokens . nes) x
           ps    = E.singleton EndOfInput
-      in eerr (TrivialError (apos:|z) us ps)
-          (State input (apos:|z) tp w)
+      in eerr (TrivialError apos us ps)
+          (State input apos tp w)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
   => (Token s -> Maybe a)
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pToken test ps = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+pToken test ps = ParsecT $ \s@(State input pos tp w) cok _ _ eerr ->
   case take1_ input of
     Nothing ->
       let us = pure EndOfInput
-      in eerr (TrivialError (pos:|z) us ps) s
+      in eerr (TrivialError pos us ps) s
     Just (c,cs) ->
       case test c of
         Nothing ->
           let !apos = positionAt1 (Proxy :: Proxy s) pos c
               us    = (Just . Tokens . nes) c
-          in eerr (TrivialError (apos:|z) us ps)
-                  (State input (apos:|z) tp w)
+          in eerr (TrivialError apos us ps)
+                  (State input apos tp w)
         Just x ->
           let !npos = advance1 (Proxy :: Proxy s) w pos c
-              newstate = State cs (npos:|z) (tp + 1) w
+              newstate = State cs npos (tp + 1) w
           in cok x newstate mempty
 {-# INLINE pToken #-}
 
@@ -446,7 +446,7 @@ pTokens :: forall e s m. Stream s
   => (Tokens s -> Tokens s -> Bool)
   -> Tokens s
   -> ParsecT e s m (Tokens s)
-pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ eok eerr ->
+pTokens f tts = ParsecT $ \s@(State input pos tp w) cok _ eok eerr ->
   let pxy = Proxy :: Proxy s
       unexpect pos' u =
         let us = pure u
@@ -455,24 +455,24 @@ pTokens f tts = ParsecT $ \s@(State input (pos:|z) tp w) cok _ eok eerr ->
       len = chunkLength pxy tts
   in case takeN_ len input of
     Nothing ->
-      eerr (unexpect (pos:|z) EndOfInput) s
+      eerr (unexpect pos EndOfInput) s
     Just (tts', input') ->
       if f tts tts'
         then let !npos = advanceN pxy w pos tts'
-                 st    = State input' (npos:|z) (tp + len) w
+                 st    = State input' npos (tp + len) w
              in if chunkEmpty pxy tts
                   then eok tts' st mempty
                   else cok tts' st mempty
         else let !apos = positionAtN pxy pos tts'
                  ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
-             in eerr (unexpect (apos:|z) ps) (State input (apos:|z) tp w)
+             in eerr (unexpect apos ps) (State input apos tp w)
 {-# INLINE pTokens #-}
 
 pTakeWhileP :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhileP ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ eok _ ->
+pTakeWhileP ml f = ParsecT $ \(State input pos tp w) cok _ eok _ ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
       !npos = advanceN pxy w pos ts
@@ -482,15 +482,15 @@ pTakeWhileP ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ eok _ ->
           Nothing -> mempty
           Just l -> (Hints . pure . E.singleton . Label) l
   in if chunkEmpty pxy ts
-       then eok ts (State input' (npos:|z) (tp + len) w) hs
-       else cok ts (State input' (npos:|z) (tp + len) w) hs
+       then eok ts (State input' npos (tp + len) w) hs
+       else cok ts (State input' npos (tp + len) w) hs
 {-# INLINE pTakeWhileP #-}
 
 pTakeWhile1P :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhile1P ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ _ eerr ->
+pTakeWhile1P ml f = ParsecT $ \(State input pos tp w) cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
       len = chunkLength pxy ts
@@ -506,31 +506,31 @@ pTakeWhile1P ml f = ParsecT $ \(State input (pos:|z) tp w) cok _ _ eerr ->
                     Nothing -> EndOfInput
                     Just (t,_) -> Tokens (nes t)
                 ps    = maybe E.empty E.singleton el
-            in eerr (TrivialError (apos:|z) us ps)
-                    (State input (apos:|z) tp w)
+            in eerr (TrivialError apos us ps)
+                    (State input apos tp w)
        else let !npos = advanceN pxy w pos ts
-            in cok ts (State input' (npos:|z) (tp + len) w) hs
+            in cok ts (State input' npos (tp + len) w) hs
 {-# INLINE pTakeWhile1P #-}
 
 pTakeP :: forall e s m. Stream s
   => Maybe String
   -> Int
   -> ParsecT e s m (Tokens s)
-pTakeP ml n = ParsecT $ \s@(State input (pos:|z) tp w) cok _ _ eerr ->
+pTakeP ml n = ParsecT $ \s@(State input pos tp w) cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
   in case takeN_ n input of
        Nothing ->
-         eerr (TrivialError (pos:|z) (pure EndOfInput) ps) s
+         eerr (TrivialError pos (pure EndOfInput) ps) s
        Just (ts, input') ->
          let len   = chunkLength pxy ts
              !apos = positionAtN pxy pos ts
              !npos = advanceN pxy w pos ts
          in if len /= n
-           then eerr (TrivialError (npos:|z) (pure EndOfInput) ps)
-                     (State input (apos:|z) tp w)
-           else cok ts (State input' (npos:|z) (tp + len) w) mempty
+           then eerr (TrivialError npos (pure EndOfInput) ps)
+                     (State input apos tp w)
+           else cok ts (State input' npos (tp + len) w) mempty
 {-# INLINE pTakeP #-}
 
 pGetParserState :: ParsecT e s m (State s)
@@ -551,8 +551,8 @@ nes x = x :| []
 -- | Convert 'ParseError' record into 'Hints'.
 
 toHints
-  :: NonEmpty SourcePos -- ^ Current position in input stream
-  -> ParseError t e     -- ^ Parse error to convert
+  :: SourcePos         -- ^ Current position in input stream
+  -> ParseError t e    -- ^ Parse error to convert
   -> Hints t
 toHints streamPos = \case
   TrivialError errPos _ ps ->

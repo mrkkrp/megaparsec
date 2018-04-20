@@ -31,7 +31,6 @@ module Test.Hspec.Megaparsec
 where
 
 import Control.Monad (unless)
-import Data.List.NonEmpty (NonEmpty (..))
 import Test.Hspec.Expectations
 import Text.Megaparsec
 import Text.Megaparsec.Error.Builder
@@ -164,7 +163,7 @@ succeedsLeaving :: ( ShowToken (Token s)
 initialState :: s -> State s
 initialState s = State
   { stateInput           = s
-  , statePos             = initialPos "" :| []
+  , statePos             = initialPos ""
   , stateTokensProcessed = 0
   , stateTabWidth        = defaultTabWidth }
 

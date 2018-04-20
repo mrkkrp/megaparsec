@@ -108,8 +108,6 @@ module Text.Megaparsec
   , getPosition
   , getNextTokenPosition
   , setPosition
-  , pushPosition
-  , popPosition
   , getTokensProcessed
   , setTokensProcessed
   , getTabWidth
@@ -129,8 +127,7 @@ import Text.Megaparsec.Internal
 import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set           as E
+import qualified Data.Set as E
 
 -- $reexports
 --
@@ -292,7 +289,7 @@ runParserT' p s = do
 initialState :: String -> s -> State s
 initialState name s = State
   { stateInput           = s
-  , statePos             = initialPos name :| []
+  , statePos             = initialPos name
   , stateTokensProcessed = 0
   , stateTabWidth        = defaultTabWidth }
 
@@ -540,7 +537,7 @@ setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 -- See also: 'getNextTokenPosition'.
 
 getPosition :: MonadParsec e s m => m SourcePos
-getPosition = NE.head . statePos <$> getParserState
+getPosition = statePos <$> getParserState
 
 -- | Get the position where the next token in the stream begins. If the
 -- stream is empty, return 'Nothing'.
@@ -552,7 +549,7 @@ getPosition = NE.head . statePos <$> getParserState
 getNextTokenPosition :: forall e s m. MonadParsec e s m => m (Maybe SourcePos)
 getNextTokenPosition = do
   State {..} <- getParserState
-  let f = positionAt1 (Proxy :: Proxy s) (NE.head statePos)
+  let f = positionAt1 (Proxy :: Proxy s) statePos
   return (f . fst <$> take1_ stateInput)
 {-# INLINEABLE getNextTokenPosition #-}
 
@@ -561,33 +558,8 @@ getNextTokenPosition = do
 -- See also: 'getPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
 
 setPosition :: MonadParsec e s m => SourcePos -> m ()
-setPosition pos = updateParserState $ \(State s (_:|z) tp w) ->
-  State s (pos:|z) tp w
-
--- | Push a position to the stack of positions and continue parsing working
--- with this position. Useful for working with include files and the like.
---
--- See also: 'popPosition'.
---
--- @since 5.0.0
-
-pushPosition :: MonadParsec e s m => SourcePos -> m ()
-pushPosition pos = updateParserState $ \(State s z tp w) ->
-  State s (NE.cons pos z) tp w
-
--- | Pop a position from the stack of positions unless it only contains one
--- element (in that case the stack of positions remains the same). This is
--- how to return to previous source file after 'pushPosition'.
---
--- See also: 'pushPosition'.
---
--- @since 5.0.0
-
-popPosition :: MonadParsec e s m => m ()
-popPosition = updateParserState $ \(State s z tp w) ->
-  case snd (NE.uncons z) of
-    Nothing -> State s z  tp w
-    Just z' -> State s z' tp w
+setPosition pos = updateParserState $ \(State s _ tp w) ->
+  State s pos tp w
 
 -- | Get the number of tokens processed so far.
 --

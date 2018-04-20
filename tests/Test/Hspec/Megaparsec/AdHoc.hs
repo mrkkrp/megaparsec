@@ -216,17 +216,17 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     => Arbitrary (ParseError t e) where
   arbitrary = oneof
     [ TrivialError
-      <$> (NE.fromList . getNonEmpty <$> arbitrary)
+      <$> arbitrary
       <*> arbitrary
       <*> (E.fromList <$> arbitrary)
     , FancyError
-      <$> (NE.fromList . getNonEmpty <$> arbitrary)
+      <$> arbitrary
       <*> (E.fromList <$> arbitrary) ]
 
 instance Arbitrary a => Arbitrary (State a) where
   arbitrary = State
     <$> arbitrary
-    <*> (NE.fromList . getNonEmpty <$> arbitrary)
+    <*> arbitrary
     <*> choose (1, 10000)
     <*> (mkPos <$> choose (1, 20))
 

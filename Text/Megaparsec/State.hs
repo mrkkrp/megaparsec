@@ -22,7 +22,6 @@ where
 
 import Control.DeepSeq (NFData)
 import Data.Data (Data)
-import Data.List.NonEmpty (NonEmpty (..))
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Text.Megaparsec.Pos
@@ -32,8 +31,11 @@ import Text.Megaparsec.Pos
 data State s = State
   { stateInput :: s
     -- ^ The rest of input to process
-  , statePos :: NonEmpty SourcePos
-    -- ^ Current position (column + line number) with support for include files
+  , statePos :: SourcePos
+    -- ^ Current position (column + line number) with support for include
+    -- files
+    --
+    -- In version /7.0.0/ type of the filed was changed.
   , stateTokensProcessed :: {-# UNPACK #-} !Int
     -- ^ Number of processed tokens so far
     --

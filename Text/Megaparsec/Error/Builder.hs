@@ -97,7 +97,7 @@ instance Ord e => Monoid (EF e) where
 -- provided by this module, see below.
 
 err
-  :: NonEmpty SourcePos -- ^ 'ParseError' position
+  :: SourcePos         -- ^ 'ParseError' position
   -> ET t              -- ^ Error components
   -> ParseError t e    -- ^ Resulting 'ParseError'
 err pos (ET us ps) = TrivialError pos us ps
@@ -105,7 +105,7 @@ err pos (ET us ps) = TrivialError pos us ps
 -- | Like 'err', but constructs a “fancy” 'ParseError'.
 
 errFancy
-  :: NonEmpty SourcePos -- ^ 'ParseError' position
+  :: SourcePos         -- ^ 'ParseError' position
   -> EF e              -- ^ Error components
   -> ParseError t e    -- ^ Resulting 'ParseError'
 errFancy pos (EF xs) = FancyError pos xs
@@ -115,8 +115,8 @@ errFancy pos (EF xs) = FancyError pos xs
 
 -- | Initial source position with empty file name.
 
-posI :: NonEmpty SourcePos
-posI = initialPos "" :| []
+posI :: SourcePos
+posI = initialPos ""
 
 -- | @'posN' n s@ returns source position achieved by applying 'advanceN'
 -- method corresponding to the type of stream @s@.
@@ -124,12 +124,12 @@ posI = initialPos "" :| []
 posN :: forall s. Stream s
   => Int
   -> s
-  -> NonEmpty SourcePos
+  -> SourcePos
 posN n s =
   case takeN_ n s of
     Nothing -> posI
     Just (ts, _) ->
-      advanceN (Proxy :: Proxy s) defaultTabWidth (initialPos "") ts :| []
+      advanceN (Proxy :: Proxy s) defaultTabWidth (initialPos "") ts
 
 ----------------------------------------------------------------------------
 -- Error components

@@ -4,6 +4,7 @@
 module Text.Megaparsec.ErrorSpec (spec) where
 
 import Control.Exception (Exception (..))
+import Control.Monad.Identity
 import Data.ByteString (ByteString)
 import Data.Char (isControl, isSpace)
 import Data.List (isInfixOf, isSuffixOf)
@@ -190,7 +191,7 @@ spec = do
       property $ \x ->
         parseErrorPretty (x :: PE) `shouldSatisfy` ("\n" `isSuffixOf`)
     it "result contains representation of source pos stack" $
-      property (contains errorPos sourcePosPretty)
+      property (contains (Identity . errorPos) sourcePosPretty)
     it "result contains representation of unexpected items" $ do
       let f (TrivialError _ us _) = us
           f _                     = Nothing
@@ -270,12 +271,6 @@ spec = do
         parseErrorPretty_ w' s pe `shouldBe`
           ("1:9:\n  |\n1 | " ++ replicate w ' ' ++ "something" ++ replicate w ' '
            ++ "\n  |         ^\nunexpected 's'\nexpecting 'x'\n")
-
-  describe "sourcePosStackPretty" $
-    it "result never ends with a newline " $
-      property $ \x ->
-        let pos = errorPos (x :: PE)
-        in sourcePosStackPretty pos `shouldNotSatisfy` ("\n" `isSuffixOf`)
 
   describe "parseErrorTextPretty" $ do
     it "shows trivial unknown ParseError correctly" $

@@ -30,6 +30,14 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
+* Dropped stacks of source positions. Thus the field `statePos` in `State`
+  has the type `SourcePos` instead of `NonEmpty SourcePos`. Accordingly, the
+  functions `pushPosition` and `popPosition` from `Text.Megaparsec` and
+  `sourcePosStackPretty` from `Text.Megaparsec.Error` were removed.
+
+  The reason for this simplification is that I could not find any code that
+  uses the feature and it makes manipulation of source positions hairy.
+
 * The debugging function `dbg` has been moved from `Text.Megaparsec` to its
   own module `Text.Megaparsec.Debug`.
 
