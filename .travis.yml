@@ -9,8 +9,6 @@ cache:
 
 matrix:
   include:
-    - env: CABALVER=2.2 GHCVER=7.8.4
-      addons: {apt: {packages: [cabal-install-2.2,ghc-7.8.4], sources: [hvr-ghc]}}
     - env: CABALVER=2.2 GHCVER=7.10.3
       addons: {apt: {packages: [cabal-install-2.2,ghc-7.10.3],sources: [hvr-ghc]}}
     - env: CABALVER=2.2 GHCVER=8.0.2

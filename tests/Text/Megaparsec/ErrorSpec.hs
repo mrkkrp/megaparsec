@@ -3,6 +3,7 @@
 
 module Text.Megaparsec.ErrorSpec (spec) where
 
+import Control.Exception (Exception (..))
 import Data.ByteString (ByteString)
 import Data.Char (isControl, isSpace)
 import Data.List (isInfixOf, isSuffixOf)
@@ -20,12 +21,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Semigroup     as S
 import qualified Data.Set           as E
 
-#if !MIN_VERSION_base(4,8,0)
-import Data.Foldable (Foldable, all)
-import Prelude hiding (all)
-#else
-import Control.Exception (Exception (..))
-#endif
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid
 #endif
@@ -294,12 +289,10 @@ spec = do
         parseErrorTextPretty (x :: PE)
           `shouldSatisfy` ("\n" `isSuffixOf`)
 
-#if MIN_VERSION_base(4,8,0)
   describe "displayException" $
     it "produces the same result as parseErrorPretty" $
       property $ \x ->
         displayException x `shouldBe` parseErrorPretty (x :: PE)
-#endif
 
 ----------------------------------------------------------------------------
 -- Helpers

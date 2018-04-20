@@ -14,7 +14,6 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -32,10 +31,6 @@ import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text            as T
 import qualified Data.Text.Lazy       as TL
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
 
 -- | Type class for inputs that can be consumed by the library.
 

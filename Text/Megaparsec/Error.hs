@@ -16,7 +16,6 @@
 -- "Text.Megaparsec" re-exports it anyway.
 
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE DeriveGeneric       #-}
@@ -60,10 +59,6 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
 
 ----------------------------------------------------------------------------
 -- Parse error type
@@ -147,9 +142,7 @@ instance ( Show t
          , ShowErrorComponent e
          , Typeable e )
   => Exception (ParseError t e) where
-#if MIN_VERSION_base(4,8,0)
   displayException = parseErrorPretty
-#endif
 
 -- | Get position of given 'ParseError'.
 --

@@ -30,6 +30,8 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
+* Dropped support for GHC 7.8.
+
 ## Megaparsec 6.5.0
 
 * Added `Text.Megaparsec.Internal`, which exposes some internal data

@@ -14,7 +14,6 @@
 -- Doaitse Swierstra. Published as a functional pearl at the Haskell
 -- Workshop 2001.
 
-{-# LANGUAGE CPP                       #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Text.Megaparsec.Perm
@@ -27,10 +26,6 @@ module Text.Megaparsec.Perm
 where
 
 import Text.Megaparsec
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
 
 infixl 1 <||>, <|?>
 infixl 2 <$$>, <$?>

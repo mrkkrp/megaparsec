@@ -54,7 +54,6 @@
 -- modules should be imported explicitly along with the modules mentioned
 -- above.
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE LambdaCase                 #-}
@@ -135,12 +134,6 @@ import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative hiding (many, some)
-import Data.Foldable (Foldable, elem, notElem)
-import Prelude hiding (elem, notElem)
-#endif
 
 -- $reexports
 --

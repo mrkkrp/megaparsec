@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies     #-}
 
@@ -12,10 +11,6 @@ import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Text.Megaparsec.Expr
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative hiding (many, some)
-#endif
 
 spec :: Spec
 spec =

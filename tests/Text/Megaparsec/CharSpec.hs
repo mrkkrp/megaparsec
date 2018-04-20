@@ -14,10 +14,6 @@ import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
-
 instance Arbitrary GeneralCategory where
   arbitrary = elements [minBound..maxBound]
 
@@ -138,11 +134,7 @@ spec = do
     checkCharPred "punctuation" isPunctuation punctuationChar
 
   describe "symbolChar" $
-#if MIN_VERSION_base(4,8,0)
     checkCharRange "symbol" "<>$£`~|×÷^®°¸¯=¬+¤±¢¨´©¥¦" symbolChar
-#else
-    checkCharRange "symbol" "<>$£`~|×÷^®°¸¯=¬+¤±¢¨´©¥¦§¶" symbolChar
-#endif
   describe "separatorChar" $
     checkCharRange "separator" " \160" separatorChar
 

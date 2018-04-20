@@ -45,10 +45,6 @@ import qualified Control.Monad.Trans.Writer.Strict as S
 import Control.Monad.Trans.Identity
 #endif
 
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid
-#endif
-
 -- | Type class describing monads that implement the full set of primitive
 -- parsers.
 --

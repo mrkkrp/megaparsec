@@ -44,10 +44,6 @@ import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
-
 ----------------------------------------------------------------------------
 -- Helpers to run parsers
 
