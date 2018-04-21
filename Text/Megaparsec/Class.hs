@@ -25,7 +25,6 @@ module Text.Megaparsec.Class
   ( MonadParsec (..) )
 where
 
-import Control.Applicative
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Trans
@@ -52,8 +51,7 @@ import Control.Monad.Trans.Identity
 -- taken advantage of as much as possible if your aim is a fast parser:
 -- 'tokens', 'takeWhileP', 'takeWhile1P', and 'takeP'.
 
-class (Stream s, Alternative m, MonadPlus m)
-    => MonadParsec e s m | m -> e s where
+class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   -- | The most general way to stop parsing and report a trivial
   -- 'ParseError'.
