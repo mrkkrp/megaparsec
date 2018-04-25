@@ -1,13 +1,15 @@
 -- |
 -- Module      :  Text.Megaparsec.Debug
--- Copyright   :  © 2018 Mark Karpov
--- License     :  BSD 3 clause
+-- Copyright   :  © 2015–2018 Megaparsec contributors
+-- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
 -- Stability   :  experimental
 -- Portability :  portable
 --
 -- Debugging helpers.
+--
+-- @since 7.0.0
 
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -51,8 +53,6 @@ import qualified Data.List.NonEmpty as NE
 -- state backtracking) or adding otherwise redundant constraints (e.g.
 -- 'Show' instance for state), so this helper is only available for
 -- 'ParsecT' monad, not 'MonadParsec' in general.
---
--- @since 5.1.0
 
 dbg :: forall e s m a.
   ( Stream s
