@@ -41,6 +41,9 @@
 * Dropped the `Text.Megaparsec.Perm` module. Use
   `Control.Applicative.Permutations` from `parser-combinators` instead.
 
+* Dropped the `Text.Megaparsec.Expr` module. Use
+  `Control.Monad.Combinators.Expr` from `parser-combinators` instead.
+
 * The debugging function `dbg` has been moved from `Text.Megaparsec` to its
   own module `Text.Megaparsec.Debug`.
 
