@@ -38,6 +38,9 @@
   The reason for this simplification is that I could not find any code that
   uses the feature and it makes manipulation of source positions hairy.
 
+* Dropped the `Text.Megaparsec.Perm` module. Use
+  `Control.Applicative.Permutations` from `parser-combinators` instead.
+
 * The debugging function `dbg` has been moved from `Text.Megaparsec` to its
   own module `Text.Megaparsec.Debug`.
 
