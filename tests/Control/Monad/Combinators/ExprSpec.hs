@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies     #-}
 
-module Text.Megaparsec.ExprSpec (spec) where
+module Control.Monad.Combinators.ExprSpec (spec) where
 
+import Control.Monad.Combinators.Expr
 import Data.Monoid ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec
@@ -10,7 +11,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Expr
 
 spec :: Spec
 spec =
@@ -23,13 +23,17 @@ spec =
           prs' expr s `succeedsLeaving` ""
     context "when stream in empty" $
       it "signals correct parse error" $
-        prs (expr <* eof) "" `shouldFailWith` err posI (ueof <> elabel "term")
+        prs (expr <* eof) "" `shouldFailWith` err posI
+          (ueof <> etok '-' <> elabel "term")
     context "when term is missing" $
       it "signals correct parse error" $ do
         let p = expr <* eof
-        prs p "-" `shouldFailWith` err (posN 1 "-") (ueof <> elabel "term")
-        prs p "(" `shouldFailWith` err (posN 1 "(") (ueof <> elabel "term")
-        prs p "*" `shouldFailWith` err posI (utok '*' <> elabel "term")
+        prs p "-" `shouldFailWith` err (posN 1 "-")
+          (ueof <> elabel "term")
+        prs p "(" `shouldFailWith` err (posN 1 "(")
+          (ueof <> etok '-' <> elabel "term")
+        prs p "*" `shouldFailWith` err posI
+          (utok '*' <> etok '-' <> elabel "term")
     context "operator is missing" $
       it "signals correct parse error" $
         property $ \a b -> do
@@ -41,9 +45,17 @@ spec =
           if c == '-'
             then prs p s `shouldParse` Sub a b
             else prs p s `shouldFailWith`
-                 err (posN n s) (utok c <> eeof <> elabel "operator")
-
--- Algebraic structures to build abstract syntax tree of our expression.
+                 err (posN n s) (mconcat
+                   [ utok c
+                   , eeof
+                   , etok '!'
+                   , etok '%'
+                   , etok '*'
+                   , etok '+'
+                   , etok '-'
+                   , etok '/'
+                   , etok '^'
+                   ])
 
 data Node
   = Val Integer   -- ^ literal value
@@ -115,9 +127,6 @@ arbitraryN2 0 = Val . getNonNegative <$> arbitrary
 arbitraryN2 n = elements [Sum,Sub,Pro,Div,Exp] <*> leaf <*> leaf
   where
     leaf = arbitraryN0 (n `div` 2)
-
--- Some helpers are put here since we don't want to depend on
--- "Text.Megaparsec.Lexer".
 
 lexeme :: Parser a -> Parser a
 lexeme p = p <* hidden space
