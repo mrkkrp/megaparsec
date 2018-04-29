@@ -78,7 +78,7 @@ instance Ord t => Monoid (ET t) where
 
 -- | Auxiliary type for construction of fancy parse errors.
 
-data EF e = EF (Set (ErrorFancy e))
+newtype EF e = EF (Set (ErrorFancy e))
   deriving (Eq, Ord, Data, Typeable, Generic)
 
 instance Ord e => Semigroup (EF e) where

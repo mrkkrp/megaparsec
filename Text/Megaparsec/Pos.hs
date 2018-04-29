@@ -108,7 +108,7 @@ instance Read Pos where
 --
 -- @since 5.0.0
 
-data InvalidPosException = InvalidPosException Int
+newtype InvalidPosException = InvalidPosException Int
   -- ^ The first value is the minimal allowed value, the second value is the
   -- actual value that was passed to 'mkPos'.
   deriving (Eq, Show, Data, Typeable, Generic)

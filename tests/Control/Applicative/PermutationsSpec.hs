@@ -100,4 +100,4 @@ testPermParser =
     <*> toPermutationWithDefault 'y' (char 'b')
     <*> toPermutationWithDefault 'z' (char 'c')
   where
-    f a b c = a:b:c:[]
+    f a b c = [a,b,c]

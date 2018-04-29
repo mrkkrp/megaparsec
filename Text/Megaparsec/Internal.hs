@@ -52,11 +52,11 @@ import Control.Monad.Error.Class
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Control.Monad.State.Class hiding (state)
+import Control.Monad.State.Class
 import Control.Monad.Trans
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
-import Data.Semigroup hiding (option)
+import Data.Semigroup
 import Data.Set (Set)
 import Data.String (IsString (..))
 import Text.Megaparsec.Class
@@ -589,10 +589,7 @@ withHints (Hints ps') c e =
 accHints
   :: Hints t           -- ^ 'Hints' to add
   -> (a -> State s -> Hints t -> m b) -- ^ An “OK” continuation to alter
-  -> a                 -- ^ First argument of resulting continuation
-  -> State s           -- ^ Second argument of resulting continuation
-  -> Hints t           -- ^ Third argument of resulting continuation
-  -> m b
+  -> (a -> State s -> Hints t -> m b) -- ^ Altered “OK” continuation
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 {-# INLINE accHints #-}
 
