@@ -3,13 +3,13 @@
 
 module Control.Monad.CombinatorsSpec (spec) where
 
+import Control.Monad.Combinators
 import Data.List (intersperse)
 import Data.Maybe (maybeToList, isNothing, fromJust)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
-import Text.Megaparsec
 import Text.Megaparsec.Char
 
 #if !MIN_VERSION_base(4,8,0)
