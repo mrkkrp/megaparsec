@@ -524,11 +524,13 @@ atEnd = option False (True <$ hidden eof)
 
 getInput :: MonadParsec e s m => m s
 getInput = stateInput <$> getParserState
+{-# INLINE getInput #-}
 
 -- | @'setInput' input@ continues parsing with @input@.
 
 setInput :: MonadParsec e s m => s -> m ()
 setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
+{-# INLINE setInput #-}
 
 -- | Return the current source position.
 --
@@ -536,6 +538,7 @@ setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
 
 getPosition :: MonadParsec e s m => m SourcePos
 getPosition = statePos <$> getParserState
+{-# INLINE getPosition #-}
 
 -- | Get the position where the next token in the stream begins. If the
 -- stream is empty, return 'Nothing'.
@@ -558,6 +561,7 @@ getNextTokenPosition = do
 setPosition :: MonadParsec e s m => SourcePos -> m ()
 setPosition pos = updateParserState $ \(State s _ tp w) ->
   State s pos tp w
+{-# INLINE setPosition #-}
 
 -- | Get the number of tokens processed so far.
 --
@@ -567,6 +571,7 @@ setPosition pos = updateParserState $ \(State s _ tp w) ->
 
 getTokensProcessed :: MonadParsec e s m => m Int
 getTokensProcessed = stateTokensProcessed <$> getParserState
+{-# INLINE getTokensProcessed #-}
 
 -- | Set the number of tokens processed so far.
 --
@@ -577,6 +582,7 @@ getTokensProcessed = stateTokensProcessed <$> getParserState
 setTokensProcessed :: MonadParsec e s m => Int -> m ()
 setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
   State s pos tp w
+{-# INLINE setTokensProcessed #-}
 
 -- | Return the tab width. The default tab width is equal to
 -- 'defaultTabWidth'. You can set a different tab width with the help of
@@ -586,6 +592,7 @@ setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
 
 getTabWidth :: MonadParsec e s m => m Pos
 getTabWidth = stateTabWidth <$> getParserState
+{-# INLINE getTabWidth #-}
 
 -- | Set tab width. If the argument of the function is not a positive
 -- number, 'defaultTabWidth' will be used.
@@ -595,6 +602,7 @@ getTabWidth = stateTabWidth <$> getParserState
 setTabWidth :: MonadParsec e s m => Pos -> m ()
 setTabWidth w = updateParserState $ \(State s pos tp _) ->
   State s pos tp w
+{-# INLINE setTabWidth #-}
 
 -- | @'setParserState' st@ sets the parser state to @st@.
 --
@@ -602,3 +610,4 @@ setTabWidth w = updateParserState $ \(State s pos tp _) ->
 
 setParserState :: MonadParsec e s m => State s -> m ()
 setParserState st = updateParserState (const st)
+{-# INLINE setParserState #-}
