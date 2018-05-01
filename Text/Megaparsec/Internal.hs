@@ -283,16 +283,6 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   in unParser m s cok cerr eok meerr
 {-# INLINE pPlus #-}
 
--- | @since 6.0.0
-
-instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
-  mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
-    let
-      a = case result of
-        OK a' -> a'
-        Error _ -> error "mfix ParsecT"
-    runParsecT (f a) s
-
 -- | From two states, return the one with the greater number of processed
 -- tokens. If the numbers of processed tokens are equal, prefer the second
 -- state.
@@ -304,6 +294,16 @@ longestMatch s1@(State _ _ tp1 _) s2@(State _ _ tp2 _) =
     EQ -> s2
     GT -> s1
 {-# INLINE longestMatch #-}
+
+-- | @since 6.0.0
+
+instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
+  mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
+    let
+      a = case result of
+        OK a' -> a'
+        Error _ -> error "mfix ParsecT"
+    runParsecT (f a) s
 
 instance MonadTrans (ParsecT e s) where
   lift amb = ParsecT $ \s _ _ eok _ ->
