@@ -414,9 +414,7 @@ charLiteral = label "literal character" $ do
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
 
-decimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
-  => m a
+decimal :: (MonadParsec e s m, Token s ~ Char, Integral a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
 
