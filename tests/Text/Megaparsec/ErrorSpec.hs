@@ -236,6 +236,11 @@ spec = do
             pe = err (posN 1 s) (utok 's' <> etok 'x') :: PE
         parseErrorPretty' s pe `shouldBe`
           "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
+      it "uses continuous highlighting properly" $ do
+        let s = "\tfoobar" :: String
+            pe = err (posN 1 s) (utoks "foo" <> utoks "rar") :: PE
+        parseErrorPretty' s pe `shouldBe`
+          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
     context "with Word8 tokens" $ do
       it "shows empty line correctly" $ do
         let s = "" :: ByteString
@@ -261,6 +266,11 @@ spec = do
             pe = err (posN 1 s) (utok 115 <> etok 120) :: PW
         parseErrorPretty' s pe `shouldBe`
           "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
+      it "uses continuous highlighting properly" $ do
+        let s = "\tfoobar" :: ByteString
+            pe = err (posN 1 s) (utoks (B.unpack "foo") <> utoks (B.unpack "rar")) :: PW
+        parseErrorPretty' s pe `shouldBe`
+          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
 
   describe "parseErrorPretty_" $
     it "takes tab width into account correctly" $

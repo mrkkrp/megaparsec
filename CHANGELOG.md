@@ -47,6 +47,9 @@
 * The debugging function `dbg` has been moved from `Text.Megaparsec` to its
   own module `Text.Megaparsec.Debug`.
 
+* Implemented continuous highlighting in parse errors. For this we added the
+  `errorComponentLen` method to the `ShowErrorComponent` type class.
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0
