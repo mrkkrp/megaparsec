@@ -22,6 +22,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Megaparsec.Error
@@ -252,10 +253,22 @@ class Ord a => ShowErrorComponent a where
 
   showErrorComponent :: a -> String
 
+  -- | Length of the error component in characters, used for highlighting of
+  -- parse errors in input string.
+  --
+  -- @since 7.0.0
+
+  errorComponentLen :: a -> Int
+  errorComponentLen _ = 1
+
 instance (Ord t, ShowToken t) => ShowErrorComponent (ErrorItem t) where
-  showErrorComponent (Tokens   ts) = showTokens ts
-  showErrorComponent (Label label) = NE.toList label
-  showErrorComponent EndOfInput    = "end of input"
+  showErrorComponent = \case
+    Tokens   ts -> showTokens ts
+    Label label -> NE.toList label
+    EndOfInput  -> "end of input"
+  errorComponentLen = \case
+    Tokens   ts -> NE.length ts
+    _           -> 1
 
 instance ShowErrorComponent e => ShowErrorComponent (ErrorFancy e) where
   showErrorComponent (ErrorFail msg) = msg
@@ -328,13 +341,20 @@ parseErrorPretty_ w s e =
   sourcePosPretty (errorPos e) <> ":\n" <>
     padding <> "|\n" <>
     lineNumber <> " | " <> rline <> "\n" <>
-    padding <> "| " <> rpadding <> "^\n" <>
+    padding <> "| " <> rpadding <> pointer <> "\n" <>
     parseErrorTextPretty e
   where
     epos       = errorPos e
+    elen       =
+      case e of
+        TrivialError _ Nothing _ -> 1
+        TrivialError _ (Just x) _ -> errorComponentLen x
+        FancyError _ xs ->
+          E.foldl' (\a b -> max a (errorComponentLen b)) 1 xs
     lineNumber = (show . unPos . sourceLine) epos
     padding    = replicate (length lineNumber + 1) ' '
     rpadding   = replicate (unPos (sourceColumn epos) - 1) ' '
+    pointer    = replicate elen '^'
     rline      =
       case rline' of
         [] -> "<empty line>"
