@@ -50,6 +50,9 @@
 * Implemented continuous highlighting in parse errors. For this we added the
   `errorComponentLen` method to the `ShowErrorComponent` type class.
 
+* Fixed the `Text.Megaparsec.Char.Lexer.charLiteral` so it can accept longer
+  escape sequences (max length is now 10).
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0

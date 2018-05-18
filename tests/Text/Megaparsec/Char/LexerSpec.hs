@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf       #-}
 {-# LANGUAGE TupleSections    #-}
@@ -245,23 +246,29 @@ spec = do
              | otherwise -> prs p s `shouldParse` (sbla, sblb, sblc)
 
   describe "charLiteral" $ do
+    let p = charLiteral
     context "when stream begins with a literal character" $
       it "parses it" $
         property $ \ch -> do
-          let p = charLiteral
-              s = showLitChar ch ""
+          let s = showLitChar ch ""
           prs  p s `shouldParse` ch
           prs' p s `succeedsLeaving` ""
     context "when stream does not begin with a literal character" $
       it "signals correct parse error" $ do
-        let p = charLiteral
-            s = "\\"
+        let s = "\\"
         prs  p s `shouldFailWith` err posI (utok '\\' <> elabel "literal character")
         prs' p s `failsLeaving` s
     context "when stream is empty" $
-      it "signals correct parse error" $ do
-        let p = charLiteral
+      it "signals correct parse error" $
         prs p "" `shouldFailWith` err posI (ueof <> elabel "literal character")
+#if MIN_VERSION_base(4,9,0)
+    context "when given a long escape sequence" $
+      it "parses it correctly" $
+        property $ \s' -> do
+          let s = "\\1114111\\&" ++ s'
+          prs p s `shouldParse` '\1114111'
+          prs' p s `succeedsLeaving` s'
+#endif
 
   describe "decimal" $ do
     context "when stream begins with decimal digits" $
