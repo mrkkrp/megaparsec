@@ -113,6 +113,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
   where
     mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w = a * 10 + fromIntegral (w - 48)
+{-# INLINE decimal_ #-}
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
