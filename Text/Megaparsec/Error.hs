@@ -363,8 +363,8 @@ parseErrorPretty_ w s e =
       selectLine (sourceLine epos) s
 
 -- | Pretty-print a textual part of a 'ParseError', that is, everything
--- except stack of source positions. The rendered staring always ends with a
--- new line.
+-- except stack of source positions. The rendered 'String' always ends with a
+-- newline.
 --
 -- @since 5.1.0
 
