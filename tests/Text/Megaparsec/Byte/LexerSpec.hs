@@ -4,12 +4,12 @@ module Text.Megaparsec.Byte.LexerSpec (spec) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
-import Data.Char (toUpper)
+import Data.Char (intToDigit, toUpper)
 import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void
 import Data.Word (Word8)
-import Numeric (showInt, showHex, showOct, showFFloatAlt)
+import Numeric (showInt, showIntAtBase, showHex, showOct, showFFloatAlt)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.QuickCheck
@@ -72,6 +72,27 @@ spec = do
       it "signals correct parse error" $
         prs (decimal :: Parser Integer) "" `shouldFailWith`
           err posI (ueof <> elabel "integer")
+
+  describe "binary" $ do
+    context "when stream begins with binary digits" $
+      it "they are parsed as an integer" $
+        property $ \n' -> do
+          let p = binary :: Parser Integer
+              n = getNonNegative n'
+              s = B8.pack (showIntAtBase 2 intToDigit n "")
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when stream does not begin with binary digits" $
+      it "signals correct parse error" $
+        property $ \a as -> a /= 48 && a /= 49 ==> do
+          let p = binary :: Parser Integer
+              s = B.pack (a : as)
+          prs  p s `shouldFailWith`
+            err posI (utok a <> elabel "binary integer")
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (binary :: Parser Integer) "" `shouldFailWith`
+          err posI (ueof <> elabel "binary integer")
 
   describe "octal" $ do
     context "when stream begins with octal digits" $
