@@ -113,6 +113,9 @@ spec = do
   describe "digitChar" $
     checkCharRange "digit" ['0'..'9'] digitChar
 
+  describe "binDigitChar" $
+    checkCharRange "binary digit" ['0'..'1'] binDigitChar
+
   describe "octDigitChar" $
     checkCharRange "octal digit" ['0'..'7'] octDigitChar
 
