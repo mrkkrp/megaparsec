@@ -28,6 +28,7 @@ module Text.Megaparsec.Byte.Lexer
   , skipBlockCommentNested
     -- * Numbers
   , decimal
+  , binary
   , octal
   , hexadecimal
   , scientific
@@ -114,6 +115,28 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
     mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w = a * 10 + fromIntegral (w - 48)
 {-# INLINE decimal_ #-}
+
+-- | Parse an integer in binary representation. Representation of binary
+-- number is expected to follow the rule @0 (b | B) (0 | 1) {0 | 1}@ except
+-- for the fact that this parser doesn't parse “0b” or “0B” prefix. It is
+-- a responsibility of the programmer to parse correct prefix before parsing
+-- the number itself.
+--
+-- For example you can make it conform to the rule mentioned above like this:
+--
+-- > binary = char '0' >> char' 'b' >> L.binary
+
+binary
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  => m a
+binary = mkNum
+  <$> takeWhile1P Nothing isBinDigit
+  <?> "binary integer"
+  where
+    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a w     = a * 2 + fromIntegral (w - 48)
+    isBinDigit w = w - 48 < 2
+{-# INLINEABLE binary #-}
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
