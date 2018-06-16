@@ -53,6 +53,12 @@
 * Fixed the `Text.Megaparsec.Char.Lexer.charLiteral` so it can accept longer
   escape sequences (max length is now 10).
 
+* Added the `binDigitChar` functions in `Text.Megaparsec.Byte` and
+  `Text.Megaparsec.Char`.
+
+* Added the `binary` functions in `Text.Megaparsec.Byte.Lexer` and
+  `Text.Megaparsec.Char.Lexer`.
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0

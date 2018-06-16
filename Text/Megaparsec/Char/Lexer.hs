@@ -55,6 +55,7 @@ module Text.Megaparsec.Char.Lexer
   , charLiteral
     -- * Numbers
   , decimal
+  , binary
   , octal
   , hexadecimal
   , scientific
@@ -428,6 +429,27 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
     mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
+
+-- | Parse an integer in binary representation. Binary number is expected to
+-- be a non-empty sequence of zeroes “0” and ones “1”.
+--
+-- You could of course parse some prefix before the actual number:
+--
+-- > binary = char '0' >> char' 'b' >> L.binary
+--
+-- @since 7.0.0
+
+binary
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+binary = mkNum
+  <$> takeWhile1P Nothing isBinDigit
+  <?> "binary integer"
+  where
+    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c     = a * 2 + fromIntegral (Char.digitToInt c)
+    isBinDigit x = x == '0' || x == '1'
+{-# INLINEABLE binary #-}
 
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the

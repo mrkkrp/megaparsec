@@ -34,6 +34,7 @@ module Text.Megaparsec.Char
   , alphaNumChar
   , printChar
   , digitChar
+  , binDigitChar
   , octDigitChar
   , hexDigitChar
   , markChar
@@ -170,6 +171,16 @@ printChar = satisfy isPrint <?> "printable character"
 digitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 digitChar = satisfy isDigit <?> "digit"
 {-# INLINE digitChar #-}
+
+-- | Parse a binary digit, i.e. "0" or "1".
+--
+-- @since 7.0.0
+
+binDigitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
+binDigitChar = satisfy isBinDigit <?> "binary digit"
+  where
+    isBinDigit x = x == '0' || x == '1'
+{-# INLINE binDigitChar #-}
 
 -- | Parse an octal digit, i.e. between “0” and “7”.
 

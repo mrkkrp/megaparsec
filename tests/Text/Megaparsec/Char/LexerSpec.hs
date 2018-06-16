@@ -13,7 +13,7 @@ import Data.Maybe
 import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void (Void)
-import Numeric (showInt, showHex, showOct, showFFloatAlt)
+import Numeric (showInt, showIntAtBase, showHex, showOct, showFFloatAlt)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -289,6 +289,27 @@ spec = do
       it "signals correct parse error" $
         prs (decimal :: Parser Integer) "" `shouldFailWith`
           err posI (ueof <> elabel "integer")
+
+  describe "binary" $ do
+    context "when stream begins with binary digits" $
+      it "they are parsed as an integer" $
+        property $ \n' -> do
+          let p = binary :: Parser Integer
+              n = getNonNegative n'
+              s = showIntAtBase 2 intToDigit n ""
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when stream does not begin with binary digits" $
+      it "signals correct parse error" $
+        property $ \a as -> a /= '0' && a /= '1' ==> do
+          let p = binary :: Parser Integer
+              s = a : as
+          prs  p s `shouldFailWith`
+            err posI (utok a <> elabel "binary integer")
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (binary :: Parser Integer) "" `shouldFailWith`
+          err posI (ueof <> elabel "binary integer")
 
   describe "octal" $ do
     context "when stream begins with octal digits" $

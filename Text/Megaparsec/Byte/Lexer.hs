@@ -28,6 +28,7 @@ module Text.Megaparsec.Byte.Lexer
   , skipBlockCommentNested
     -- * Numbers
   , decimal
+  , binary
   , octal
   , hexadecimal
   , scientific
@@ -115,6 +116,27 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
     step a w = a * 10 + fromIntegral (w - 48)
 {-# INLINE decimal_ #-}
 
+-- | Parse an integer in binary representation. Binary number is expected to
+-- be a non-empty sequence of zeroes “0” and ones “1”.
+--
+-- You could of course parse some prefix before the actual number:
+--
+-- > binary = char 48 >> char' 98 >> L.binary
+--
+-- @since 7.0.0
+
+binary
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  => m a
+binary = mkNum
+  <$> takeWhile1P Nothing isBinDigit
+  <?> "binary integer"
+  where
+    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a w     = a * 2 + fromIntegral (w - 48)
+    isBinDigit w = w == 48 || w == 49
+{-# INLINEABLE binary #-}
+
 -- | Parse an integer in octal representation. Representation of octal
 -- number is expected to be according to the Haskell report except for the
 -- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
@@ -123,7 +145,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
 --
 -- For example you can make it conform to the Haskell report like this:
 --
--- > octal = char '0' >> char' 'o' >> L.octal
+-- > octal = char 48 >> char' 111 >> L.octal
 
 octal
   :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
@@ -145,7 +167,7 @@ octal = mkNum
 --
 -- For example you can make it conform to the Haskell report like this:
 --
--- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
+-- > hexadecimal = char 48 >> char' 120 >> L.hexadecimal
 
 hexadecimal
   :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
