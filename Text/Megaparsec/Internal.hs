@@ -42,7 +42,8 @@ module Text.Megaparsec.Internal
   , withHints
   , accHints
   , refreshLastHint
-  , runParsecT )
+  , runParsecT
+  , withParsecT )
 where
 
 import Control.Applicative
@@ -615,3 +616,17 @@ runParsecT p s = unParser p s cok cerr eok eerr
     cerr err s' = return $ Reply s' Consumed (Error err)
     eok a s' _  = return $ Reply s' Virgin   (OK a)
     eerr err s' = return $ Reply s' Virgin   (Error err)
+
+-- | Transform any custom errors thrown by the parser using the
+-- given function. Similar in function and purpose to @withExceptT@.
+--
+-- @since 7.0.0
+
+withParsecT :: (Monad m, Ord e')
+  => (e -> e')
+  -> ParsecT e s m a
+  -> ParsecT e' s m a
+withParsecT f p =
+  ParsecT $ \s cok cerr eok eerr ->
+    unParser p s cok (cerr . mapParseError f) eok (eerr . mapParseError f)
+{-# INLINE withParsecT #-}

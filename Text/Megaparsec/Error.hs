@@ -30,6 +30,7 @@ module Text.Megaparsec.Error
     ErrorItem (..)
   , ErrorFancy (..)
   , ParseError (..)
+  , mapParseError
   , errorPos
     -- * Pretty-printing
   , ShowToken (..)
@@ -150,6 +151,18 @@ instance ( Show t
          , Typeable e )
   => Exception (ParseError t e) where
   displayException = parseErrorPretty
+
+-- | Modify the custom data component in a parse error. This could be done
+-- via 'fmap' if not for the 'Ord' constraint.
+--
+-- @since 7.0.0
+
+mapParseError :: Ord e'
+  => (e -> e')
+  -> ParseError t e
+  -> ParseError t e'
+mapParseError _ (TrivialError s u p) = TrivialError s u p
+mapParseError f (FancyError s x) = FancyError s (E.map (fmap f) x)
 
 -- | Get position of given 'ParseError'.
 --
