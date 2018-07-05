@@ -511,18 +511,18 @@ mkInterspace x n = oneof [si, mkIndent x n]
 mkIndent :: String -> Int -> Gen String
 mkIndent x n = (++) <$> mkIndent' x n <*> eol
   where
-    eol = frequency [(5, return "\n"), (1, listOf1 (return '\n'))]
+    eol = frequency [(5, return "\n"), (1, (scaleDown . listOf1 . return) '\n')]
 
 mkIndent' :: String -> Int -> Gen String
 mkIndent' x n = concat <$> sequence [spc, sym, tra]
   where
-    spc = frequency [(5, vectorOf n itm), (1, listOf itm)]
-    tra = listOf itm
+    spc = frequency [(5, vectorOf n itm), (1, scaleDown (listOf itm))]
+    tra = scaleDown (listOf itm)
     itm = elements " \t"
     sym = return x
 
 whiteChars :: Gen String
-whiteChars = listOf (elements "\t\n ")
+whiteChars = scaleDown $ listOf (elements "\t\n ")
 
 whiteLine :: Gen String
 whiteLine = commentOut <$> arbitrary `suchThat` goodEnough
