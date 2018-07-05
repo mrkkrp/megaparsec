@@ -59,6 +59,9 @@
 * Added the `binary` functions in `Text.Megaparsec.Byte.Lexer` and
   `Text.Megaparsec.Char.Lexer`.
 
+* Added `mapParseError` and `withParsecT` to allow changing the type of
+  the custom data component in parse errors.
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0
