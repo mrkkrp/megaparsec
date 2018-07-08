@@ -56,11 +56,10 @@ where
 
 import Control.Applicative
 import Data.Char
-import Data.Function (on)
 import Data.Functor (void)
 import Data.Proxy
 import Text.Megaparsec
-import qualified Data.CaseInsensitive as CI
+import Text.Megaparsec.Common
 
 ----------------------------------------------------------------------------
 -- Simple parsers
@@ -316,24 +315,3 @@ char' c = choice [char c, char (swapCase c)]
       | isLower x = toUpper x
       | otherwise = x
 {-# INLINE char' #-}
-
-----------------------------------------------------------------------------
--- Sequence of characters
-
--- | A type-constrained version of 'chunk'.
-
-string :: (MonadParsec e s m, Token s ~ Char) => Tokens s -> m (Tokens s)
-string = chunk
-{-# INLINE string #-}
-
--- | The same as 'string', but case-insensitive. On success returns string
--- cased as actually parsed input.
---
--- >>> parseTest (string' "foobar") "foObAr"
--- "foObAr"
-
-string' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
-  => Tokens s
-  -> m (Tokens s)
-string' = tokens ((==) `on` CI.mk)
-{-# INLINE string' #-}

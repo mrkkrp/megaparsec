@@ -19,10 +19,10 @@
 
 module Text.Megaparsec.Byte.Lexer
   ( -- * White space
-    C.space
-  , C.lexeme
-  , C.symbol
-  , C.symbol'
+    space
+  , lexeme
+  , symbol
+  , symbol'
   , skipLineComment
   , skipBlockComment
   , skipBlockCommentNested
@@ -43,9 +43,9 @@ import Data.Proxy
 import Data.Scientific (Scientific)
 import Data.Word (Word8)
 import Text.Megaparsec
-import Text.Megaparsec.Byte
-import qualified Data.Scientific            as Sci
-import qualified Text.Megaparsec.Char.Lexer as C
+import Text.Megaparsec.Lexer
+import qualified Data.Scientific      as Sci
+import qualified Text.Megaparsec.Byte as B
 
 ----------------------------------------------------------------------------
 -- White space
@@ -59,7 +59,7 @@ skipLineComment :: (MonadParsec e s m, Token s ~ Word8)
   => Tokens s          -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix =
-  string prefix *> void (takeWhileP (Just "character") (/= 10))
+  B.string prefix *> void (takeWhileP (Just "character") (/= 10))
 {-# INLINEABLE skipLineComment #-}
 
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
@@ -71,8 +71,8 @@ skipBlockComment :: (MonadParsec e s m, Token s ~ Word8)
   -> m ()
 skipBlockComment start end = p >> void (manyTill anySingle n)
   where
-    p = string start
-    n = string end
+    p = B.string start
+    n = B.string end
 {-# INLINEABLE skipBlockComment #-}
 
 -- | @'skipBlockCommentNested' start end@ skips possibly nested block
@@ -87,8 +87,8 @@ skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Word8)
 skipBlockCommentNested start end = p >> void (manyTill e n)
   where
     e = skipBlockCommentNested start end <|> void anySingle
-    p = string start
-    n = string end
+    p = B.string start
+    n = B.string end
 {-# INLINEABLE skipBlockCommentNested #-}
 
 ----------------------------------------------------------------------------
@@ -233,7 +233,7 @@ dotDecimal_ :: (MonadParsec e s m, Token s ~ Word8)
   -> Integer
   -> m SP
 dotDecimal_ pxy c' = do
-  void (char 46)
+  void (B.char 46)
   let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
       step (SP a e') w = SP
         (a * 10 + fromIntegral (w - 48))
@@ -245,7 +245,7 @@ exponent_ :: (MonadParsec e s m, Token s ~ Word8)
   => Int
   -> m Int
 exponent_ e' = do
-  void (char' 101)
+  void (B.char' 101)
   (+ e') <$> signed (return ()) decimal_
 {-# INLINE exponent_ #-}
 
@@ -265,9 +265,9 @@ signed :: (MonadParsec e s m, Token s ~ Word8, Num a)
   => m ()              -- ^ How to consume white space after the sign
   -> m a               -- ^ How to parse the number itself
   -> m a               -- ^ Parser for signed numbers
-signed spc p = option id (C.lexeme spc sign) <*> p
+signed spc p = option id (lexeme spc sign) <*> p
   where
-    sign = (id <$ char 43) <|> (negate <$ char 45)
+    sign = (id <$ B.char 43) <|> (negate <$ B.char 45)
 {-# INLINEABLE signed #-}
 
 ----------------------------------------------------------------------------

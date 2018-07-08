@@ -11,9 +11,9 @@
     still contain `char` as type-constrained versions of `single`.
 
   * Similarly, now there is the `chunk` combinator that is a generalization
-    of `string` for arbitrary streams. `Text.Megaparsec.Char` and
-    `Text.Megaparsec.Byte` still contain `string` as type-constrained
-    versions of `single`.
+    of `string` for arbitrary streams. The `string` combinator is still
+    re-exported from `Text.Megaparsec.Char` and `Text.Megaparsec.Byte` for
+    compatibility.
 
   * `satisfy` does not depend on type of token, and so it now lives in
     `Text.Megaparsec`.
