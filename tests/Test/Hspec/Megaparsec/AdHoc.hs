@@ -18,6 +18,7 @@ module Test.Hspec.Megaparsec.AdHoc
   , abcRow
   , toFirstMismatch
   , rightOrder
+  , scaleDown
   , Parser )
 where
 
@@ -178,6 +179,11 @@ rightOrder p s s' =
   it "produces the list in the right order" $
     prs_ p s `shouldParse` s'
 
+-- | Scale down.
+
+scaleDown :: Gen a -> Gen a
+scaleDown = scale (`div` 4)
+
 -- | The type of parser that consumes a 'String'.
 
 type Parser = Parsec Void String
@@ -189,13 +195,11 @@ instance Arbitrary Void where
   arbitrary = error "Arbitrary Void"
 
 instance Arbitrary Pos where
-  arbitrary = mkPos <$> (getSmall <$> arbitrary `suchThat` (> 0))
+  arbitrary = mkPos <$> (getSmall . getPositive <$> arbitrary)
 
 instance Arbitrary SourcePos where
   arbitrary = SourcePos
-    <$> sized (\n -> do
-          k <- choose (0, n `div` 2)
-          vectorOf k arbitrary)
+    <$> scaleDown arbitrary
     <*> arbitrary
     <*> arbitrary
 
@@ -207,9 +211,7 @@ instance Arbitrary t => Arbitrary (ErrorItem t) where
 
 instance Arbitrary (ErrorFancy a) where
   arbitrary = oneof
-    [ sized (\n -> do
-        k <- choose (0, n `div` 2)
-        ErrorFail <$> vectorOf k arbitrary)
+    [ ErrorFail <$> scaleDown arbitrary
     , ErrorIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
 instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
@@ -218,14 +220,14 @@ instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
     [ TrivialError
       <$> arbitrary
       <*> arbitrary
-      <*> (E.fromList <$> arbitrary)
+      <*> (E.fromList <$> scaleDown arbitrary)
     , FancyError
       <$> arbitrary
-      <*> (E.fromList <$> arbitrary) ]
+      <*> (E.fromList <$> scaleDown arbitrary) ]
 
 instance Arbitrary a => Arbitrary (State a) where
   arbitrary = State
-    <$> arbitrary
+    <$> scaleDown arbitrary
     <*> arbitrary
     <*> choose (1, 10000)
     <*> (mkPos <$> choose (1, 20))

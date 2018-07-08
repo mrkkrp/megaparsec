@@ -21,8 +21,8 @@ import Data.Function (on)
 import Data.List (isPrefixOf)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe, isJust)
-import Data.Monoid
 import Data.Proxy
+import Data.Semigroup
 import Data.String
 import Data.Void
 import Prelude hiding (span, concat)
@@ -1804,9 +1804,14 @@ instance Stream [Span] where
 instance Arbitrary Span where
   arbitrary = do
     start <- arbitrary
-    end   <- arbitrary `suchThat` (> start)
+    dline <- arbitrary
+    dcol  <- arbitrary
+    let end = start
+          { sourceLine = sourceLine start <> dline
+          , sourceColumn = sourceColumn start <> dcol
+          }
     Span start end <$>
-      (NE.fromList . getNonEmpty <$> arbitrary)
+      (NE.fromList . getNonEmpty <$> scaleDown arbitrary)
 
 instance ShowToken Span where
   showTokens ts = concat (NE.toList . spanBody <$> ts)
