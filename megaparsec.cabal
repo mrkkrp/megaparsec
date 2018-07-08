@@ -61,6 +61,8 @@ library
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Stream
   other-modules:      Text.Megaparsec.Class
+                    , Text.Megaparsec.Common
+                    , Text.Megaparsec.Lexer
                     , Text.Megaparsec.State
   if flag(dev)
     ghc-options:      -O0 -Wall -Werror

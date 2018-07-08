@@ -40,7 +40,7 @@ module Text.Megaparsec.Byte
   , char'
     -- * Sequence of bytes
   , string
-  , C.string' )
+  , string' )
 where
 
 import Control.Applicative
@@ -50,7 +50,7 @@ import Data.Maybe (fromMaybe)
 import Data.Proxy
 import Data.Word (Word8)
 import Text.Megaparsec
-import qualified Text.Megaparsec.Char as C
+import Text.Megaparsec.Common
 
 ----------------------------------------------------------------------------
 -- Simple parsers
@@ -219,15 +219,6 @@ char' c = choice
       where
         g = toChar x
 {-# INLINE char' #-}
-
-----------------------------------------------------------------------------
--- Sequence of bytes
-
--- | A type-constrained version of 'chunk'.
-
-string :: (MonadParsec e s m, Token s ~ Word8) => Tokens s -> m (Tokens s)
-string = chunk
-{-# INLINE string #-}
 
 ----------------------------------------------------------------------------
 -- Helpers
