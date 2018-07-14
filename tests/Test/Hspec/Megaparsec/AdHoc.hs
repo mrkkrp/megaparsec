@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE TypeFamilies         #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Hspec.Megaparsec.AdHoc
@@ -22,7 +23,6 @@ module Test.Hspec.Megaparsec.AdHoc
   , Parser )
 where
 
-import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
 import Data.List.NonEmpty (NonEmpty (..))
@@ -52,17 +52,23 @@ import qualified Data.Text.Lazy              as TL
 -- that assumes empty file name.
 
 prs
-  :: Parser a          -- ^ Parser to run
-  -> String            -- ^ Input for the parser
-  -> Either (ParseError Char Void) a -- ^ Result of parsing
+  :: Parser a
+     -- ^ Parser to run
+  -> String
+     -- ^ Input for the parser
+  -> Either (ParseErrorBundle String Void) a
+     -- ^ Result of parsing
 prs p = parse p ""
 
 -- | Just like 'prs', but allows to inspect the final state of the parser.
 
 prs'
-  :: Parser a          -- ^ Parser to run
-  -> String            -- ^ Input for the parser
-  -> (State String, Either (ParseError Char Void) a) -- ^ Result of parsing
+  :: Parser a
+     -- ^ Parser to run
+  -> String
+     -- ^ Input for the parser
+  -> (State String, Either (ParseErrorBundle String Void) a)
+     -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 
 -- | Just like 'prs', but forces the parser to consume all input by adding
@@ -71,9 +77,12 @@ prs' p s = runParser' p (initialState s)
 -- > prs_ p = parse (p <* eof) ""
 
 prs_
-  :: Parser a          -- ^ Parser to run
-  -> String            -- ^ Input for the parser
-  -> Either (ParseError Char Void) a -- ^ Result of parsing
+  :: Parser a
+     -- ^ Parser to run
+  -> String
+     -- ^ Input for the parser
+  -> Either (ParseErrorBundle String Void) a
+     -- ^ Result of parsing
 prs_ p = parse (p <* eof) ""
 
 -- | Just like 'prs', but interprets given parser as various monads (tries
@@ -82,7 +91,7 @@ prs_ p = parse (p <* eof) ""
 grs
   :: (forall m. MonadParsec Void String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> (Either (ParseError Char Void) a -> Expectation)
+  -> (Either (ParseErrorBundle String Void) a -> Expectation)
     -- ^ How to check result of parsing
   -> Expectation
 grs p s r = do
@@ -101,7 +110,7 @@ grs p s r = do
 grs'
   :: (forall m. MonadParsec Void String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> ((State String, Either (ParseError Char Void) a) -> Expectation)
+  -> ((State String, Either (ParseErrorBundle String Void) a) -> Expectation)
     -- ^ How to check result of parsing
   -> Expectation
 grs' p s r = do
@@ -116,9 +125,9 @@ grs' p s r = do
   r (prs' (evalRWSTS    p)    s)
 
 evalWriterTL :: Monad m => L.WriterT [Int] m a -> m a
-evalWriterTL = liftM fst . L.runWriterT
+evalWriterTL = fmap fst . L.runWriterT
 evalWriterTS :: Monad m => S.WriterT [Int] m a -> m a
-evalWriterTS = liftM fst . S.runWriterT
+evalWriterTS = fmap fst . S.runWriterT
 
 evalRWSTL :: Monad m => L.RWST () [Int] () m a -> m a
 evalRWSTL m = do

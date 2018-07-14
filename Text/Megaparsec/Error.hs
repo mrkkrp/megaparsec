@@ -23,7 +23,9 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 module Text.Megaparsec.Error
   ( -- * Parse error type
@@ -32,13 +34,12 @@ module Text.Megaparsec.Error
   , ParseError (..)
   , mapParseError
   , errorPos
+  , ParseErrorBundle (..)
     -- * Pretty-printing
   , ShowToken (..)
-  , LineToken (..)
   , ShowErrorComponent (..)
+  , errorBundlePretty
   , parseErrorPretty
-  , parseErrorPretty'
-  , parseErrorPretty_
   , parseErrorTextPretty )
 where
 
@@ -209,14 +210,71 @@ mergeError e1 e2 =
     n (Just x) (Just y) = Just (max x y)
 {-# INLINE mergeError #-}
 
+-- | A non-empty collection of 'ParseError's equipped with additional
+-- information that allows to pretty-print the errors efficiently and
+-- correctly.
+--
+-- @since 7.0.0
+
+data ParseErrorBundle s e = ParseErrorBundle
+  { bundleErrors :: NonEmpty (ParseError (Token s) e)
+    -- ^ A /sorted/ collection of 'ParseError's to display
+  , bundleTabWidth :: Pos
+    -- ^ Tab width to use
+  , bundleInput :: s
+    -- ^ Input stream to use to locale the offending line (or a chunk of it)
+  , bundleSourcePos :: SourcePos
+    -- ^ Starting position of 'bundleStream'
+  } deriving (Generic)
+
+deriving instance ( Show s
+                  , Show (Token s)
+                  , Show e
+                  ) => Show (ParseErrorBundle s e)
+deriving instance ( Read s
+                  , Read (Token s)
+                  , Ord (Token s)
+                  , Read e
+                  , Ord e
+                  ) => Read (ParseErrorBundle s e)
+deriving instance ( Eq s
+                  , Eq (Token s)
+                  , Eq e
+                  ) => Eq (ParseErrorBundle s e)
+deriving instance ( Typeable s
+                  , Typeable (Token s)
+                  , Typeable e
+                  ) => Typeable (ParseErrorBundle s e)
+deriving instance ( Data s
+                  , Data (Token s)
+                  , Ord (Token s)
+                  , Data e
+                  , Ord e
+                  ) => Data (ParseErrorBundle s e)
+
+instance ( NFData s
+         , NFData (Token s)
+         , NFData e
+         ) => NFData (ParseErrorBundle s e)
+
+instance ( Show s
+         , Show (Token s)
+         , Show e
+         , ShowToken (Token s)
+         , ShowErrorComponent e
+         , Stream s
+         , Typeable s
+         , Typeable e
+         ) => Exception (ParseErrorBundle s e) where
+  displayException = errorBundlePretty
+
 ----------------------------------------------------------------------------
 -- Pretty-printing
 
--- | Type class 'ShowToken' includes methods that allow to pretty-print
--- single token as well as stream of tokens. This is used for rendering of
--- error messages.
+-- | Type class 'ShowToken' includes methods that allow to display token of
+-- given type during pretty-printing of parse error messages.
 --
--- @since 5.0.0
+-- @since 7.0.0
 
 class ShowToken a where
 
@@ -224,19 +282,6 @@ class ShowToken a where
   -- to print single tokens (represented as singleton lists).
 
   showTokens :: NonEmpty a -> String
-
-instance ShowToken Char where
-  showTokens = stringPretty
-
-instance ShowToken Word8 where
-  showTokens = stringPretty . fmap (chr . fromIntegral)
-
--- | Type class for tokens that support operations necessary for selecting
--- and displaying relevant line of input.
---
--- @since 6.0.0
-
-class LineToken a where
 
   -- | Convert a token to a 'Char'. This is used to print relevant line from
   -- input stream by turning a list of tokens into a 'String'.
@@ -247,22 +292,23 @@ class LineToken a where
 
   tokenIsNewline :: a -> Bool
 
-instance LineToken Char where
+instance ShowToken Char where
+  showTokens = stringPretty
   tokenAsChar = id
   tokenIsNewline x = x == '\n'
 
-instance LineToken Word8 where
+instance ShowToken Word8 where
+  showTokens = stringPretty . fmap (chr . fromIntegral)
   tokenAsChar = chr . fromIntegral
   tokenIsNewline x = x == 10
 
--- | The type class defines how to print custom data component of
--- 'ParseError'.
+-- | The type class defines how to print a component of 'ParseError'.
 --
 -- @since 5.0.0
 
 class Ord a => ShowErrorComponent a where
 
-  -- | Pretty-print custom data component of 'ParseError'.
+  -- | Pretty-print a component of 'ParseError'.
 
   showErrorComponent :: a -> String
 
@@ -298,6 +344,55 @@ instance ShowErrorComponent e => ShowErrorComponent (ErrorFancy e) where
 instance ShowErrorComponent Void where
   showErrorComponent = absurd
 
+-- | Pretty-print a 'ParseErrorBundle'. All 'ParseError's in the bundle will
+-- be pretty-printed in order together with the corresponding offending
+-- lines by doing a single efficient pass over the input stream. The
+-- rendered 'String' always ends with a newline.
+--
+-- @since 7.0.0
+
+errorBundlePretty
+  :: forall s e. ( ShowToken (Token s)
+                 , ShowErrorComponent e
+                 , Stream s
+                 )
+  => ParseErrorBundle s e -- ^ Parse error bundle to display
+  -> String               -- ^ Textual rendition of the bundle
+errorBundlePretty ParseErrorBundle {..} =
+  let (r, _, _) = foldl f (id, bundleSourcePos, bundleInput) bundleErrors
+  in drop 1 (r "")
+  where
+    f :: (ShowS, SourcePos, s)
+      -> ParseError (Token s) e
+      -> (ShowS, SourcePos, s)
+    f (o, !npos, s) e = (o . (outChunk ++), npos', s')
+      where
+        nline = sourceLine npos'
+        ncol  = sourceColumn npos'
+        epos = errorPos e
+        (npos', sline, s') = selectLine npos (sourceLine epos) s
+        outChunk =
+          "\n" <> sourcePosPretty epos <> ":\n" <>
+          padding <> "|\n" <>
+          lineNumber <> " | " <> gpadding <> rline <> "\n" <>
+          padding <> "| " <> rpadding <> pointer <> "\n" <>
+          parseErrorTextPretty e
+        lineNumber = show (unPos nline)
+        padding = replicate (length lineNumber + 1) ' '
+        gpadding = replicate (unPos ncol - 1) '?'
+        rpadding = replicate (unPos (sourceColumn epos) - 1) ' '
+        pointer = replicate elen '^'
+        rline =
+          case tokenAsChar <$> chunkToTokens (Proxy :: Proxy s) sline of
+            [] -> "<empty line>"
+            xs -> expandTab bundleTabWidth xs
+        elen =
+          case e of
+            TrivialError _ Nothing _ -> 1
+            TrivialError _ (Just x) _ -> errorComponentLen x
+            FancyError _ xs ->
+              E.foldl' (\a b -> max a (errorComponentLen b)) 1 xs
+
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
 --
@@ -311,69 +406,6 @@ parseErrorPretty
   -> String            -- ^ Result of rendering
 parseErrorPretty e =
   sourcePosPretty (errorPos e) <> ":\n" <> parseErrorTextPretty e
-
--- | Pretty-print a 'ParseError' and display the line on which the parse
--- error occurred. The rendered 'String' always ends with a newline.
---
--- Note that if you work with include files and have a stack of
--- 'SourcePos'es in 'ParseError', it's up to you to provide correct input
--- stream corresponding to the file in which parse error actually happened.
---
--- 'parseErrorPretty'' is defined in terms of the more general
--- 'parseErrorPretty_' function which allows to specify tab width as well:
---
--- > parseErrorPretty' = parseErrorPretty_ defaultTabWidth
---
--- @since 6.0.0
-
-parseErrorPretty'
-  :: ( ShowToken (Token s)
-     , LineToken (Token s)
-     , ShowErrorComponent e
-     , Stream s )
-  => s                 -- ^ Original input stream
-  -> ParseError (Token s) e -- ^ Parse error to render
-  -> String            -- ^ Result of rendering
-parseErrorPretty' = parseErrorPretty_ defaultTabWidth
-
--- | Just like 'parseErrorPretty'', but allows to specify tab width.
---
--- @since 6.1.0
-
-parseErrorPretty_
-  :: forall s e.
-     ( ShowToken (Token s)
-     , LineToken (Token s)
-     , ShowErrorComponent e
-     , Stream s )
-  => Pos               -- ^ Tab width
-  -> s                 -- ^ Original input stream
-  -> ParseError (Token s) e -- ^ Parse error to render
-  -> String             -- ^ Result of rendering
-parseErrorPretty_ w s e =
-  sourcePosPretty (errorPos e) <> ":\n" <>
-    padding <> "|\n" <>
-    lineNumber <> " | " <> rline <> "\n" <>
-    padding <> "| " <> rpadding <> pointer <> "\n" <>
-    parseErrorTextPretty e
-  where
-    epos       = errorPos e
-    elen       =
-      case e of
-        TrivialError _ Nothing _ -> 1
-        TrivialError _ (Just x) _ -> errorComponentLen x
-        FancyError _ xs ->
-          E.foldl' (\a b -> max a (errorComponentLen b)) 1 xs
-    lineNumber = (show . unPos . sourceLine) epos
-    padding    = replicate (length lineNumber + 1) ' '
-    rpadding   = replicate (unPos (sourceColumn epos) - 1) ' '
-    pointer    = replicate elen '^'
-    rline      =
-      case rline' of
-        [] -> "<empty line>"
-        xs -> expandTab w xs
-    rline'     = fmap tokenAsChar . chunkToTokens (Proxy :: Proxy s) $
-      selectLine (sourceLine epos) s
 
 -- | Pretty-print a textual part of a 'ParseError', that is, everything
 -- except stack of source positions. The rendered 'String' always ends with a
@@ -480,19 +512,28 @@ orList (x:|[])  = x
 orList (x:|[y]) = x <> " or " <> y
 orList xs       = intercalate ", " (NE.init xs) <> ", or " <> NE.last xs
 
--- | Select a line from input stream given its number.
+-- | Select a line from input stream given its number and the number of the
+-- line where input stream starts.
 
 selectLine
-  :: forall s. (LineToken (Token s), Stream s)
-  => Pos               -- ^ Number of line to select
+  :: forall s. (ShowToken (Token s), Stream s)
+  => SourcePos         -- ^ Current position
+  -> Pos               -- ^ Number of line to select
   -> s                 -- ^ Input stream
-  -> Tokens s          -- ^ Selected line
-selectLine l = go pos1
+  -> (SourcePos, Tokens s, s)
+     -- ^ Position of start of the selected line, the line itself, and the
+     -- rest of the input stream
+selectLine cpos l = go cpos
   where
     go !n !s =
-      if n == l
-        then fst (takeWhile_ notNewline s)
-        else go (n <> pos1) (stripNewline $ snd (takeWhile_ notNewline s))
+      let (ts, s') = takeWhile_ notNewline s
+          nl = sourceLine n
+          n' = n { sourceLine = nl <> pos1
+                 , sourceColumn = pos1
+                 }
+      in if nl == l
+        then (n, ts, s')
+        else go n' (stripNewline s')
     notNewline = not . tokenIsNewline
     stripNewline s =
       case take1_ s of

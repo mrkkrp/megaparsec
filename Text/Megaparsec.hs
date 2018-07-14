@@ -78,7 +78,6 @@ module Text.Megaparsec
   , parse
   , parseMaybe
   , parseTest
-  , parseTest'
   , runParser
   , runParser'
   , runParserT
@@ -174,7 +173,7 @@ parse
   :: Parsec e s a -- ^ Parser to run
   -> String       -- ^ Name of source file
   -> s            -- ^ Input for parser
-  -> Either (ParseError (Token s) e) a
+  -> Either (ParseErrorBundle s e) a
 parse = runParser
 
 -- | @'parseMaybe' p input@ runs the parser @p@ on @input@ and returns the
@@ -197,33 +196,16 @@ parseMaybe p s =
 -- input @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
-             , Ord (Token s)
              , ShowToken (Token s)
-             , Show a )
+             , Show a
+             , Stream s
+             )
   => Parsec e s a -- ^ Parser to run
   -> s            -- ^ Input for parser
   -> IO ()
 parseTest p input =
   case parse p "" input of
-    Left  e -> putStr (parseErrorPretty e)
-    Right x -> print x
-
--- | A version of 'parseTest' that also prints offending line in parse
--- errors.
---
--- @since 6.0.0
-
-parseTest' :: ( ShowErrorComponent e
-              , ShowToken (Token s)
-              , LineToken (Token s)
-              , Show a
-              , Stream s )
-  => Parsec e s a -- ^ Parser to run
-  -> s            -- ^ Input for parser
-  -> IO ()
-parseTest' p input =
-  case parse p "" input of
-    Left  e -> putStr (parseErrorPretty' input e)
+    Left  e -> putStr (errorBundlePretty e)
     Right x -> print x
 
 -- | @'runParser' p file input@ runs parser @p@ on the input stream of
@@ -237,7 +219,7 @@ runParser
   :: Parsec e s a -- ^ Parser to run
   -> String     -- ^ Name of source file
   -> s          -- ^ Input for parser
-  -> Either (ParseError (Token s) e) a
+  -> Either (ParseErrorBundle s e) a
 runParser p name s = snd $ runParser' p (initialState name s)
 
 -- | The function is similar to 'runParser' with the difference that it
@@ -250,7 +232,7 @@ runParser p name s = snd $ runParser' p (initialState name s)
 runParser'
   :: Parsec e s a -- ^ Parser to run
   -> State s    -- ^ Initial state
-  -> (State s, Either (ParseError (Token s) e) a)
+  -> (State s, Either (ParseErrorBundle s e) a)
 runParser' p = runIdentity . runParserT' p
 
 -- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
@@ -263,7 +245,7 @@ runParserT :: Monad m
   => ParsecT e s m a -- ^ Parser to run
   -> String        -- ^ Name of source file
   -> s             -- ^ Input for parser
-  -> m (Either (ParseError (Token s) e) a)
+  -> m (Either (ParseErrorBundle s e) a)
 runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
@@ -275,12 +257,19 @@ runParserT p name s = snd `liftM` runParserT' p (initialState name s)
 runParserT' :: Monad m
   => ParsecT e s m a -- ^ Parser to run
   -> State s       -- ^ Initial state
-  -> m (State s, Either (ParseError (Token s) e) a)
+  -> m (State s, Either (ParseErrorBundle s e) a)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
-  case result of
-    OK    x -> return (s', Right x)
-    Error e -> return (s', Left  e)
+  return $ case result of
+    OK    x -> (s', Right x)
+    Error e ->
+      let bundle = ParseErrorBundle
+            { bundleErrors = e :| []
+            , bundleTabWidth = stateTabWidth s
+            , bundleInput = stateInput s
+            , bundleSourcePos = statePos s
+            }
+      in (s', Left bundle)
 
 -- | Given name of source file and input construct initial state for parser.
 
@@ -594,8 +583,8 @@ getTabWidth :: MonadParsec e s m => m Pos
 getTabWidth = stateTabWidth <$> getParserState
 {-# INLINE getTabWidth #-}
 
--- | Set tab width. If the argument of the function is not a positive
--- number, 'defaultTabWidth' will be used.
+-- | Set tab width, avoid changing tab width in the middle of parsing if at
+-- all possible as it'll screw up parse error pretty-printing.
 --
 -- See also: 'getTabWidth'.
 
