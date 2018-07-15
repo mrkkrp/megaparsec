@@ -284,15 +284,21 @@ spec = do
 -- Helpers
 
 prs
-  :: Parser a          -- ^ Parser to run
-  -> ByteString        -- ^ Input for the parser
-  -> Either (ParseError Word8 Void) a -- ^ Result of parsing
+  :: Parser a
+     -- ^ Parser to run
+  -> ByteString
+     -- ^ Input for the parser
+  -> Either (ParseErrorBundle ByteString Void) a
+     -- ^ Result of parsing
 prs p = parse p ""
 
 prs'
-  :: Parser a          -- ^ Parser to run
-  -> ByteString        -- ^ Input for the parser
-  -> (State ByteString, Either (ParseError Word8 Void) a) -- ^ Result of parsing
+  :: Parser a
+     -- ^ Parser to run
+  -> ByteString
+     -- ^ Input for the parser
+  -> (State ByteString, Either (ParseErrorBundle ByteString Void) a)
+     -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 
 isDigit :: Word8 -> Bool

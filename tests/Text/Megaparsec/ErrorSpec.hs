@@ -171,7 +171,7 @@ spec = do
     it "shows strings in double quotes" $
       property $ \str' ->
         let str = filter (not . g) str'
-            g x = isControl x || x `elem` ['\160']
+            g x = isControl x || x == '\160'
         in length str > 1 ==>
              showTokens (NE.fromList str) === ("\"" <> str <> "\"")
     it "shows control characters in long strings property"
@@ -183,6 +183,166 @@ spec = do
       -- the testing is rather shallow.
       let ts = NE.fromList [10,48,49,50] :: NonEmpty Word8
       showTokens ts `shouldBe` "\"<newline>012\""
+
+  describe "errorBundlePretty" $ do
+    context "with Char tokens" $ do
+      it "shows empty line correctly" $ do
+        let s = "" :: String
+        mkBundlePE s (mempty :: PE) `shouldBe`
+          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
+      it "shows position on first line correctly" $ do
+        let s = "abc" :: String
+            pe = err (posN 1 s) (utok 'b' <> etok 'd') :: PE
+        mkBundlePE s pe `shouldBe`
+          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "skips to second line correctly" $ do
+        let s = "one\ntwo\n" :: String
+            pe = err (posN 4 s) (utok 't' <> etok 'x') :: PE
+        mkBundlePE s pe `shouldBe`
+          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
+      it "shows position on 1000 line correctly" $ do
+        let s = replicate 999 '\n' ++ "abc"
+            pe = err (posN 999 s) (utok 'a' <> etok 'd') :: PE
+        mkBundlePE s pe `shouldBe`
+          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
+      it "shows offending line in the presence of tabs correctly" $ do
+        let s = "\tsomething" :: String
+            pe = err (posN 1 s) (utok 's' <> etok 'x') :: PE
+        mkBundlePE s pe `shouldBe`
+          "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
+      it "uses continuous highlighting properly" $ do
+        let s = "\tfoobar" :: String
+            pe = err (posN 1 s) (utoks "foo" <> utoks "rar") :: PE
+        mkBundlePE s pe `shouldBe`
+          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
+      context "stream of insufficient size is provided in the bundle" $
+        it "handles the situation reasonably" $ do
+          let s = "" :: String
+              s' = "foobar" :: String
+              pe = err (posN 3 s') (ueof <> etok 'x') :: PE
+          mkBundlePE s pe `shouldBe`
+            "1:4:\n  |\n1 | <empty line>\n  |    ^\nunexpected end of input\nexpecting 'x'\n"
+      context "starting column in bundle is greater than 1" $ do
+        context "and less than parse error column" $
+          it "is rendered correctly" $ do
+            let s = "foo" :: String
+                s' = "blahfoo" :: String
+                pe = err (posN 5 s') (utok 'o' <> etok 'x') :: PE
+                bundle = ParseErrorBundle
+                  { bundleErrors = pe :| []
+                  , bundleTabWidth = defaultTabWidth
+                  , bundleInput = s
+                  , bundleSourcePos =
+                      SourcePos "" pos1 (S.stimes (5 :: Int) pos1)
+                  }
+            errorBundlePretty bundle `shouldBe`
+              "1:6:\n  |\n1 | ????foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
+        context "and greater than parse error column" $
+          it "is rendered correctly" $ do
+            let s = "foo" :: String
+                s' = "blahfoo" :: String
+                pe = err (posN 5 s') (utok 'o' <> etok 'x') :: PE
+                bundle = ParseErrorBundle
+                  { bundleErrors = pe :| []
+                  , bundleTabWidth = defaultTabWidth
+                  , bundleInput = s
+                  , bundleSourcePos =
+                      SourcePos "" pos1 (S.stimes (10 :: Int) pos1)
+                  }
+            errorBundlePretty bundle `shouldBe`
+              "1:6:\n  |\n1 | ?????????foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
+    context "with Word8 tokens" $ do
+      it "shows empty line correctly" $ do
+        let s = "" :: ByteString
+        mkBundlePW s (mempty :: PW) `shouldBe`
+          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
+      it "shows position on first line correctly" $ do
+        let s = "abc" :: ByteString
+            pe = err (posN 1 s) (utok 98 <> etok 100) :: PW
+        mkBundlePW s pe `shouldBe`
+          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
+      it "skips to second line correctly" $ do
+        let s = "one\ntwo\n" :: ByteString
+            pe = err (posN 4 s) (utok 116 <> etok 120) :: PW
+        mkBundlePW s pe `shouldBe`
+          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
+      it "shows position on 1000 line correctly" $ do
+        let s = B.replicate 999 10 <> "abc"
+            pe = err (posN 999 s) (utok 97 <> etok 100) :: PW
+        mkBundlePW s pe `shouldBe`
+          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
+      it "shows offending line in the presence of tabs correctly" $ do
+        let s = "\tsomething" :: ByteString
+            pe = err (posN 1 s) (utok 115 <> etok 120) :: PW
+        mkBundlePW s pe `shouldBe`
+          "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
+      it "uses continuous highlighting properly" $ do
+        let s = "\tfoobar" :: ByteString
+            pe = err (posN 1 s) (utoks (B.unpack "foo") <> utoks (B.unpack "rar")) :: PW
+        mkBundlePW s pe `shouldBe`
+          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
+      context "stream of insufficient size is provided in the bundle" $
+        it "handles the situation reasonably" $ do
+          let s = "" :: ByteString
+              s' = "foobar" :: ByteString
+              pe = err (posN 3 s') (ueof <> etok 120) :: PW
+          mkBundlePW s pe `shouldBe`
+            "1:4:\n  |\n1 | <empty line>\n  |    ^\nunexpected end of input\nexpecting 'x'\n"
+      context "starting column in bundle is greater than 1" $ do
+        context "and less than parse error column" $
+          it "is rendered correctly" $ do
+            let s = "foo" :: ByteString
+                s' = "blahfoo" :: ByteString
+                pe = err (posN 5 s') (utok 111 <> etok 120) :: PW
+                bundle = ParseErrorBundle
+                  { bundleErrors = pe :| []
+                  , bundleTabWidth = defaultTabWidth
+                  , bundleInput = s
+                  , bundleSourcePos =
+                      SourcePos "" pos1 (S.stimes (5 :: Int) pos1)
+                  }
+            errorBundlePretty bundle `shouldBe`
+              "1:6:\n  |\n1 | ????foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
+        context "and greater than parse error column" $
+          it "is rendered correctly" $ do
+            let s = "foo" :: ByteString
+                s' = "blahfoo" :: ByteString
+                pe = err (posN 5 s') (utok 111 <> etok 120) :: PW
+                bundle = ParseErrorBundle
+                  { bundleErrors = pe :| []
+                  , bundleTabWidth = defaultTabWidth
+                  , bundleInput = s
+                  , bundleSourcePos =
+                      SourcePos "" pos1 (S.stimes (10 :: Int) pos1)
+                  }
+            errorBundlePretty bundle `shouldBe`
+              "1:6:\n  |\n1 | ?????????foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
+    it "takes tab width into account correctly" $
+      property $ \w' -> do
+        let s  = "\tsomething\t" :: String
+            pe = err (posN 1 s) (utok 's' <> etok 'x') :: PE
+            bundle = ParseErrorBundle
+              { bundleErrors = pe :| []
+              , bundleTabWidth = w'
+              , bundleInput = s
+              , bundleSourcePos = initialPos ""
+              }
+            w  = unPos w'
+        errorBundlePretty bundle `shouldBe`
+          ("1:9:\n  |\n1 | " ++ replicate w ' ' ++ "something" ++ replicate w ' '
+           ++ "\n  |         ^\nunexpected 's'\nexpecting 'x'\n")
+    it "displays multi-error bundle correctly" $ do
+      let s = "something\ngood\n" :: String
+          pe0 = err (posN 0 s) (utok 's' <> etok 'x') :: PE
+          pe1 = err (posN 10 s) (utok 'g' <> etok 'y') :: PE
+          bundle = ParseErrorBundle
+            { bundleErrors = pe0 :| [pe1]
+            , bundleTabWidth = defaultTabWidth
+            , bundleInput = s
+            , bundleSourcePos = initialPos ""
+            }
+      errorBundlePretty bundle `shouldBe`
+        "1:1:\n  |\n1 | something\n  | ^\nunexpected 's'\nexpecting 'x'\n\n2:1:\n  |\n2 | good\n  | ^\nunexpected 'g'\nexpecting 'y'\n"
 
   describe "parseErrorPretty" $ do
     it "shows unknown ParseError correctly" $
@@ -210,78 +370,6 @@ spec = do
             mempty <> fancy (ErrorFail "foo") <> fancy (ErrorFail "bar")
       parseErrorPretty pe `shouldBe` "1:1:\nbar\nfoo\n"
 
-  describe "parseErrorPretty'" $ do
-    context "with Char tokens" $ do
-      it "shows empty line correctly" $ do
-        let s = "" :: String
-        parseErrorPretty' s (mempty :: PE) `shouldBe`
-          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
-      it "shows position on first line correctly" $ do
-        let s = "abc" :: String
-            pe = err (posN 1 s) (utok 'b' <> etok 'd') :: PE
-        parseErrorPretty' s pe `shouldBe`
-          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
-      it "skips to second line correctly" $ do
-        let s = "one\ntwo\n" :: String
-            pe = err (posN 4 s) (utok 't' <> etok 'x') :: PE
-        parseErrorPretty' s pe `shouldBe`
-          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
-      it "shows position on 1000 line correctly" $ do
-        let s = replicate 999 '\n' ++ "abc"
-            pe = err (posN 999 s) (utok 'a' <> etok 'd') :: PE
-        parseErrorPretty' s pe `shouldBe`
-          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
-      it "shows offending line in the presence of tabs correctly" $ do
-        let s = "\tsomething" :: String
-            pe = err (posN 1 s) (utok 's' <> etok 'x') :: PE
-        parseErrorPretty' s pe `shouldBe`
-          "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
-      it "uses continuous highlighting properly" $ do
-        let s = "\tfoobar" :: String
-            pe = err (posN 1 s) (utoks "foo" <> utoks "rar") :: PE
-        parseErrorPretty' s pe `shouldBe`
-          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
-    context "with Word8 tokens" $ do
-      it "shows empty line correctly" $ do
-        let s = "" :: ByteString
-        parseErrorPretty' s (mempty :: PW) `shouldBe`
-          "1:1:\n  |\n1 | <empty line>\n  | ^\nunknown parse error\n"
-      it "shows position on first line correctly" $ do
-        let s = "abc" :: ByteString
-            pe = err (posN 1 s) (utok 98 <> etok 100) :: PW
-        parseErrorPretty' s pe `shouldBe`
-          "1:2:\n  |\n1 | abc\n  |  ^\nunexpected 'b'\nexpecting 'd'\n"
-      it "skips to second line correctly" $ do
-        let s = "one\ntwo\n" :: ByteString
-            pe = err (posN 4 s) (utok 116 <> etok 120) :: PW
-        parseErrorPretty' s pe `shouldBe`
-          "2:1:\n  |\n2 | two\n  | ^\nunexpected 't'\nexpecting 'x'\n"
-      it "shows position on 1000 line correctly" $ do
-        let s = B.replicate 999 10 <> "abc"
-            pe = err (posN 999 s) (utok 97 <> etok 100) :: PW
-        parseErrorPretty' s pe `shouldBe`
-          "1000:1:\n     |\n1000 | abc\n     | ^\nunexpected 'a'\nexpecting 'd'\n"
-      it "shows offending line in the presence of tabs correctly" $ do
-        let s = "\tsomething" :: ByteString
-            pe = err (posN 1 s) (utok 115 <> etok 120) :: PW
-        parseErrorPretty' s pe `shouldBe`
-          "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
-      it "uses continuous highlighting properly" $ do
-        let s = "\tfoobar" :: ByteString
-            pe = err (posN 1 s) (utoks (B.unpack "foo") <> utoks (B.unpack "rar")) :: PW
-        parseErrorPretty' s pe `shouldBe`
-          "1:9:\n  |\n1 |         foobar\n  |         ^^^\nunexpected \"rar\"\n"
-
-  describe "parseErrorPretty_" $
-    it "takes tab width into account correctly" $
-      property $ \w' -> do
-        let s  = "\tsomething\t" :: String
-            pe = err (posN 1 s) (utok 's' <> etok 'x') :: PE
-            w  = unPos w'
-        parseErrorPretty_ w' s pe `shouldBe`
-          ("1:9:\n  |\n1 | " ++ replicate w ' ' ++ "something" ++ replicate w ' '
-           ++ "\n  |         ^\nunexpected 's'\nexpecting 'x'\n")
-
   describe "parseErrorTextPretty" $ do
     it "shows trivial unknown ParseError correctly" $
       parseErrorTextPretty (mempty :: PE)
@@ -307,3 +395,19 @@ contains g r e = property (all f (g e))
   where
     rendered = parseErrorPretty e
     f x = r x `isInfixOf` rendered
+
+mkBundlePE :: String -> PE -> String
+mkBundlePE s e = errorBundlePretty $ ParseErrorBundle
+  { bundleErrors = e :| []
+  , bundleTabWidth = defaultTabWidth
+  , bundleInput = s
+  , bundleSourcePos = initialPos ""
+  }
+
+mkBundlePW :: ByteString -> PW -> String
+mkBundlePW s e = errorBundlePretty $ ParseErrorBundle
+  { bundleErrors = e :| []
+  , bundleTabWidth = defaultTabWidth
+  , bundleInput = s
+  , bundleSourcePos = initialPos ""
+  }

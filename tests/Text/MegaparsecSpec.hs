@@ -64,7 +64,8 @@ spec = do
               apos = spanStart h
           runParser' p st `shouldBe`
             ( st { statePos = apos }
-            , Left (err apos $ utok h <> eeof) )
+            , Left (mkBundle st (err apos $ utok h <> eeof))
+            )
 
     describe "token" $ do
       context "when input stream is empty" $
@@ -74,7 +75,8 @@ spec = do
                 st = (st' :: State [Span]) { stateInput = [] }
             runParser' p st `shouldBe`
               ( st
-              , Left (err statePos $ ueof <> etok span) )
+              , Left (mkBundle st (err statePos $ ueof <> etok span))
+              )
       context "when head of stream matches" $
         it "updates parser state correctly" $
           property $ \st'@State {..} span -> do
@@ -97,7 +99,8 @@ spec = do
                 apos = spanStart h
             runParser' p st `shouldBe`
               ( st { statePos = apos }
-              , Left (err apos $ utok h <> etok span))
+              , Left (mkBundle st (err apos $ utok h <> etok span))
+              )
 
     describe "tokens" $
       it "updates position in stream correctly" $
@@ -112,18 +115,26 @@ spec = do
                 let pxy = Proxy :: Proxy [Span]
                 in ( positionAt1 pxy statePos (head stateInput)
                    , advanceN pxy stateTabWidth statePos consumed )
-          if | null ts -> runParser' p st `shouldBe` (st, Right [])
-             | null stateInput -> runParser' p st `shouldBe`
-               ( st
-               , Left (err statePos $ ueof <> etoks ts) )
-             | il == tl -> runParser' p st `shouldBe`
-               ( st { statePos             = npos
-                    , stateTokensProcessed = stateTokensProcessed + fromIntegral tl
-                    , stateInput           = drop tl stateInput }
-               , Right consumed )
-             | otherwise -> runParser' p st `shouldBe`
-               ( st { statePos = apos }
-               , Left (err apos $ utoks (take tl stateInput) <> etoks ts) )
+              r =
+                if | null ts ->
+                     ( st
+                     , Right []
+                     )
+                   | null stateInput ->
+                     ( st
+                     , Left (mkBundle st (err statePos $ ueof <> etoks ts))
+                     )
+                   | il == tl ->
+                     ( st { statePos             = npos
+                          , stateTokensProcessed = stateTokensProcessed + fromIntegral tl
+                          , stateInput           = drop tl stateInput }
+                     , Right consumed
+                     )
+                   | otherwise ->
+                     ( st { statePos = apos }
+                     , Left (mkBundle st (err apos $ utoks (take tl stateInput) <> etoks ts))
+                     )
+          runParser' p st `shouldBe` r
 
     describe "takeWhileP" $
       it "updates position in stream correctly" $
@@ -394,7 +405,7 @@ spec = do
                 p = void . many $ do
                   x <- S.get
                   if x < n then S.modify (+ 1) else empty
-                v :: S.State Integer (Either (ParseError Char Void) ())
+                v :: S.State Integer (Either (ParseErrorBundle String Void) ())
                 v = runParserT p "" ("" :: String)
             S.execState v 0 `shouldBe` n
 
@@ -541,7 +552,7 @@ spec = do
     describe "callCC" $
       it "works properly" $
         property $ \a b -> do
-          let p :: ParsecT Void String (Cont (Either (ParseError Char Void) Integer)) Integer
+          let p :: ParsecT Void String (Cont (Either (ParseErrorBundle String Void) Integer)) Integer
               p = callCC $ \e -> when (a > b) (e a) >> return b
           runCont (runParserT p "" "") id `shouldBe` Right (max a b)
 
@@ -1337,7 +1348,10 @@ spec = do
                       FancyError   _ xs    -> E.size xs )
                 finalPos = max (errorPos e) pos'
                 st = st' { statePos = errorPos e }
-            runParser' p st `shouldBe` (st { statePos = finalPos }, Left r)
+            runParser' p st `shouldBe`
+              ( st { statePos = finalPos }
+              , Left (mkBundle st r)
+              )
 
     describe "takeRest" $
       it "returns rest of the input" $
@@ -1815,6 +1829,9 @@ instance Arbitrary Span where
 
 instance ShowToken Span where
   showTokens ts = concat (NE.toList . spanBody <$> ts)
+  -- NOTE Custom input streams need custom error reproting anyway:
+  tokenAsChar = const '_'
+  tokenIsNewline = const False
 
 instance ShowErrorComponent Int where
   showErrorComponent = show
@@ -1840,18 +1857,28 @@ incCoincidence st ts = do
 emulateStrParsing
   :: State String
   -> String
-  -> (State String, Either (ParseError Char Void) String)
+  -> (State String, Either (ParseErrorBundle String Void) String)
 emulateStrParsing st@(State i pos tp w) s =
   if s == take l i
     then ( State (drop l i) (updatePosString w pos s) (tp + fromIntegral l) w
          , Right s )
     else ( st
-         , Left $ err pos (etoks s <> utoks (take l i)) )
+         , Left (mkBundle st (err pos (etoks s <> utoks (take l i))))
+         )
   where
     l = length s
 
-eqParser :: (Eq a, Eq (Token i))
-  => Parsec Void i a
-  -> Parsec Void i a
-  -> i -> Bool
-eqParser p1 p2 i = runParser p1 "" i == runParser p2 "" i
+eqParser :: (Eq a, Eq (Token s), Eq s)
+  => Parsec Void s a
+  -> Parsec Void s a
+  -> s
+  -> Bool
+eqParser p1 p2 s = runParser p1 "" s == runParser p2 "" s
+
+mkBundle :: State s -> ParseError (Token s) e -> ParseErrorBundle s e
+mkBundle s e = ParseErrorBundle
+  { bundleErrors = e :| []
+  , bundleTabWidth = stateTabWidth s
+  , bundleInput = stateInput s
+  , bundleSourcePos = statePos s
+  }

@@ -38,6 +38,25 @@
   The reason for this simplification is that I could not find any code that
   uses the feature and it makes manipulation of source positions hairy.
 
+* Introduced `ParseErrorBundle` which contains one or more `ParseError`
+  equipped with all information that is necessary to pretty-print them
+  together with offending lines from the input stream. Functions like
+  `runParser` now return `ParseErrorBundle` instead of plain `ParseError`.
+  By default there will be only one `ParseError` in such a bundle, but it's
+  possible to add more parse errors to a bundle manually. During
+  pretty-printing, the stream will be traversed only once.
+
+* The `ShowToken` and `LineToken` type classes (for pretty-printing of parse
+  errors with displaying of offending lines) have been merged. All methods
+  are now in `ShowToken`.
+
+* The primary function for pretty-printing of parse
+  errors—`errorBundlePretty` always prints offending lines now.
+  `parseErrorPretty` is still there, but it probably won't see a lot of
+  usage from now on. `parseErrorPretty'` and `parseErrorPretty_` were
+  removed. `parseTest'` was removed because `parseTest` always prints
+  offending lines now.
+
 * Dropped the `Text.Megaparsec.Perm` module. Use
   `Control.Applicative.Permutations` from `parser-combinators` instead.
 

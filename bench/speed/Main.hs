@@ -4,11 +4,14 @@ module Main (main) where
 
 import Control.DeepSeq
 import Criterion.Main
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified Data.List.NonEmpty         as NE
+import qualified Data.Set                   as E
 import qualified Data.Text                  as T
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -44,6 +47,12 @@ main = defaultMain
   , bparser "octal" mkInt (const (L.octal :: Parser Integer))
   , bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer))
   , bparser "scientific" mkInt (const L.scientific)
+
+  , bgroup "" [bbundle "single error" n [n] | n <- stdSeries]
+
+  , bbundle "2 errors" 1000 [1, 1000]
+  , bbundle "4 errors" 1000 [1, 500, 1000]
+  , bbundle "100 errors" 1000 [10,20..1000]
   ]
 
 -- | Perform a series to measurements with the same parser.
@@ -57,6 +66,30 @@ bparser name f p = bgroup name (bs <$> stdSeries)
   where
     bs n = env (return (f n, n)) (bench (show n) . nf p')
     p' (s,n) = parse (p (s,n)) "" s
+
+-- | Bench the 'errorBundlePretty' function.
+
+bbundle
+  :: String            -- ^ Name of the benchmark
+  -> Int               -- ^ Number of lines in input stream
+  -> [Int]             -- ^ Lines with parse errors
+  -> Benchmark
+bbundle name totalLines sps =
+  let s = take (totalLines * 80) (cycle as)
+      as = replicate 79 'a' ++ "\n"
+      f l = TrivialError
+        (SourcePos "" (mkPos l) (mkPos 20))
+        (Just $ Tokens ('a' :| ""))
+        (E.singleton $ Tokens ('b' :| ""))
+      bundle :: ParseErrorBundle String Void
+      bundle = ParseErrorBundle
+        { bundleTabWidth = defaultTabWidth
+        , bundleInput = s
+        , bundleSourcePos = initialPos ""
+        , bundleErrors = f <$> NE.fromList sps
+        }
+  in bench ("errorBundlePretty-" ++ show totalLines ++ "-" ++ name)
+           (nf errorBundlePretty bundle)
 
 -- | The series of sizes to try as part of 'bparser'.
 

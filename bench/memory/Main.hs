@@ -4,12 +4,15 @@ module Main (main) where
 
 import Control.DeepSeq
 import Control.Monad
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Weigh
+import qualified Data.List.NonEmpty         as NE
+import qualified Data.Set                   as E
 import qualified Data.Text                  as T
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -47,6 +50,13 @@ main = mainWith $ do
   bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer))
   bparser "scientific" mkInt (const L.scientific)
 
+  forM_ stdSeries $ \n ->
+    bbundle "single error" n [n]
+
+  bbundle "2 errors" 1000 [1, 1000]
+  bbundle "4 errors" 1000 [1, 500, 1000]
+  bbundle "100 errors" 1000 [10,20..1000]
+
 -- | Perform a series of measurements with the same parser.
 
 bparser :: NFData a
@@ -57,7 +67,32 @@ bparser :: NFData a
 bparser name f p = forM_ stdSeries $ \i -> do
   let arg      = (f i,i)
       p' (s,n) = parse (p (s,n)) "" s
-  func (name ++ "/" ++ show i) p' arg
+  func (name ++ "-" ++ show i) p' arg
+
+-- | Bench the 'errorBundlePretty' function.
+
+bbundle
+  :: String            -- ^ Name of the benchmark
+  -> Int               -- ^ Number of lines in input stream
+  -> [Int]             -- ^ Lines with parse errors
+  -> Weigh ()
+bbundle name totalLines sps = do
+  let s = take (totalLines * 80) (cycle as)
+      as = replicate 79 'a' ++ "\n"
+      f l = TrivialError
+        (SourcePos "" (mkPos l) (mkPos 20))
+        (Just $ Tokens ('a' :| ""))
+        (E.singleton $ Tokens ('b' :| ""))
+      bundle :: ParseErrorBundle String Void
+      bundle = ParseErrorBundle
+        { bundleTabWidth = defaultTabWidth
+        , bundleInput = s
+        , bundleSourcePos = initialPos ""
+        , bundleErrors = f <$> NE.fromList sps
+        }
+  func ("errorBundlePretty-" ++ show totalLines ++ "-" ++ name)
+       errorBundlePretty
+       bundle
 
 -- | The series of sizes to try as part of 'bparser'.
 
