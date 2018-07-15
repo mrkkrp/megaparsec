@@ -11,8 +11,6 @@
     * [Error messages](#error-messages)
     * [Alex support](#alex-support)
     * [Character and binary parsing](#character-and-binary-parsing)
-    * [Permutation parsing](#permutation-parsing)
-    * [Expression parsing](#expression-parsing)
     * [Lexer](#lexer)
 * [Documentation](#documentation)
 * [Tutorials](#tutorials)
@@ -101,6 +99,11 @@ need to use a shapeless bunch of strings.
 The design of parse errors has been revised in version 6 significantly, but
 custom errors are still easy (probably even easier now).
 
+Megaparsec 7 introduced the `ParseErrorBundle` data type that helps to
+manage multi-error messages and pretty-print them easily and efficiently.
+That version of the library also made the practice of displaying offending
+line the default.
+
 ### Alex support
 
 Megaparsec works well with streams of tokens produced by tools like Alex.
@@ -116,24 +119,6 @@ for character parsing live in the
 module. Similarly, there is
 [`Text.Megaparsec.Byte`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Byte.html)
 module for parsing streams of bytes.
-
-### Permutation parsing
-
-For those who are interested in parsing of permutation phrases, there is
-[`Text.Megaparsec.Perm`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Perm.html).
-You have to import the module explicitly, it's not included in the
-`Text.Megaparsec` module.
-
-### Expression parsing
-
-Megaparsec has a solution for parsing of expressions. Take a look at
-[`Text.Megaparsec.Expr`](https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Expr.html).
-You have to import the module explicitly, it's not included in the
-`Text.Megaparsec`.
-
-Given a table of operators that describes their fixity and precedence, you
-can construct a parser that will parse any expression involving the
-operators. See documentation for comprehensive description of how it works.
 
 ### Lexer
 
