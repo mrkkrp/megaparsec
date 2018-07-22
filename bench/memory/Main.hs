@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Main (main) where
 
@@ -57,6 +58,11 @@ main = mainWith $ do
   bbundle "4 errors" 1000 [1, 500, 1000]
   bbundle "100 errors" 1000 [10,20..1000]
 
+  breachOffset 0 1000
+  breachOffset 0 2000
+  breachOffset 0 4000
+  breachOffset 1000 1000
+
 -- | Perform a series of measurements with the same parser.
 
 bparser :: NFData a
@@ -80,19 +86,45 @@ bbundle name totalLines sps = do
   let s = take (totalLines * 80) (cycle as)
       as = replicate 79 'a' ++ "\n"
       f l = TrivialError
-        (SourcePos "" (mkPos l) (mkPos 20))
+        (20 + l * 80)
         (Just $ Tokens ('a' :| ""))
         (E.singleton $ Tokens ('b' :| ""))
       bundle :: ParseErrorBundle String Void
       bundle = ParseErrorBundle
-        { bundleTabWidth = defaultTabWidth
-        , bundleInput = s
-        , bundleSourcePos = initialPos ""
-        , bundleErrors = f <$> NE.fromList sps
+        { bundleErrors = f <$> NE.fromList sps
+        , bundlePosState = PosState
+          { pstateInput = s
+          , pstateOffset = 0
+          , pstateSourcePos = initialPos ""
+          , pstateTabWidth = defaultTabWidth
+          , pstateLinePrefix = ""
+          }
         }
   func ("errorBundlePretty-" ++ show totalLines ++ "-" ++ name)
        errorBundlePretty
        bundle
+
+-- | Bench the 'reachOffset' function.
+
+breachOffset
+  :: Int               -- ^ Starting offset in 'PosState'
+  -> Int               -- ^ Offset to reach
+  -> Weigh ()
+breachOffset o0 o1 = func
+  ("reachOffset-" ++ show o0 ++ "-" ++ show o1)
+  f
+  (o0 * 80, o1 * 80)
+  where
+    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f (startOffset, targetOffset) =
+      let (x, _, y) = reachOffset targetOffset PosState
+            { pstateInput = manyAs (targetOffset - startOffset)
+            , pstateOffset = startOffset
+            , pstateSourcePos = initialPos ""
+            , pstateTabWidth = defaultTabWidth
+            , pstateLinePrefix = ""
+            }
+      in (x, y)
 
 -- | The series of sizes to try as part of 'bparser'.
 

@@ -17,7 +17,8 @@
 {-# LANGUAGE DeriveGeneric      #-}
 
 module Text.Megaparsec.State
-  ( State (..) )
+  ( State (..)
+  , PosState (..) )
 where
 
 import Control.DeepSeq (NFData)
@@ -31,17 +32,34 @@ import Text.Megaparsec.Pos
 data State s = State
   { stateInput :: s
     -- ^ The rest of input to process
-  , statePos :: SourcePos
-    -- ^ Current position (column + line number) with support for include
-    -- files
-    --
-    -- In version /7.0.0/ type of the filed was changed.
-  , stateTokensProcessed :: {-# UNPACK #-} !Int
+  , stateOffset :: {-# UNPACK #-} !Int
     -- ^ Number of processed tokens so far
     --
-    -- @since 5.2.0
-  , stateTabWidth :: Pos
-    -- ^ Tab width to use
+    -- @since 7.0.0
+  , statePosState :: PosState s
+    -- ^ State that is used for line\/column calculation
+    --
+    -- @since 7.0.0
   } deriving (Show, Eq, Data, Typeable, Generic)
 
 instance NFData s => NFData (State s)
+
+-- | Special kind of state that is used to calculate line\/column positions
+-- on demand.
+--
+-- @since 7.0.0
+
+data PosState s = PosState
+  { pstateInput :: s
+    -- ^ The rest of input to process
+  , pstateOffset :: !Int
+    -- ^ Offset corresponding to beginning of 'pstateInput'
+  , pstateSourcePos :: !SourcePos
+    -- ^ Source position corresponding to beginning of 'pstateInput'
+  , pstateTabWidth :: Pos
+    -- ^ Tab width to use for column calculation
+  , pstateLinePrefix :: String
+    -- ^ Prefix to prepend to offending line
+  } deriving (Show, Eq, Data, Typeable, Generic)
+
+instance NFData s => NFData (PosState s)

@@ -23,17 +23,14 @@ spec =
           prs' expr s `succeedsLeaving` ""
     context "when stream in empty" $
       it "signals correct parse error" $
-        prs (expr <* eof) "" `shouldFailWith` err posI
+        prs (expr <* eof) "" `shouldFailWith` err 0
           (ueof <> etok '-' <> elabel "term")
     context "when term is missing" $
       it "signals correct parse error" $ do
         let p = expr <* eof
-        prs p "-" `shouldFailWith` err (posN 1 "-")
-          (ueof <> elabel "term")
-        prs p "(" `shouldFailWith` err (posN 1 "(")
-          (ueof <> etok '-' <> elabel "term")
-        prs p "*" `shouldFailWith` err posI
-          (utok '*' <> etok '-' <> elabel "term")
+        prs p "-" `shouldFailWith` err 1 (ueof <> elabel "term")
+        prs p "(" `shouldFailWith` err 1 (ueof <> etok '-' <> elabel "term")
+        prs p "*" `shouldFailWith` err 0 (utok '*' <> etok '-' <> elabel "term")
     context "operator is missing" $
       it "signals correct parse error" $
         property $ \a b -> do
@@ -45,7 +42,7 @@ spec =
           if c == '-'
             then prs p s `shouldParse` Sub a b
             else prs p s `shouldFailWith`
-                 err (posN n s) (mconcat
+                 err n (mconcat
                    [ utok c
                    , eeof
                    , etok '!'

@@ -14,7 +14,6 @@
 --
 -- @since 6.5.0
 
-{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -62,7 +61,6 @@ import Data.Set (Set)
 import Data.String (IsString (..))
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
-import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 import qualified Control.Monad.Fail  as Fail
@@ -100,7 +98,7 @@ newtype Hints t = Hints [Set (ErrorItem t)]
 --
 -- See also: 'Consumption', 'Result'.
 
-data Reply e s a = Reply (State s) Consumption (Result (Token s) e a)
+data Reply e s a = Reply (State s) Consumption (Result s e a)
 
 -- | This data structure represents an aspect of result of parser's work.
 --
@@ -114,9 +112,9 @@ data Consumption
 --
 -- See also: 'Consumption', 'Reply'.
 
-data Result t e a
+data Result s e a
   = OK a                   -- ^ Parser succeeded
-  | Error (ParseError t e) -- ^ Parser failed
+  | Error (ParseError s e) -- ^ Parser failed
 
 -- | @'ParsecT' e s m a@ is a parser with custom data component of error
 -- @e@, stream type @s@, underlying monad @m@ and return type @a@.
@@ -125,9 +123,9 @@ newtype ParsecT e s m a = ParsecT
   { unParser
       :: forall b. State s
       -> (a -> State s   -> Hints (Token s) -> m b) -- consumed-OK
-      -> (ParseError (Token s) e -> State s -> m b) -- consumed-error
+      -> (ParseError s e -> State s         -> m b) -- consumed-error
       -> (a -> State s   -> Hints (Token s) -> m b) -- empty-OK
-      -> (ParseError (Token s) e -> State s -> m b) -- empty-error
+      -> (ParseError s e -> State s         -> m b) -- empty-error
       -> m b }
 
 -- | @since 5.3.0
@@ -219,9 +217,9 @@ instance Stream s => Fail.MonadFail (ParsecT e s m) where
   fail = pFail
 
 pFail :: String -> ParsecT e s m a
-pFail msg = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
+pFail msg = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
   let d = E.singleton (ErrorFail msg)
-  in eerr (FancyError pos d) s
+  in eerr (FancyError o d) s
 {-# INLINE pFail #-}
 
 instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
@@ -267,8 +265,8 @@ instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
   mplus = pPlus
 
 pZero :: ParsecT e s m a
-pZero = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (TrivialError pos Nothing E.empty) s
+pZero = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
+  eerr (TrivialError o Nothing E.empty) s
 {-# INLINE pZero #-}
 
 pPlus :: (Ord e, Stream s)
@@ -278,7 +276,7 @@ pPlus :: (Ord e, Stream s)
 pPlus m n = ParsecT $ \s cok cerr eok eerr ->
   let meerr err ms =
         let ncerr err' s' = cerr (err' <> err) (longestMatch ms s')
-            neok x s' hs  = eok x s' (toHints (statePos s') err <> hs)
+            neok x s' hs  = eok x s' (toHints (stateOffset s') err <> hs)
             neerr err' s' = eerr (err' <> err) (longestMatch ms s')
         in unParser n s cok ncerr neok neerr
   in unParser m s cok cerr eok meerr
@@ -289,8 +287,8 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
 -- state.
 
 longestMatch :: State s -> State s -> State s
-longestMatch s1@(State _ _ tp1 _) s2@(State _ _ tp2 _) =
-  case tp1 `compare` tp2 of
+longestMatch s1@(State _ o1 _) s2@(State _ o2 _) =
+  case o1 `compare` o2 of
     LT -> s2
     EQ -> s2
     GT -> s1
@@ -332,15 +330,15 @@ pFailure
   :: Maybe (ErrorItem (Token s))
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pFailure us ps = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (TrivialError pos us ps) s
+pFailure us ps = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
+  eerr (TrivialError o us ps) s
 {-# INLINE pFailure #-}
 
 pFancyFailure
   :: Set (ErrorFancy e)
   -> ParsecT e s m a
-pFancyFailure xs = ParsecT $ \s@(State _ pos _ _) _ _ _ eerr ->
-  eerr (FancyError pos xs) s
+pFancyFailure xs = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
+  eerr (FancyError o xs) s
 {-# INLINE pFancyFailure #-}
 
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
@@ -370,9 +368,9 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 {-# INLINE pLookAhead #-}
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
-pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
+pNotFollowedBy p = ParsecT $ \s@(State input o _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
-      unexpect u = TrivialError pos (pure u) E.empty
+      unexpect u = TrivialError o (pure u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
       eok' _ _ _ = eerr (unexpect what) s
@@ -381,73 +379,71 @@ pNotFollowedBy p = ParsecT $ \s@(State input pos _ _) _ _ eok eerr ->
 {-# INLINE pNotFollowedBy #-}
 
 pWithRecovery
-  :: (ParseError (Token s) e -> ParsecT e s m a)
+  :: Stream s
+  => (ParseError s e -> ParsecT e s m a)
   -> ParsecT e s m a
   -> ParsecT e s m a
 pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
   let mcerr err ms =
         let rcok x s' _ = cok x s' mempty
             rcerr   _ _ = cerr err ms
-            reok x s' _ = eok x s' (toHints (statePos s') err)
+            reok x s' _ = eok x s' (toHints (stateOffset s') err)
             reerr   _ _ = cerr err ms
         in unParser (r err) ms rcok rcerr reok reerr
       meerr err ms =
-        let rcok x s' _ = cok x s' (toHints (statePos s') err)
+        let rcok x s' _ = cok x s' (toHints (stateOffset s') err)
             rcerr   _ _ = eerr err ms
-            reok x s' _ = eok x s' (toHints (statePos s') err)
+            reok x s' _ = eok x s' (toHints (stateOffset s') err)
             reerr   _ _ = eerr err ms
         in unParser (r err) ms rcok rcerr reok reerr
   in unParser p s cok mcerr eok meerr
 {-# INLINE pWithRecovery #-}
 
 pObserving
-  :: ParsecT e s m a
-  -> ParsecT e s m (Either (ParseError (Token s) e) a)
+  :: Stream s
+  => ParsecT e s m a
+  -> ParsecT e s m (Either (ParseError s e) a)
 pObserving p = ParsecT $ \s cok _ eok _ ->
   let cerr' err s' = cok (Left err) s' mempty
-      eerr' err s' = eok (Left err) s' (toHints (statePos s') err)
+      eerr' err s' = eok (Left err) s' (toHints (stateOffset s') err)
   in unParser p s (cok . Right) cerr' (eok . Right) eerr'
 {-# INLINE pObserving #-}
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
-pEof = ParsecT $ \s@(State input pos tp w) _ _ eok eerr ->
+pEof = ParsecT $ \s@(State input o pst) _ _ eok eerr ->
   case take1_ input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
-      let !apos = positionAt1 (Proxy :: Proxy s) pos x
-          us    = (pure . Tokens . nes) x
-          ps    = E.singleton EndOfInput
-      in eerr (TrivialError apos us ps)
-          (State input apos tp w)
+      let us = (pure . Tokens . nes) x
+          ps = E.singleton EndOfInput
+      in eerr (TrivialError o us ps)
+          (State input o pst)
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
   => (Token s -> Maybe a)
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pToken test ps = ParsecT $ \s@(State input pos tp w) cok _ _ eerr ->
+pToken test ps = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
   case take1_ input of
     Nothing ->
       let us = pure EndOfInput
-      in eerr (TrivialError pos us ps) s
+      in eerr (TrivialError o us ps) s
     Just (c,cs) ->
       case test c of
         Nothing ->
-          let !apos = positionAt1 (Proxy :: Proxy s) pos c
-              us    = (Just . Tokens . nes) c
-          in eerr (TrivialError apos us ps)
-                  (State input apos tp w)
+          let us = (Just . Tokens . nes) c
+          in eerr (TrivialError o us ps)
+                  (State input o pst)
         Just x ->
-          let !npos = advance1 (Proxy :: Proxy s) w pos c
-              newstate = State cs npos (tp + 1) w
-          in cok x newstate mempty
+          cok x (State cs (o + 1) pst) mempty
 {-# INLINE pToken #-}
 
 pTokens :: forall e s m. Stream s
   => (Tokens s -> Tokens s -> Bool)
   -> Tokens s
   -> ParsecT e s m (Tokens s)
-pTokens f tts = ParsecT $ \s@(State input pos tp w) cok _ eok eerr ->
+pTokens f tts = ParsecT $ \s@(State input o pst) cok _ eok eerr ->
   let pxy = Proxy :: Proxy s
       unexpect pos' u =
         let us = pure u
@@ -456,42 +452,39 @@ pTokens f tts = ParsecT $ \s@(State input pos tp w) cok _ eok eerr ->
       len = chunkLength pxy tts
   in case takeN_ len input of
     Nothing ->
-      eerr (unexpect pos EndOfInput) s
+      eerr (unexpect o EndOfInput) s
     Just (tts', input') ->
       if f tts tts'
-        then let !npos = advanceN pxy w pos tts'
-                 st    = State input' npos (tp + len) w
+        then let st = State input' (o + len) pst
              in if chunkEmpty pxy tts
                   then eok tts' st mempty
                   else cok tts' st mempty
-        else let !apos = positionAtN pxy pos tts'
-                 ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
-             in eerr (unexpect apos ps) (State input apos tp w)
+        else let ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
+             in eerr (unexpect o ps) (State input o pst)
 {-# INLINE pTokens #-}
 
 pTakeWhileP :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhileP ml f = ParsecT $ \(State input pos tp w) cok _ eok _ ->
+pTakeWhileP ml f = ParsecT $ \(State input o pst) cok _ eok _ ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
-      !npos = advanceN pxy w pos ts
       len = chunkLength pxy ts
       hs =
         case ml >>= NE.nonEmpty of
           Nothing -> mempty
           Just l -> (Hints . pure . E.singleton . Label) l
   in if chunkEmpty pxy ts
-       then eok ts (State input' npos (tp + len) w) hs
-       else cok ts (State input' npos (tp + len) w) hs
+       then eok ts (State input' (o + len) pst) hs
+       else cok ts (State input' (o + len) pst) hs
 {-# INLINE pTakeWhileP #-}
 
 pTakeWhile1P :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhile1P ml f = ParsecT $ \(State input pos tp w) cok _ _ eerr ->
+pTakeWhile1P ml f = ParsecT $ \(State input o pst) cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
       len = chunkLength pxy ts
@@ -501,37 +494,33 @@ pTakeWhile1P ml f = ParsecT $ \(State input pos tp w) cok _ _ eerr ->
           Nothing -> mempty
           Just l -> (Hints . pure . E.singleton) l
   in if chunkEmpty pxy ts
-       then let !apos = positionAtN pxy pos ts
-                us    = pure $
+       then let us = pure $
                   case take1_ input of
                     Nothing -> EndOfInput
                     Just (t,_) -> Tokens (nes t)
                 ps    = maybe E.empty E.singleton el
-            in eerr (TrivialError apos us ps)
-                    (State input apos tp w)
-       else let !npos = advanceN pxy w pos ts
-            in cok ts (State input' npos (tp + len) w) hs
+            in eerr (TrivialError o us ps)
+                    (State input o pst)
+       else cok ts (State input' (o + len) pst) hs
 {-# INLINE pTakeWhile1P #-}
 
 pTakeP :: forall e s m. Stream s
   => Maybe String
   -> Int
   -> ParsecT e s m (Tokens s)
-pTakeP ml n = ParsecT $ \s@(State input pos tp w) cok _ _ eerr ->
+pTakeP ml n = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
   in case takeN_ n input of
        Nothing ->
-         eerr (TrivialError pos (pure EndOfInput) ps) s
+         eerr (TrivialError o (pure EndOfInput) ps) s
        Just (ts, input') ->
-         let len   = chunkLength pxy ts
-             !apos = positionAtN pxy pos ts
-             !npos = advanceN pxy w pos ts
+         let len = chunkLength pxy ts
          in if len /= n
-           then eerr (TrivialError npos (pure EndOfInput) ps)
-                     (State input apos tp w)
-           else cok ts (State input' npos (tp + len) w) mempty
+           then eerr (TrivialError (o + len) (pure EndOfInput) ps)
+                     (State input o pst)
+           else cok ts (State input' (o + len) pst) mempty
 {-# INLINE pTakeP #-}
 
 pGetParserState :: ParsecT e s m (State s)
@@ -552,16 +541,17 @@ nes x = x :| []
 -- | Convert 'ParseError' record into 'Hints'.
 
 toHints
-  :: SourcePos         -- ^ Current position in input stream
-  -> ParseError t e    -- ^ Parse error to convert
-  -> Hints t
+  :: Stream s
+  => Int               -- ^ Current offset in input stream
+  -> ParseError s e    -- ^ Parse error to convert
+  -> Hints (Token s)
 toHints streamPos = \case
-  TrivialError errPos _ ps ->
+  TrivialError errOffset _ ps ->
     -- NOTE This is important to check here that the error indeed has
     -- happened at the same position as current position of stream because
     -- there might have been backtracking with 'try' and in that case we
     -- must not convert such a parse error to hints.
-    if streamPos == errPos
+    if streamPos == errOffset
       then Hints (if E.null ps then [] else [ps])
       else mempty
   FancyError _ _ -> mempty
@@ -572,10 +562,11 @@ toHints streamPos = \case
 -- Note that if resulting continuation gets 'ParseError' that has custom
 -- data in it, hints are ignored.
 
-withHints :: Ord (Token s)
+withHints
+  :: Stream s
   => Hints (Token s)   -- ^ Hints to use
-  -> (ParseError (Token s) e -> State s -> m b) -- ^ Continuation to influence
-  -> ParseError (Token s) e -- ^ First argument of resulting continuation
+  -> (ParseError s e -> State s -> m b) -- ^ Continuation to influence
+  -> ParseError s e    -- ^ First argument of resulting continuation
   -> State s           -- ^ Second argument of resulting continuation
   -> m b
 withHints (Hints ps') c e =
@@ -617,8 +608,8 @@ runParsecT p s = unParser p s cok cerr eok eerr
     eok a s' _  = return $ Reply s' Virgin   (OK a)
     eerr err s' = return $ Reply s' Virgin   (Error err)
 
--- | Transform any custom errors thrown by the parser using the
--- given function. Similar in function and purpose to @withExceptT@.
+-- | Transform any custom errors thrown by the parser using the given
+-- function. Similar in function and purpose to @withExceptT@.
 --
 -- @since 7.0.0
 

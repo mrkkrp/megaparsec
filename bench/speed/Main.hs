@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Main (main) where
 
@@ -53,6 +54,12 @@ main = defaultMain
   , bbundle "2 errors" 1000 [1, 1000]
   , bbundle "4 errors" 1000 [1, 500, 1000]
   , bbundle "100 errors" 1000 [10,20..1000]
+
+  , breachOffset 0 1000
+  , breachOffset 0 2000
+  , breachOffset 0 4000
+  , breachOffset 1000 1000
+
   ]
 
 -- | Perform a series to measurements with the same parser.
@@ -78,18 +85,43 @@ bbundle name totalLines sps =
   let s = take (totalLines * 80) (cycle as)
       as = replicate 79 'a' ++ "\n"
       f l = TrivialError
-        (SourcePos "" (mkPos l) (mkPos 20))
+        (20 + l * 80)
         (Just $ Tokens ('a' :| ""))
         (E.singleton $ Tokens ('b' :| ""))
       bundle :: ParseErrorBundle String Void
       bundle = ParseErrorBundle
-        { bundleTabWidth = defaultTabWidth
-        , bundleInput = s
-        , bundleSourcePos = initialPos ""
-        , bundleErrors = f <$> NE.fromList sps
+        { bundleErrors = f <$> NE.fromList sps
+        , bundlePosState = PosState
+          { pstateInput = s
+          , pstateOffset = 0
+          , pstateSourcePos = initialPos ""
+          , pstateTabWidth = defaultTabWidth
+          , pstateLinePrefix = ""
+          }
         }
   in bench ("errorBundlePretty-" ++ show totalLines ++ "-" ++ name)
            (nf errorBundlePretty bundle)
+
+-- | Bench the 'reachOffset' function.
+
+breachOffset
+  :: Int               -- ^ Starting offset in 'PosState'
+  -> Int               -- ^ Offset to reach
+  -> Benchmark
+breachOffset o0 o1 = bench
+  ("reachOffset-" ++ show o0 ++ "-" ++ show o1)
+  (nf f (o0 * 80, o1 * 80))
+  where
+    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f (startOffset, targetOffset) =
+      let (x, _, y) = reachOffset targetOffset PosState
+             { pstateInput = manyAs (targetOffset - startOffset)
+             , pstateOffset = startOffset
+             , pstateSourcePos = initialPos ""
+             , pstateTabWidth = defaultTabWidth
+             , pstateLinePrefix = ""
+             }
+      in (x, y)
 
 -- | The series of sizes to try as part of 'bparser'.
 

@@ -1,33 +1,45 @@
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Hspec.Megaparsec.AdHoc
-  ( -- * Helpers to run parsers
-    prs
+  ( -- * Types
+    Parser
+    -- * Helpers to run parsers
+  , prs
   , prs'
   , prs_
   , grs
   , grs'
-    -- * Working with source position
-  , updatePosString
-  , pos1
-  , nes
     -- * Other
+  , nes
   , abcRow
-  , toFirstMismatch
   , rightOrder
   , scaleDown
-  , Parser )
+  , getTabWidth
+  , setTabWidth
+  , strSourcePos
+    -- * Char and byte conversion
+  , toChar
+  , fromChar
+    -- * Proxies
+  , sproxy
+  , bproxy
+  , blproxy
+  , tproxy
+  , tlproxy )
 where
 
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
+import Data.Char (chr, ord)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
 import Data.Void
+import Data.Word (Word8)
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.QuickCheck
@@ -44,6 +56,13 @@ import qualified Data.List.NonEmpty          as NE
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 import qualified Data.Text.Lazy              as TL
+
+----------------------------------------------------------------------------
+-- Types
+
+-- | The type of parser that consumes a 'String'.
+
+type Parser = Parsec Void String
 
 ----------------------------------------------------------------------------
 -- Helpers to run parsers
@@ -140,24 +159,12 @@ evalRWSTS m = do
   return a
 
 ----------------------------------------------------------------------------
--- Working with source position
-
--- | A helper function that is used to advance 'SourcePos' given a 'String'.
-
-updatePosString
-  :: Pos               -- ^ Tab width
-  -> SourcePos         -- ^ Initial position
-  -> String            -- ^ 'String' — collection of tokens to process
-  -> SourcePos         -- ^ Final position
-updatePosString = advanceN (Proxy :: Proxy String)
+-- Other
 
 -- | Make a singleton non-empty list from a value.
 
 nes :: a -> NonEmpty a
 nes x = x :| []
-
-----------------------------------------------------------------------------
--- Other
 
 -- | @abcRow a b c@ generates string consisting of character “a” repeated
 -- @a@ times, character “b” repeated @b@ times, and character “c” repeated
@@ -165,17 +172,6 @@ nes x = x :| []
 
 abcRow :: Int -> Int -> Int -> String
 abcRow a b c = replicate a 'a' ++ replicate b 'b' ++ replicate c 'c'
-
--- | Given a comparing function, get prefix of one string till first
--- mismatch with another string (including first mismatching character).
-
-toFirstMismatch
-  :: (Char -> Char -> Bool) -- ^ Comparing function
-  -> String            -- ^ First string
-  -> String            -- ^ Second string
-  -> String            -- ^ Resulting prefix
-toFirstMismatch f str s = take (n + 1) s
-  where n = length (takeWhile (uncurry f) (zip str s))
 
 -- | Check that the given parser returns the list in the right order.
 
@@ -188,14 +184,70 @@ rightOrder p s s' =
   it "produces the list in the right order" $
     prs_ p s `shouldParse` s'
 
+-- | Get tab width from 'PosState'. Use with care only for testing.
+
+getTabWidth :: MonadParsec e s m => m Pos
+getTabWidth = pstateTabWidth . statePosState <$> getParserState
+
+-- | Set tab width in 'PosState'. Use with care only for testing.
+
+setTabWidth :: MonadParsec e s m => Pos -> m ()
+setTabWidth w = updateParserState $ \st ->
+  let pst = statePosState st
+  in st { statePosState = pst { pstateTabWidth = w } }
+
 -- | Scale down.
 
 scaleDown :: Gen a -> Gen a
 scaleDown = scale (`div` 4)
 
--- | The type of parser that consumes a 'String'.
+-- | A helper function that is used to advance 'SourcePos' given a 'String'.
 
-type Parser = Parsec Void String
+strSourcePos :: Pos -> SourcePos -> String -> SourcePos
+strSourcePos tabWidth ipos input =
+  let (x, _, _) = reachOffset maxBound pstate in x
+  where
+    pstate = PosState
+      { pstateInput = input
+      , pstateOffset = 0
+      , pstateSourcePos = ipos
+      , pstateTabWidth = tabWidth
+      , pstateLinePrefix = ""
+      }
+
+----------------------------------------------------------------------------
+-- Char and byte conversion
+
+-- | Convert a byte to char.
+
+toChar :: Word8 -> Char
+toChar = chr . fromIntegral
+
+-- | Covert a char to byte.
+
+fromChar :: Char -> Maybe Word8
+fromChar x = let p = ord x in
+  if p > 0xff
+    then Nothing
+    else Just (fromIntegral p)
+
+----------------------------------------------------------------------------
+-- Proxies
+
+sproxy :: Proxy String
+sproxy = Proxy
+
+bproxy :: Proxy B.ByteString
+bproxy = Proxy
+
+blproxy :: Proxy BL.ByteString
+blproxy = Proxy
+
+tproxy :: Proxy T.Text
+tproxy = Proxy
+
+tlproxy :: Proxy TL.Text
+tlproxy = Proxy
 
 ----------------------------------------------------------------------------
 -- Arbitrary instances
@@ -223,23 +275,38 @@ instance Arbitrary (ErrorFancy a) where
     [ ErrorFail <$> scaleDown arbitrary
     , ErrorIndentation <$> arbitrary <*> arbitrary <*> arbitrary ]
 
-instance (Arbitrary t, Ord t, Arbitrary e, Ord e)
-    => Arbitrary (ParseError t e) where
+instance (Arbitrary (Token s), Ord (Token s), Arbitrary e, Ord e)
+    => Arbitrary (ParseError s e) where
   arbitrary = oneof
     [ TrivialError
-      <$> arbitrary
+      <$> (getNonNegative <$> arbitrary)
       <*> arbitrary
       <*> (E.fromList <$> scaleDown arbitrary)
     , FancyError
-      <$> arbitrary
+      <$> (getNonNegative <$> arbitrary)
       <*> (E.fromList <$> scaleDown arbitrary) ]
 
-instance Arbitrary a => Arbitrary (State a) where
-  arbitrary = State
-    <$> scaleDown arbitrary
-    <*> arbitrary
+instance Arbitrary s => Arbitrary (State s) where
+  arbitrary = do
+    input  <- scaleDown arbitrary
+    offset <- choose (1, 10000)
+    pstate :: PosState s <- arbitrary
+    return State
+      { stateInput = input
+      , stateOffset = offset
+      , statePosState = pstate
+        { pstateInput = input
+        , pstateOffset = offset
+        }
+      }
+
+instance Arbitrary s => Arbitrary (PosState s) where
+  arbitrary = PosState
+    <$> arbitrary
     <*> choose (1, 10000)
+    <*> arbitrary
     <*> (mkPos <$> choose (1, 20))
+    <*> scaleDown arbitrary
 
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary

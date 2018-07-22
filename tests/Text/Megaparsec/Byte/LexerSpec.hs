@@ -34,7 +34,7 @@ spec = do
     it "inner characters are labelled properly" $ do
       let p = skipLineComment "//" <* empty
           s = "// here we go"
-      prs  p s `shouldFailWith` err (posN (B.length s) s) (elabel "character")
+      prs  p s `shouldFailWith` err (B.length s) (elabel "character")
       prs' p s `failsLeaving` ""
 
   describe "skipBlockComment" $
@@ -67,11 +67,11 @@ spec = do
         property $ \a as -> not (isDigit a) ==> do
           let p = decimal :: Parser Integer
               s = B.pack (a : as)
-          prs  p s `shouldFailWith` err posI (utok a <> elabel "integer")
+          prs  p s `shouldFailWith` err 0 (utok a <> elabel "integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (decimal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "integer")
+          err 0 (ueof <> elabel "integer")
 
   describe "binary" $ do
     context "when stream begins with binary digits" $
@@ -88,11 +88,11 @@ spec = do
           let p = binary :: Parser Integer
               s = B.pack (a : as)
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "binary integer")
+            err 0 (utok a <> elabel "binary integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (binary :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "binary integer")
+          err 0 (ueof <> elabel "binary integer")
 
   describe "octal" $ do
     context "when stream begins with octal digits" $
@@ -109,11 +109,11 @@ spec = do
           let p = octal :: Parser Integer
               s = B.pack (a : as)
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "octal integer")
+            err 0 (utok a <> elabel "octal integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (octal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "octal integer")
+          err 0 (ueof <> elabel "octal integer")
 
   describe "hexadecimal" $ do
     context "when stream begins with hexadecimal digits" $
@@ -138,11 +138,11 @@ spec = do
           let p = hexadecimal :: Parser Integer
               s = B.pack (a : as)
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "hexadecimal integer")
+            err 0 (utok a <> elabel "hexadecimal integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (hexadecimal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "hexadecimal integer")
+          err 0 (ueof <> elabel "hexadecimal integer")
 
   describe "scientific" $ do
     context "when stream begins with a number" $
@@ -160,7 +160,7 @@ spec = do
         property $ \(NonNegative n) -> do
           let p = scientific <* empty :: Parser Scientific
               s = B8.pack (showFFloatAlt Nothing (n :: Double) "")
-          prs p s `shouldFailWith` err (posN (B.length s) s)
+          prs p s `shouldFailWith` err (B.length s)
             (etok 69 <> etok 101 <> elabel "digit")
           prs' p s `failsLeaving` ""
     context "when whole part is followed by a dot without valid fractional part" $
@@ -180,7 +180,7 @@ spec = do
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (scientific :: Parser Scientific) "" `shouldFailWith`
-          err posI (ueof <> elabel "digit")
+          err 0 (ueof <> elabel "digit")
 
   describe "float" $ do
     context "when stream begins with a float" $
@@ -197,7 +197,7 @@ spec = do
           let p = float :: Parser Double
               s = B.pack (a : as)
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "digit")
+            err 0 (utok a <> elabel "digit")
           prs' p s `failsLeaving` s
     context "when stream begins with an integer (decimal)" $
       it "signals correct parse error" $
@@ -205,7 +205,7 @@ spec = do
           let p = float :: Parser Double
               n = getNonNegative n'
               s = B8.pack $ show (n :: Integer)
-          prs  p s `shouldFailWith` err (posN (B.length s) s)
+          prs  p s `shouldFailWith` err (B.length s)
             (ueof <> etok 46 <> etok 69 <> etok 101 <> elabel "digit")
           prs' p s `failsLeaving` ""
     context "when number is followed by something starting with 'e'" $
@@ -218,7 +218,7 @@ spec = do
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (float :: Parser Double) "" `shouldFailWith`
-          err posI (ueof <> elabel "digit")
+          err 0 (ueof <> elabel "digit")
     context "when there is float with just exponent" $
       it "parses it all right" $ do
         let p = float :: Parser Double
@@ -269,7 +269,7 @@ spec = do
           let p :: Parser Integer
               p = signed (hidden B.space) decimal
               s = B8.pack (' ' : show (n :: Integer))
-          prs  p s `shouldFailWith` err posI
+          prs  p s `shouldFailWith` err 0
             (utok 32 <> etok 43 <> etok 45 <> elabel "integer")
           prs' p s `failsLeaving` s
     context "when there is white space between sign and digits" $

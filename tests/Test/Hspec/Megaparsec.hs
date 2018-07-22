@@ -50,7 +50,6 @@ import qualified Data.List.NonEmpty as NE
 
 shouldParse
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -73,7 +72,6 @@ r `shouldParse` v = case r of
 
 parseSatisfies
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -108,7 +106,6 @@ p `shouldFailOn` s = shouldFail (p s)
 
 shouldSucceedOn
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -130,14 +127,13 @@ p `shouldSucceedOn` s = shouldSucceed (p s)
 
 shouldFailWith
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
      , Eq e
      )
   => Either (ParseErrorBundle s e) a -- ^ The result of parsing
-  -> ParseError (Token s) e          -- ^ Expected parse errors
+  -> ParseError s e    -- ^ Expected parse errors
   -> Expectation
 r `shouldFailWith` perr1 = r `shouldFailWithM` [perr1]
 
@@ -146,14 +142,13 @@ r `shouldFailWith` perr1 = r `shouldFailWithM` [perr1]
 
 shouldFailWithM
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
      , Eq e
      )
   => Either (ParseErrorBundle s e) a -- ^ The result of parsing
-  -> [ParseError (Token s) e]
+  -> [ParseError s e]
      -- ^ Expected parse errors, the argument is a normal linked list (as
      -- opposed to the more correct 'NonEmpty' list) as a syntactical
      -- convenience for the user, passing empty list here will result in an
@@ -211,7 +206,6 @@ succeedsLeaving
      , Show a
      , Eq s
      , Show s
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      )
@@ -230,10 +224,16 @@ succeedsLeaving
 
 initialState :: s -> State s
 initialState s = State
-  { stateInput           = s
-  , statePos             = initialPos ""
-  , stateTokensProcessed = 0
-  , stateTabWidth        = defaultTabWidth }
+  { stateInput  = s
+  , stateOffset = 0
+  , statePosState = PosState
+    { pstateInput = s
+    , pstateOffset = 0
+    , pstateSourcePos = initialPos ""
+    , pstateTabWidth = defaultTabWidth
+    , pstateLinePrefix = ""
+    }
+  }
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -253,7 +253,6 @@ shouldFail r = case r of
 
 shouldSucceed
   :: ( HasCallStack
-     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -284,8 +283,7 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
 -- in a test suite report.
 
 showBundle
-  :: ( ShowToken (Token s)
-     , ShowErrorComponent e
+  :: ( ShowErrorComponent e
      , Stream s
      )
   => ParseErrorBundle s e

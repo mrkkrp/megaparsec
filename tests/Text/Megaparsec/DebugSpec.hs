@@ -28,13 +28,13 @@ spec = do
       it "its hints are preserved" $ do
         let p = dbg "many chars" (many (char 'a')) <* empty
             s = "abcd"
-        prs  p s `shouldFailWith` err (posN (1 :: Int) s) (etok 'a')
+        prs  p s `shouldFailWith` err 1 (etok 'a')
         prs' p s `failsLeaving` "bcd"
     context "when inner parser fails consuming input" $
       it "has no effect on how parser works" $ do
         let p = dbg "chars" (char 'a' *> char 'c')
             s = "abc"
-        prs  p s `shouldFailWith` err (posN (1 :: Int) s) (utok 'b' <> etok 'c')
+        prs  p s `shouldFailWith` err 1 (utok 'b' <> etok 'c')
         prs' p s `failsLeaving` "bc"
     context "when inner parser succeeds without consuming" $ do
       it "has no effect on how parser works" $ do
@@ -45,11 +45,11 @@ spec = do
       it "its hints are preserved" $ do
         let p = dbg "many chars" (many (char 'a')) <* empty
             s = "bcd"
-        prs  p s `shouldFailWith` err posI (etok 'a')
+        prs  p s `shouldFailWith` err 0 (etok 'a')
         prs' p s `failsLeaving` "bcd"
     context "when inner parser fails without consuming" $
       it "has no effect on how parser works" $ do
         let p = dbg "empty" (void empty)
             s = "abc"
-        prs  p s `shouldFailWith` err posI mempty
+        prs  p s `shouldFailWith` err 0 mempty
         prs' p s `failsLeaving` s
