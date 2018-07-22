@@ -20,6 +20,7 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char.Lexer
+import qualified Data.CaseInsensitive as CI
 import qualified Text.Megaparsec.Char as C
 
 spec :: Spec
@@ -47,11 +48,8 @@ spec = do
           let p = symbol' scn y'
               y' = toUpper <$> y
               y = takeWhile (not . isSpace) s
-          -- NOTE In some rare cases it's possible that y' will have a
-          -- different length than y due to the craziness of Unicode. We
-          -- cannot deal with those cases due to how the tokens primitive is
-          -- implemented. This is a “feature”, not a bug.
-          when (length y' /= length y) discard
+          -- Rare tricky cases we don't want to deal with.
+          when (CI.mk y' /= CI.mk y) discard
           prs  p s `shouldParse` y
           prs' p s `succeedsLeaving` ""
 
