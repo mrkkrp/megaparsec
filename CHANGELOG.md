@@ -81,6 +81,10 @@
 * Added `mapParseError` and `withParsecT` to allow changing the type of
   the custom data component in parse errors.
 
+* Improved case-insensitive character matching in the cases when e.g.
+  `isLower` and `isUpper` both return `False`. Functions affected:
+  `Text.Megaparsec.Char.char'`.
+
 * Dropped support for GHC 7.8.
 
 ## Megaparsec 6.5.0

@@ -308,10 +308,9 @@ char = single
 -- expecting 'E' or 'e'
 
 char' :: (MonadParsec e s m, Token s ~ Char) => Token s -> m (Token s)
-char' c = choice [char c, char (swapCase c)]
-  where
-    swapCase x
-      | isUpper x = toLower x
-      | isLower x = toUpper x
-      | otherwise = x
+char' c = choice
+  [ char (toLower c)
+  , char (toUpper c)
+  , char (toTitle c)
+  ]
 {-# INLINE char' #-}
