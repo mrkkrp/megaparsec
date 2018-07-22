@@ -123,13 +123,16 @@ spec = do
         property $ \ch s -> do
           let sl = B.cons (liftChar toLower ch) s
               su = B.cons (liftChar toUpper ch) s
+              st = B.cons (liftChar toTitle ch) s
           prs  (char' ch) sl `shouldParse`     liftChar toLower ch
           prs  (char' ch) su `shouldParse`     liftChar toUpper ch
+          prs  (char' ch) st `shouldParse`     liftChar toTitle ch
           prs' (char' ch) sl `succeedsLeaving` s
           prs' (char' ch) su `succeedsLeaving` s
+          prs' (char' ch) st `succeedsLeaving` s
     context "when stream does not begin with the character specified as argument" $
       it "signals correct parse error" $
-        property $ \ch ch' s -> liftChar toLower ch /= liftChar toLower ch' ==> do
+        property $ \ch ch' s -> not (casei ch ch') ==> do
           let s' = B.cons ch' s
               ms = utok ch' <> etok (liftChar toLower ch) <> etok (liftChar toUpper ch)
           prs  (char' ch) s' `shouldFailWith` err posI ms
@@ -241,3 +244,11 @@ fromChar x = let p = ord x in
 
 liftChar :: (Char -> Char) -> Word8 -> Word8
 liftChar f x = (fromMaybe x . fromChar . f . toChar) x
+
+-- | Compare two characters case-insensitively.
+
+casei :: Word8 -> Word8 -> Bool
+casei x y =
+  x == liftChar toLower y ||
+  x == liftChar toUpper y ||
+  x == liftChar toTitle y

@@ -44,9 +44,8 @@ module Text.Megaparsec.Byte
 where
 
 import Control.Applicative
-import Data.Char
+import Data.Char hiding (toLower, toUpper)
 import Data.Functor (void)
-import Data.Maybe (fromMaybe)
 import Data.Proxy
 import Data.Word (Word8)
 import Text.Megaparsec
@@ -209,15 +208,9 @@ char = single
 
 char' :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
 char' c = choice
-  [ char c
-  , char (fromMaybe c (swapCase c)) ]
-  where
-    swapCase x
-      | isUpper g = fromChar (toLower g)
-      | isLower g = fromChar (toUpper g)
-      | otherwise = Nothing
-      where
-        g = toChar x
+  [ char (toLower c)
+  , char (toUpper c)
+  ]
 {-# INLINE char' #-}
 
 ----------------------------------------------------------------------------
@@ -239,11 +232,23 @@ toChar :: Word8 -> Char
 toChar = chr . fromIntegral
 {-# INLINE toChar #-}
 
--- | Convert a char to byte.
+-- | Convert a byte to its upper-case version.
 
-fromChar :: Char -> Maybe Word8
-fromChar x = let p = ord x in
-  if p > 0xff
-    then Nothing
-    else Just (fromIntegral p)
-{-# INLINE fromChar #-}
+toUpper :: Word8 -> Word8
+toUpper x
+  | x >= 97 && x <= 122 = x - 32
+  | x == 247 = x -- division sign
+  | x == 255 = x -- latin small letter y with diaeresis
+  | x >= 224 = x - 32
+  | otherwise = x
+{-# INLINE toUpper #-}
+
+-- | Convert a byte to its lower-case version.
+
+toLower :: Word8 -> Word8
+toLower x
+  | x >= 65 && x <= 90 = x + 32
+  | x == 215 = x -- multiplication sign
+  | x >= 192 && x <= 222 = x + 32
+  | otherwise = x
+{-# INLINE toLower #-}

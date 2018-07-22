@@ -200,28 +200,41 @@ spec = do
           prs  (char ch) "" `shouldFailWith` err posI (ueof <> etok ch)
 
   describe "char'" $ do
-    let goodChar x =
-          (toUpper x == toLower x) ||
-          (((toUpper x == x) || (toLower x == x)) && (isUpper x || isLower x))
-    context "when stream begins with the character specified as argument" $
+    context "when stream begins with the character specified as argument" $ do
       it "parses the character" $
-        property $ \ch s -> goodChar ch ==> do
+        property $ \ch s -> do
           let sl = toLower ch : s
               su = toUpper ch : s
+              st = toTitle ch : s
           prs  (char' ch) sl `shouldParse`     toLower ch
           prs  (char' ch) su `shouldParse`     toUpper ch
+          prs  (char' ch) st `shouldParse`     toTitle ch
           prs' (char' ch) sl `succeedsLeaving` s
           prs' (char' ch) su `succeedsLeaving` s
-    context "when stream does not begin with the character specified as argument" $
+      context "when the character is not upper or lower" $
+        -- See https://ghc.haskell.org/trac/ghc/ticket/14589
+        it "matches it against a form obtained via one of the conversion functions" $
+          property $ \s -> do
+            let ch = '\9438'
+                s' = '\9412' : s
+            prs (char' ch) s' `shouldParse` '\9412'
+            prs' (char' ch) s' `succeedsLeaving` s
+    context "when stream does not begin with the character specified as argument" $ do
       it "signals correct parse error" $
-        property $ \ch ch' s -> goodChar ch && toLower ch /= toLower ch' ==> do
+        property $ \ch ch' s -> not (casei ch ch') ==> do
           let s' = ch' : s
-              ms = utok ch' <> etok (toLower ch) <> etok (toUpper ch)
+              ms = utok ch' <> etok (toLower ch) <> etok (toUpper ch) <> etok (toTitle ch)
           prs  (char' ch) s' `shouldFailWith` err posI ms
           prs' (char' ch) s' `failsLeaving`   s'
+      context "when the character is not upper or lower" $
+        it "lists correct options in the error message" $
+          property $ \ch s -> not (casei '\9438' ch) ==> do
+            let ms = utok ch <> etok '\9438' <> etok '\9412'
+                s' = ch : s
+            prs (char' '\9438') s' `shouldFailWith` err posI ms
     context "when stream is empty" $
       it "signals correct parse error" $
-        property $ \ch -> goodChar ch ==> do
+        property $ \ch -> do
           let ms = ueof <> etok (toLower ch) <> etok (toUpper ch)
           prs  (char' ch) "" `shouldFailWith` err posI ms
 
@@ -315,11 +328,6 @@ fuzzyCase s = zipWith f s <$> vector (length s)
     f k True  = if isLower k then toUpper k else toLower k
     f k False = k
 
--- | Case-insensitive equality test for characters.
-
-casei :: Char -> Char -> Bool
-casei x y = toUpper x == toUpper y
-
 -- | The 'isPrefixOf' function takes two 'String's and returns 'True' iff
 -- the first list is a prefix of the second with case-insensitive
 -- comparison.
@@ -328,3 +336,11 @@ isPrefixOfI :: String -> String -> Bool
 isPrefixOfI [] _  =  True
 isPrefixOfI _  [] =  False
 isPrefixOfI (x:xs) (y:ys) = x `casei` y && isPrefixOf xs ys
+
+-- | Case-insensitive equality test for characters.
+
+casei :: Char -> Char -> Bool
+casei x y =
+  x == toLower y ||
+  x == toUpper y ||
+  x == toTitle y
