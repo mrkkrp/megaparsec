@@ -12,6 +12,7 @@
 -- This version of the library should be used with Megaparsec 7, it won't
 -- work with older versions of Megaparsec.
 
+{-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -48,7 +49,8 @@ import qualified Data.List.NonEmpty as NE
 -- > parse letterChar "" "x" `shouldParse` 'x'
 
 shouldParse
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -70,7 +72,8 @@ r `shouldParse` v = case r of
 -- > parse (many punctuationChar) "" "?!!" `parseSatisfies` ((== 3) . length)
 
 parseSatisfies
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -92,7 +95,7 @@ r `parseSatisfies` p = case r of
 -- > parse (char 'x') "" `shouldFailOn` "a"
 
 shouldFailOn
-  :: Show a
+  :: (HasCallStack, Show a)
   => (s -> Either (ParseErrorBundle s e) a)
      -- ^ Parser that takes stream and produces result or error message
   -> s                 -- ^ Input that the parser should fail on
@@ -104,7 +107,8 @@ p `shouldFailOn` s = shouldFail (p s)
 -- > parse (char 'x') "" `shouldSucceedOn` "x"
 
 shouldSucceedOn
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -125,7 +129,8 @@ p `shouldSucceedOn` s = shouldSucceed (p s)
 -- > parse (char 'x') "" "b" `shouldFailWith` err posI (utok 'b' <> etok 'x')
 
 shouldFailWith
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -140,7 +145,8 @@ r `shouldFailWith` perr1 = r `shouldFailWithM` [perr1]
 -- report more than one parse error at a time.
 
 shouldFailWithM
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -177,7 +183,11 @@ r `shouldFailWithM` perrs1' = case r of
 -- See also: 'initialState'.
 
 failsLeaving
-  :: (Show a, Eq s, Show s)
+  :: ( HasCallStack
+     , Show a
+     , Eq s
+     , Show s
+     )
   => (State s, Either (ParseErrorBundle s e) a)
      -- ^ Parser that takes stream and produces result along with actual
      -- state information
@@ -197,7 +207,8 @@ failsLeaving
 -- See also: 'initialState'.
 
 succeedsLeaving
-  :: ( Show a
+  :: ( HasCallStack
+     , Show a
      , Eq s
      , Show s
      , ShowToken (Token s)
@@ -230,7 +241,7 @@ initialState s = State
 -- | Expect that the argument is a result of a failed parser.
 
 shouldFail
-  :: Show a
+  :: (HasCallStack, Show a)
   => Either (ParseErrorBundle s e) a
   -> Expectation
 shouldFail r = case r of
@@ -241,7 +252,8 @@ shouldFail r = case r of
 -- | Expectation that argument is result of a succeeded parser.
 
 shouldSucceed
-  :: ( ShowToken (Token s)
+  :: ( HasCallStack
+     , ShowToken (Token s)
      , ShowErrorComponent e
      , Stream s
      , Show a
@@ -257,7 +269,10 @@ shouldSucceed r = case r of
 -- | Compare two streams for equality and in the case of mismatch report it.
 
 checkUnconsumed
-  :: (Eq s, Show s)
+  :: ( HasCallStack
+     , Eq s
+     , Show s
+     )
   => s                 -- ^ Expected unconsumed input
   -> s                 -- ^ Actual unconsumed input
   -> Expectation
@@ -268,7 +283,11 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
 -- | Render a parse error bundle in a way that is suitable for inserting it
 -- in a test suite report.
 
-showBundle :: (ShowToken (Token s), ShowErrorComponent e, Stream s)
+showBundle
+  :: ( ShowToken (Token s)
+     , ShowErrorComponent e
+     , Stream s
+     )
   => ParseErrorBundle s e
   -> String
 showBundle = unlines . fmap indent . lines . errorBundlePretty
