@@ -18,7 +18,7 @@
   * `satisfy` does not depend on type of token, and so it now lives in
     `Text.Megaparsec`.
 
-  * `anyToken` was renamed to `anySingle` and moved to `Text.Megaparsec`.
+  * `anyChar` was renamed to `anySingle` and moved to `Text.Megaparsec`.
 
   * `notChar` was renamed to `anySingleBut` and moved to `Text.Megaparsec`.
 
