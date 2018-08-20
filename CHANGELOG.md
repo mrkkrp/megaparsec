@@ -1,5 +1,20 @@
 ## Megaparsec 7.0.0
 
+### General
+
+* Dropped the `Text.Megaparsec.Perm` module. Use
+  `Control.Applicative.Permutations` from `parser-combinators` instead.
+
+* Dropped the `Text.Megaparsec.Expr` module. Use
+  `Control.Monad.Combinators.Expr` from `parser-combinators` instead.
+
+* The debugging function `dbg` has been moved from `Text.Megaparsec` to its
+  own module `Text.Megaparsec.Debug`.
+
+* Dropped support for GHC 7.8.
+
+### Combinators
+
 * Moved some general combinators from `Text.Megaparsec.Char` and
   `Text.Megaparsec.Byte` to `Text.Megaparsec`, renaming some of them for
   clarity.
@@ -30,45 +45,6 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
-* Dropped stacks of source positions. Thus the field `statePos` in `State`
-  has the type `SourcePos` instead of `NonEmpty SourcePos`. Accordingly, the
-  functions `pushPosition` and `popPosition` from `Text.Megaparsec` and
-  `sourcePosStackPretty` from `Text.Megaparsec.Error` were removed.
-
-  The reason for this simplification is that I could not find any code that
-  uses the feature and it makes manipulation of source positions hairy.
-
-* Introduced `ParseErrorBundle` which contains one or more `ParseError`
-  equipped with all information that is necessary to pretty-print them
-  together with offending lines from the input stream. Functions like
-  `runParser` now return `ParseErrorBundle` instead of plain `ParseError`.
-  By default there will be only one `ParseError` in such a bundle, but it's
-  possible to add more parse errors to a bundle manually. During
-  pretty-printing, the stream will be traversed only once.
-
-* The `ShowToken` and `LineToken` type classes (for pretty-printing of parse
-  errors with displaying of offending lines) have been merged. All methods
-  are now in `ShowToken`.
-
-* The primary function for pretty-printing of parse
-  errors—`errorBundlePretty` always prints offending lines now.
-  `parseErrorPretty` is still there, but it probably won't see a lot of
-  usage from now on. `parseErrorPretty'` and `parseErrorPretty_` were
-  removed. `parseTest'` was removed because `parseTest` always prints
-  offending lines now.
-
-* Dropped the `Text.Megaparsec.Perm` module. Use
-  `Control.Applicative.Permutations` from `parser-combinators` instead.
-
-* Dropped the `Text.Megaparsec.Expr` module. Use
-  `Control.Monad.Combinators.Expr` from `parser-combinators` instead.
-
-* The debugging function `dbg` has been moved from `Text.Megaparsec` to its
-  own module `Text.Megaparsec.Debug`.
-
-* Implemented continuous highlighting in parse errors. For this we added the
-  `errorComponentLen` method to the `ShowErrorComponent` type class.
-
 * Fixed the `Text.Megaparsec.Char.Lexer.charLiteral` so it can accept longer
   escape sequences (max length is now 10).
 
@@ -78,14 +54,88 @@
 * Added the `binary` functions in `Text.Megaparsec.Byte.Lexer` and
   `Text.Megaparsec.Char.Lexer`.
 
-* Added `mapParseError` and `withParsecT` to allow changing the type of
-  the custom data component in parse errors.
-
 * Improved case-insensitive character matching in the cases when e.g.
   `isLower` and `isUpper` both return `False`. Functions affected:
   `Text.Megaparsec.Char.char'`.
 
-* Dropped support for GHC 7.8.
+* Renamed `getPosition` to `getSourcePos`.
+
+* Renamed `getTokensProcessed` to `getOffset`, `setTokensProcessed` to
+  `setOffset`.
+
+* Dropped `getTabWidth` and `setTabWidth` because tab width is irrelevant to
+  parsing process now, it's only relevant for pretty-printing of parse
+  errors, which is handled separately.
+
+* Added and `withParsecT` in `Text.Megaparsec.Internal` to allow changing
+  the type of the custom data component in parse errors.
+
+### Parser state and input stream
+
+* Dropped stacks of source positions. Thus the field `statePos` in `State`
+  has the type `SourcePos` instead of `NonEmpty SourcePos`. Accordingly, the
+  functions `pushPosition` and `popPosition` from `Text.Megaparsec` and
+  `sourcePosStackPretty` from `Text.Megaparsec.Error` were removed.
+
+  The reason for this simplification is that I could not find any code that
+  uses the feature and it makes manipulation of source positions hairy.
+
+* Introduced `PosState` for calculating `SourcePos` from offsets and getting
+  offending line for displaying on pretty-printing of parse errors. It's now
+  contained in both `State` and `ParseErrorBundle` (see below).
+
+* Dropped `positionAt1`, `positionAtN`, `advance1`, and `advanceN` methods
+  from `Stream`. They are no longer necessary because `reachOffset` takes
+  care of `SourcePos` calculation.
+
+### Parse errors
+
+* `ParseError` now contains raw offset in input stream instead of
+  `SourcePos`. `errorPos` was dropped from `Text.Megaparsec.Error`.
+
+* `ParseError` is now parametrized over stream type `s` instead of token
+  type `t`.
+
+* Introduced `ParseErrorBundle` which contains one or more `ParseError`
+  equipped with all information that is necessary to pretty-print them
+  together with offending lines from the input stream. Functions like
+  `runParser` now return `ParseErrorBundle` instead of plain `ParseError`.
+
+  By default there will be only one `ParseError` in such a bundle, but it's
+  possible to add more parse errors to a bundle manually. During
+  pretty-printing, the input stream will be traversed only once.
+
+* The primary function for pretty-printing of parse
+  errors—`errorBundlePretty` always prints offending lines now.
+  `parseErrorPretty` is still there, but it probably won't see a lot of
+  usage from now on. `parseErrorPretty'` and `parseErrorPretty_` were
+  removed. `parseTest'` was removed because `parseTest` always prints
+  offending lines now.
+
+* The `ShowToken` type class has been removed and its method `showTokens`
+  now lives in the `Stream` type class.
+
+* The `LineToken` type class is no longer necessary because the new method
+  `reachOffset` of the type class `Stream` does its job.
+
+* In `Text.Megaparsec.Error` the following functions were added:
+  `mapParseError`, `errorOffset`.
+
+* Implemented continuous highlighting in parse errors. For this we added the
+  `errorComponentLen` method to the `ShowErrorComponent` type class.
+
+### Parse error builder
+
+* The functions `err` and `errFancy` now accept offsets at which the parse
+  errors are expected to have happened, i.e. `Int`s. Thus `posI` and `posN`
+  are no longer necessary and were removed.
+
+* `ET` is now parametrized over the type of stream `s` instead of token type
+  `t`.
+
+* Combinators like `utoks` and `etoks` now accept chunks of input stream
+  directly, i.e. `Tokens s` instead of `[Token s]` which should be more
+  natural and convenient.
 
 ## Megaparsec 6.5.0
 

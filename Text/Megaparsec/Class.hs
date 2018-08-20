@@ -154,7 +154,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- @since 4.4.0
 
   withRecovery
-    :: (ParseError (Token s) e -> m a) -- ^ How to recover from failure
+    :: (ParseError s e -> m a) -- ^ How to recover from failure
     -> m a             -- ^ Original parser
     -> m a             -- ^ Parser that can recover from failures
 
@@ -169,7 +169,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   observing
     :: m a             -- ^ The parser to run
-    -> m (Either (ParseError (Token s) e) a)
+    -> m (Either (ParseError s e) a)
 
   -- | This parser only succeeds at the end of the input.
 

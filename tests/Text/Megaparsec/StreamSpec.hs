@@ -1,16 +1,23 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Megaparsec.StreamSpec (spec) where
 
-import Data.Char (isLetter, chr)
+import Data.Char (isLetter, chr, isControl, isSpace)
+import Data.List (foldl')
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
 import Data.Semigroup ((<>))
+import Data.String (IsString)
+import Data.Word (Word8)
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.List.NonEmpty   as NE
 import qualified Data.Text            as T
 import qualified Data.Text.Lazy       as TL
 
@@ -38,32 +45,6 @@ spec = do
       it "only true when chunkLength returns 0" $
         property $ \chk ->
           chunkEmpty sproxy chk === (chunkLength sproxy chk <= 0)
-    describe "positionAt1" $
-      it "just returns the given position" $
-        property $ \pos t ->
-          positionAt1 sproxy pos t === pos
-    describe "positionAtN" $
-      it "just returns the given position" $
-        property $ \pos chk ->
-          positionAtN sproxy pos chk === pos
-    describe "advance1" $ do
-      context "when given newline" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l _) ->
-            advance1 sproxy w pos '\n' === SourcePos n (l <> pos1) pos1
-      context "when given tab" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l c) ->
-            advance1 sproxy w pos '\t' === SourcePos n l (toNextTab w c)
-      context "when given other character" $
-        it "works correctly" $
-          property $ \ch w pos@(SourcePos n l c) ->
-            (ch /= '\n' && ch /= '\t') ==>
-              advance1 sproxy w pos ch === SourcePos n l (c <> pos1)
-    describe "advanceN" $
-      it "works correctly" $
-        advanceN sproxy defaultTabWidth (initialPos "") "something\n\tfoo"
-          === SourcePos "" (mkPos 2) (mkPos 12)
     describe "take1_" $ do
       context "when input in empty" $
         it "returns Nothing" $
@@ -90,6 +71,8 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === span isLetter s
+    describeShowTokens sproxy quotedCharGen
+    describeReachOffset sproxy
 
   describe "ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -112,32 +95,6 @@ spec = do
       it "only true when chunkLength returns 0" $
         property $ \chk ->
           chunkEmpty bproxy chk === (chunkLength bproxy chk <= 0)
-    describe "positionAt1" $
-      it "just returns the given position" $
-        property $ \pos t ->
-          positionAt1 bproxy pos t === pos
-    describe "positionAtN" $
-      it "just returns the given position" $
-        property $ \pos chk ->
-          positionAtN bproxy pos chk === pos
-    describe "advance1" $ do
-      context "when given newline" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l _) ->
-            advance1 bproxy w pos 10 === SourcePos n (l <> pos1) pos1
-      context "when given tab" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l c) ->
-            advance1 bproxy w pos 9 === SourcePos n l (toNextTab w c)
-      context "when given other character" $
-        it "works correctly" $
-          property $ \ch w pos@(SourcePos n l c) ->
-            (ch /= 10 && ch /= 9) ==>
-              advance1 bproxy w pos ch === SourcePos n l (c <> pos1)
-    describe "advanceN" $
-      it "works correctly" $
-        advanceN bproxy defaultTabWidth (initialPos "") "something\n\tfoo"
-          === SourcePos "" (mkPos 2) (mkPos 12)
     describe "take1_" $ do
       context "when input in empty" $
         it "returns Nothing" $
@@ -165,6 +122,8 @@ spec = do
         property $ \s ->
           let f = isLetter . chr . fromIntegral
           in takeWhile_ f s === B.span f s
+    describeShowTokens bproxy quotedWordGen
+    describeReachOffset bproxy
 
   describe "Lazy ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -187,32 +146,6 @@ spec = do
       it "only true when chunkLength returns 0" $
         property $ \chk ->
           chunkEmpty blproxy chk === (chunkLength blproxy chk <= 0)
-    describe "positionAt1" $
-      it "just returns the given position" $
-        property $ \pos t ->
-          positionAt1 blproxy pos t === pos
-    describe "positionAtN" $
-      it "just returns the given position" $
-        property $ \pos chk ->
-          positionAtN blproxy pos chk === pos
-    describe "advance1" $ do
-      context "when given newline" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l _) ->
-            advance1 blproxy w pos 10 === SourcePos n (l <> pos1) pos1
-      context "when given tab" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l c) ->
-            advance1 blproxy w pos 9 === SourcePos n l (toNextTab w c)
-      context "when given other character" $
-        it "works correctly" $
-          property $ \ch w pos@(SourcePos n l c) ->
-            (ch /= 10 && ch /= 9) ==>
-              advance1 blproxy w pos ch === SourcePos n l (c <> pos1)
-    describe "advanceN" $
-      it "works correctly" $
-        advanceN blproxy defaultTabWidth (initialPos "") "something\n\tfoo"
-          === SourcePos "" (mkPos 2) (mkPos 12)
     describe "take1_" $ do
       context "when input in empty" $
         it "returns Nothing" $
@@ -240,6 +173,8 @@ spec = do
         property $ \s ->
           let f = isLetter . chr . fromIntegral
           in takeWhile_ f s === BL.span f s
+    describeShowTokens blproxy quotedWordGen
+    describeReachOffset blproxy
 
   describe "Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -262,32 +197,6 @@ spec = do
       it "only true when chunkLength returns 0" $
         property $ \chk ->
           chunkEmpty tproxy chk === (chunkLength tproxy chk <= 0)
-    describe "positionAt1" $
-      it "just returns the given position" $
-        property $ \pos t ->
-          positionAt1 tproxy pos t === pos
-    describe "positionAtN" $
-      it "just returns the given position" $
-        property $ \pos chk ->
-          positionAtN tproxy pos chk === pos
-    describe "advance1" $ do
-      context "when given newline" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l _) ->
-            advance1 tproxy w pos '\n' === SourcePos n (l <> pos1) pos1
-      context "when given tab" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l c) ->
-            advance1 tproxy w pos '\t' === SourcePos n l (toNextTab w c)
-      context "when given other character" $
-        it "works correctly" $
-          property $ \ch w pos@(SourcePos n l c) ->
-            (ch /= '\n' && ch /= '\t') ==>
-              advance1 tproxy w pos ch === SourcePos n l (c <> pos1)
-    describe "advanceN" $
-      it "works correctly" $
-        advanceN tproxy defaultTabWidth (initialPos "") "something\n\tfoo"
-          === SourcePos "" (mkPos 2) (mkPos 12)
     describe "take1_" $ do
       context "when input in empty" $
         it "returns Nothing" $
@@ -314,6 +223,8 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === T.span isLetter s
+    describeShowTokens tproxy quotedCharGen
+    describeReachOffset tproxy
 
   describe "Lazy Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -336,32 +247,6 @@ spec = do
       it "only true when chunkLength returns 0" $
         property $ \chk ->
           chunkEmpty tlproxy chk === (chunkLength tlproxy chk <= 0)
-    describe "positionAt1" $
-      it "just returns the given position" $
-        property $ \pos t ->
-          positionAt1 tlproxy pos t === pos
-    describe "positionAtN" $
-      it "just returns the given position" $
-        property $ \pos chk ->
-          positionAtN tlproxy pos chk === pos
-    describe "advance1" $ do
-      context "when given newline" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l _) ->
-            advance1 tlproxy w pos '\n' === SourcePos n (l <> pos1) pos1
-      context "when given tab" $
-        it "works correctly" $
-          property $ \w pos@(SourcePos n l c) ->
-            advance1 tlproxy w pos '\t' === SourcePos n l (toNextTab w c)
-      context "when given other character" $
-        it "works correctly" $
-          property $ \ch w pos@(SourcePos n l c) ->
-            (ch /= '\n' && ch /= '\t') ==>
-              advance1 tlproxy w pos ch === SourcePos n l (c <> pos1)
-    describe "advanceN" $
-      it "works correctly" $
-        advanceN tlproxy defaultTabWidth (initialPos "") "something\n\tfoo"
-          === SourcePos "" (mkPos 2) (mkPos 12)
     describe "take1_" $ do
       context "when input in empty" $
         it "returns Nothing" $
@@ -388,27 +273,218 @@ spec = do
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
           takeWhile_ isLetter s === TL.span isLetter s
+    describeShowTokens tlproxy quotedCharGen
+    describeReachOffset tlproxy
 
 ----------------------------------------------------------------------------
 -- Helpers
 
-toNextTab :: Pos -> Pos -> Pos
+-- | Generic block of tests for the 'showTokens' method.
+
+describeShowTokens
+  :: forall s. ( Stream s
+               , IsString (Tokens s)
+               , Show (Token s)
+               , Arbitrary (Token s)
+               )
+  => Proxy s           -- ^ 'Proxy' that clarifies the type of stream
+  -> Gen (Token s)     -- ^ Generator of tokens that should be simply quoted
+  -> Spec
+describeShowTokens pxy quotedTokGen =
+  describe "showTokens" $ do
+    let f :: Tokens s -> String -> Expectation
+        f x y = showTokens pxy (NE.fromList $ chunkToTokens pxy x) `shouldBe` y
+    it "shows CRLF newline correctly"
+      (f "\r\n" "crlf newline")
+    it "shows null byte correctly"
+      (f "\NUL" "null")
+    it "shows start of heading correctly"
+      (f "\SOH" "start of heading")
+    it "shows start of text correctly"
+      (f "\STX" "start of text")
+    it "shows end of text correctly"
+      (f "\ETX" "end of text")
+    it "shows end of transmission correctly"
+      (f "\EOT" "end of transmission")
+    it "shows enquiry correctly"
+      (f "\ENQ" "enquiry")
+    it "shows acknowledge correctly"
+      (f "\ACK" "acknowledge")
+    it "shows bell correctly"
+      (f "\BEL" "bell")
+    it "shows backspace correctly"
+      (f "\BS" "backspace")
+    it "shows tab correctly"
+      (f "\t" "tab")
+    it "shows newline correctly"
+      (f "\n" "newline")
+    it "shows vertical tab correctly"
+      (f "\v" "vertical tab")
+    it "shows form feed correctly"
+      (f "\f" "form feed")
+    it "shows carriage return correctly"
+      (f "\r" "carriage return")
+    it "shows shift out correctly"
+      (f "\SO" "shift out")
+    it "shows shift in correctly"
+      (f "\SI" "shift in")
+    it "shows data link escape correctly"
+      (f "\DLE" "data link escape")
+    it "shows device control one correctly"
+      (f "\DC1" "device control one")
+    it "shows device control two correctly"
+      (f "\DC2" "device control two")
+    it "shows device control three correctly"
+      (f "\DC3" "device control three")
+    it "shows device control four correctly"
+      (f "\DC4" "device control four")
+    it "shows negative acknowledge correctly"
+      (f "\NAK" "negative acknowledge")
+    it "shows synchronous idle correctly"
+      (f "\SYN" "synchronous idle")
+    it "shows end of transmission block correctly"
+      (f "\ETB" "end of transmission block")
+    it "shows cancel correctly"
+      (f "\CAN" "cancel")
+    it "shows end of medium correctly"
+      (f "\EM"  "end of medium")
+    it "shows substitute correctly"
+      (f "\SUB" "substitute")
+    it "shows escape correctly"
+      (f "\ESC" "escape")
+    it "shows file separator correctly"
+      (f "\FS"  "file separator")
+    it "shows group separator correctly"
+      (f "\GS"  "group separator")
+    it "shows record separator correctly"
+      (f "\RS"  "record separator")
+    it "shows unit separator correctly"
+      (f "\US"  "unit separator")
+    it "shows delete correctly"
+      (f "\DEL" "delete")
+    it "shows space correctly"
+      (f " "    "space")
+    it "shows non-breaking space correctly"
+      (f "\160" "non-breaking space")
+    it "shows other single characters in single quotes" $
+      property $ forAll quotedTokGen $ \x -> do
+        let r = showTokens pxy (x :| [])
+        head r `shouldBe` '\''
+        last r `shouldBe` '\''
+    it "shows strings in double quotes" $
+      property $ \x (NonEmpty xs) -> do
+        let r = showTokens pxy (x :| xs)
+        head r `shouldBe` '\"'
+        last r `shouldBe` '\"'
+    it "shows control characters in long strings property"
+      (f "{\n" "\"{<newline>\"")
+
+-- | Generic block of tests for the 'reachOffset' method.
+
+describeReachOffset
+  :: forall s. ( Stream s
+               , IsString s
+               , Show s
+               , Arbitrary s
+               )
+  => Proxy s           -- ^ 'Proxy' that clarifies the type of stream
+  -> Spec
+describeReachOffset Proxy =
+  describe "reachOffset" $ do
+    it "returns correct SourcePos (newline)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "\n" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _, _) = reachOffset o pst
+            SourcePos n l _ = pstateSourcePos pst
+        r `shouldBe` SourcePos n (l <> pos1) pos1
+    it "returns correct SourcePos (tab)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "\t" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _, _) = reachOffset o pst
+            SourcePos n l c = pstateSourcePos pst
+            w = pstateTabWidth pst
+        r `shouldBe` SourcePos n l (toNextTab w c)
+    it "returns correct SourcePos (other)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "a" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _, _) = reachOffset o pst
+            SourcePos n l c = pstateSourcePos pst
+        r `shouldBe` SourcePos n l (c <> pos1)
+    it "replaces empty line with <empty line>" $
+      property $ \o pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "" :: s
+              , pstateLinePrefix = ""
+              }
+            (_, r, _) = reachOffset o pst
+        r `shouldBe` "<empty line>"
+    it "replaces tabs with spaces in returned line" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "\ta\t" :: s
+              , pstateLinePrefix = "\t"
+              }
+            (_, r, _) = reachOffset 2 pst
+            w = unPos (pstateTabWidth pst)
+            r' = replicate (w * 2) ' ' ++ "a" ++ replicate w ' '
+        r `shouldBe` r'
+    it "returns correct line (with line prefix)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "foo\nbar\nbaz" :: s
+              , pstateLinePrefix = "123"
+              }
+            (_, r, _) = reachOffset 0 pst
+        r `shouldBe` "123foo"
+    it "returns correct line (without line prefix)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "foo\nbar\nbaz" :: s
+              , pstateOffset = 0
+              }
+            (_, r, _) = reachOffset 4 pst
+        r `shouldBe` "bar"
+    it "works incrementally" $
+      property $ \os' (NonNegative d) s -> do
+        let os = getNonNegative <$> os'
+            s' :: PosState String
+            s' = foldl' f s os
+            o' = case os of
+                   [] -> d
+                   xs -> maximum xs + d
+            f pst o =
+              let (_, _, pst') = reachOffset o pst
+              in pst'
+        reachOffset o' s `shouldBe` reachOffset o' s'
+
+-- | Get next tab position given tab width and current column.
+
+toNextTab
+  :: Pos               -- ^ Tab width
+  -> Pos               -- ^ Current column
+  -> Pos               -- ^ Column of next tab position
 toNextTab w' c' = mkPos $ c + w - ((c - 1) `rem` w)
   where
     w = unPos w'
     c = unPos c'
 
-sproxy :: Proxy String
-sproxy = Proxy
+quotedCharGen :: Gen Char
+quotedCharGen = arbitrary `suchThat` isQuotedChar
 
-bproxy :: Proxy B.ByteString
-bproxy = Proxy
+quotedWordGen :: Gen Word8
+quotedWordGen = arbitrary `suchThat` (isQuotedChar . toChar)
 
-blproxy :: Proxy BL.ByteString
-blproxy = Proxy
+-- | Return 'True' if the 'Char' should be simply quoted by the 'showTokens'
+-- method, i.e. it's not a character with a special representation.
 
-tproxy :: Proxy T.Text
-tproxy = Proxy
-
-tlproxy :: Proxy TL.Text
-tlproxy = Proxy
+isQuotedChar :: Char -> Bool
+isQuotedChar x = not (isControl x) && not (isSpace x)

@@ -36,13 +36,13 @@ spec = do
       if | n <= 0 || m > n ->
            if x == 0
              then prs_ p s `shouldParse` ""
-             else prs_ p s `shouldFailWith` err posI (utok 'x' <> eeof)
+             else prs_ p s `shouldFailWith` err 0 (utok 'x' <> eeof)
          | m <= x && x <= n ->
            prs_ p s `shouldParse` s
          | x < m ->
-           prs_ p s `shouldFailWith` err (posN x s) (ueof <> etok 'x')
+           prs_ p s `shouldFailWith` err x (ueof <> etok 'x')
          | otherwise ->
-           prs_ p s `shouldFailWith` err (posN n s) (utok 'x' <> eeof)
+           prs_ p s `shouldFailWith` err n (utok 'x' <> eeof)
     rightOrder (count' 1 3 letterChar) "abc" "abc"
 
   describe "endBy" $ do
@@ -51,13 +51,13 @@ spec = do
           p = endBy (char 'a') (char '-')
           s = intersperse '-' (replicate n 'a') ++ [c]
       if | c == 'a' && n == 0 ->
-           prs_ p s `shouldFailWith` err (posN (1 :: Int) s) (ueof <> etok '-')
+           prs_ p s `shouldFailWith` err 1 (ueof <> etok '-')
          | c == 'a' ->
-           prs_ p s `shouldFailWith` err (posN (g n) s) (utok 'a' <> etok '-')
+           prs_ p s `shouldFailWith` err (g n) (utok 'a' <> etok '-')
          | c == '-' && n == 0 ->
-           prs_ p s `shouldFailWith` err posI (utok '-' <> etok 'a'<> eeof)
+           prs_ p s `shouldFailWith` err 0 (utok '-' <> etok 'a'<> eeof)
          | c /= '-' ->
-           prs_ p s `shouldFailWith` err (posN (g n) s)
+           prs_ p s `shouldFailWith` err (g n)
              ( utok c <>
                (if n > 0 then etok '-' else eeof) <>
                (if n == 0 then etok 'a' else mempty) )
@@ -70,13 +70,13 @@ spec = do
           p = endBy1 (char 'a') (char '-')
           s = intersperse '-' (replicate n 'a') ++ [c]
       if | c == 'a' && n == 0 ->
-           prs_ p s `shouldFailWith` err (posN (1 :: Int) s) (ueof <> etok '-')
+           prs_ p s `shouldFailWith` err (1 :: Int) (ueof <> etok '-')
          | c == 'a' ->
-           prs_ p s `shouldFailWith` err (posN (g n) s) (utok 'a' <> etok '-')
+           prs_ p s `shouldFailWith` err (g n) (utok 'a' <> etok '-')
          | c == '-' && n == 0 ->
-           prs_ p s `shouldFailWith` err posI (utok '-' <> etok 'a')
+           prs_ p s `shouldFailWith` err 0 (utok '-' <> etok 'a')
          | c /= '-' ->
-           prs_ p s `shouldFailWith` err (posN (g n) s)
+           prs_ p s `shouldFailWith` err (g n)
              ( utok c <>
                (if n > 0 then etok '-' else mempty) <>
                (if n == 0 then etok 'a' else mempty) )
@@ -89,7 +89,7 @@ spec = do
           p = (,) <$> manyTill letterChar (char 'c') <*> many letterChar
           s = abcRow a b c
       if c == 0
-        then prs_ p s `shouldFailWith` err (posN (a + b) s)
+        then prs_ p s `shouldFailWith` err (a + b)
              (ueof <> etok 'c' <> elabel "letter")
         else let (pre, post) = break (== 'c') s
              in prs_ p s `shouldParse` (pre, drop 1 post)
@@ -101,13 +101,12 @@ spec = do
           p = (,) <$> someTill letterChar (char 'c') <*> many letterChar
           s = abcRow a b c
       if | null s ->
-           prs_ p s `shouldFailWith` err posI (ueof <> elabel "letter")
+           prs_ p s `shouldFailWith` err 0 (ueof <> elabel "letter")
          | c == 0 ->
-           prs_ p s `shouldFailWith` err (posN (a + b) s)
+           prs_ p s `shouldFailWith` err (a + b)
              (ueof <> etok 'c' <> elabel "letter")
          | s == "c" ->
-           prs_ p s `shouldFailWith` err
-             (posN (1 :: Int) s) (ueof <> etok 'c' <> elabel "letter")
+           prs_ p s `shouldFailWith` err 1 (ueof <> etok 'c' <> elabel "letter")
          | head s == 'c' ->
            prs_ p s `shouldParse` ("c", drop 2 s)
          | otherwise ->
@@ -126,14 +125,11 @@ spec = do
          | c == 'a' && n == 0 ->
            prs_ p s `shouldParse` "a"
          | n == 0 ->
-           prs_ p s `shouldFailWith` err posI
-             (utok c <> etok 'a' <> eeof)
+           prs_ p s `shouldFailWith` err 0 (utok c <> etok 'a' <> eeof)
          | c == '-' ->
-           prs_ p s `shouldFailWith` err (posN (length s) s)
-             (ueof <> etok 'a')
+           prs_ p s `shouldFailWith` err (length s) (ueof <> etok 'a')
          | otherwise ->
-           prs_ p s `shouldFailWith` err (posN (g n) s)
-             (utok c <> etok '-' <> eeof)
+           prs_ p s `shouldFailWith` err (g n) (utok c <> etok '-' <> eeof)
     rightOrder (sepBy letterChar (char ',')) "a,b,c" "abc"
 
   describe "sepBy1" $ do
@@ -145,15 +141,15 @@ spec = do
       if | isNothing c' && n >= 1 ->
            prs_ p s `shouldParse` replicate n 'a'
          | isNothing c' ->
-           prs_ p s `shouldFailWith` err posI (ueof <> etok 'a')
+           prs_ p s `shouldFailWith` err 0 (ueof <> etok 'a')
          | c == 'a' && n == 0 ->
            prs_ p s `shouldParse` "a"
          | n == 0 ->
-           prs_ p s `shouldFailWith` err posI (utok c <> etok 'a')
+           prs_ p s `shouldFailWith` err 0 (utok c <> etok 'a')
          | c == '-' ->
-           prs_ p s `shouldFailWith` err (posN (length s) s) (ueof <> etok 'a')
+           prs_ p s `shouldFailWith` err (length s) (ueof <> etok 'a')
          | otherwise ->
-           prs_ p s `shouldFailWith` err (posN (g n) s) (utok c <> etok '-' <> eeof)
+           prs_ p s `shouldFailWith` err (g n) (utok c <> etok '-' <> eeof)
     rightOrder (sepBy1 letterChar (char ',')) "a,b,c" "abc"
 
   describe "sepEndBy" $ do
@@ -168,11 +164,11 @@ spec = do
          | c == 'a' && n == 0 ->
            prs_ p s `shouldParse` "a"
          | n == 0 ->
-           prs_ p s `shouldFailWith` err posI (utok c <> etok 'a' <> eeof)
+           prs_ p s `shouldFailWith` err 0 (utok c <> etok 'a' <> eeof)
          | c == '-' ->
            prs_ p s `shouldParse` a
          | otherwise ->
-           prs_ p s `shouldFailWith` err (posN (g n) s) (utok c <> etok '-' <> eeof)
+           prs_ p s `shouldFailWith` err (g n) (utok c <> etok '-' <> eeof)
     rightOrder (sepEndBy letterChar (char ',')) "a,b,c," "abc"
 
   describe "sepEndBy1" $ do
@@ -185,15 +181,15 @@ spec = do
       if | isNothing c' && n >= 1 ->
            prs_ p s `shouldParse` a
          | isNothing c' ->
-           prs_ p s `shouldFailWith` err posI (ueof <> etok 'a')
+           prs_ p s `shouldFailWith` err 0 (ueof <> etok 'a')
          | c == 'a' && n == 0 ->
            prs_ p s `shouldParse` "a"
          | n == 0 ->
-           prs_ p s `shouldFailWith` err posI (utok c <> etok 'a')
+           prs_ p s `shouldFailWith` err 0 (utok c <> etok 'a')
          | c == '-' ->
            prs_ p s `shouldParse` a
          | otherwise ->
-           prs_ p s `shouldFailWith` err (posN (g n) s) (utok c <> etok '-' <> eeof)
+           prs_ p s `shouldFailWith` err (g n) (utok c <> etok '-' <> eeof)
     rightOrder (sepEndBy1 letterChar (char ',')) "a,b,c," "abc"
 
   describe "skipMany" $
@@ -233,7 +229,7 @@ spec = do
           n = getNonNegative n'
           s = replicate n c ++ [a]
       if n == 0
-        then prs_ p s `shouldFailWith` err posI (utok a <> etok c)
+        then prs_ p s `shouldFailWith` err 0 (utok a <> etok c)
         else prs_ p s `shouldParse` a
 
 ----------------------------------------------------------------------------

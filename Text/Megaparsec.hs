@@ -24,21 +24,18 @@
 -- > type Parser = Parsec Void Text
 -- >                      ^    ^
 -- >                      |    |
--- > Custom error component    Type of input
+-- > Custom error component    Input stream type
 --
--- Then you can write type signatures like @Parser Int@—for a parser that
+-- Then you can write type signatures like @Parser 'Int'@—for a parser that
 -- returns an 'Int' for example.
 --
 -- Similarly (since it's known to cause confusion), you should use
--- 'ParseError' type parametrized like this:
+-- 'ParseErrorBundle' type parametrized like this:
 --
--- > ParseError Char Void
--- >            ^    ^
--- >            |    |
--- >   Token type    Custom error component (the same you used in Parser)
---
--- Token type for 'String' and 'Data.Text.Text' (strict and lazy) is 'Char',
--- for 'Data.ByteString.ByteString's it's 'Data.Word.Word8'.
+-- > ParseErrorBundle Text Void
+-- >                  ^    ^
+-- >                  |    |
+-- >  Input stream type    Custom error component (the same you used in Parser)
 --
 -- Megaparsec uses some type-level machinery to provide flexibility without
 -- compromising on type safety. Thus type signatures are sometimes necessary
@@ -46,22 +43,14 @@
 -- like “Type variable @e0@ is ambiguous …”, you need to give an explicit
 -- signature to your parser to resolve the ambiguity. It's a good idea to
 -- provide type signatures for all top-level definitions.
---
--- Megaparsec is capable of a lot. Apart from this standard functionality
--- you can parse permutation phrases with "Text.Megaparsec.Perm",
--- expressions with "Text.Megaparsec.Expr", do lexing with
--- "Text.Megaparsec.Char.Lexer" and "Text.Megaparsec.Byte.Lexer". These
--- modules should be imported explicitly along with the modules mentioned
--- above.
 
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Text.Megaparsec
   ( -- * Re-exports
@@ -72,6 +61,7 @@ module Text.Megaparsec
   , module Control.Monad.Combinators
     -- * Data types
   , State (..)
+  , PosState (..)
   , Parsec
   , ParsecT
     -- * Running parser
@@ -102,13 +92,9 @@ module Text.Megaparsec
     -- * Parser state combinators
   , getInput
   , setInput
-  , getPosition
-  , getNextTokenPosition
-  , setPosition
-  , getTokensProcessed
-  , setTokensProcessed
-  , getTabWidth
-  , setTabWidth
+  , getSourcePos
+  , getOffset
+  , setOffset
   , setParserState )
 where
 
@@ -117,7 +103,6 @@ import Control.Monad.Combinators
 import Control.Monad.Identity
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
-import Data.Proxy
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
 import Text.Megaparsec.Internal
@@ -144,6 +129,12 @@ import qualified Data.Set as E
 -- This module is intended to be imported qualified:
 --
 -- > import qualified Control.Monad.Combinators.NonEmpty as NE
+--
+-- Other modules of interest are:
+--
+--     * "Control.Monad.Combinators.Expr" for parsing of expressions.
+--     * "Control.Applicative.Permutations" for parsing of permutations
+--       phrases.
 
 ----------------------------------------------------------------------------
 -- Data types
@@ -196,7 +187,6 @@ parseMaybe p s =
 -- input @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
-             , ShowToken (Token s)
              , Show a
              , Stream s
              )
@@ -265,9 +255,7 @@ runParserT' p s = do
     Error e ->
       let bundle = ParseErrorBundle
             { bundleErrors = e :| []
-            , bundleTabWidth = stateTabWidth s
-            , bundleInput = stateInput s
-            , bundleSourcePos = statePos s
+            , bundlePosState = statePosState s
             }
       in (s', Left bundle)
 
@@ -275,10 +263,16 @@ runParserT' p s = do
 
 initialState :: String -> s -> State s
 initialState name s = State
-  { stateInput           = s
-  , statePos             = initialPos name
-  , stateTokensProcessed = 0
-  , stateTabWidth        = defaultTabWidth }
+  { stateInput  = s
+  , stateOffset = 0
+  , statePosState = PosState
+    { pstateInput = s
+    , pstateOffset = 0
+    , pstateSourcePos = initialPos name
+    , pstateTabWidth = defaultTabWidth
+    , pstateLinePrefix = ""
+    }
+  }
 
 ----------------------------------------------------------------------------
 -- Derivatives of primitive combinators
@@ -445,29 +439,29 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 
 match :: MonadParsec e s m => m a -> m (Tokens s, a)
 match p = do
-  tp  <- getTokensProcessed
-  s   <- getInput
-  r   <- p
-  tp' <- getTokensProcessed
+  o  <- getOffset
+  s  <- getInput
+  r  <- p
+  o' <- getOffset
   -- NOTE The 'fromJust' call here should never fail because if the stream
   -- is empty before 'p' (the only case when 'takeN_' can return 'Nothing'
   -- as per its invariants), (tp' - tp) won't be greater than 0, and in that
   -- case 'Just' is guaranteed to be returned as per another invariant of
   -- 'takeN_'.
-  return ((fst . fromJust) (takeN_ (tp' - tp) s), r)
+  return ((fst . fromJust) (takeN_ (o' - o) s), r)
 {-# INLINEABLE match #-}
 
 -- | Specify how to process 'ParseError's that happen inside of this
 -- wrapper. As a side effect of the current implementation changing
--- 'errorPos' with this combinator will also change the final 'statePos' in
--- the parser state (try to avoid that because 'statePos' will go out of
--- sync with factual position in the input stream, which is probably OK if
--- you finish parsing right after that, but be warned).
+-- 'errorOffset' with this combinator will also change the final
+-- 'stateOffset' in the parser state (try to avoid that because
+-- 'stateOffset' will go out of sync with factual position in the input
+-- stream and pretty-printing of parse errors afterwards will be incorrect).
 --
 -- @since 5.3.0
 
 region :: MonadParsec e s m
-  => (ParseError (Token s) e -> ParseError (Token s) e)
+  => (ParseError s e -> ParseError s e)
      -- ^ How to process 'ParseError's
   -> m a               -- ^ The “region” that the processing applies to
   -> m a
@@ -476,11 +470,11 @@ region f m = do
   case r of
     Left err ->
       case f err of
-        TrivialError pos us ps -> do
-          updateParserState $ \st -> st { statePos = pos }
+        TrivialError o us ps -> do
+          updateParserState $ \st -> st { stateOffset = o }
           failure us ps
-        FancyError pos xs -> do
-          updateParserState $ \st -> st { statePos = pos }
+        FancyError o xs -> do
+          updateParserState $ \st -> st { stateOffset = o }
           fancyFailure xs
     Right x -> return x
 {-# INLINEABLE region #-}
@@ -518,80 +512,47 @@ getInput = stateInput <$> getParserState
 -- | @'setInput' input@ continues parsing with @input@.
 
 setInput :: MonadParsec e s m => s -> m ()
-setInput s = updateParserState (\(State _ pos tp w) -> State s pos tp w)
+setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 {-# INLINE setInput #-}
 
--- | Return the current source position.
+-- | Return the current source position. This function /is not cheap/, do
+-- not call it e.g. on matching of every token, that's a bad idea. Still you
+-- can use it to get 'SourcePos' to attach to things that you parse.
 --
--- See also: 'getNextTokenPosition'.
-
-getPosition :: MonadParsec e s m => m SourcePos
-getPosition = statePos <$> getParserState
-{-# INLINE getPosition #-}
-
--- | Get the position where the next token in the stream begins. If the
--- stream is empty, return 'Nothing'.
+-- The function works under the assumption that we move in input stream only
+-- forward and never backward, which is always true unless the user abuses
+-- the library on purpose.
 --
--- See also: 'getPosition'.
---
--- @since 5.3.0
+-- @since 7.0.0
 
-getNextTokenPosition :: forall e s m. MonadParsec e s m => m (Maybe SourcePos)
-getNextTokenPosition = do
-  State {..} <- getParserState
-  let f = positionAt1 (Proxy :: Proxy s) statePos
-  return (f . fst <$> take1_ stateInput)
-{-# INLINEABLE getNextTokenPosition #-}
-
--- | @'setPosition' pos@ sets the current source position to @pos@.
---
--- See also: 'getPosition', 'pushPosition', 'popPosition', and 'SourcePos'.
-
-setPosition :: MonadParsec e s m => SourcePos -> m ()
-setPosition pos = updateParserState $ \(State s _ tp w) ->
-  State s pos tp w
-{-# INLINE setPosition #-}
+getSourcePos :: MonadParsec e s m => m SourcePos
+getSourcePos = do
+  st <- getParserState
+  let (pos, _, pst) = reachOffset (stateOffset st) (statePosState st)
+  setParserState st { statePosState = pst }
+  return pos
+{-# INLINE getSourcePos #-}
 
 -- | Get the number of tokens processed so far.
 --
--- See also: 'setTokensProcessed'.
+-- See also: 'setOffset'.
 --
--- @since 6.0.0
+-- @since 7.0.0
 
-getTokensProcessed :: MonadParsec e s m => m Int
-getTokensProcessed = stateTokensProcessed <$> getParserState
-{-# INLINE getTokensProcessed #-}
+getOffset :: MonadParsec e s m => m Int
+getOffset = stateOffset <$> getParserState
+{-# INLINE getOffset #-}
 
 -- | Set the number of tokens processed so far.
 --
--- See also: 'getTokensProcessed'.
+-- See also: 'getOffset'.
 --
--- @since 6.0.0
+-- @since 7.0.0
 
-setTokensProcessed :: MonadParsec e s m => Int -> m ()
-setTokensProcessed tp = updateParserState $ \(State s pos _ w) ->
-  State s pos tp w
-{-# INLINE setTokensProcessed #-}
-
--- | Return the tab width. The default tab width is equal to
--- 'defaultTabWidth'. You can set a different tab width with the help of
--- 'setTabWidth'.
---
--- See also: 'setTabWidth'.
-
-getTabWidth :: MonadParsec e s m => m Pos
-getTabWidth = stateTabWidth <$> getParserState
-{-# INLINE getTabWidth #-}
-
--- | Set tab width, avoid changing tab width in the middle of parsing if at
--- all possible as it'll screw up parse error pretty-printing.
---
--- See also: 'getTabWidth'.
-
-setTabWidth :: MonadParsec e s m => Pos -> m ()
-setTabWidth w = updateParserState $ \(State s pos tp _) ->
-  State s pos tp w
-{-# INLINE setTabWidth #-}
+setOffset :: MonadParsec e s m => Int -> m ()
+setOffset o = updateParserState $ \(State s _ pst) ->
+  State s o pst
+{-# INLINE setOffset #-}
 
 -- | @'setParserState' st@ sets the parser state to @st@.
 --

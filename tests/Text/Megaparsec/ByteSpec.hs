@@ -6,13 +6,12 @@ import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Char
 import Data.Maybe (fromMaybe)
-import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Void
 import Data.Word (Word8)
 import Test.Hspec
 import Test.Hspec.Megaparsec
-import Test.Hspec.Megaparsec.AdHoc (nes)
+import Test.Hspec.Megaparsec.AdHoc hiding (prs, prs', Parser)
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Byte
@@ -47,20 +46,20 @@ spec = do
         property $ \ch -> ch /= 10 ==> do
           let s = "\r" <> B.singleton ch
           prs eol s `shouldFailWith`
-            err posI (utoks (B.unpack s) <> elabel "end of line")
+            err 0 (utoks s <> elabel "end of line")
     context "when input stream is '\\r'" $
       it "signals correct parse error" $
-        prs eol "\r" `shouldFailWith` err posI
+        prs eol "\r" `shouldFailWith` err 0
           (utok 13 <> elabel "end of line")
     context "when stream does not begin with newline or CRLF sequence" $
       it "signals correct parse error" $
         property $ \ch s -> (ch /= 13 && ch /= 10) ==> do
           let s' = B.singleton ch <> s
-          prs eol s' `shouldFailWith` err posI
-            (utoks (B.unpack $ B.take 2 s') <> elabel "end of line")
+          prs eol s' `shouldFailWith` err 0
+            (utoks (B.take 2 s') <> elabel "end of line")
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs eol "" `shouldFailWith` err posI
+        prs eol "" `shouldFailWith` err 0
           (ueof <> elabel "end of line")
 
   describe "tab" $
@@ -80,7 +79,7 @@ spec = do
         property $ \ch s' -> not (isSpace' ch) ==> do
           let (s0,s1) = B.partition isSpace' s'
               s = B.singleton ch <> s0 <> s1
-          prs  space1 s `shouldFailWith` err posI (utok ch <> elabel "white space")
+          prs  space1 s `shouldFailWith` err 0 (utok ch <> elabel "white space")
           prs' space1 s `failsLeaving` s
     context "when stream starts with a space character" $
       it "consumes space up to first non-space character" $
@@ -91,7 +90,7 @@ spec = do
           prs' space1 s `succeedsLeaving` s1
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs space1 "" `shouldFailWith` err posI (ueof <> elabel "white space")
+        prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" (isControl . toChar) controlChar
@@ -135,13 +134,13 @@ spec = do
         property $ \ch ch' s -> not (casei ch ch') ==> do
           let s' = B.cons ch' s
               ms = utok ch' <> etok (liftChar toLower ch) <> etok (liftChar toUpper ch)
-          prs  (char' ch) s' `shouldFailWith` err posI ms
+          prs  (char' ch) s' `shouldFailWith` err 0 ms
           prs' (char' ch) s' `failsLeaving`   s'
     context "when stream is empty" $
       it "signals correct parse error" $
         property $ \ch -> do
           let ms = ueof <> etok (liftChar toLower ch) <> etok (liftChar toUpper ch)
-          prs  (char' ch) "" `shouldFailWith` err posI ms
+          prs  (char' ch) "" `shouldFailWith` err 0 ms
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -158,13 +157,12 @@ checkStrLit name ts p = do
     it "signals correct parse error" $
       property $ \ch s -> ch /= B.head ts ==> do
        let s' = B.cons ch s
-           us = B.unpack $ B.take (B.length ts) s'
-           ps = B.unpack ts
-       prs  p s' `shouldFailWith` err posI (utoks us <> etoks ps)
+           us = B.take (B.length ts) s'
+       prs  p s' `shouldFailWith` err 0 (utoks us <> etoks ts)
        prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> etoks (B.unpack ts))
+      prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
 
 checkCharPred :: String -> (Word8 -> Bool) -> Parser Word8 -> SpecWith ()
 checkCharPred name f p = do
@@ -178,24 +176,24 @@ checkCharPred name f p = do
     it "signals correct parse error" $
       property $ \ch s -> not (f ch) ==> do
        let s' = B.singleton ch <> s
-       prs  p s' `shouldFailWith` err posI (utok ch <> elabel name)
+       prs  p s' `shouldFailWith` err 0 (utok ch <> elabel name)
        prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> elabel name)
+      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 checkCharRange :: String -> [Word8] -> Parser Word8 -> SpecWith ()
 checkCharRange name tchs p = do
   forM_ tchs $ \tch ->
-    context ("when stream begins with " ++ showTokens (nes tch)) $
-      it ("parses the " ++ showTokens (nes tch)) $
+    context ("when stream begins with " ++ showTokens bproxy (nes tch)) $
+      it ("parses the " ++ showTokens bproxy (nes tch)) $
         property $ \s -> do
           let s' = B.singleton tch <> s
           prs  p s' `shouldParse`     tch
           prs' p s' `succeedsLeaving` s
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> elabel name)
+      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 prs
   :: Parser a
@@ -215,9 +213,6 @@ prs'
      -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 
-bproxy :: Proxy ByteString
-bproxy = Proxy
-
 -- | 'Word8'-specialized version of 'isSpace'.
 
 isSpace' :: Word8 -> Bool
@@ -226,19 +221,6 @@ isSpace' x
   | x == 32           = True
   | x == 160          = True
   | otherwise         = False
-
--- | Convert a byte to char.
-
-toChar :: Word8 -> Char
-toChar = chr . fromIntegral
-
--- | Covert a char to byte.
-
-fromChar :: Char -> Maybe Word8
-fromChar x = let p = ord x in
-  if p > 0xff
-    then Nothing
-    else Just (fromIntegral p)
 
 -- | Lift char transformation to byte transformation.
 

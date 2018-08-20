@@ -63,7 +63,7 @@ spec = do
     it "inner characters are labelled properly" $ do
       let p = skipLineComment "//" <* empty
           s = "// here we go"
-      prs  p s `shouldFailWith` err (posN (length s) s) (elabel "character")
+      prs  p s `shouldFailWith` err (length s) (elabel "character")
       prs' p s `failsLeaving` ""
 
   describe "skipBlockComment" $
@@ -84,16 +84,21 @@ spec = do
 
   describe "indentLevel" $
     it "returns current indentation level (column)" $
-      property $ \pos -> do
-        let p = setPosition pos *> indentLevel
-        prs p "" `shouldParse` sourceColumn pos
+      property $ \s w o -> do
+        let p = do
+              setTabWidth w
+              setOffset o
+              indentLevel
+            c = sourceColumn (strSourcePos w (initialPos "") (take o s))
+        prs p s `shouldParse` c
+        prs' p s `succeedsLeaving` s
 
   describe "incorrectIndent" $
     it "signals correct parse error" $
       property $ \ord ref actual -> do
         let p :: Parser ()
             p = incorrectIndent ord ref actual
-        prs p "" `shouldFailWith` errFancy posI (ii ord ref actual)
+        prs p "" `shouldFailWith` errFancy 0 (ii ord ref actual)
 
   describe "indentGuard" $
     it "works as intended" $
@@ -109,11 +114,11 @@ spec = do
               ip = indentGuard scn
               sp = void (symbol sc sbla <* C.eol)
           if | col0 <= pos1 ->
-               prs p s `shouldFailWith` errFancy posI (ii GT pos1 col0)
+               prs p s `shouldFailWith` errFancy 0 (ii GT pos1 col0)
              | col1 /= col0 ->
-               prs p s `shouldFailWith` errFancy (posN (getIndent l1 + g 1) s) (ii EQ col0 col1)
+               prs p s `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ col0 col1)
              | col2 <= col0 ->
-               prs p s `shouldFailWith` errFancy (posN (getIndent l2 + g 2) s) (ii GT col0 col2)
+               prs p s `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col0 col2)
              | otherwise    ->
                prs p s `shouldParse` ()
 
@@ -124,7 +129,7 @@ spec = do
             i = getIndent s
         if i == 0
           then prs p s `shouldParse` sbla
-          else prs p s `shouldFailWith` errFancy (posN i s) (ii EQ pos1 (getCol s))
+          else prs p s `shouldFailWith` errFancy i (ii EQ pos1 (getCol s))
 
   describe "indentBlock" $ do
     it "works as indented" $
@@ -153,21 +158,21 @@ spec = do
               l x  = return . (x,)
               ib'  = mkPos (fromIntegral ib)
           if | col1 <= col0 -> prs p s `shouldFailWith`
-               err (posN (getIndent l1 + g 1) s) (utok (head sblb) <> eeof)
+               err (getIndent l1 + g 1) (utok (head sblb) <> eeof)
              | isJust mn && col1 /= ib' -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l1 + g 1) s) (ii EQ ib' col1)
+               errFancy (getIndent l1 + g 1) (ii EQ ib' col1)
              | col2 <= col1 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l2 + g 2) s) (ii GT col1 col2)
+               errFancy (getIndent l2 + g 2) (ii GT col1 col2)
              | col3 == col2 -> prs p s `shouldFailWith`
-               err (posN (getIndent l3 + g 3) s) (utoks sblb <> etoks sblc <> eeof)
+               err (getIndent l3 + g 3) (utoks sblb <> etoks sblc <> eeof)
              | col3 <= col0 -> prs p s `shouldFailWith`
-               err (posN (getIndent l3 + g 3) s) (utok (head sblb) <> eeof)
+               err (getIndent l3 + g 3) (utok (head sblb) <> eeof)
              | col3 < col1 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l3 + g 3) s) (ii EQ col1 col3)
+               errFancy (getIndent l3 + g 3) (ii EQ col1 col3)
              | col3 > col1 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l3 + g 3) s) (ii EQ col2 col3)
+               errFancy (getIndent l3 + g 3) (ii EQ col2 col3)
              | col4 <= col3 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l4 + g 4) s) (ii GT col3 col4)
+               errFancy (getIndent l4 + g 4) (ii GT col3 col4)
              | otherwise -> prs p s `shouldParse`
                (sbla, [(sblb, [sblc]), (sblb, [sblc])])
     it "IndentMany works as intended (newline at the end)" $
@@ -214,7 +219,7 @@ spec = do
             IndentSome (Just (mkPos 5)) (l sbla) lvlb <$ symbol sc sbla
           lvlb = symbol sc sblb
           l x = return . (x,)
-      prs p s `shouldFailWith` errFancy (posN 6 s)
+      prs p s `shouldFailWith` errFancy 6
         (fancy $ ErrorIndentation EQ (mkPos 5) (mkPos 3))
 
   describe "lineFold" $
@@ -238,9 +243,9 @@ spec = do
               (col0, col1, col2) = (getCol l0, getCol l1, getCol l2)
               (end0, end1)       = (getEnd l0, getEnd l1)
           if | end0 && col1 <= col0 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l1 + g 1) s) (ii GT col0 col1)
+               errFancy (getIndent l1 + g 1) (ii GT col0 col1)
              | end1 && col2 <= col0 -> prs p s `shouldFailWith`
-               errFancy (posN (getIndent l2 + g 2) s) (ii GT col0 col2)
+               errFancy (getIndent l2 + g 2) (ii GT col0 col2)
              | otherwise -> prs p s `shouldParse` (sbla, sblb, sblc)
 
   describe "charLiteral" $ do
@@ -254,11 +259,11 @@ spec = do
     context "when stream does not begin with a literal character" $
       it "signals correct parse error" $ do
         let s = "\\"
-        prs  p s `shouldFailWith` err posI (utok '\\' <> elabel "literal character")
+        prs  p s `shouldFailWith` err 0 (utok '\\' <> elabel "literal character")
         prs' p s `failsLeaving` s
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs p "" `shouldFailWith` err posI (ueof <> elabel "literal character")
+        prs p "" `shouldFailWith` err 0 (ueof <> elabel "literal character")
 #if MIN_VERSION_base(4,9,0)
     context "when given a long escape sequence" $
       it "parses it correctly" $
@@ -282,11 +287,11 @@ spec = do
         property $ \a as -> not (isDigit a) ==> do
           let p = decimal :: Parser Integer
               s = a : as
-          prs  p s `shouldFailWith` err posI (utok a <> elabel "integer")
+          prs  p s `shouldFailWith` err 0 (utok a <> elabel "integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (decimal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "integer")
+          err 0 (ueof <> elabel "integer")
 
   describe "binary" $ do
     context "when stream begins with binary digits" $
@@ -303,11 +308,11 @@ spec = do
           let p = binary :: Parser Integer
               s = a : as
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "binary integer")
+            err 0 (utok a <> elabel "binary integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (binary :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "binary integer")
+          err 0 (ueof <> elabel "binary integer")
 
   describe "octal" $ do
     context "when stream begins with octal digits" $
@@ -324,11 +329,11 @@ spec = do
           let p = octal :: Parser Integer
               s = a : as
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "octal integer")
+            err 0 (utok a <> elabel "octal integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (octal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "octal integer")
+          err 0 (ueof <> elabel "octal integer")
 
   describe "hexadecimal" $ do
     context "when stream begins with hexadecimal digits" $
@@ -345,11 +350,11 @@ spec = do
           let p = hexadecimal :: Parser Integer
               s = a : as
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "hexadecimal integer")
+            err 0 (utok a <> elabel "hexadecimal integer")
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (hexadecimal :: Parser Integer) "" `shouldFailWith`
-          err posI (ueof <> elabel "hexadecimal integer")
+          err 0 (ueof <> elabel "hexadecimal integer")
 
   describe "scientific" $ do
     context "when stream begins with a number" $
@@ -367,7 +372,7 @@ spec = do
         property $ \(NonNegative n) -> do
           let p = scientific <* empty :: Parser Scientific
               s = showFFloatAlt Nothing (n :: Double) ""
-          prs p s `shouldFailWith` err (posN (length s) s)
+          prs p s `shouldFailWith` err (length s)
             (etok 'E' <> etok 'e' <> elabel "digit")
           prs' p s `failsLeaving` ""
     context "when whole part is followed by a dot without valid fractional part" $
@@ -387,7 +392,7 @@ spec = do
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (scientific :: Parser Scientific) "" `shouldFailWith`
-          err posI (ueof <> elabel "digit")
+          err 0 (ueof <> elabel "digit")
 
   describe "float" $ do
     context "when stream begins with a float" $
@@ -404,7 +409,7 @@ spec = do
           let p = float :: Parser Double
               s = a : as
           prs  p s `shouldFailWith`
-            err posI (utok a <> elabel "digit")
+            err 0 (utok a <> elabel "digit")
           prs' p s `failsLeaving` s
     context "when stream begins with an integer (decimal)" $
       it "signals correct parse error" $
@@ -412,7 +417,7 @@ spec = do
           let p = float :: Parser Double
               n = getNonNegative n'
               s = show (n :: Integer)
-          prs  p s `shouldFailWith` err (posN (length s) s)
+          prs  p s `shouldFailWith` err (length s)
             (ueof <> etok '.' <> etok 'E' <> etok 'e' <> elabel "digit")
           prs' p s `failsLeaving` ""
     context "when number is followed by something starting with 'e'" $
@@ -425,7 +430,7 @@ spec = do
     context "when stream is empty" $
       it "signals correct parse error" $
         prs (float :: Parser Double) "" `shouldFailWith`
-          err posI (ueof <> elabel "digit")
+          err 0 (ueof <> elabel "digit")
     context "when there is float with just exponent" $
       it "parses it all right" $ do
         let p = float :: Parser Double
@@ -476,7 +481,7 @@ spec = do
           let p :: Parser Integer
               p = signed (hidden C.space) decimal
               s = ' ' : show (n :: Integer)
-          prs  p s `shouldFailWith` err posI
+          prs  p s `shouldFailWith` err 0
             (utok ' ' <> etok '+' <> etok '-' <> elabel "integer")
           prs' p s `failsLeaving` s
     context "when there is white space between sign and digits" $
@@ -553,7 +558,7 @@ getIndent = length . takeWhile isSpace
 
 getCol :: String -> Pos
 getCol x = sourceColumn .
-  updatePosString defaultTabWidth (initialPos "") $ take (getIndent x) x
+  strSourcePos defaultTabWidth (initialPos "") $ takeWhile isSpace x
 
 sbla, sblb, sblc :: String
 sbla = "aaa"

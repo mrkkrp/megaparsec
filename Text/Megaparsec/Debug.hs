@@ -52,11 +52,10 @@ import qualified Data.List.NonEmpty as NE
 -- transformers without introducing surprising behavior (e.g. unexpected
 -- state backtracking) or adding otherwise redundant constraints (e.g.
 -- 'Show' instance for state), so this helper is only available for
--- 'ParsecT' monad, not 'MonadParsec' in general.
+-- 'ParsecT' monad, not any instance of 'MonadParsec' in general.
 
 dbg :: forall e s m a.
   ( Stream s
-  , ShowToken (Token s)
   , ShowErrorComponent e
   , Show a )
   => String            -- ^ Debugging label
@@ -84,39 +83,41 @@ dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
 data DbgItem s e a
   = DbgIn   [Token s]
   | DbgCOK  [Token s] a
-  | DbgCERR [Token s] (ParseError (Token s) e)
+  | DbgCERR [Token s] (ParseError s e)
   | DbgEOK  [Token s] a
-  | DbgEERR [Token s] (ParseError (Token s) e)
+  | DbgEERR [Token s] (ParseError s e)
 
 -- | Render a single piece of debugging info.
 
-dbgLog :: (ShowToken (Token s), ShowErrorComponent e, Show a, Ord (Token s))
+dbgLog
+  :: forall s e a. (Stream s, ShowErrorComponent e, Show a)
   => String            -- ^ Debugging label
   -> DbgItem s e a     -- ^ Information to render
   -> String            -- ^ Rendered result
 dbgLog lbl item = prefix msg
   where
     prefix = unlines . fmap ((lbl ++ "> ") ++) . lines
+    pxy = Proxy :: Proxy s
     msg = case item of
       DbgIn   ts   ->
-        "IN: " ++ showStream ts
+        "IN: " ++ showStream pxy ts
       DbgCOK  ts a ->
-        "MATCH (COK): " ++ showStream ts ++ "\nVALUE: " ++ show a
+        "MATCH (COK): " ++ showStream pxy ts ++ "\nVALUE: " ++ show a
       DbgCERR ts e ->
-        "MATCH (CERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+        "MATCH (CERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
       DbgEOK  ts a ->
-        "MATCH (EOK): " ++ showStream ts ++ "\nVALUE: " ++ show a
+        "MATCH (EOK): " ++ showStream pxy ts ++ "\nVALUE: " ++ show a
       DbgEERR ts e ->
-        "MATCH (EERR): " ++ showStream ts ++ "\nERROR:\n" ++ parseErrorPretty e
+        "MATCH (EERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
 
 -- | Pretty-print a list of tokens.
 
-showStream :: ShowToken t => [t] -> String
-showStream ts =
+showStream :: Stream s => Proxy s -> [Token s] -> String
+showStream pxy ts =
   case NE.nonEmpty ts of
     Nothing -> "<EMPTY>"
     Just ne ->
-      let (h, r) = splitAt 40 (showTokens ne)
+      let (h, r) = splitAt 40 (showTokens pxy ne)
       in if null r then h else h ++ " <…>"
 
 -- | Calculate number of consumed tokens given 'State' of parser before and
@@ -126,7 +127,7 @@ streamDelta
   :: State s           -- ^ State of parser before consumption
   -> State s           -- ^ State of parser after consumption
   -> Int               -- ^ Number of consumed tokens
-streamDelta s0 s1 = stateTokensProcessed s1 - stateTokensProcessed s0
+streamDelta s0 s1 = stateOffset s1 - stateOffset s0
 
 -- | Extract a given number of tokens from the stream.
 

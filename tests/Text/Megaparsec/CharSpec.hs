@@ -44,20 +44,20 @@ spec = do
       it "signals correct parse error" $
         property $ \ch -> ch /= '\n' ==> do
           let s = ['\r',ch]
-          prs eol s `shouldFailWith` err posI (utoks s <> elabel "end of line")
+          prs eol s `shouldFailWith` err 0 (utoks s <> elabel "end of line")
     context "when input stream is '\\r'" $
       it "signals correct parse error" $
-        prs eol "\r" `shouldFailWith` err posI
+        prs eol "\r" `shouldFailWith` err 0
           (utok '\r' <> elabel "end of line")
     context "when stream does not begin with newline or CRLF sequence" $
       it "signals correct parse error" $
         property $ \ch s -> (ch `notElem` "\r\n") ==> do
           let s' = ch : s
-          prs eol s' `shouldFailWith` err posI
+          prs eol s' `shouldFailWith` err 0
             (utoks (take 2 s') <> elabel "end of line")
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs eol "" `shouldFailWith` err posI
+        prs eol "" `shouldFailWith` err 0
           (ueof <> elabel "end of line")
 
   describe "tab" $
@@ -77,7 +77,7 @@ spec = do
         property $ \ch s' -> not (isSpace ch) ==> do
           let (s0,s1) = partition isSpace s'
               s = ch : s0 ++ s1
-          prs  space1 s `shouldFailWith` err posI (utok ch <> elabel "white space")
+          prs  space1 s `shouldFailWith` err 0 (utok ch <> elabel "white space")
           prs' space1 s `failsLeaving` s
     context "when stream starts with a space character" $
       it "consumes space up to first non-space character" $
@@ -88,7 +88,7 @@ spec = do
           prs' space1 s `succeedsLeaving` s1
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs space1 "" `shouldFailWith` err posI (ueof <> elabel "white space")
+        prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" isControl controlChar
@@ -155,11 +155,11 @@ spec = do
     context "when stream does not begin with Latin-1 character" $
       it "signals correct parse error" $ do
         prs  latin1Char "б" `shouldFailWith`
-          err posI (utok 'б' <> elabel "Latin-1 character")
+          err 0 (utok 'б' <> elabel "Latin-1 character")
         prs' latin1Char "в" `failsLeaving`   "в"
     context "when stream is empty" $
       it "signals correct parse error" $
-        prs latin1Char "" `shouldFailWith` err posI (ueof <> elabel "Latin-1 character")
+        prs latin1Char "" `shouldFailWith` err 0 (ueof <> elabel "Latin-1 character")
 
   describe "charCategory" $ do
     context "when parser corresponding to general category of next char is used" $
@@ -174,13 +174,13 @@ spec = do
         property $ \g ch s -> (generalCategory ch /= g) ==> do
           let s' = ch : s
           prs  (charCategory g) s' `shouldFailWith`
-            err posI (utok ch <> elabel (categoryName g))
+            err 0 (utok ch <> elabel (categoryName g))
           prs' (charCategory g) s' `failsLeaving` s'
     context "when stream is empty" $
       it "signals correct parse error" $
         property $ \g ->
           prs (charCategory g) "" `shouldFailWith`
-            err posI (ueof <> elabel (categoryName g))
+            err 0 (ueof <> elabel (categoryName g))
 
   describe "char" $ do
     context "when stream begins with the character specified as argument" $
@@ -193,12 +193,12 @@ spec = do
       it "signals correct parse error" $
         property $ \ch ch' s -> ch /= ch' ==> do
           let s' = ch' : s
-          prs  (char ch) s' `shouldFailWith` err posI (utok ch' <> etok ch)
+          prs  (char ch) s' `shouldFailWith` err 0 (utok ch' <> etok ch)
           prs' (char ch) s' `failsLeaving`   s'
     context "when stream is empty" $
       it "signals correct parse error" $
         property $ \ch ->
-          prs  (char ch) "" `shouldFailWith` err posI (ueof <> etok ch)
+          prs  (char ch) "" `shouldFailWith` err 0 (ueof <> etok ch)
 
   describe "char'" $ do
     context "when stream begins with the character specified as argument" $ do
@@ -225,19 +225,19 @@ spec = do
         property $ \ch ch' s -> not (casei ch ch') ==> do
           let s' = ch' : s
               ms = utok ch' <> etok (toLower ch) <> etok (toUpper ch) <> etok (toTitle ch)
-          prs  (char' ch) s' `shouldFailWith` err posI ms
+          prs  (char' ch) s' `shouldFailWith` err 0 ms
           prs' (char' ch) s' `failsLeaving`   s'
       context "when the character is not upper or lower" $
         it "lists correct options in the error message" $
           property $ \ch s -> not (casei '\9438' ch) ==> do
             let ms = utok ch <> etok '\9438' <> etok '\9412'
                 s' = ch : s
-            prs (char' '\9438') s' `shouldFailWith` err posI ms
+            prs (char' '\9438') s' `shouldFailWith` err 0 ms
     context "when stream is empty" $
       it "signals correct parse error" $
         property $ \ch -> do
           let ms = ueof <> etok (toLower ch) <> etok (toUpper ch)
-          prs  (char' ch) "" `shouldFailWith` err posI ms
+          prs  (char' ch) "" `shouldFailWith` err 0 ms
 
   describe "string" $ do
     context "when stream is prefixed with given string" $
@@ -250,8 +250,7 @@ spec = do
       it "signals correct parse error" $
         property $ \str s -> not (str `isPrefixOf` s) ==> do
           let us = take (length str) s
-          prs (string str) s `shouldFailWith`
-            err posI (utoks us <> etoks str)
+          prs (string str) s `shouldFailWith` err 0 (utoks us <> etoks str)
 
   describe "string'" $ do
     context "when stream is prefixed with given string" $
@@ -267,8 +266,7 @@ spec = do
       it "signals correct parse error" $
         property $ \str s -> not (str `isPrefixOfI` s) ==> do
           let us = take (length str) s
-          prs  (string' str) s `shouldFailWith`
-            err posI (utoks us <> etoks str)
+          prs  (string' str) s `shouldFailWith` err 0 (utoks us <> etoks str)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -286,11 +284,11 @@ checkStrLit name ts p = do
       property $ \ch s -> ch /= head ts ==> do
        let s' = ch : s
            us = take (length ts) s'
-       prs  p s' `shouldFailWith` err posI (utoks us <> etoks ts)
+       prs  p s' `shouldFailWith` err 0 (utoks us <> etoks ts)
        prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> etoks ts)
+      prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
 
 checkCharPred :: String -> (Char -> Bool) -> Parser Char -> SpecWith ()
 checkCharPred name f p = do
@@ -304,24 +302,24 @@ checkCharPred name f p = do
     it "signals correct parse error" $
       property $ \ch s -> not (f ch) ==> do
        let s' = ch : s
-       prs  p s' `shouldFailWith` err posI (utok ch <> elabel name)
+       prs  p s' `shouldFailWith` err 0 (utok ch <> elabel name)
        prs' p s' `failsLeaving`   s'
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> elabel name)
+      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 checkCharRange :: String -> String -> Parser Char -> SpecWith ()
 checkCharRange name tchs p = do
   forM_ tchs $ \tch ->
-    context ("when stream begins with " ++ showTokens (nes tch)) $
-      it ("parses the " ++ showTokens (nes tch)) $
+    context ("when stream begins with " ++ showTokens sproxy (nes tch)) $
+      it ("parses the " ++ showTokens sproxy (nes tch)) $
         property $ \s -> do
           let s' = tch : s
           prs  p s' `shouldParse`     tch
           prs' p s' `succeedsLeaving` s
   context "when stream is empty" $
     it "signals correct parse error" $
-      prs p "" `shouldFailWith` err posI (ueof <> elabel name)
+      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 -- | Randomly change the case in the given string.
 
