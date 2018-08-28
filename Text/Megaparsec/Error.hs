@@ -26,6 +26,7 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE UndecidableInstances#-}
 
 module Text.Megaparsec.Error
   ( -- * Parse error type
