@@ -31,6 +31,7 @@ module Test.Hspec.Megaparsec
   , failsLeaving
   , succeedsLeaving
   , initialState
+  , initialPosState
     -- * Re-exports
   , module Text.Megaparsec.Error.Builder )
 where
@@ -218,21 +219,26 @@ succeedsLeaving
   shouldSucceed r
   checkUnconsumed s (stateInput st)
 
--- | Given input for parsing, construct initial state for parser (that is,
--- with empty file name, default tab width and position at 1 line and 1
--- column).
+-- | Given input for parsing, construct initial state for parser.
 
 initialState :: s -> State s
 initialState s = State
   { stateInput  = s
   , stateOffset = 0
-  , statePosState = PosState
-    { pstateInput = s
-    , pstateOffset = 0
-    , pstateSourcePos = initialPos ""
-    , pstateTabWidth = defaultTabWidth
-    , pstateLinePrefix = ""
-    }
+  , statePosState = initialPosState s
+  }
+
+-- | Given input for parsing, construct initial positional state.
+--
+-- @since 2.0.0
+
+initialPosState :: s -> PosState s
+initialPosState s = PosState
+  { pstateInput = s
+  , pstateOffset = 0
+  , pstateSourcePos = initialPos ""
+  , pstateTabWidth = defaultTabWidth
+  , pstateLinePrefix = ""
   }
 
 ----------------------------------------------------------------------------
