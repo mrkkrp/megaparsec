@@ -73,6 +73,7 @@ spec = do
           takeWhile_ isLetter s === span isLetter s
     describeShowTokens sproxy quotedCharGen
     describeReachOffset sproxy
+    describeReachOffsetNoLine sproxy
 
   describe "ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -124,6 +125,7 @@ spec = do
           in takeWhile_ f s === B.span f s
     describeShowTokens bproxy quotedWordGen
     describeReachOffset bproxy
+    describeReachOffsetNoLine bproxy
 
   describe "Lazy ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -175,6 +177,7 @@ spec = do
           in takeWhile_ f s === BL.span f s
     describeShowTokens blproxy quotedWordGen
     describeReachOffset blproxy
+    describeReachOffsetNoLine blproxy
 
   describe "Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -225,6 +228,7 @@ spec = do
           takeWhile_ isLetter s === T.span isLetter s
     describeShowTokens tproxy quotedCharGen
     describeReachOffset tproxy
+    describeReachOffsetNoLine tproxy
 
   describe "Lazy Text instance of Stream" $ do
     describe "tokenToChunk" $
@@ -275,6 +279,7 @@ spec = do
           takeWhile_ isLetter s === TL.span isLetter s
     describeShowTokens tlproxy quotedCharGen
     describeReachOffset tlproxy
+    describeReachOffsetNoLine tlproxy
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -465,6 +470,59 @@ describeReachOffset Proxy =
               let (_, _, pst') = reachOffset o pst
               in pst'
         reachOffset o' s `shouldBe` reachOffset o' s'
+
+-- | Generic block of tests for the 'reachOffsetNoLine' method.
+
+describeReachOffsetNoLine
+  :: forall s. ( Stream s
+               , IsString s
+               , Show s
+               , Arbitrary s
+               )
+  => Proxy s           -- ^ 'Proxy' that clarifies the type of stream
+  -> Spec
+describeReachOffsetNoLine Proxy =
+  describe "reachOffsetNoLine" $ do
+    it "returns correct SourcePos (newline)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "\n" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _) = reachOffsetNoLine o pst
+            SourcePos n l _ = pstateSourcePos pst
+        r `shouldBe` SourcePos n (l <> pos1) pos1
+    it "returns correct SourcePos (tab)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "\t" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _) = reachOffsetNoLine o pst
+            SourcePos n l c = pstateSourcePos pst
+            w = pstateTabWidth pst
+        r `shouldBe` SourcePos n l (toNextTab w c)
+    it "returns correct SourcePos (other)" $
+      property $ \pst' -> do
+        let pst = (pst' :: PosState s)
+              { pstateInput = "a" :: s
+              }
+            o = pstateOffset pst + 1
+            (r, _) = reachOffsetNoLine o pst
+            SourcePos n l c = pstateSourcePos pst
+        r `shouldBe` SourcePos n l (c <> pos1)
+    it "works incrementally" $
+      property $ \os' (NonNegative d) s -> do
+        let os = getNonNegative <$> os'
+            s' :: PosState String
+            s' = foldl' f s os
+            o' = case os of
+                   [] -> d
+                   xs -> maximum xs + d
+            f pst o =
+              let (_, pst') = reachOffsetNoLine o pst
+              in pst'
+        reachOffsetNoLine o' s `shouldBe` reachOffsetNoLine o' s'
 
 -- | Get next tab position given tab width and current column.
 
