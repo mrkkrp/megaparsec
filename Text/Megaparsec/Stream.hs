@@ -168,6 +168,25 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     -> PosState s      -- ^ Initial 'PosState' to use
     -> (SourcePos, String, PosState s) -- ^ (See above)
 
+  -- | A version of 'reachOffset' that may be faster because it doesn't need
+  -- to fetch the line at which the given offset in located.
+  --
+  -- The default implementation is this:
+  --
+  -- > reachOffsetNoLine o pst =
+  -- >   let (spos, _, pst')=  reachOffset o pst
+  -- >   in (spos, pst')
+  --
+  -- @since 7.0.0
+
+  reachOffsetNoLine
+    :: Int             -- ^ Offset to reach
+    -> PosState s      -- ^ Initial 'PosState' to use
+    -> (SourcePos, PosState s) -- ^ Reached source position and updated state
+  reachOffsetNoLine o pst =
+    let (spos, _, pst') = reachOffset o pst
+    in (spos, pst')
+
 instance Stream String where
   type Token String = Char
   type Tokens String = String
@@ -184,7 +203,11 @@ instance Stream String where
     | otherwise = Just (splitAt n s)
   takeWhile_ = span
   showTokens Proxy = stringPretty
-  reachOffset = reachOffset' splitAt foldl' id id ('\n','\t')
+  -- NOTE Do not eta-reduce these (breaks inlining)
+  reachOffset o pst =
+    reachOffset' splitAt foldl' id id ('\n','\t') o pst
+  reachOffsetNoLine o pst =
+    reachOffsetNoLine' splitAt foldl' ('\n', '\t') o pst
 
 instance Stream B.ByteString where
   type Token B.ByteString = Word8
@@ -201,8 +224,11 @@ instance Stream B.ByteString where
     | otherwise = Just (B.splitAt n s)
   takeWhile_ = B.span
   showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
-  reachOffset =
-    reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9)
+  -- NOTE Do not eta-reduce these (breaks inlining)
+  reachOffset o pst =
+    reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
+  reachOffsetNoLine o pst =
+    reachOffsetNoLine' B.splitAt B.foldl' (10, 9) o pst
 
 instance Stream BL.ByteString where
   type Token BL.ByteString = Word8
@@ -219,10 +245,11 @@ instance Stream BL.ByteString where
     | otherwise = Just (BL.splitAt (fromIntegral n) s)
   takeWhile_ = BL.span
   showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
-  reachOffset =
-    reachOffset' splitAt' BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9)
-    where
-      splitAt' n = BL.splitAt (fromIntegral n)
+  -- NOTE Do not eta-reduce these (breaks inlining)
+  reachOffset o pst =
+    reachOffset' splitAtBL BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9) o pst
+  reachOffsetNoLine o pst =
+    reachOffsetNoLine' splitAtBL BL.foldl' (10, 9) o pst
 
 instance Stream T.Text where
   type Token T.Text = Char
@@ -239,8 +266,11 @@ instance Stream T.Text where
     | otherwise = Just (T.splitAt n s)
   takeWhile_ = T.span
   showTokens Proxy = stringPretty
-  reachOffset =
-    reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t')
+  -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
+  reachOffset o pst =
+    reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t') o pst
+  reachOffsetNoLine o pst =
+    reachOffsetNoLine' T.splitAt T.foldl' ('\n', '\t') o pst
 
 instance Stream TL.Text where
   type Token TL.Text  = Char
@@ -257,10 +287,11 @@ instance Stream TL.Text where
     | otherwise = Just (TL.splitAt (fromIntegral n) s)
   takeWhile_ = TL.span
   showTokens Proxy = stringPretty
-  reachOffset =
-    reachOffset' splitAt' TL.foldl' TL.unpack id ('\n', '\t')
-    where
-      splitAt' n = TL.splitAt (fromIntegral n)
+  -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
+  reachOffset o pst =
+    reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') o pst
+  reachOffsetNoLine o pst =
+    reachOffsetNoLine' splitAtTL TL.foldl' ('\n', '\t') o pst
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -268,7 +299,9 @@ instance Stream TL.Text where
 -- | An internal helper state type combining a difference 'String' and an
 -- unboxed 'SourcePos'.
 
-data St = St {-# UNPACK #-} !SourcePos ShowS
+data St = St SourcePos ShowS
+
+-- {-# UNPACK #-} -- TODO do we need to unpack or not?
 
 -- | A helper definition to facilitate defining 'reachOffset' for various
 -- stream types.
@@ -345,6 +378,62 @@ reachOffset' splitAt'
                 St (SourcePos n l (c <> pos1))
                    (g . (fromTok ch :))
 {-# INLINE reachOffset' #-}
+
+-- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
+
+reachOffsetNoLine'
+  :: forall s. Stream s
+  => (Int -> s -> (Tokens s, s))
+     -- ^ How to split input stream at given offset
+  -> (forall b. (b -> Token s -> b) -> b -> Tokens s -> b)
+     -- ^ How to fold over input stream
+  -> (Token s, Token s)
+     -- ^ Newline token and tab token
+  -> Int
+     -- ^ Offset to reach
+  -> PosState s
+     -- ^ Initial 'PosState' to use
+  -> (SourcePos, PosState s)
+     -- ^ Reached 'SourcePos' and updated 'PosState'
+reachOffsetNoLine' splitAt'
+                   foldl''
+                   (newlineTok, tabTok)
+                   o
+                   PosState {..} =
+  ( spos
+  , PosState
+      { pstateInput = post
+      , pstateOffset = max pstateOffset o
+      , pstateSourcePos = spos
+      , pstateTabWidth = pstateTabWidth
+      , pstateLinePrefix = pstateLinePrefix
+      }
+  )
+  where
+    spos = foldl'' go pstateSourcePos pre
+    (pre, post) = splitAt' (o - pstateOffset) pstateInput
+    go (SourcePos n l c) ch =
+      let c' = unPos c
+          w  = unPos pstateTabWidth
+      in if | ch == newlineTok ->
+                SourcePos n (l <> pos1) pos1
+            | ch == tabTok ->
+                SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+            | otherwise ->
+                SourcePos n l (c <> pos1)
+{-# INLINE reachOffsetNoLine' #-}
+
+-- | Like 'BL.splitAt' but accepts the index as an 'Int'.
+
+splitAtBL :: Int -> BL.ByteString -> (BL.ByteString, BL.ByteString)
+splitAtBL n = BL.splitAt (fromIntegral n)
+{-# INLINE splitAtBL #-}
+
+-- | Like 'TL.splitAt' but accepts the index as an 'Int'.
+
+splitAtTL :: Int -> TL.Text -> (TL.Text, TL.Text)
+splitAtTL n = TL.splitAt (fromIntegral n)
+{-# INLINE splitAtTL #-}
 
 -- | @stringPretty s@ returns pretty representation of string @s@. This is
 -- used when printing string tokens in error messages.

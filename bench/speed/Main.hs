@@ -60,6 +60,11 @@ main = defaultMain
   , breachOffset 0 4000
   , breachOffset 1000 1000
 
+  , breachOffsetNoLine 0 1000
+  , breachOffsetNoLine 0 2000
+  , breachOffsetNoLine 0 4000
+  , breachOffsetNoLine 1000 1000
+
   ]
 
 -- | Perform a series to measurements with the same parser.
@@ -122,6 +127,26 @@ breachOffset o0 o1 = bench
              , pstateLinePrefix = ""
              }
       in (x, y)
+
+-- | Bench the 'reachOffsetNoLine' function.
+
+breachOffsetNoLine
+  :: Int               -- ^ Starting offset in 'PosState'
+  -> Int               -- ^ Offset to reach
+  -> Benchmark
+breachOffsetNoLine o0 o1 = bench
+  ("reachOffsetNoLine-" ++ show o0 ++ "-" ++ show o1)
+  (nf f (o0 * 80, o1 * 80))
+  where
+    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f (startOffset, targetOffset) =
+      reachOffsetNoLine targetOffset PosState
+        { pstateInput = manyAs (targetOffset - startOffset)
+        , pstateOffset = startOffset
+        , pstateSourcePos = initialPos ""
+        , pstateTabWidth = defaultTabWidth
+        , pstateLinePrefix = ""
+        }
 
 -- | The series of sizes to try as part of 'bparser'.
 

@@ -63,6 +63,11 @@ main = mainWith $ do
   breachOffset 0 4000
   breachOffset 1000 1000
 
+  breachOffsetNoLine 0 1000
+  breachOffsetNoLine 0 2000
+  breachOffsetNoLine 0 4000
+  breachOffsetNoLine 1000 1000
+
 -- | Perform a series of measurements with the same parser.
 
 bparser :: NFData a
@@ -125,6 +130,27 @@ breachOffset o0 o1 = func
             , pstateLinePrefix = ""
             }
       in (x, y)
+
+-- | Bench the 'reachOffsetNoLine' function.
+
+breachOffsetNoLine
+  :: Int               -- ^ Starting offset in 'PosState'
+  -> Int               -- ^ Offset to reach
+  -> Weigh ()
+breachOffsetNoLine o0 o1 = func
+  ("reachOffsetNoLine-" ++ show o0 ++ "-" ++ show o1)
+  f
+  (o0 * 80, o1 * 80)
+  where
+    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f (startOffset, targetOffset) =
+      reachOffsetNoLine targetOffset PosState
+        { pstateInput = manyAs (targetOffset - startOffset)
+        , pstateOffset = startOffset
+        , pstateSourcePos = initialPos ""
+        , pstateTabWidth = defaultTabWidth
+        , pstateLinePrefix = ""
+        }
 
 -- | The series of sizes to try as part of 'bparser'.
 

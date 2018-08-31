@@ -134,7 +134,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 
 indentLevel :: MonadParsec e s m => m Pos
 indentLevel = sourceColumn <$> getSourcePos
-{-# INLINEABLE indentLevel #-}
+{-# INLINE indentLevel #-}
 
 -- | Fail reporting incorrect indentation error. The error has attached
 -- information:
