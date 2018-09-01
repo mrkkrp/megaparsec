@@ -9,8 +9,7 @@
 --
 -- Utility functions for testing Megaparsec parsers with Hspec.
 --
--- This version of the library should be used with Megaparsec 7, it won't
--- work with older versions of Megaparsec.
+-- This version of the library should be used with Megaparsec 7.
 
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE FlexibleContexts    #-}
@@ -140,6 +139,8 @@ r `shouldFailWith` perr1 = r `shouldFailWithM` [perr1]
 
 -- | Similar to 'shouldFailWith', but allows to check parsers that can
 -- report more than one parse error at a time.
+--
+-- @since 2.0.0
 
 shouldFailWithM
   :: ( HasCallStack
