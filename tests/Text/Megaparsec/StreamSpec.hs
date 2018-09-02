@@ -4,6 +4,7 @@
 
 module Text.Megaparsec.StreamSpec (spec) where
 
+import Control.Monad
 import Data.Char (isLetter, chr, isControl, isSpace)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
@@ -379,6 +380,7 @@ describeShowTokens pxy quotedTokGen =
     it "shows strings in double quotes" $
       property $ \x (NonEmpty xs) -> do
         let r = showTokens pxy (x :| xs)
+        when (r == "crlf newline") discard
         head r `shouldBe` '\"'
         last r `shouldBe` '\"'
     it "shows control characters in long strings property"
