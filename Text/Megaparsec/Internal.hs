@@ -344,8 +344,10 @@ pFancyFailure xs = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   let el = Label <$> NE.nonEmpty l
-      cl = Label . (NE.fromList "the rest of " <>) <$> NE.nonEmpty l
-      cok' x s' hs = cok x s' (refreshLastHint hs cl)
+      cok' x s' hs =
+        case el of
+          Nothing -> cok x s' (refreshLastHint hs Nothing)
+          Just  _ -> cok x s' hs
       eok' x s' hs = eok x s' (refreshLastHint hs el)
       eerr'    err = eerr $
         case err of
