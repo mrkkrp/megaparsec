@@ -36,6 +36,7 @@ module Text.Megaparsec.Error
   , mapParseError
   , errorOffset
   , ParseErrorBundle (..)
+  , attachSourcePos
     -- * Pretty-printing
   , ShowErrorComponent (..)
   , errorBundlePretty
@@ -45,6 +46,7 @@ where
 
 import Control.DeepSeq
 import Control.Exception
+import Control.Monad.State.Strict
 import Data.Data (Data)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -233,7 +235,7 @@ mergeError e1 e2 =
 
 data ParseErrorBundle s e = ParseErrorBundle
   { bundleErrors :: NonEmpty (ParseError s e)
-    -- ^ A /sorted/ collection of 'ParseError's to display
+    -- ^ A collection of 'ParseError's that is sorted by parse error offsets
   , bundlePosState :: PosState s
     -- ^ State that is used for line\/column calculation
   } deriving (Generic)
@@ -274,6 +276,29 @@ instance ( Show s
          , Typeable e
          ) => Exception (ParseErrorBundle s e) where
   displayException = errorBundlePretty
+
+-- | Attach 'SourcePos'es to items in a 'Traversable' container given that
+-- there is a projection allowing to get an offset per item.
+--
+-- Items must be in ascending order with respect to their offsets.
+--
+-- @since 7.0.0
+
+attachSourcePos
+  :: (Traversable t, Stream s)
+  => (a -> Int)        -- ^ How to project offset from an item
+  -> t a               -- ^ The collection of items
+  -> PosState s        -- ^ Initial 'PosState'
+  -> (t (a, SourcePos), PosState s) -- ^ The collection with 'SourcePos'es
+                                    -- added and the final 'PosState'
+attachSourcePos projectOffset xs = runState (traverse f xs)
+  where
+    f a = do
+      pst <- get
+      let (spos, pst') = reachOffsetNoLine (projectOffset a) pst
+      put pst'
+      return (a, spos)
+{-# INLINEABLE attachSourcePos #-}
 
 ----------------------------------------------------------------------------
 -- Pretty-printing
@@ -319,10 +344,10 @@ errorBundlePretty ParseErrorBundle {..} =
     f :: (ShowS, PosState s)
       -> ParseError s e
       -> (ShowS, PosState s)
-    f (o, !pstate) e = (o . (outChunk ++), pstate')
+    f (o, !pst) e = (o . (outChunk ++), pst')
       where
-        (epos, sline, pstate') = reachOffset (errorOffset e) pstate
-        ppos = pstateSourcePos pstate
+        (epos, sline, pst') = reachOffset (errorOffset e) pst
+        ppos = pstateSourcePos pst
         outChunk =
           "\n" <> sourcePosPretty epos <> ":\n" <>
           padding <> "|\n" <>

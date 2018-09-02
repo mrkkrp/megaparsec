@@ -112,6 +112,8 @@
   removed. `parseTest'` was removed because `parseTest` always prints
   offending lines now.
 
+* Added `attachSourcePos` function in `Text.Megaparsec.Error`.
+
 * The `ShowToken` type class has been removed and its method `showTokens`
   now lives in the `Stream` type class.
 

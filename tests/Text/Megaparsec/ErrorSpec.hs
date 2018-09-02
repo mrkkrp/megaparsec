@@ -6,14 +6,14 @@ module Text.Megaparsec.ErrorSpec (spec) where
 import Control.Exception (Exception (..))
 import Data.ByteString (ByteString)
 import Data.Functor.Identity
-import Data.List (isSuffixOf, isInfixOf)
+import Data.List (isSuffixOf, isInfixOf, sort)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Void
 import Test.Hspec
+import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec
-import Text.Megaparsec.Error.Builder
 import qualified Data.ByteString    as B
 import qualified Data.Semigroup     as S
 import qualified Data.Set           as E
@@ -69,13 +69,26 @@ spec = do
           TrivialError pos us ps <> FancyError pos xs `shouldBe`
             (FancyError pos xs :: PE)
 
-  describe "errorPos" $
+  describe "errorOffset" $
     it "returns error position" $
       property $ \e ->
         errorOffset e `shouldBe`
           (case e :: PE of
             TrivialError o _ _ -> o
             FancyError   o _   -> o)
+
+  describe "attachSourcePos" $
+    it "attaches the positions correctly" $
+      property $ \xs' s -> do
+        let xs = sort $ getSmall . getPositive <$> xs'
+            pst = initialPosState (s :: String)
+            pst' =
+              if null xs
+                then pst
+                else snd $ reachOffsetNoLine (last xs) pst
+            rs = f <$> xs
+            f x = (x, fst (reachOffsetNoLine x pst))
+        attachSourcePos id (xs :: [Int]) pst `shouldBe` (rs, pst')
 
   describe "errorBundlePretty" $ do
     context "with Char tokens" $ do
