@@ -356,9 +356,16 @@ errorBundlePretty ParseErrorBundle {..} =
           parseErrorTextPretty e
         lineNumber = (show . unPos . sourceLine) epos
         padding = replicate (length lineNumber + 1) ' '
-        gpadding = replicate (unPos (sourceColumn ppos) - 1) '?'
-        rpadding = replicate (unPos (sourceColumn epos) - 1) ' '
-        pointer = replicate elen '^'
+        gpadding = replicate gpshift '?'
+        gpshift = unPos (sourceColumn ppos) - 1
+        rpadding = replicate rpshift ' '
+        rpshift = unPos (sourceColumn epos) - 1
+        pointer = replicate
+          (if rpshift + elen > gpshift + slineLen
+             then gpshift + slineLen - rpshift + 1
+             else elen)
+          '^'
+        slineLen = length sline
         elen =
           case e of
             TrivialError _ Nothing _ -> 1
