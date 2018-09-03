@@ -63,7 +63,7 @@ features some combinators that are missing in other parsing libraries:
 * `observing` allows to “observe” parse errors without ending parsing (they
   are returned in `Left`, while normal results are wrapped in `Right`).
 
-In addition to that, Megaparsec 6 features high-performance combinators
+In addition to that, Megaparsec features high-performance combinators
 similar to those found in Attoparsec:
 
 * `tokens` makes it easy to parse several tokens in a row (`string` and
@@ -76,9 +76,8 @@ similar to those found in Attoparsec:
 * `takeP` allows to grab n tokens from the stream and returns them as a
   “chunk” of the stream.
 
-So now that we have matched the main “performance boosters” of Attoparsec,
-Megaparsec 6 is not significantly slower than Attoparsec if you write your
-parser carefully (see also [the section about performance](#performance)).
+Megaparsec is about as fast as Attoparsec if you write your parser carefully
+(see also [the section about performance](#performance)).
 
 Megaparsec can currently work with the following types of input stream
 out-of-the-box:
@@ -92,12 +91,9 @@ users have done so many times.
 
 ### Error messages
 
-Megaparsec 5 introduced well-typed error messages and the ability to use
-custom data types to adjust the library to specific domain of interest. No
-need to use a shapeless bunch of strings.
-
-The design of parse errors has been revised in version 6 significantly, but
-custom errors are still easy (probably even easier now).
+Megaparsec has well-typed error messages and the ability to use custom data
+types to adjust the library to specific domain of interest. No need to use a
+shapeless bunch of strings.
 
 Megaparsec 7 introduced the `ParseErrorBundle` data type that helps to
 manage multi-error messages and pretty-print them easily and efficiently.
@@ -108,8 +104,8 @@ line the default.
 
 Megaparsec works well with streams of tokens produced by tools like Alex.
 The design of the `Stream` type class has been changed significantly in
-version 6, but user can still work with custom streams of tokens without
-problems.
+versions 6 and 7, but user can still work with custom streams of tokens
+without problems.
 
 ### Character and binary parsing
 
@@ -158,18 +154,18 @@ to migrate to Megaparsec.
 
 ## Performance
 
-Despite being flexible, Megaparsec is also quite fast. Here is how
-Megaparsec 6.4.0 compares to Attoparsec 0.13.2.0 (the fastest widely used
-parsing library in the Haskell ecosystem):
+Despite being flexible, Megaparsec is also fast. Here is how Megaparsec
+7.0.0 compares to Attoparsec 0.13.2.2 (the fastest widely used parsing
+library in the Haskell ecosystem):
 
 Test case         | Execution time | Allocated | Max residency
 ------------------|---------------:|----------:|-------------:
-CSV (Attoparsec)  |       57.14 μs |   397,912 |        10,560
-CSV (Megaparsec)  |       76.27 μs |   557,272 |         9,120
-Log (Attoparsec)  |       244.2 μs | 1,181,120 |        11,144
-Log (Megaparsec)  |       315.2 μs | 1,485,776 |        11,392
-JSON (Attoparsec) |       14.39 μs |   132,496 |         9,048
-JSON (Megaparsec) |       26.70 μs |   233,336 |         9,424
+CSV (Attoparsec)  |       76.50 μs |   397,784 |        10,544
+CSV (Megaparsec)  |       64.69 μs |   352,408 |         9,104
+Log (Attoparsec)  |       302.8 μs | 1,150,032 |        10,912
+Log (Megaparsec)  |       337.8 μs | 1,246,496 |        10,912
+JSON (Attoparsec) |       18.20 μs |   128,368 |         9,032
+JSON (Megaparsec) |       25.45 μs |   203,824 |         9,176
 
 The benchmarks were created to guide development of Megaparsec 6 and can be
 found [here](https://github.com/mrkkrp/parsers-bench).
@@ -189,9 +185,9 @@ let's compare Megaparsec with some of them.
 library for parsing. Although the both libraries deal with parsing, it's
 usually easy to decide which you will need in particular project:
 
-* *Attoparsec* is faster but not that feature-rich. It should be used when
-  you want to process large amounts of data where performance matters more
-  than quality of error messages.
+* *Attoparsec* is sometimes faster but not that feature-rich. It should be
+  used when you want to process large amounts of data where performance
+  matters more than quality of error messages.
 
 * *Megaparsec* is good for parsing of source code or other human-readable
   texts. It has better error messages and it's implemented as monad
@@ -344,6 +340,7 @@ The following are some prominent projects that use Megaparsec:
 Here are some blog posts mainly announcing new features of the project and
 describing what sort of things are now possible:
 
+* [Megaparsec 7](https://markkarpov.com/post/megaparsec-7.html)
 * [Evolution of error messages](https://markkarpov.com/post/evolution-of-error-messages.html)
 * [A major upgrade to Megaparsec: more speed, more power](https://markkarpov.com/post/megaparsec-more-speed-more-power.html)
 * [Latest additions to Megaparsec](https://markkarpov.com/post/latest-additions-to-megaparsec.html)
