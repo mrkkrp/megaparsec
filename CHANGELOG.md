@@ -45,6 +45,10 @@
   makes sense because the collection of expected items cannot depend on what
   we see in the input stream.
 
+* The `label` primitive now doesn't prepend the phrase “the rest of” to the
+  label when its inner parser produces hints after consuming input. In that
+  case `label` has no effect.
+
 * Fixed the `Text.Megaparsec.Char.Lexer.charLiteral` so it can accept longer
   escape sequences (max length is now 10).
 
