@@ -156,10 +156,10 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   --       'SourcePos' should correspond to the token at the offset @o@.
   --     * It should not include the newline at the end.
   --     * It should not be empty, if the line happens to be empty, it
-  --       should be replaced with the string @<empty line>@.
+  --       should be replaced with the string @\"\<empty line\>\"@.
   --     * Tab characters should be replaced by appropriate number of
   --       spaces, which is determined by the 'pstateTabWidth' field of
-  --       'StatePos'.
+  --       'PosState'.
   --
   -- @since 7.0.0
 

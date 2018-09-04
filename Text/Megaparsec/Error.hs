@@ -7,8 +7,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Parse errors. Current version of Megaparsec supports well-typed errors
--- instead of 'String'-based ones. This gives a lot of flexibility in
+-- Parse errors. The current version of Megaparsec supports well-typed
+-- errors instead of 'String'-based ones. This gives a lot of flexibility in
 -- describing what exactly went wrong as well as a way to return arbitrary
 -- data in case of failure.
 --
@@ -107,10 +107,6 @@ instance NFData a => NFData (ErrorFancy a) where
 
 -- | @'ParseError' t e@ represents a parse error parametrized over the token
 -- type @t@ and the custom data @e@.
---
--- Note that the stack of source positions contains current position as its
--- head, and the rest of positions allows to track full sequence of include
--- files with topmost source file at the end of the list.
 --
 -- 'Semigroup' and 'Monoid' instances of the data type allow to merge parse
 -- errors from different branches of parsing. When merging two
@@ -286,7 +282,7 @@ instance ( Show s
 
 attachSourcePos
   :: (Traversable t, Stream s)
-  => (a -> Int)        -- ^ How to project offset from an item
+  => (a -> Int) -- ^ How to project offset from an item (e.g. 'errorOffset')
   -> t a               -- ^ The collection of items
   -> PosState s        -- ^ Initial 'PosState'
   -> (t (a, SourcePos), PosState s) -- ^ The collection with 'SourcePos'es

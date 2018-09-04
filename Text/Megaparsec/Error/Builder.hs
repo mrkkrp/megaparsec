@@ -8,8 +8,7 @@
 -- Portability :  portable
 --
 -- A set of helpers that should make construction of 'ParseError's more
--- concise. This is primarily useful in test suites and for debugging, you
--- most certainly don't need it for normal usage.
+-- concise. This is primarily useful in test suites and for debugging.
 --
 -- @since 6.0.0
 

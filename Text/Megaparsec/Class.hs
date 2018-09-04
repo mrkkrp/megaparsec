@@ -64,7 +64,8 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     -> m a
 
   -- | The most general way to stop parsing and report a fancy 'ParseError'.
-  -- To report a single custom parse error, see 'customFailure'.
+  -- To report a single custom parse error, see
+  -- 'Text.Megaparsec.customFailure'.
   --
   -- @since 6.0.0
 
@@ -238,7 +239,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- > takeWhileP (Just "foo") f = many (satisfy f <?> "foo")
   -- > takeWhileP Nothing      f = many (satisfy f)
   --
-  -- The combinator never fails, although it may parse an empty chunk.
+  -- The combinator never fails, although it may parse the empty chunk.
   --
   -- @since 6.0.0
 

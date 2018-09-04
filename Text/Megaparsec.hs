@@ -147,18 +147,19 @@ type Parsec e s = ParsecT e s Identity
 ----------------------------------------------------------------------------
 -- Running a parser
 
--- | @'parse' p file input@ runs parser @p@ over 'Identity' (see 'runParserT'
--- if you're using the 'ParsecT' monad transformer; 'parse' itself is just a
--- synonym for 'runParser'). It returns either a 'ParseError' ('Left') or a
--- value of type @a@ ('Right'). 'parseErrorPretty' can be used to turn
--- 'ParseError' into the string representation of the error message. See
--- "Text.Megaparsec.Error" if you need to do more advanced error analysis.
+-- | @'parse' p file input@ runs parser @p@ over 'Identity' (see
+-- 'runParserT' if you're using the 'ParsecT' monad transformer; 'parse'
+-- itself is just a synonym for 'runParser'). It returns either a
+-- 'ParseErrorBundle' ('Left') or a value of type @a@ ('Right').
+-- 'errorBundlePretty' can be used to turn 'ParseErrorBundle' into the
+-- string representation of the error message. See "Text.Megaparsec.Error"
+-- if you need to do more advanced error analysis.
 --
--- > main = case (parse numbers "" "11,2,43") of
--- >          Left err -> putStr (parseErrorPretty err)
+-- > main = case parse numbers "" "11,2,43" of
+-- >          Left bundle -> putStr (errorBundlePretty bundle)
 -- >          Right xs -> print (sum xs)
 -- >
--- > numbers = integer `sepBy` char ','
+-- > numbers = decimal `sepBy` char ','
 
 parse
   :: Parsec e s a -- ^ Parser to run
@@ -423,6 +424,8 @@ unexpected item = failure (Just item) E.empty
 -- | Report a custom parse error. For a more general version, see
 -- 'fancyFailure'.
 --
+-- > customFailure = fancyFailure . E.singleton . ErrorCustom
+--
 -- @since 6.3.0
 
 customFailure :: MonadParsec e s m => e -> m a
@@ -430,10 +433,9 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 {-# INLINE customFailure #-}
 
 -- | Return both the result of a parse and a chunk of input that was
--- consumed during parsing. This relies on the change of the
--- 'stateTokensProcessed' value to evaluate how many tokens were consumed.
--- If you mess with it manually in the argument parser, prepare for
--- troubles.
+-- consumed during parsing. This relies on the change of the 'stateOffset'
+-- value to evaluate how many tokens were consumed. If you mess with it
+-- manually in the argument parser, prepare for troubles.
 --
 -- @since 5.3.0
 
@@ -480,7 +482,7 @@ region f m = do
 {-# INLINEABLE region #-}
 
 -- | Consume the rest of the input and return it as a chunk. This parser
--- never fails, but may return an empty chunk.
+-- never fails, but may return the empty chunk.
 --
 -- > takeRest = takeWhileP Nothing (const True)
 --
