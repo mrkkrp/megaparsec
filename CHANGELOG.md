@@ -76,21 +76,20 @@
 
 ### Parser state and input stream
 
-* Dropped stacks of source positions. Thus the field `statePos` in `State`
-  has the type `SourcePos` instead of `NonEmpty SourcePos`. Accordingly, the
-  functions `pushPosition` and `popPosition` from `Text.Megaparsec` and
-  `sourcePosStackPretty` from `Text.Megaparsec.Error` were removed.
-
-  The reason for this simplification is that I could not find any code that
-  uses the feature and it makes manipulation of source positions hairy.
+* Dropped stacks of source positions. Accordingly, the functions
+  `pushPosition` and `popPosition` from `Text.Megaparsec` and
+  `sourcePosStackPretty` from `Text.Megaparsec.Error` were removed. The
+  reason for this simplification is that I could not find any code that uses
+  the feature and it makes manipulation of source positions hairy.
 
 * Introduced `PosState` for calculating `SourcePos` from offsets and getting
   offending line for displaying on pretty-printing of parse errors. It's now
-  contained in both `State` and `ParseErrorBundle` (see below).
+  contained in both `State` and `ParseErrorBundle`.
 
 * Dropped `positionAt1`, `positionAtN`, `advance1`, and `advanceN` methods
-  from `Stream`. They are no longer necessary because `reachOffset` takes
-  care of `SourcePos` calculation.
+  from `Stream`. They are no longer necessary because `reachOffset` (and its
+  specialized version `reachOffsetNoLine`) takes care of `SourcePos`
+  calculation.
 
 ### Parse errors
 
@@ -111,10 +110,10 @@
 
 * The primary function for pretty-printing of parse
   errors—`errorBundlePretty` always prints offending lines now.
-  `parseErrorPretty` is still there, but it probably won't see a lot of
-  usage from now on. `parseErrorPretty'` and `parseErrorPretty_` were
-  removed. `parseTest'` was removed because `parseTest` always prints
-  offending lines now.
+  `parseErrorPretty` is still there, but it probably won't see a lot of use
+  from now on. `parseErrorPretty'` and `parseErrorPretty_` were removed.
+  `parseTest'` was removed because `parseTest` always prints offending lines
+  now.
 
 * Added `attachSourcePos` function in `Text.Megaparsec.Error`.
 
