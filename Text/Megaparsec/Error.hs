@@ -343,24 +343,24 @@ errorBundlePretty ParseErrorBundle {..} =
     f (o, !pst) e = (o . (outChunk ++), pst')
       where
         (epos, sline, pst') = reachOffset (errorOffset e) pst
-        ppos = pstateSourcePos pst
         outChunk =
           "\n" <> sourcePosPretty epos <> ":\n" <>
           padding <> "|\n" <>
-          lineNumber <> " | " <> gpadding <> sline <> "\n" <>
+          lineNumber <> " | " <> sline <> "\n" <>
           padding <> "| " <> rpadding <> pointer <> "\n" <>
           parseErrorTextPretty e
         lineNumber = (show . unPos . sourceLine) epos
         padding = replicate (length lineNumber + 1) ' '
-        gpadding = replicate gpshift '?'
-        gpshift = unPos (sourceColumn ppos) - 1
-        rpadding = replicate rpshift ' '
+        rpadding =
+          if pointerLen > 0
+            then replicate rpshift ' '
+            else ""
         rpshift = unPos (sourceColumn epos) - 1
-        pointer = replicate
-          (if rpshift + elen > gpshift + slineLen
-             then gpshift + slineLen - rpshift + 1
-             else elen)
-          '^'
+        pointer = replicate pointerLen '^'
+        pointerLen =
+          if rpshift + elen > slineLen
+            then slineLen - rpshift + 1
+            else elen
         slineLen = length sline
         elen =
           case e of

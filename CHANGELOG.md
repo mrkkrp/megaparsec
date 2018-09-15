@@ -1,3 +1,8 @@
+## Megaparsec 7.0.1
+
+* Fixed a bug in `errorBundlePretty`. Previously the question sign `?` was
+  erroneously inserted before offending line in 2nd and later parse errors.
+
 ## Megaparsec 7.0.0
 
 ### General
