@@ -151,7 +151,7 @@ spec = do
                   }
                 }
           errorBundlePretty bundle `shouldBe`
-            "1:6:\n  |\n1 | ????foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
+            "1:6:\n  |\n1 | foo\n  | \nunexpected 'o'\nexpecting 'x'\n"
       context "and greater than parse error column" $
         it "is rendered correctly" $ do
           let s = "foo" :: String
@@ -167,7 +167,7 @@ spec = do
                   }
                 }
           errorBundlePretty bundle `shouldBe`
-            "1:10:\n  |\n1 | ?????????foo\n  |          ^\nunexpected 'o'\nexpecting 'x'\n"
+            "1:10:\n  |\n1 | foo\n  | \nunexpected 'o'\nexpecting 'x'\n"
     it "takes tab width into account correctly" $
       property $ \w' -> do
         let s  = "\tsomething\t" :: String
@@ -190,7 +190,7 @@ spec = do
            "\n  | " ++ tabRep ++ "^\nunexpected 's'\nexpecting 'x'\n")
     it "displays multi-error bundle correctly" $ do
       let s = "something\ngood\n" :: String
-          pe0 = err 0 (utok 's' <> etok 'x') :: PE
+          pe0 = err 2 (utok 'm' <> etok 'x') :: PE
           pe1 = err 10 (utok 'g' <> etok 'y') :: PE
           bundle = ParseErrorBundle
             { bundleErrors = pe0 :| [pe1]
@@ -203,7 +203,7 @@ spec = do
               }
             }
       errorBundlePretty bundle `shouldBe`
-        "1:1:\n  |\n1 | something\n  | ^\nunexpected 's'\nexpecting 'x'\n\n2:1:\n  |\n2 | good\n  | ^\nunexpected 'g'\nexpecting 'y'\n"
+        "1:3:\n  |\n1 | something\n  |   ^\nunexpected 'm'\nexpecting 'x'\n\n2:1:\n  |\n2 | good\n  | ^\nunexpected 'g'\nexpecting 'y'\n"
 
   describe "parseErrorPretty" $ do
     it "shows unknown ParseError correctly" $
