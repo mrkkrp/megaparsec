@@ -134,7 +134,9 @@ utoks = unexp . canonicalizeTokens (Proxy :: Proxy s)
 -- strings (for empty strings it's bottom).
 
 ulabel :: Stream s => String -> ET s
-ulabel = unexp . Label . NE.fromList
+ulabel label
+  | label == "" = error "Text.Megaparsec.Error.Builder.ulabel: empty label"
+  | otherwise = unexp . Label . NE.fromList $ label
 
 -- | Construct an “unexpected end of input” error component.
 
@@ -156,7 +158,9 @@ etoks = expe . canonicalizeTokens (Proxy :: Proxy s)
 -- strings.
 
 elabel :: Stream s => String -> ET s
-elabel = expe . Label . NE.fromList
+elabel label
+  | label == "" = error "Text.Megaparsec.Error.Builder.elabel: empty label"
+  | otherwise = expe . Label . NE.fromList $ label
 
 -- | Construct an “expected end of input” error component.
 
