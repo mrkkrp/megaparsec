@@ -14,7 +14,6 @@
 --
 -- @since 6.5.0
 
-{-# LANGUAGE CPP                    #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
@@ -39,10 +38,6 @@ import qualified Control.Monad.Trans.State.Lazy    as L
 import qualified Control.Monad.Trans.State.Strict  as S
 import qualified Control.Monad.Trans.Writer.Lazy   as L
 import qualified Control.Monad.Trans.Writer.Strict as S
-
-#if !MIN_VERSION_mtl(2,2,2)
-import Control.Monad.Trans.Identity
-#endif
 
 -- | Type class describing monads that implement the full set of primitive
 -- parsers.

@@ -28,7 +28,6 @@
 --
 -- To do lexing of byte streams, see "Text.Megaparsec.Byte.Lexer".
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
