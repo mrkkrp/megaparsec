@@ -105,8 +105,8 @@ instance NFData a => NFData (ErrorFancy a) where
   rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
   rnf (ErrorCustom a) = rnf a
 
--- | @'ParseError' t e@ represents a parse error parametrized over the token
--- type @t@ and the custom data @e@.
+-- | @'ParseError' s e@ represents a parse error parametrized over the
+-- stream type @s@ and the custom data @e@.
 --
 -- 'Semigroup' and 'Monoid' instances of the data type allow to merge parse
 -- errors from different branches of parsing. When merging two
