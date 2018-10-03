@@ -293,6 +293,65 @@ spec = do
         prs (decimal :: Parser Integer) "" `shouldFailWith`
           err 0 (ueof <> elabel "integer")
 
+  describe "groupedDecimal" $ do
+    context "when stream begins with decimal digits" $
+      it "they are parsed as an integer" $
+        property $ \n' -> do
+          let p = groupedDecimal :: Parser Integer
+              n = getNonNegative n'
+              s = showInt n ""
+          prs  p s `shouldParse` n
+          prs' p s `succeedsLeaving` ""
+    context "when stream contains an underscore" $
+      it "they are parsed as an integer" $
+        property $ \n1' n2' -> do
+          let p = groupedDecimal :: Parser Integer
+              n1 = getNonNegative n1' :: Integer
+              n2 = getNonNegative n2' :: Integer
+              s = (showInt n1 "") ++ "_" ++ (showInt n2 "")
+          prs  p s `shouldParse` (read $ (showInt n1 "") ++ (showInt n2 ""))
+          prs' p s `succeedsLeaving` ""
+    context "when stream contains double underscores" $
+      it "they are parsed as an integer" $
+        property $ \n1' n2' -> do
+          let p = groupedDecimal :: Parser Integer
+              n1 = getNonNegative n1' :: Integer
+              n2 = getNonNegative n2' :: Integer
+              s = (showInt n1 "") ++ "__" ++ (showInt n2 "")
+          prs  p s `shouldParse` (read $ (showInt n1 "") ++ (showInt n2 ""))
+          prs' p s `succeedsLeaving` ""
+    context "when stream starts with an underscore" $
+      it "signals correct parse error" $
+        property $ \n' -> do
+          let p = groupedDecimal :: Parser Integer
+              n = getNonNegative n' :: Integer
+              s = '_' : showInt n ""
+          prs  p s `shouldFailWith` err 0 (utok '_' <> elabel "integer")
+    context "when stream ends with an underscore" $
+      it "signals correct parse error" $
+        property $ \n' -> do
+          let p = groupedDecimal :: Parser Integer
+              n = getNonNegative n' :: Integer
+              s = showInt n "" ++ "_"
+          prs  p s `shouldFailWith` err (length s - 1) (utok '_' <> elabel "integer")
+    context "when stream starts with an underscore" $
+      it "signals correct parse error" $
+        property $ \n' -> do
+          let p = groupedDecimal :: Parser Integer
+              n = getNonNegative n' :: Integer
+              s = '_' : showInt n ""
+          prs  p s `shouldFailWith` err 0 (utok '_' <> elabel "integer")
+    context "when stream does not begin with decimal digits" $
+      it "signals correct parse error" $
+        property $ \a as -> not (isDigit a || a == '_') ==> do
+          let p = groupedDecimal :: Parser Integer
+              s = a : as
+          prs  p s `shouldFailWith` err 0 (utok a <> elabel "integer")
+    context "when stream is empty" $
+      it "signals correct parse error" $
+        prs (groupedDecimal :: Parser Integer) "" `shouldFailWith`
+          err 0 (ueof <> elabel "integer")
+
   describe "binary" $ do
     context "when stream begins with binary digits" $
       it "they are parsed as an integer" $

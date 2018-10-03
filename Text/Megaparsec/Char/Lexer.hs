@@ -54,6 +54,7 @@ module Text.Megaparsec.Char.Lexer
   , charLiteral
     -- * Numbers
   , decimal
+  , groupedDecimal
   , binary
   , octal
   , hexadecimal
@@ -62,7 +63,7 @@ module Text.Megaparsec.Char.Lexer
   , signed )
 where
 
-import Control.Applicative
+import Control.Applicative hiding (many)
 import Control.Monad (void)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
@@ -347,6 +348,27 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
     mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
+
+-- | Same as 'decimal' but allows underscores as separators in the string.
+
+groupedDecimal :: (MonadParsec e s m, Token s ~ Char, Integral a) => m a
+groupedDecimal = groupedDecimal_ <?> "integer"
+{-# INLINEABLE groupedDecimal #-}
+
+-- | A non-public helper to parse decimal integers with underscores.
+
+groupedDecimal_
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  => m a
+groupedDecimal_ = mkNum . fst <$> match (do void $ digits
+                                            void $ many $ try _digits
+                                            notFollowedBy (C.char '_'))
+  where
+    digits   = takeWhile1P (Just "integer") Char.isDigit
+    _digits  = takeWhile1P (Just "underscore") (== '_') >> digits
+    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c = if c == '_' then a else a * 10 + fromIntegral (Char.digitToInt c)
+{-# INLINE groupedDecimal_ #-}
 
 -- | Parse an integer in binary representation. Binary number is expected to
 -- be a non-empty sequence of zeroes “0” and ones “1”.
