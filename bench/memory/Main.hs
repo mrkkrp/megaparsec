@@ -47,6 +47,7 @@ main = mainWith $ do
   bparser "takeWhileP" manyAs (const $ takeWhileP Nothing (== 'a'))
   bparser "takeWhile1P" manyAs (const $ takeWhile1P Nothing (== 'a'))
   bparser "decimal" mkInt (const (L.decimal :: Parser Integer))
+  bparser "groupedDecimal" mkInt (const (L.groupedDecimal :: Parser Integer))
   bparser "octal" mkInt (const (L.octal :: Parser Integer))
   bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer))
   bparser "scientific" mkInt (const L.scientific)
