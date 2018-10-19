@@ -252,8 +252,9 @@ differences between the two libraries:
   `takeWhileP`, `takeWhile1P`, `takeP` like Attoparsec.
 
 If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
-Also see [this original announcement](https://notehub.org/w7037) for another
-comparison.
+Also see [this original
+announcement](https://mail.haskell.org/pipermail/haskell-cafe/2015-September/121530.html)
+for another comparison.
 
 ### Megaparsec vs Trifecta
 
@@ -346,7 +347,7 @@ describing what sort of things are now possible:
 * [Latest additions to Megaparsec](https://markkarpov.com/post/latest-additions-to-megaparsec.html)
 * [Announcing Megaparsec 5](https://markkarpov.com/post/announcing-megaparsec-5.html)
 * [Megaparsec 4 and 5](https://markkarpov.com/post/megaparsec-4-and-5.html)
-* [The original Megaparsec 4.0.0 announcement](https://notehub.org/w7037)
+* [The original Megaparsec 4.0.0 announcement](https://mail.haskell.org/pipermail/haskell-cafe/2015-September/121530.html)
 
 ## Authors
 
