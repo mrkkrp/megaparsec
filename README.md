@@ -181,9 +181,10 @@ let's compare Megaparsec with some of them.
 
 ### Megaparsec vs Attoparsec
 
-[Attoparsec](https://github.com/bos/attoparsec) is another prominent Haskell
-library for parsing. Although the both libraries deal with parsing, it's
-usually easy to decide which you will need in particular project:
+[Attoparsec](https://hackage.haskell.org/package/attoparsec) is another
+prominent Haskell library for parsing. Although the both libraries deal with
+parsing, it's usually easy to decide which you will need in particular
+project:
 
 * *Attoparsec* is sometimes faster but not that feature-rich. It should be
   used when you want to process large amounts of data where performance
@@ -204,8 +205,9 @@ so it can be used even to parse low-level binary formats.
 
 ### Megaparsec vs Parsec
 
-Since Megaparsec is a fork of Parsec, we are bound to list the main
-differences between the two libraries:
+Since Megaparsec is a fork of
+[Parsec](https://hackage.haskell.org/package/parsec), we are bound to list
+the main differences between the two libraries:
 
 * Better error messages. We test our error messages using numerous
   QuickCheck (generative) tests. Good error messages are just as important
