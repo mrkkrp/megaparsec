@@ -201,9 +201,6 @@ spec = do
           prs  (char ch) "" `shouldFailWith` err 0 (ueof <> etok ch)
 
   describe "char'" $ do
-    -- a character with different lower, upper and title cases ('ǳ',
-    -- 'ǲ' and 'Ǳ' respectively)
-    let distinctTitleCase = 'ǳ'
     context "when stream begins with the character specified as argument" $ do
       it "parses the character" $
         property $ \ch s -> do
@@ -223,12 +220,6 @@ spec = do
                 s' = '\9412' : s
             prs (char' ch) s' `shouldParse` '\9412'
             prs' (char' ch) s' `succeedsLeaving` s
-      context "when character has different lower, upper and title cases" $
-        it "parses the character in lower, upper or title case" $ do
-          let p = prs (char' distinctTitleCase)
-          p [distinctTitleCase] `shouldParse` distinctTitleCase
-          p [toUpper distinctTitleCase] `shouldParse` toUpper distinctTitleCase
-          p [toTitle distinctTitleCase] `shouldParse` toTitle distinctTitleCase
     context "when stream does not begin with the character specified as argument" $ do
       it "signals correct parse error" $
         property $ \ch ch' s -> not (casei ch ch') ==> do
@@ -242,19 +233,12 @@ spec = do
             let ms = utok ch <> etok '\9438' <> etok '\9412'
                 s' = ch : s
             prs (char' '\9438') s' `shouldFailWith` err 0 ms
-    context "when stream is empty" $ do
+    context "when stream is empty" $
       it "signals correct parse error" $
         property $ \ch -> do
           let options = etok <$> [toLower ch, toTitle ch, toUpper ch]
               ms = ueof <> mconcat (nub options)
           prs  (char' ch) "" `shouldFailWith` err 0 ms
-      context "when character has different lower, upper and title cases" $
-        it "signals correct parse error" $ do
-          let ms = mconcat [ ueof
-                           , etok distinctTitleCase
-                           , etok $ toUpper distinctTitleCase
-                           , etok $ toTitle distinctTitleCase ]
-          prs (char' distinctTitleCase) "" `shouldFailWith` err 0 ms
 
   describe "string" $ do
     context "when stream is prefixed with given string" $
