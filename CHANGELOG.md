@@ -1,3 +1,13 @@
+## Megaparsec 7.0.2
+
+* Fixed the property test for `char'` which was failing in the case when
+  there is a character with different upper and title cases.
+
+* More descriptive error messages when `elabel` or `ulabel` from
+  `Text.Megaparsec.Error.Builder` are used with empty strings.
+
+* Typos fixes in the docs.
+
 ## Megaparsec 7.0.1
 
 * Fixed a bug in `errorBundlePretty`. Previously the question sign `?` was
