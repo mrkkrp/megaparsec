@@ -98,7 +98,6 @@ module Text.Megaparsec
   , setParserState )
 where
 
-import Control.Monad
 import Control.Monad.Combinators
 import Control.Monad.Identity
 import Data.List.NonEmpty (NonEmpty (..))
@@ -237,7 +236,7 @@ runParserT :: Monad m
   -> String        -- ^ Name of source file
   -> s             -- ^ Input for parser
   -> m (Either (ParseErrorBundle s e) a)
-runParserT p name s = snd `liftM` runParserT' p (initialState name s)
+runParserT p name s = snd <$> runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
 -- accepts and returns parser state. This is thus the most general way to
