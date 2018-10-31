@@ -1,3 +1,7 @@
+## Megaparsec 7.0.3
+
+* Fixed the build with `mtl` older than `2.2.2`.
+
 ## Megaparsec 7.0.2
 
 * Fixed the property test for `char'` which was failing in the case when
