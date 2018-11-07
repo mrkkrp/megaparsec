@@ -11,8 +11,7 @@
 --
 -- High-level parsers to help you write your lexer. The module doesn't
 -- impose how you should write your parser, but certain approaches may be
--- more elegant than others. Especially important theme is parsing of white
--- space, comments, and indentation.
+-- more elegant than others.
 --
 -- Parsing of white space is an important part of any parser. We propose a
 -- convention where __every lexeme parser assumes no spaces before the__
@@ -190,8 +189,8 @@ nonIndented :: MonadParsec e s m
 nonIndented sc p = indentGuard sc EQ pos1 *> p
 {-# INLINEABLE nonIndented #-}
 
--- | The data type represents available behaviors for parsing of indented
--- tokens. This is used in 'indentBlock', which see.
+-- | Behaviors for parsing of indented tokens. This is used in
+-- 'indentBlock', which see.
 --
 -- @since 4.3.0
 
@@ -269,9 +268,9 @@ indentedItems ref lvl sc p = go
 -- | Create a parser that supports line-folding. The first argument is used
 -- to consume white space between components of line fold, thus it /must/
 -- consume newlines in order to work properly. The second argument is a
--- callback that receives a custom space-consuming parser as argument. This
--- parser should be used after separate components of line fold that can be
--- put on different lines.
+-- callback that receives a custom space-consuming parser as an argument.
+-- This parser should be used after separate components of line fold that
+-- can be put on different lines.
 --
 -- An example should clarify the usage pattern:
 --
@@ -328,7 +327,7 @@ charLiteral = label "literal character" $ do
 -- | Parse an integer in decimal representation according to the format of
 -- integer literals described in the Haskell report.
 --
--- If you need to parse signed integers, see 'signed' combinator.
+-- If you need to parse signed integers, see the 'signed' combinator.
 --
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.

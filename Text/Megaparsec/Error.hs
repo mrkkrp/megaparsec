@@ -96,8 +96,7 @@ data ErrorFancy e
     -- level and actual level, reference indentation level, actual
     -- indentation level
   | ErrorCustom e
-    -- ^ Custom error data, can be conveniently disabled by indexing
-    -- 'ErrorFancy' by 'Void'
+    -- ^ Custom error data
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
 
 instance NFData a => NFData (ErrorFancy a) where

@@ -8,8 +8,7 @@
 -- Portability :  portable
 --
 -- Textual source position. The position includes name of file, line number,
--- and column number. A non-empty list of such positions can be used to
--- model a stack of include files.
+-- and column number.
 --
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
@@ -87,6 +86,10 @@ pos1 = mkPos 1
 -- you want to refer to the default tab width because actual value /may/
 -- change in future.
 --
+-- Currently:
+--
+-- > defaultTabWidth = mkPos 8
+--
 -- @since 5.0.0
 
 defaultTabWidth :: Pos
@@ -109,8 +112,7 @@ instance Read Pos where
 -- @since 5.0.0
 
 newtype InvalidPosException = InvalidPosException Int
-  -- ^ The first value is the minimal allowed value, the second value is the
-  -- actual value that was passed to 'mkPos'.
+  -- ^ Contains the actual value that was passed to 'mkPos'
   deriving (Eq, Show, Data, Typeable, Generic)
 
 instance Exception InvalidPosException

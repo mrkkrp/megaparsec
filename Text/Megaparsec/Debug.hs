@@ -52,7 +52,8 @@ import qualified Data.List.NonEmpty as NE
 -- transformers without introducing surprising behavior (e.g. unexpected
 -- state backtracking) or adding otherwise redundant constraints (e.g.
 -- 'Show' instance for state), so this helper is only available for
--- 'ParsecT' monad, not any instance of 'MonadParsec' in general.
+-- 'ParsecT' monad, not any instance of 'Text.Megaparsec.MonadParsec' in
+-- general.
 
 dbg :: forall e s m a.
   ( Stream s

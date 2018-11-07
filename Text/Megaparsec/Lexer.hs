@@ -43,10 +43,10 @@ import qualified Data.CaseInsensitive as CI
 -- 'takeWhile1P' are preferred because of their speed.
 --
 -- @lineComment@ is used to parse line comments. You can use
--- 'skipLineComment' if you don't need anything special.
+-- @skipLineComment@ if you don't need anything special.
 --
 -- @blockComment@ is used to parse block (multi-line) comments. You can use
--- 'skipBlockComment' or 'skipBlockCommentNested' if you don't need anything
+-- @skipBlockComment@ or @skipBlockCommentNested@ if you don't need anything
 -- special.
 --
 -- If you don't want to allow a kind of comment, simply pass 'empty' which

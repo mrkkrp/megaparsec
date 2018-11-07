@@ -166,7 +166,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   reachOffset
     :: Int             -- ^ Offset to reach
     -> PosState s      -- ^ Initial 'PosState' to use
-    -> (SourcePos, String, PosState s) -- ^ (See above)
+    -> (SourcePos, String, PosState s) -- ^ (See below)
 
   -- | A version of 'reachOffset' that may be faster because it doesn't need
   -- to fetch the line at which the given offset in located.

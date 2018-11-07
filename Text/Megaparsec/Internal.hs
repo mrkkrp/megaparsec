@@ -100,7 +100,7 @@ newtype Hints t = Hints [Set (ErrorItem t)]
 
 data Reply e s a = Reply (State s) Consumption (Result s e a)
 
--- | This data structure represents an aspect of result of parser's work.
+-- | Whether the input has been consumed or not.
 --
 -- See also: 'Result', 'Reply'.
 
@@ -108,7 +108,8 @@ data Consumption
   = Consumed -- ^ Some part of input stream was consumed
   | Virgin   -- ^ No input was consumed
 
--- | This data structure represents an aspect of result of parser's work.
+-- | Whether the parser has failed or not. On success we include the
+-- resulting value, on failure we include a 'ParseError'.
 --
 -- See also: 'Consumption', 'Reply'.
 
@@ -540,7 +541,7 @@ nes x = x :| []
 ----------------------------------------------------------------------------
 -- Helper functions
 
--- | Convert 'ParseError' record into 'Hints'.
+-- | Convert 'ParseError' record to 'Hints'.
 
 toHints
   :: Stream s
@@ -588,8 +589,8 @@ accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 {-# INLINE accHints #-}
 
 -- | Replace the most recent group of hints (if any) with the given
--- 'ErrorItem' (or delete it if 'Nothing' is given). This is used in 'label'
--- primitive.
+-- 'ErrorItem' (or delete it if 'Nothing' is given). This is used in the
+-- 'label' primitive.
 
 refreshLastHint :: Hints t -> Maybe (ErrorItem t) -> Hints t
 refreshLastHint (Hints [])     _        = Hints []

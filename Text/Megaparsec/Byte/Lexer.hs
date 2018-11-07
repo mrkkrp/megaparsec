@@ -97,7 +97,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- | Parse an integer in decimal representation according to the format of
 -- integer literals described in the Haskell report.
 --
--- If you need to parse signed integers, see 'signed' combinator.
+-- If you need to parse signed integers, see the 'signed' combinator.
 
 decimal
   :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)

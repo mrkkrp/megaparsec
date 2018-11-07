@@ -11,7 +11,8 @@
 --
 -- This module includes everything you need to get started writing a parser.
 -- If you are new to Megaparsec and don't know where to begin, take a look
--- at the tutorials <https://markkarpov.com/learn-haskell.html#megaparsec-tutorials>.
+-- at the tutorials
+-- <https://markkarpov.com/learn-haskell.html#megaparsec-tutorials>.
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
 -- most everything that you may need, we advise to import
@@ -39,7 +40,7 @@
 --
 -- Megaparsec uses some type-level machinery to provide flexibility without
 -- compromising on type safety. Thus type signatures are sometimes necessary
--- to avoid ambiguous types. If you're seeing a error message that reads
+-- to avoid ambiguous types. If you're seeing an error message that reads
 -- like “Type variable @e0@ is ambiguous …”, you need to give an explicit
 -- signature to your parser to resolve the ambiguity. It's a good idea to
 -- provide type signatures for all top-level definitions.
@@ -173,7 +174,7 @@ parse = runParser
 -- will fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
--- error messages (and thus file name) are not important and entire input
+-- error messages (and thus file names) are not important and entire input
 -- should be parsed. For example, it can be used when parsing of a single
 -- number according to a specification of its format is desired.
 
@@ -183,7 +184,7 @@ parseMaybe p s =
     Left  _ -> Nothing
     Right x -> Just x
 
--- | The expression @'parseTest' p input@ applies the parser @p@ against
+-- | The expression @'parseTest' p input@ applies the parser @p@ against the
 -- input @input@ and prints the result to stdout. Useful for testing.
 
 parseTest :: ( ShowErrorComponent e
@@ -200,8 +201,8 @@ parseTest p input =
 
 -- | @'runParser' p file input@ runs parser @p@ on the input stream of
 -- tokens @input@, obtained from source @file@. The @file@ is only used in
--- error messages and may be the empty string. Returns either a 'ParseError'
--- ('Left') or a value of type @a@ ('Right').
+-- error messages and may be the empty string. Returns either a
+-- 'ParseErrorBundle' ('Left') or a value of type @a@ ('Right').
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
 
@@ -228,8 +229,8 @@ runParser' p = runIdentity . runParserT' p
 -- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
 -- @input@, obtained from source @file@. The @file@ is only used in error
 -- messages and may be the empty string. Returns a computation in the
--- underlying monad @m@ that returns either a 'ParseError' ('Left') or a
--- value of type @a@ ('Right').
+-- underlying monad @m@ that returns either a 'ParseErrorBundle' ('Left') or
+-- a value of type @a@ ('Right').
 
 runParserT :: Monad m
   => ParsecT e s m a -- ^ Parser to run
@@ -296,8 +297,7 @@ single t = token testToken expected
 {-# INLINE single #-}
 
 -- | The parser @'satisfy' f@ succeeds for any token for which the supplied
--- function @f@ returns 'True'. Returns the character that is actually
--- parsed.
+-- function @f@ returns 'True'.
 --
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
@@ -315,7 +315,7 @@ satisfy f = token testChar E.empty
 {-# INLINE satisfy #-}
 
 -- | Parse and return a single token. It's a good idea to attach a 'label'
--- to this parser manually.
+-- to this parser.
 --
 -- > anySingle = satisfy (const True)
 --
@@ -328,7 +328,7 @@ anySingle = satisfy (const True)
 {-# INLINE anySingle #-}
 
 -- | Match any token but the given one. It's a good idea to attach a 'label'
--- to this parser manually.
+-- to this parser.
 --
 -- > anySingleBut t = satisfy (/= t)
 --
@@ -377,7 +377,7 @@ oneOf cs = satisfy (`elem` cs)
 --
 -- See also: 'satisfy'.
 --
--- __Performance note__: prefer 'satisfy' and 'singleBut' when you can
+-- __Performance note__: prefer 'satisfy' and 'anySingleBut' when you can
 -- because it's faster.
 --
 -- @since 7.0.0
@@ -520,9 +520,9 @@ setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 -- not call it e.g. on matching of every token, that's a bad idea. Still you
 -- can use it to get 'SourcePos' to attach to things that you parse.
 --
--- The function works under the assumption that we move in input stream only
--- forward and never backward, which is always true unless the user abuses
--- the library on purpose.
+-- The function works under the assumption that we move in the input stream
+-- only forwards and never backwards, which is always true unless the user
+-- abuses the library.
 --
 -- @since 7.0.0
 

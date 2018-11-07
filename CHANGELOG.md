@@ -1,3 +1,7 @@
+## Megaparsec 7.0.4
+
+* Numerous documentation corrections.
+
 ## Megaparsec 7.0.3
 
 * Fixed the build with `mtl` older than `2.2.2`.
@@ -10,7 +14,7 @@
 * More descriptive error messages when `elabel` or `ulabel` from
   `Text.Megaparsec.Error.Builder` are used with empty strings.
 
-* Typos fixes in the docs.
+* Typo fixes in the docs.
 
 ## Megaparsec 7.0.1
 

@@ -120,11 +120,12 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- unexpected "le"
   -- expecting "let" or "lexical"
   --
-  -- __Please note__ that as of Megaparsec 4.4.0, 'string' backtracks
-  -- automatically (see 'tokens'), so it does not need 'try'. However, the
-  -- examples above demonstrate the idea behind 'try' so well that it was
-  -- decided to keep them. You still need to use 'try' when your
-  -- alternatives are complex, composite parsers.
+  -- __Please note__ that as of Megaparsec 4.4.0,
+  -- 'Text.Megaparsec.Char.string' backtracks automatically (see 'tokens'),
+  -- so it does not need 'try'. However, the examples above demonstrate the
+  -- idea behind 'try' so well that it was decided to keep them. You still
+  -- need to use 'try' when your alternatives are complex, composite
+  -- parsers.
 
   try :: m a -> m a
 
@@ -160,7 +161,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     -> m a             -- ^ Parser that can recover from failures
 
   -- | @'observing' p@ allows to “observe” failure of the @p@ parser, should
-  -- it happen, without actually ending parsing, but instead getting the
+  -- it happen, without actually ending parsing but instead getting the
   -- 'ParseError' in 'Left'. On success parsed value is returned in 'Right'
   -- as usual. Note that this primitive just allows you to observe parse
   -- errors as they happen, it does not backtrack or change how the @p@
@@ -172,7 +173,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     :: m a             -- ^ The parser to run
     -> m (Either (ParseError s e) a)
 
-  -- | This parser only succeeds at the end of the input.
+  -- | This parser only succeeds at the end of input.
 
   eof :: m ()
 
@@ -231,8 +232,8 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   -- | Parse /zero/ or more tokens for which the supplied predicate holds.
   -- Try to use this as much as possible because for many streams the
-  -- combinator is much faster than parsers built with 'many' and
-  -- 'Text.Megaparsec.Char.satisfy'.
+  -- combinator is much faster than parsers built with
+  -- 'Control.Monad.Combinators.many' and 'Text.Megaparsec.satisfy'.
   --
   -- The following equations should clarify the behavior:
   --
