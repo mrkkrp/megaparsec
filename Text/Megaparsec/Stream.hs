@@ -15,6 +15,7 @@
 -- @since 6.0.0
 
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DefaultSignatures   #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
@@ -25,27 +26,25 @@
 {-# LANGUAGE TypeFamilies        #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..) )
+  ( Stream (..), SrcPosToken )
 where
 
-import Data.Char (chr)
-import Data.Foldable (foldl')
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe)
-import Data.Proxy
-import Data.Word (Word8)
-import Text.Megaparsec.Pos
-import Text.Megaparsec.State
-import qualified Data.ByteString            as B
-import qualified Data.ByteString.Char8      as B8
-import qualified Data.ByteString.Lazy       as BL
-import qualified Data.ByteString.Lazy.Char8 as BL8
-import qualified Data.List.NonEmpty         as NE
-import qualified Data.Text                  as T
-import qualified Data.Text.Lazy             as TL
+import qualified Data.ByteString       as B
+import qualified Data.ByteString.Lazy  as BL
+import           Data.Char             (chr)
+import           Data.Foldable         (foldl')
+import           Data.List.NonEmpty    (NonEmpty (..))
+import qualified Data.List.NonEmpty    as NE
+import           Data.Maybe            (fromMaybe)
+import           Data.Proxy
+import qualified Data.Text             as T
+import qualified Data.Text.Lazy        as TL
+import           Data.Word             (Word8)
+import           Text.Megaparsec.Pos
+import           Text.Megaparsec.State
 
 #if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
+import           Data.Semigroup
 #endif
 
 -- | Type class for inputs that can be consumed by the library.
@@ -187,27 +186,27 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     let (spos, _, pst') = reachOffset o pst
     in (spos, pst')
 
-instance Stream String where
-  type Token String = Char
-  type Tokens String = String
+instance (Ord c, SrcPosToken c) => Stream [c] where
+  type Token [c] = c
+  type Tokens [c] = [c]
   tokenToChunk Proxy = pure
   tokensToChunk Proxy = id
   chunkToTokens Proxy = id
   chunkLength Proxy = length
   chunkEmpty Proxy = null
-  take1_ [] = Nothing
+  take1_ []     = Nothing
   take1_ (t:ts) = Just (t, ts)
   takeN_ n s
-    | n <= 0    = Just ("", s)
+    | n <= 0    = Just ([], s)
     | null s    = Nothing
     | otherwise = Just (splitAt n s)
   takeWhile_ = span
-  showTokens Proxy = stringPretty
+  showTokens Proxy = prettyTokens
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' splitAt foldl' id id ('\n','\t') o pst
+    reachOffset' splitAt foldl' showToken (isLF, isTab) o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAt foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' splitAt foldl' (isLF, isTab) o pst
 
 instance Stream B.ByteString where
   type Token B.ByteString = Word8
@@ -223,12 +222,12 @@ instance Stream B.ByteString where
     | B.null s  = Nothing
     | otherwise = Just (B.splitAt n s)
   takeWhile_ = B.span
-  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
+  showTokens Proxy = prettyTokens . fmap (chr . fromIntegral)
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
+    reachOffset' B.splitAt B.foldl' ((:[]) . chr . fromIntegral) ((==10), (==9)) o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' B.splitAt B.foldl' (10, 9) o pst
+    reachOffsetNoLine' B.splitAt B.foldl' ((==10), (==9)) o pst
 
 instance Stream BL.ByteString where
   type Token BL.ByteString = Word8
@@ -244,12 +243,12 @@ instance Stream BL.ByteString where
     | BL.null s = Nothing
     | otherwise = Just (BL.splitAt (fromIntegral n) s)
   takeWhile_ = BL.span
-  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
+  showTokens Proxy = prettyTokens . fmap (chr . fromIntegral)
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' splitAtBL BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9) o pst
+    reachOffset' splitAtBL BL.foldl' ((:[]) . chr . fromIntegral) ((==10), (==9)) o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAtBL BL.foldl' (10, 9) o pst
+    reachOffsetNoLine' splitAtBL BL.foldl' ((==10), (==9)) o pst
 
 instance Stream T.Text where
   type Token T.Text = Char
@@ -265,12 +264,12 @@ instance Stream T.Text where
     | T.null s  = Nothing
     | otherwise = Just (T.splitAt n s)
   takeWhile_ = T.span
-  showTokens Proxy = stringPretty
+  showTokens Proxy = prettyTokens
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
-    reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t') o pst
+    reachOffset' T.splitAt T.foldl' (:[]) ((=='\n'), (=='\t')) o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' T.splitAt T.foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' T.splitAt T.foldl' ((=='\n'), (=='\t')) o pst
 
 instance Stream TL.Text where
   type Token TL.Text  = Char
@@ -286,12 +285,12 @@ instance Stream TL.Text where
     | TL.null s = Nothing
     | otherwise = Just (TL.splitAt (fromIntegral n) s)
   takeWhile_ = TL.span
-  showTokens Proxy = stringPretty
+  showTokens Proxy = prettyTokens
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
-    reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') o pst
+    reachOffset' splitAtTL TL.foldl' (:[]) ((=='\n'), (=='\t')) o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAtTL TL.foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' splitAtTL TL.foldl' ((=='\n'), (=='\t')) o pst
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -312,11 +311,9 @@ reachOffset'
      -- ^ How to split input stream at given offset
   -> (forall b. (b -> Token s -> b) -> b -> Tokens s -> b)
      -- ^ How to fold over input stream
-  -> (Tokens s -> String)
-     -- ^ How to convert chunk of input stream into a 'String'
-  -> (Token s -> Char)
-     -- ^ How to convert a token into a 'Char'
-  -> (Token s, Token s)
+  -> (Token s -> String)
+     -- ^ How to convert a token into a 'String'
+  -> (Token s -> Bool, Token s -> Bool)
      -- ^ Newline token and tab token
   -> Int
      -- ^ Offset to reach
@@ -327,7 +324,6 @@ reachOffset'
      -- 'PosState'
 reachOffset' splitAt'
              foldl''
-             fromToks
              fromTok
              (newlineTok, tabTok)
              o
@@ -336,9 +332,9 @@ reachOffset' splitAt'
   , case expandTab pstateTabWidth
            . addPrefix
            . f
-           . fromToks
+           . (concatMap fromTok . chunkToTokens (Proxy :: Proxy s))
            . fst
-           $ takeWhile_ (/= newlineTok) post of
+           $ takeWhile_ (not . newlineTok) post of
       "" -> "<empty line>"
       xs -> xs
   , PosState
@@ -368,15 +364,15 @@ reachOffset' splitAt'
       let SourcePos n l c = apos
           c' = unPos c
           w  = unPos pstateTabWidth
-      in if | ch == newlineTok ->
+      in if | newlineTok ch ->
                 St (SourcePos n (l <> pos1) pos1)
                    id
-            | ch == tabTok ->
+            | tabTok ch ->
                 St (SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)))
-                   (g . (fromTok ch :))
+                   (g . (fromTok ch ++))
             | otherwise ->
                 St (SourcePos n l (c <> pos1))
-                   (g . (fromTok ch :))
+                   (g . (fromTok ch ++))
 {-# INLINE reachOffset' #-}
 
 -- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
@@ -387,7 +383,7 @@ reachOffsetNoLine'
      -- ^ How to split input stream at given offset
   -> (forall b. (b -> Token s -> b) -> b -> Tokens s -> b)
      -- ^ How to fold over input stream
-  -> (Token s, Token s)
+  -> (Token s -> Bool, Token s -> Bool)
      -- ^ Newline token and tab token
   -> Int
      -- ^ Offset to reach
@@ -415,13 +411,52 @@ reachOffsetNoLine' splitAt'
     go (SourcePos n l c) ch =
       let c' = unPos c
           w  = unPos pstateTabWidth
-      in if | ch == newlineTok ->
+      in if | newlineTok ch ->
                 SourcePos n (l <> pos1) pos1
-            | ch == tabTok ->
+            | tabTok ch ->
                 SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
             | otherwise ->
                 SourcePos n l (c <> pos1)
 {-# INLINE reachOffsetNoLine' #-}
+
+-- | A class for tokens that can be used in a parser to determine the source position based on
+-- tabs/newlines. Has a default implementation of there being no tabs/newlines and therefore everything
+-- being on the same line.
+
+class SrcPosToken a where
+  isTab :: a -> Bool
+  isTab = const False
+
+  isLF :: a -> Bool
+  isLF = const False
+
+  isCR :: a -> Bool
+  isCR = const False
+
+  -- | @prettyToken t@ returns user-friendly string representation of given
+  -- token @t@, suitable for using in error messages.
+
+  prettyToken :: Bool -- ^ Whether this token is the only one on the current line
+              -> a -> String
+  default prettyToken :: Show a => Bool -> a -> String
+  prettyToken _ = show
+
+  showToken :: a -> String
+  default showToken :: Show a => a -> String
+  showToken = show
+
+instance SrcPosToken Char where
+  isTab = (=='\t')
+  isLF = (=='\n')
+  isCR = (=='\r')
+
+  prettyToken True ' ' = "space"
+  prettyToken True ch  = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
+  prettyToken False ch  = case charPretty' ch of
+    Nothing     -> [ch]
+    Just pretty -> "<" <> pretty <> ">"
+
+  showToken ch = [ch]
 
 -- | Like 'BL.splitAt' but accepts the index as an 'Int'.
 
@@ -435,25 +470,14 @@ splitAtTL :: Int -> TL.Text -> (TL.Text, TL.Text)
 splitAtTL n = TL.splitAt (fromIntegral n)
 {-# INLINE splitAtTL #-}
 
--- | @stringPretty s@ returns pretty representation of string @s@. This is
--- used when printing string tokens in error messages.
+-- | @prettyTokens s@ returns pretty representation of tokens @s@. This is
+-- used when printing tokens in error messages.
 
-stringPretty :: NonEmpty Char -> String
-stringPretty (x:|[])      = charPretty x
-stringPretty ('\r':|"\n") = "crlf newline"
-stringPretty xs           = "\"" <> concatMap f (NE.toList xs) <> "\""
-  where
-    f ch =
-      case charPretty' ch of
-        Nothing     -> [ch]
-        Just pretty -> "<" <> pretty <> ">"
-
--- | @charPretty ch@ returns user-friendly string representation of given
--- character @ch@, suitable for using in error messages.
-
-charPretty :: Char -> String
-charPretty ' ' = "space"
-charPretty ch = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
+prettyTokens :: SrcPosToken a => NonEmpty a -> String
+prettyTokens (x:|[])      = prettyToken True x
+prettyTokens (r:|[n])
+  | isCR r && isLF n = "crlf newline"
+prettyTokens xs           = "\"" <> concatMap (prettyToken False) (NE.toList xs) <> "\""
 
 -- | If the given character has a pretty representation, return that,
 -- otherwise 'Nothing'. This is an internal helper.
