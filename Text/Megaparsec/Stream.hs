@@ -14,39 +14,79 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE CPP                    #-}
+{-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE InstanceSigs           #-}
+{-# LANGUAGE LambdaCase             #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE MultiWayIf             #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE RecordWildCards        #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..) )
+  ( Stream (..), NewStream (..) )
 where
 
-import Data.Char (chr)
-import Data.Foldable (foldl')
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe)
-import Data.Proxy
-import Data.Word (Word8)
-import Text.Megaparsec.Pos
-import Text.Megaparsec.State
+import           Prelude                    hiding (break, span, splitAt)
+
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
+import           Data.Char                  (chr)
+import           Data.Foldable              (foldl')
+import           Data.List.NonEmpty         (NonEmpty (..))
 import qualified Data.List.NonEmpty         as NE
+import           Data.Maybe                 (fromMaybe)
+import           Data.Proxy
 import qualified Data.Text                  as T
 import qualified Data.Text.Lazy             as TL
+import           Data.Word                  (Word8)
+import           Text.Megaparsec.Pos
+import           Text.Megaparsec.State
+
+import           Data.MonoTraversable
+import           Data.NonNull
+import           Data.Sequences
 
 #if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
+import           Data.Semigroup
 #endif
+
+class (Index seq ~ Int, IsSequence seq) => NewStream s seq | seq -> s where
+  isTab :: Element seq -> Bool
+  isTab = const False
+  isLF :: Element seq -> Bool
+  isLF = const False
+
+  toStr :: Element seq -> String
+  default toStr :: Show (Element seq) => Element seq -> String
+  toStr = show
+
+  prettyTokens :: NonNull seq -> String
+  default prettyTokens :: Show seq => NonNull seq -> String
+  prettyTokens = show
+
+instance NewStream String String where
+  isTab = (=='\t')
+  isLF = (=='\n')
+  toStr = (:[])
+  prettyTokens = stringPretty'
+
+instance NewStream B8.ByteString B8.ByteString where
+  isTab = (==9)
+  isLF = (==10)
+  prettyTokens :: NonNull B8.ByteString -> String
+  prettyTokens s = stringPretty' $ impureNonNull $ chr . fromIntegral <$> otoList s
+
+instance NewStream [Int] [Int] where
 
 -- | Type class for inputs that can be consumed by the library.
 
@@ -187,6 +227,12 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     let (spos, _, pst') = reachOffset o pst
     in (spos, pst')
 
+takeN_' :: NewStream s seq => Int -> seq -> Maybe (seq, seq)
+takeN_' n s
+  | n <= 0    = Just (mempty, s)
+  | onull s    = Nothing
+  | otherwise = Just (splitAt n s)
+
 instance Stream String where
   type Token String = Char
   type Tokens String = String
@@ -195,7 +241,7 @@ instance Stream String where
   chunkToTokens Proxy = id
   chunkLength Proxy = length
   chunkEmpty Proxy = null
-  take1_ [] = Nothing
+  take1_ []     = Nothing
   take1_ (t:ts) = Just (t, ts)
   takeN_ n s
     | n <= 0    = Just ("", s)
@@ -303,9 +349,63 @@ data St = St SourcePos ShowS
 
 -- {-# UNPACK #-} -- TODO do we need to unpack or not?
 
+
+-- reachOffset Int -> PosState a -> (SourcePos, String, PosState)
+-- reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
+
+nreachOffset :: forall seq s . NewStream s seq
+             => Int
+             -> PosState seq
+             -> (SourcePos, String, PosState seq)
+nreachOffset o PosState {..} =
+  ( spos
+  , case expandTab pstateTabWidth
+           . addPrefix
+           . f
+           . (concatMap (toStr @s @seq) . otoList)
+           . fst
+           $ break (not . isLF @_ @seq) post of
+      "" -> "<empty line>"
+      xs -> xs
+  , PosState
+      { pstateInput = post
+      , pstateOffset = max pstateOffset o
+      , pstateSourcePos = spos
+      , pstateTabWidth = pstateTabWidth
+      , pstateLinePrefix =
+          if sameLine
+            -- NOTE We don't use difference lists here because it's
+            -- desirable for 'PosState' to be an instance of 'Eq' and
+            -- 'Show'. So we just do appending here. Fortunately several
+            -- parse errors on the same line should be relatively rare.
+            then pstateLinePrefix ++ f ""
+            else f ""
+      }
+  )
+  where
+    addPrefix xs =
+      if sameLine
+        then pstateLinePrefix ++ xs
+        else xs
+    sameLine = sourceLine spos == sourceLine pstateSourcePos
+    (pre, post) = splitAt (o - pstateOffset) pstateInput
+    St spos f = ofoldl' go (St pstateSourcePos id) pre
+    go (St apos g) ch =
+      let SourcePos n l c = apos
+          c' = unPos c
+          w  = unPos pstateTabWidth
+      in if | isLF @_ @seq ch ->
+                St (SourcePos n (l <> pos1) pos1)
+                   id
+            | isTab @_ @seq ch ->
+                St (SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)))
+                   (g . (toStr @_ @seq ch ++))
+            | otherwise ->
+                St (SourcePos n l (c <> pos1))
+                   (g . (toStr @_ @seq ch ++))
+
 -- | A helper definition to facilitate defining 'reachOffset' for various
 -- stream types.
-
 reachOffset'
   :: forall s. Stream s
   => (Int -> s -> (Tokens s, s))
@@ -381,6 +481,33 @@ reachOffset' splitAt'
 
 -- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
 
+nreachOffsetNoLine' :: forall seq s . NewStream s seq
+             => Int
+             -> PosState seq
+             -> (SourcePos, PosState seq)
+nreachOffsetNoLine' o PosState {..} =
+  ( spos
+  , PosState
+      { pstateInput = post
+      , pstateOffset = max pstateOffset o
+      , pstateSourcePos = spos
+      , pstateTabWidth = pstateTabWidth
+      , pstateLinePrefix = pstateLinePrefix
+      }
+  )
+  where
+    spos = ofoldl' go pstateSourcePos pre
+    (pre, post) = splitAt (o - pstateOffset) pstateInput
+    go (SourcePos n l c) ch =
+      let c' = unPos c
+          w  = unPos pstateTabWidth
+      in if | isLF @_ @seq ch ->
+                SourcePos n (l <> pos1) pos1
+            | isTab @_ @seq ch->
+                SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+            | otherwise ->
+                SourcePos n l (c <> pos1)
+
 reachOffsetNoLine'
   :: forall s. Stream s
   => (Int -> s -> (Tokens s, s))
@@ -448,12 +575,24 @@ stringPretty xs           = "\"" <> concatMap f (NE.toList xs) <> "\""
         Nothing     -> [ch]
         Just pretty -> "<" <> pretty <> ">"
 
+stringPretty' :: (IsSequence seq, Element seq ~ Char) => NonNull seq -> String
+stringPretty' xs = case nuncons xs of
+  (x, Nothing) -> charPretty x
+  (x, Just n) -> case (x, nuncons n) of
+    ('\r', ('\n', Nothing)) -> "crlf newline"
+    _                       -> oconcatMap f xs
+  where
+    f ch =
+      case charPretty' ch of
+        Nothing     -> [ch]
+        Just pretty -> "<" <> pretty <> ">"
+
 -- | @charPretty ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages.
 
 charPretty :: Char -> String
 charPretty ' ' = "space"
-charPretty ch = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
+charPretty ch  = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
 
 -- | If the given character has a pretty representation, return that,
 -- otherwise 'Nothing'. This is an internal helper.
