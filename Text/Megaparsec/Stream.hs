@@ -14,24 +14,23 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE AllowAmbiguousTypes    #-}
-{-# LANGUAGE CPP                    #-}
-{-# LANGUAGE DefaultSignatures      #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE LambdaCase             #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE MultiWayIf             #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE RecordWildCards        #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE InstanceSigs          #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Text.Megaparsec.Stream
-  ( Stream (..), nreachOffset, nreachOffsetNoLine', takeN_' )
+  ( Stream (..), reachOffset, reachOffsetNoLine, takeN_, stringPretty )
 where
 
 import           Prelude               hiding (break, span, splitAt)
@@ -55,7 +54,7 @@ import           Data.Semigroup
 #endif
 
 
-class (Eq (Tokens s), Ord (Element (Tokens s)), IsSequence (Tokens s)) => Stream s where
+class (IsSequence (Tokens s), Ord (Tokens s), Ord (Element (Tokens s))) => Stream s where
   type Tokens s :: *
   isTab :: Element (Tokens s) -> Bool
   isTab = const False
@@ -106,8 +105,8 @@ instance Stream TL.Text where
   prettyTokens = stringPretty
 
 
-takeN_' :: Stream s => Int -> Tokens s -> Maybe (Tokens s, Tokens s)
-takeN_' n s
+takeN_ :: Stream s => Int -> Tokens s -> Maybe (Tokens s, Tokens s)
+takeN_ n s
   | n <= 0    = Just (mempty, s)
   | onull s    = Nothing
   | otherwise = Just (splitAt (fromIntegral n) s)
@@ -123,21 +122,25 @@ data St = St SourcePos ShowS
 -- {-# UNPACK #-} -- TODO do we need to unpack or not?
 
 
+showTokens :: forall s . Stream s
+           => Tokens s -> String
+showTokens = concatMap (toStr @s) . otoList
+
 -- reachOffset Int -> PosState a -> (SourcePos, String, PosState)
 -- reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
 
-nreachOffset :: forall s . Stream s
+reachOffset :: forall s . Stream s
              => Int
              -> PosState (Tokens s)
              -> (SourcePos, String, PosState (Tokens s))
-nreachOffset o PosState {..} =
+reachOffset o PosState {..} =
   ( spos
   , case expandTab pstateTabWidth
            . addPrefix
            . f
-           . (concatMap (toStr @s) . otoList)
+           . showTokens @s
            . fst
-           $ break (not . isLF @s) post of
+           $ span (not . isLF @s) post of
       "" -> "<empty line>"
       xs -> xs
   , PosState
@@ -180,11 +183,11 @@ nreachOffset o PosState {..} =
 
 -- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
 
-nreachOffsetNoLine' :: forall s . Stream s
+reachOffsetNoLine :: forall s . Stream s
              => Int
              -> PosState (Tokens s)
              -> (SourcePos, PosState (Tokens s))
-nreachOffsetNoLine' o PosState {..} =
+reachOffsetNoLine o PosState {..} =
   ( spos
   , PosState
       { pstateInput = post
@@ -221,7 +224,6 @@ stringPretty xs           = "\"" <> concatMap f (NE.toList xs) <> "\""
       case charPretty' ch of
         Nothing     -> [ch]
         Just pretty -> "<" <> pretty <> ">"
-
 
 -- | @charPretty ch@ returns user-friendly string representation of given
 -- character @ch@, suitable for using in error messages.

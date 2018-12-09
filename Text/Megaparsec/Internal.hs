@@ -68,7 +68,7 @@ import           Text.Megaparsec.State
 import           Text.Megaparsec.Stream
 
 import           Data.MonoTraversable
-import           Data.Sequences             as S
+import qualified Data.Sequences             as S
 
 ----------------------------------------------------------------------------
 -- Data types
@@ -375,7 +375,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input o _) _ _ eok eerr ->
-  let what = maybe EndOfInput (Tokens . nes . fst) (uncons input)
+  let what = maybe EndOfInput (Tokens . nes . fst) (S.uncons input)
       unexpect u = TrivialError o (pure u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
@@ -417,7 +417,7 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
 pEof = ParsecT $ \s@(State input o pst) _ _ eok eerr ->
-  case uncons input of
+  case S.uncons input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let us = (pure . Tokens . nes) x
@@ -431,7 +431,7 @@ pToken :: forall e s m a. Stream s
   -> Set (ErrorItem (Element (Tokens s)))
   -> ParsecT e s m a
 pToken test ps = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
-  case uncons input of
+  case S.uncons input of
     Nothing ->
       let us = pure EndOfInput
       in eerr (TrivialError o us ps) s
@@ -455,7 +455,7 @@ pTokens f tts = ParsecT $ \s@(State input o pst) cok _ eok eerr ->
             ps = (E.singleton . Tokens . NE.fromList . otoList) tts
         in TrivialError pos' us ps
       len = olength tts
-  in case takeN_' @s len input of
+  in case takeN_ @s len input of
     Nothing ->
       eerr (unexpect o EndOfInput) s
     Just (tts', input') ->
@@ -514,7 +514,7 @@ pTakeP :: forall e s m. Stream s
 pTakeP ml n = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
   let el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
-  in case takeN_' @s n input of
+  in case takeN_ @s n input of
        Nothing ->
          eerr (TrivialError o (pure EndOfInput) ps) s
        Just (ts, input') ->

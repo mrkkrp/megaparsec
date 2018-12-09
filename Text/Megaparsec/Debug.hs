@@ -136,6 +136,6 @@ streamDelta s0 s1 = stateOffset s1 - stateOffset s0
 
 streamTake :: forall s. Stream s => Int -> Tokens s -> [Element (Tokens s)]
 streamTake n s =
-  case fst <$> takeN_' @s n s of
+  case fst <$> takeN_ @s n s of
     Nothing  -> []
     Just chk -> otoList chk

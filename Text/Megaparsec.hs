@@ -453,7 +453,7 @@ match p = do
   -- as per its invariants), (tp' - tp) won't be greater than 0, and in that
   -- case 'Just' is guaranteed to be returned as per another invariant of
   -- 'takeN_'.
-  return ((fst . fromJust) (takeN_' @s (o' - o) s), r)
+  return ((fst . fromJust) (takeN_ @s (o' - o) s), r)
 {-# INLINEABLE match #-}
 
 -- | Specify how to process 'ParseError's that happen inside of this
@@ -533,7 +533,7 @@ setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 getSourcePos :: forall e s m . MonadParsec e s m => m SourcePos
 getSourcePos = do
   st <- getParserState
-  let (pos, pst) = nreachOffsetNoLine' @s (stateOffset st) (statePosState st)
+  let (pos, pst) = reachOffsetNoLine @s (stateOffset st) (statePosState st)
   setParserState st { statePosState = pst }
   return pos
 {-# INLINE getSourcePos #-}

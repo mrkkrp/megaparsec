@@ -296,7 +296,7 @@ attachSourcePos projectOffset xs = runState (traverse f xs)
   where
     f a = do
       pst <- get
-      let (spos, pst') = nreachOffsetNoLine' @s (projectOffset a) pst
+      let (spos, pst') = reachOffsetNoLine @s (projectOffset a) pst
       put pst'
       return (a, spos)
 {-# INLINEABLE attachSourcePos #-}
@@ -347,7 +347,7 @@ errorBundlePretty ParseErrorBundle {..} =
       -> (ShowS, PosState (Tokens s))
     f (o, !pst) e = (o . (outChunk ++), pst')
       where
-        (epos, sline, pst') = nreachOffset @s (errorOffset e) pst
+        (epos, sline, pst') = reachOffset @s (errorOffset e) pst
         outChunk =
           "\n" <> sourcePosPretty epos <> ":\n" <>
           padding <> "|\n" <>
