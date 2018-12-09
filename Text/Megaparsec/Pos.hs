@@ -32,14 +32,14 @@ module Text.Megaparsec.Pos
   , sourcePosPretty )
 where
 
-import Control.DeepSeq
-import Control.Exception
-import Data.Data (Data)
-import Data.Typeable (Typeable)
-import GHC.Generics
+import           Control.DeepSeq
+import           Control.Exception
+import           Data.Data         (Data)
+import           Data.Typeable     (Typeable)
+import           GHC.Generics
 
 #if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
+import           Data.Semigroup
 #endif
 
 ----------------------------------------------------------------------------

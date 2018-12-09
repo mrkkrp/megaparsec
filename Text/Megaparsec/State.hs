@@ -21,18 +21,18 @@ module Text.Megaparsec.State
   , PosState (..) )
 where
 
-import Control.DeepSeq (NFData)
-import Data.Data (Data)
-import Data.Typeable (Typeable)
-import GHC.Generics
-import Text.Megaparsec.Pos
+import           Control.DeepSeq     (NFData)
+import           Data.Data           (Data)
+import           Data.Typeable       (Typeable)
+import           GHC.Generics
+import           Text.Megaparsec.Pos
 
 -- | This is the Megaparsec's state parametrized over stream type @s@.
 
 data State s = State
-  { stateInput :: s
+  { stateInput    :: s
     -- ^ The rest of input to process
-  , stateOffset :: {-# UNPACK #-} !Int
+  , stateOffset   :: {-# UNPACK #-} !Int
     -- ^ Number of processed tokens so far
     --
     -- @since 7.0.0
@@ -50,13 +50,13 @@ instance NFData s => NFData (State s)
 -- @since 7.0.0
 
 data PosState s = PosState
-  { pstateInput :: s
+  { pstateInput      :: s
     -- ^ The rest of input to process
-  , pstateOffset :: !Int
+  , pstateOffset     :: !Int
     -- ^ Offset corresponding to beginning of 'pstateInput'
-  , pstateSourcePos :: !SourcePos
+  , pstateSourcePos  :: !SourcePos
     -- ^ Source position corresponding to beginning of 'pstateInput'
-  , pstateTabWidth :: Pos
+  , pstateTabWidth   :: Pos
     -- ^ Tab width to use for column calculation
   , pstateLinePrefix :: String
     -- ^ Prefix to prepend to offending line

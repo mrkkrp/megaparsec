@@ -22,6 +22,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -45,27 +46,29 @@ module Text.Megaparsec.Internal
   , withParsecT )
 where
 
-import Control.Applicative
-import Control.Monad
-import Control.Monad.Cont.Class
-import Control.Monad.Error.Class
-import Control.Monad.Fix
-import Control.Monad.IO.Class
-import Control.Monad.Reader.Class
-import Control.Monad.State.Class
-import Control.Monad.Trans
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Proxy
-import Data.Semigroup
-import Data.Set (Set)
-import Data.String (IsString (..))
-import Text.Megaparsec.Class
-import Text.Megaparsec.Error
-import Text.Megaparsec.State
-import Text.Megaparsec.Stream
-import qualified Control.Monad.Fail  as Fail
-import qualified Data.List.NonEmpty  as NE
-import qualified Data.Set            as E
+import           Control.Applicative
+import           Control.Monad
+import           Control.Monad.Cont.Class
+import           Control.Monad.Error.Class
+import qualified Control.Monad.Fail         as Fail
+import           Control.Monad.Fix
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader.Class
+import           Control.Monad.State.Class
+import           Control.Monad.Trans
+import           Data.List.NonEmpty         (NonEmpty (..))
+import qualified Data.List.NonEmpty         as NE
+import           Data.Semigroup
+import           Data.Set                   (Set)
+import qualified Data.Set                   as E
+import           Data.String                (IsString (..))
+import           Text.Megaparsec.Class
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.State
+import           Text.Megaparsec.Stream
+
+import           Data.MonoTraversable
+import           Data.Sequences             as S
 
 ----------------------------------------------------------------------------
 -- Data types
@@ -98,7 +101,7 @@ newtype Hints t = Hints [Set (ErrorItem t)]
 --
 -- See also: 'Consumption', 'Result'.
 
-data Reply e s a = Reply (State s) Consumption (Result s e a)
+data Reply e s a = Reply (State (Tokens s)) Consumption (Result s e a)
 
 -- | Whether the input has been consumed or not.
 --
@@ -122,11 +125,11 @@ data Result s e a
 
 newtype ParsecT e s m a = ParsecT
   { unParser
-      :: forall b. State s
-      -> (a -> State s   -> Hints (Token s) -> m b) -- consumed-OK
-      -> (ParseError s e -> State s         -> m b) -- consumed-error
-      -> (a -> State s   -> Hints (Token s) -> m b) -- empty-OK
-      -> (ParseError s e -> State s         -> m b) -- empty-error
+      :: forall b. State (Tokens s)
+      -> (a -> State (Tokens s)   -> Hints (Element (Tokens s)) -> m b) -- consumed-OK
+      -> (ParseError s e -> State (Tokens s)         -> m b) -- consumed-error
+      -> (a -> State (Tokens s)   -> Hints (Element (Tokens s)) -> m b) -- empty-OK
+      -> (ParseError s e -> State (Tokens s)         -> m b) -- empty-error
       -> m b }
 
 -- | @since 5.3.0
@@ -246,7 +249,7 @@ instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
     runParsecT p s `catchError` \e ->
       runParsecT (h e) s
 
-mkPT :: Monad m => (State s -> m (Reply e s a)) -> ParsecT e s m a
+mkPT :: Monad m => (State (Tokens s) -> m (Reply e s a)) -> ParsecT e s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
   case consumption of
@@ -301,7 +304,7 @@ instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
   mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
     let
       a = case result of
-        OK a' -> a'
+        OK a'   -> a'
         Error _ -> error "mfix ParsecT"
     runParsecT (f a) s
 
@@ -328,8 +331,8 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   updateParserState = pUpdateParserState
 
 pFailure
-  :: Maybe (ErrorItem (Token s))
-  -> Set (ErrorItem (Token s))
+  :: Maybe (ErrorItem (Element (Tokens s)))
+  -> Set (ErrorItem (Element (Tokens s)))
   -> ParsecT e s m a
 pFailure us ps = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
   eerr (TrivialError o us ps) s
@@ -372,7 +375,7 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input o _) _ _ eok eerr ->
-  let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
+  let what = maybe EndOfInput (Tokens . nes . fst) (uncons input)
       unexpect u = TrivialError o (pure u) E.empty
       cok' _ _ _ = eerr (unexpect what) s
       cerr'  _ _ = eok () s mempty
@@ -414,7 +417,7 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
 pEof = ParsecT $ \s@(State input o pst) _ _ eok eerr ->
-  case take1_ input of
+  case uncons input of
     Nothing    -> eok () s mempty
     Just (x,_) ->
       let us = (pure . Tokens . nes) x
@@ -424,11 +427,11 @@ pEof = ParsecT $ \s@(State input o pst) _ _ eok eerr ->
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
-  => (Token s -> Maybe a)
-  -> Set (ErrorItem (Token s))
+  => (Element (Tokens s) -> Maybe a)
+  -> Set (ErrorItem (Element (Tokens s)))
   -> ParsecT e s m a
 pToken test ps = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
-  case take1_ input of
+  case uncons input of
     Nothing ->
       let us = pure EndOfInput
       in eerr (TrivialError o us ps) s
@@ -447,59 +450,56 @@ pTokens :: forall e s m. Stream s
   -> Tokens s
   -> ParsecT e s m (Tokens s)
 pTokens f tts = ParsecT $ \s@(State input o pst) cok _ eok eerr ->
-  let pxy = Proxy :: Proxy s
-      unexpect pos' u =
+  let unexpect pos' u =
         let us = pure u
-            ps = (E.singleton . Tokens . NE.fromList . chunkToTokens pxy) tts
+            ps = (E.singleton . Tokens . NE.fromList . otoList) tts
         in TrivialError pos' us ps
-      len = chunkLength pxy tts
-  in case takeN_ len input of
+      len = olength tts
+  in case takeN_' @s len input of
     Nothing ->
       eerr (unexpect o EndOfInput) s
     Just (tts', input') ->
       if f tts tts'
         then let st = State input' (o + len) pst
-             in if chunkEmpty pxy tts
+             in if onull tts
                   then eok tts' st mempty
                   else cok tts' st mempty
-        else let ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
+        else let ps = (Tokens . NE.fromList . otoList) tts'
              in eerr (unexpect o ps) (State input o pst)
 {-# INLINE pTokens #-}
 
 pTakeWhileP :: forall e s m. Stream s
   => Maybe String
-  -> (Token s -> Bool)
+  -> (Element (Tokens s) -> Bool)
   -> ParsecT e s m (Tokens s)
 pTakeWhileP ml f = ParsecT $ \(State input o pst) cok _ eok _ ->
-  let pxy = Proxy :: Proxy s
-      (ts, input') = takeWhile_ f input
-      len = chunkLength pxy ts
+  let (ts, input') = S.span f input
+      len = olength ts
       hs =
         case ml >>= NE.nonEmpty of
           Nothing -> mempty
-          Just l -> (Hints . pure . E.singleton . Label) l
-  in if chunkEmpty pxy ts
+          Just l  -> (Hints . pure . E.singleton . Label) l
+  in if onull ts
        then eok ts (State input' (o + len) pst) hs
        else cok ts (State input' (o + len) pst) hs
 {-# INLINE pTakeWhileP #-}
 
 pTakeWhile1P :: forall e s m. Stream s
   => Maybe String
-  -> (Token s -> Bool)
+  -> (Element (Tokens s) -> Bool)
   -> ParsecT e s m (Tokens s)
 pTakeWhile1P ml f = ParsecT $ \(State input o pst) cok _ _ eerr ->
-  let pxy = Proxy :: Proxy s
-      (ts, input') = takeWhile_ f input
-      len = chunkLength pxy ts
+  let (ts, input') = S.span f input
+      len = olength ts
       el = Label <$> (ml >>= NE.nonEmpty)
       hs =
         case el of
           Nothing -> mempty
-          Just l -> (Hints . pure . E.singleton) l
-  in if chunkEmpty pxy ts
+          Just l  -> (Hints . pure . E.singleton) l
+  in if onull ts
        then let us = pure $
-                  case take1_ input of
-                    Nothing -> EndOfInput
+                  case S.uncons input of
+                    Nothing    -> EndOfInput
                     Just (t,_) -> Tokens (nes t)
                 ps    = maybe E.empty E.singleton el
             in eerr (TrivialError o us ps)
@@ -512,25 +512,24 @@ pTakeP :: forall e s m. Stream s
   -> Int
   -> ParsecT e s m (Tokens s)
 pTakeP ml n = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
-  let pxy = Proxy :: Proxy s
-      el = Label <$> (ml >>= NE.nonEmpty)
+  let el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
-  in case takeN_ n input of
+  in case takeN_' @s n input of
        Nothing ->
          eerr (TrivialError o (pure EndOfInput) ps) s
        Just (ts, input') ->
-         let len = chunkLength pxy ts
+         let len = olength ts
          in if len /= n
            then eerr (TrivialError (o + len) (pure EndOfInput) ps)
                      (State input o pst)
            else cok ts (State input' (o + len) pst) mempty
 {-# INLINE pTakeP #-}
 
-pGetParserState :: ParsecT e s m (State s)
+pGetParserState :: ParsecT e s m (State (Tokens s))
 pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 {-# INLINE pGetParserState #-}
 
-pUpdateParserState :: (State s -> State s) -> ParsecT e s m ()
+pUpdateParserState :: (State (Tokens s) -> State (Tokens s)) -> ParsecT e s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
@@ -547,7 +546,7 @@ toHints
   :: Stream s
   => Int               -- ^ Current offset in input stream
   -> ParseError s e    -- ^ Parse error to convert
-  -> Hints (Token s)
+  -> Hints (Element (Tokens s))
 toHints streamPos = \case
   TrivialError errOffset _ ps ->
     -- NOTE This is important to check here that the error indeed has
@@ -567,15 +566,15 @@ toHints streamPos = \case
 
 withHints
   :: Stream s
-  => Hints (Token s)   -- ^ Hints to use
-  -> (ParseError s e -> State s -> m b) -- ^ Continuation to influence
+  => Hints (Element (Tokens s))   -- ^ Hints to use
+  -> (ParseError s e -> State (Tokens s) -> m b) -- ^ Continuation to influence
   -> ParseError s e    -- ^ First argument of resulting continuation
-  -> State s           -- ^ Second argument of resulting continuation
+  -> State (Tokens s)           -- ^ Second argument of resulting continuation
   -> m b
 withHints (Hints ps') c e =
   case e of
     TrivialError pos us ps -> c (TrivialError pos us (E.unions (ps : ps')))
-    _ -> c e
+    _                      -> c e
 {-# INLINE withHints #-}
 
 -- | @'accHints' hs c@ results in “OK” continuation that will add given
@@ -602,7 +601,7 @@ refreshLastHint (Hints (_:xs)) (Just m) = Hints (E.singleton m : xs)
 
 runParsecT :: Monad m
   => ParsecT e s m a -- ^ Parser to run
-  -> State s       -- ^ Initial state
+  -> State (Tokens s)       -- ^ Initial state
   -> m (Reply e s a)
 runParsecT p s = unParser p s cok cerr eok eerr
   where

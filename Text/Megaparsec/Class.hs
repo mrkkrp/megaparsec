@@ -25,23 +25,24 @@ module Text.Megaparsec.Class
   ( MonadParsec (..) )
 where
 
-import Control.Monad
-import Control.Monad.Identity
-import Control.Monad.Trans
-import Data.Set (Set)
-import Text.Megaparsec.Error
-import Text.Megaparsec.State
-import Text.Megaparsec.Stream
+import           Control.Monad
+import           Control.Monad.Identity
 import qualified Control.Monad.RWS.Lazy            as L
 import qualified Control.Monad.RWS.Strict          as S
+import           Control.Monad.Trans
 import qualified Control.Monad.Trans.Reader        as L
 import qualified Control.Monad.Trans.State.Lazy    as L
 import qualified Control.Monad.Trans.State.Strict  as S
 import qualified Control.Monad.Trans.Writer.Lazy   as L
 import qualified Control.Monad.Trans.Writer.Strict as S
+import           Data.MonoTraversable
+import           Data.Set                          (Set)
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.State
+import           Text.Megaparsec.Stream
 
 #if !MIN_VERSION_mtl(2,2,2)
-import Control.Monad.Trans.Identity
+import           Control.Monad.Trans.Identity
 #endif
 
 -- | Type class describing monads that implement the full set of primitive
@@ -59,8 +60,8 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- @since 6.0.0
 
   failure
-    :: Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
-    -> Set (ErrorItem (Token s)) -- ^ Expected items
+    :: Maybe (ErrorItem (Element (Tokens s))) -- ^ Unexpected item (if any)
+    -> Set (ErrorItem (Element (Tokens s))) -- ^ Expected items
     -> m a
 
   -- | The most general way to stop parsing and report a fancy 'ParseError'.
@@ -192,9 +193,9 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- /7.0.0/.
 
   token
-    :: (Token s -> Maybe a)
+    :: (Element (Tokens s) -> Maybe a)
        -- ^ Matching function for the token to parse
-    -> Set (ErrorItem (Token s))
+    -> Set (ErrorItem (Element (Tokens s)))
        -- ^ Expected items (in case of an error)
     -> m a
 
@@ -246,7 +247,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   takeWhileP
     :: Maybe String    -- ^ Name for a single token in the row
-    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+    -> (Element (Tokens s) -> Bool) -- ^ Predicate to use to test tokens
     -> m (Tokens s)    -- ^ A chunk of matching tokens
 
   -- | Similar to 'takeWhileP', but fails if it can't parse at least one
@@ -257,7 +258,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   takeWhile1P
     :: Maybe String    -- ^ Name for a single token in the row
-    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
+    -> (Element (Tokens s) -> Bool) -- ^ Predicate to use to test tokens
     -> m (Tokens s)    -- ^ A chunk of matching tokens
 
   -- | Extract the specified number of tokens from the input stream and
@@ -283,11 +284,11 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   -- | Return the full parser state as a 'State' record.
 
-  getParserState :: m (State s)
+  getParserState :: m (State (Tokens s))
 
   -- | @'updateParserState' f@ applies the function @f@ to the parser state.
 
-  updateParserState :: (State s -> State s) -> m ()
+  updateParserState :: (State (Tokens s) -> State (Tokens s)) -> m ()
 
 ----------------------------------------------------------------------------
 -- Lifting through MTL

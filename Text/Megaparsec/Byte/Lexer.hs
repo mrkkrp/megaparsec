@@ -14,6 +14,7 @@
 --
 -- > import qualified Text.Megaparsec.Byte.Lexer as L
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
 
@@ -36,16 +37,17 @@ module Text.Megaparsec.Byte.Lexer
   , signed )
 where
 
-import Control.Applicative
-import Data.Functor (void)
-import Data.List (foldl')
-import Data.Proxy
-import Data.Scientific (Scientific)
-import Data.Word (Word8)
-import Text.Megaparsec
-import Text.Megaparsec.Lexer
-import qualified Data.Scientific      as Sci
-import qualified Text.Megaparsec.Byte as B
+import           Control.Applicative
+import           Data.Functor          (void)
+import           Data.List             (foldl')
+import           Data.Scientific       (Scientific)
+import qualified Data.Scientific       as Sci
+import           Data.Word             (Word8)
+import           Text.Megaparsec
+import qualified Text.Megaparsec.Byte  as B
+import           Text.Megaparsec.Lexer
+
+import           Data.MonoTraversable
 
 ----------------------------------------------------------------------------
 -- White space
@@ -55,7 +57,7 @@ import qualified Text.Megaparsec.Byte as B
 -- doesn't consume the newline. Newline is either supposed to be consumed by
 -- 'space' parser or picked up manually.
 
-skipLineComment :: (MonadParsec e s m, Token s ~ Word8)
+skipLineComment :: (MonadParsec e s m, Element (Tokens s) ~ Word8, Eq (Tokens s))
   => Tokens s          -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix =
@@ -65,7 +67,7 @@ skipLineComment prefix =
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: (MonadParsec e s m, Token s ~ Word8)
+skipBlockComment :: (MonadParsec e s m, Element (Tokens s) ~ Word8, Eq (Tokens s))
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
@@ -80,7 +82,7 @@ skipBlockComment start end = p >> void (manyTill anySingle n)
 --
 -- @since 5.0.0
 
-skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Word8)
+skipBlockCommentNested :: (MonadParsec e s m, Element (Tokens s) ~ Word8, Eq (Tokens s))
   => Tokens s          -- ^ Start of block comment
   -> Tokens s          -- ^ End of block comment
   -> m ()
@@ -100,7 +102,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- If you need to parse signed integers, see the 'signed' combinator.
 
 decimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Word8, Integral a)
   => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
@@ -108,11 +110,11 @@ decimal = decimal_ <?> "integer"
 -- | A non-public helper to parse decimal integers.
 
 decimal_
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Word8, Integral a)
   => m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum    = foldl' step 0 . otoList
     step a w = a * 10 + fromIntegral (w - 48)
 {-# INLINE decimal_ #-}
 
@@ -126,13 +128,13 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
 -- @since 7.0.0
 
 binary
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Word8, Integral a)
   => m a
 binary = mkNum
   <$> takeWhile1P Nothing isBinDigit
   <?> "binary integer"
   where
-    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum        = foldl' step 0 . otoList
     step a w     = a * 2 + fromIntegral (w - 48)
     isBinDigit w = w == 48 || w == 49
 {-# INLINEABLE binary #-}
@@ -148,13 +150,13 @@ binary = mkNum
 -- > octal = char 48 >> char' 111 >> L.octal
 
 octal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Word8, Integral a)
   => m a
 octal = mkNum
   <$> takeWhile1P Nothing isOctDigit
   <?> "octal integer"
   where
-    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum        = foldl' step 0 . otoList
     step a w     = a * 8 + fromIntegral (w - 48)
     isOctDigit w = w - 48 < 8
 {-# INLINEABLE octal #-}
@@ -170,13 +172,13 @@ octal = mkNum
 -- > hexadecimal = char 48 >> char' 120 >> L.hexadecimal
 
 hexadecimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Word8, Integral a)
   => m a
 hexadecimal = mkNum
   <$> takeWhile1P Nothing isHexDigit
   <?> "hexadecimal integer"
   where
-    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum        = foldl' step 0 . otoList
     step a w
       | w >= 48 && w <= 57 = a * 16 + fromIntegral (w - 48)
       | w >= 97            = a * 16 + fromIntegral (w - 87)
@@ -199,11 +201,11 @@ hexadecimal = mkNum
 -- see 'signed'.
 
 scientific
-  :: forall e s m. (MonadParsec e s m, Token s ~ Word8)
+  :: forall e s m. (MonadParsec e s m, Element (Tokens s) ~ Word8)
   => m Scientific
 scientific = do
   c'      <- decimal_
-  SP c e' <- option (SP c' 0) (try $ dotDecimal_ (Proxy :: Proxy s) c')
+  SP c e' <- option (SP c' 0) (try $ dotDecimal_ c')
   e       <- option e' (try $ exponent_ e')
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
@@ -218,30 +220,29 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 --
 -- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
 
-float :: (MonadParsec e s m, Token s ~ Word8, RealFloat a) => m a
+float :: (MonadParsec e s m, Element (Tokens s) ~ Word8, RealFloat a) => m a
 float = do
   c' <- decimal_
   Sci.toRealFloat <$>
-    ((do SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
+    ((do SP c e' <- dotDecimal_ c'
          e       <- option e' (try $ exponent_ e')
          return (Sci.scientific c e))
      <|> (Sci.scientific c' <$> exponent_ 0))
 {-# INLINEABLE float #-}
 
-dotDecimal_ :: (MonadParsec e s m, Token s ~ Word8)
-  => Proxy s
-  -> Integer
+dotDecimal_ :: (MonadParsec e s m, Element (Tokens s) ~ Word8)
+  => Integer
   -> m SP
-dotDecimal_ pxy c' = do
+dotDecimal_ c' = do
   void (B.char 46)
-  let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
+  let mkNum    = foldl' step (SP c' 0) . otoList
       step (SP a e') w = SP
         (a * 10 + fromIntegral (w - 48))
         (e' - 1)
   mkNum <$> takeWhile1P (Just "digit") isDigit
 {-# INLINE dotDecimal_ #-}
 
-exponent_ :: (MonadParsec e s m, Token s ~ Word8)
+exponent_ :: (MonadParsec e s m, Element (Tokens s) ~ Word8)
   => Int
   -> m Int
 exponent_ e' = do
@@ -261,7 +262,7 @@ exponent_ e' = do
 -- > integer       = lexeme L.decimal
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec e s m, Token s ~ Word8, Num a)
+signed :: (MonadParsec e s m, Element (Tokens s) ~ Word8, Num a)
   => m ()              -- ^ How to consume white space after the sign
   -> m a               -- ^ How to parse the number itself
   -> m a               -- ^ Parser for signed numbers

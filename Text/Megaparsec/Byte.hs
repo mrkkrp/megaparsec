@@ -11,6 +11,7 @@
 --
 -- @since 6.0.0
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
 
@@ -43,42 +44,44 @@ module Text.Megaparsec.Byte
   , string' )
 where
 
-import Control.Applicative
-import Data.Char hiding (toLower, toUpper)
-import Data.Functor (void)
-import Data.Proxy
-import Data.Word (Word8)
-import Text.Megaparsec
-import Text.Megaparsec.Common
+import           Control.Applicative
+import           Data.Char              hiding (toLower, toUpper)
+import           Data.Functor           (void)
+import           Data.Word              (Word8)
+import           Text.Megaparsec
+import           Text.Megaparsec.Common
+
+import           Data.MonoTraversable
+import qualified Data.Sequences      as S
 
 ----------------------------------------------------------------------------
 -- Simple parsers
 
 -- | Parse a newline byte.
 
-newline :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+newline :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 newline = char 10
 {-# INLINE newline #-}
 
 -- | Parse a carriage return character followed by a newline character.
 -- Return the sequence of characters parsed.
 
-crlf :: forall e s m. (MonadParsec e s m, Token s ~ Word8) => m (Tokens s)
-crlf = string (tokensToChunk (Proxy :: Proxy s) [13,10])
+crlf :: forall e s m. (MonadParsec e s m, Element (Tokens s) ~ Word8, Eq (Tokens s)) => m (Tokens s)
+crlf = string (S.fromList [13,10])
 {-# INLINE crlf #-}
 
 -- | Parse a CRLF (see 'crlf') or LF (see 'newline') end of line. Return the
 -- sequence of characters parsed.
 
-eol :: forall e s m. (MonadParsec e s m, Token s ~ Word8) => m (Tokens s)
-eol = (tokenToChunk (Proxy :: Proxy s) <$> newline)
+eol :: forall e s m. (MonadParsec e s m, Element (Tokens s) ~ Word8, Eq (Tokens s)) => m (Tokens s)
+eol = (opoint <$> newline)
   <|> crlf
   <?> "end of line"
 {-# INLINE eol #-}
 
 -- | Parse a tab character.
 
-tab :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+tab :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 tab = char 9
 {-# INLINE tab #-}
 
@@ -86,7 +89,7 @@ tab = char 9
 --
 -- See also: 'skipMany' and 'spaceChar'.
 
-space :: (MonadParsec e s m, Token s ~ Word8) => m ()
+space :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m ()
 space = void $ takeWhileP (Just "white space") isSpace'
 {-# INLINE space #-}
 
@@ -94,7 +97,7 @@ space = void $ takeWhileP (Just "white space") isSpace'
 --
 -- See also: 'skipSome' and 'spaceChar'.
 
-space1 :: (MonadParsec e s m, Token s ~ Word8) => m ()
+space1 :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m ()
 space1 = void $ takeWhile1P (Just "white space") isSpace'
 {-# INLINE space1 #-}
 
@@ -103,51 +106,51 @@ space1 = void $ takeWhile1P (Just "white space") isSpace'
 
 -- | Parse a control character.
 
-controlChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+controlChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 controlChar = satisfy (isControl . toChar) <?> "control character"
 {-# INLINE controlChar #-}
 
 -- | Parse a space character, and the control characters: tab, newline,
 -- carriage return, form feed, and vertical tab.
 
-spaceChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+spaceChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 spaceChar = satisfy isSpace' <?> "white space"
 {-# INLINE spaceChar #-}
 
 -- | Parse an upper-case character.
 
-upperChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+upperChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 upperChar = satisfy (isUpper . toChar) <?> "uppercase letter"
 {-# INLINE upperChar #-}
 
 -- | Parse a lower-case alphabetic character.
 
-lowerChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+lowerChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 lowerChar = satisfy (isLower . toChar) <?> "lowercase letter"
 {-# INLINE lowerChar #-}
 
 -- | Parse an alphabetic character: lower-case or upper-case.
 
-letterChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+letterChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 letterChar = satisfy (isLetter . toChar) <?> "letter"
 {-# INLINE letterChar #-}
 
 -- | Parse an alphabetic or digit characters.
 
-alphaNumChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+alphaNumChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 alphaNumChar = satisfy (isAlphaNum . toChar) <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
 -- | Parse a printable character: letter, number, mark, punctuation, symbol
 -- or space.
 
-printChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+printChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 printChar = satisfy (isPrint . toChar) <?> "printable character"
 {-# INLINE printChar #-}
 
 -- | Parse an ASCII digit, i.e between “0” and “9”.
 
-digitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+digitChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 digitChar = satisfy isDigit' <?> "digit"
   where
     isDigit' x = x >= 48 && x <= 57
@@ -157,7 +160,7 @@ digitChar = satisfy isDigit' <?> "digit"
 --
 -- @since 7.0.0
 
-binDigitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+binDigitChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 binDigitChar = satisfy isBinDigit <?> "binary digit"
   where
     isBinDigit x = x == 48 || x == 49
@@ -165,7 +168,7 @@ binDigitChar = satisfy isBinDigit <?> "binary digit"
 
 -- | Parse an octal digit, i.e. between “0” and “7”.
 
-octDigitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+octDigitChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 octDigitChar = satisfy isOctDigit' <?> "octal digit"
   where
     isOctDigit' x = x >= 48 && x <= 55
@@ -174,14 +177,14 @@ octDigitChar = satisfy isOctDigit' <?> "octal digit"
 -- | Parse a hexadecimal digit, i.e. between “0” and “9”, or “a” and “f”, or
 -- “A” and “F”.
 
-hexDigitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+hexDigitChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 hexDigitChar = satisfy (isHexDigit . toChar) <?> "hexadecimal digit"
 {-# INLINE hexDigitChar #-}
 
 -- | Parse a character from the first 128 characters of the Unicode
 -- character set, corresponding to the ASCII character set.
 
-asciiChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
+asciiChar :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => m (Element (Tokens s))
 asciiChar = satisfy (< 128) <?> "ASCII character"
 {-# INLINE asciiChar #-}
 
@@ -192,7 +195,7 @@ asciiChar = satisfy (< 128) <?> "ASCII character"
 --
 -- > newline = char 10
 
-char :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
+char :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => Element (Tokens s) -> m (Element (Tokens s))
 char = single
 {-# INLINE char #-}
 
@@ -206,7 +209,7 @@ char = single
 -- unexpected 'G'
 -- expecting 'E' or 'e'
 
-char' :: (MonadParsec e s m, Token s ~ Word8) => Token s -> m (Token s)
+char' :: (MonadParsec e s m, Element (Tokens s) ~ Word8) => Element (Tokens s) -> m (Element (Tokens s))
 char' c = choice
   [ char (toLower c)
   , char (toUpper c)

@@ -61,19 +61,20 @@ module Text.Megaparsec.Char.Lexer
   , signed )
 where
 
-import Control.Applicative
-import Control.Monad (void)
-import Data.List (foldl')
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (listToMaybe, fromMaybe, isJust)
-import Data.Proxy
-import Data.Scientific (Scientific)
-import Text.Megaparsec
-import Text.Megaparsec.Lexer
-import qualified Data.Char            as Char
-import qualified Data.Scientific      as Sci
-import qualified Data.Set             as E
-import qualified Text.Megaparsec.Char as C
+import           Control.Applicative
+import           Control.Monad         (void)
+import qualified Data.Char             as Char
+import           Data.List             (foldl')
+import           Data.List.NonEmpty    (NonEmpty (..))
+import           Data.Maybe            (fromMaybe, isJust, listToMaybe)
+import           Data.Scientific       (Scientific)
+import qualified Data.Scientific       as Sci
+import qualified Data.Set              as E
+import           Text.Megaparsec
+import qualified Text.Megaparsec.Char  as C
+import           Text.Megaparsec.Lexer
+
+import           Data.MonoTraversable
 
 ----------------------------------------------------------------------------
 -- White space
@@ -83,8 +84,8 @@ import qualified Text.Megaparsec.Char as C
 -- doesn't consume the newline. Newline is either supposed to be consumed by
 -- 'space' parser or picked up manually.
 
-skipLineComment :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Line comment prefix
+skipLineComment :: (MonadParsec e s m, Element (Tokens s) ~ Char, Eq (Tokens s))
+  => Tokens s         -- ^ Line comment prefix
   -> m ()
 skipLineComment prefix =
   C.string prefix *> void (takeWhileP (Just "character") (/= '\n'))
@@ -93,9 +94,9 @@ skipLineComment prefix =
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 
-skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Start of block comment
-  -> Tokens s          -- ^ End of block comment
+skipBlockComment :: (MonadParsec e s m, Element (Tokens s) ~ Char, Eq (Tokens s))
+  => Tokens s         -- ^ Start of block comment
+  -> Tokens s         -- ^ End of block comment
   -> m ()
 skipBlockComment start end = p >> void (manyTill anySingle n)
   where
@@ -108,9 +109,9 @@ skipBlockComment start end = p >> void (manyTill anySingle n)
 --
 -- @since 5.0.0
 
-skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Start of block comment
-  -> Tokens s          -- ^ End of block comment
+skipBlockCommentNested :: (MonadParsec e s m, Element (Tokens s) ~ Char, Eq (Tokens s))
+  => Tokens s         -- ^ Start of block comment
+  -> Tokens s         -- ^ End of block comment
   -> m ()
 skipBlockCommentNested start end = p >> void (manyTill e n)
   where
@@ -217,7 +218,7 @@ data IndentOpt m a b
 --
 -- @since 4.3.0
 
-indentBlock :: (MonadParsec e s m, Token s ~ Char)
+indentBlock :: (MonadParsec e s m, Element (Tokens s) ~ Char)
   => m ()              -- ^ How to consume indentation (white space)
   -> m (IndentOpt m a b) -- ^ How to parse “reference” token
   -> m a
@@ -311,7 +312,7 @@ lineFold sc action =
 -- __Performance note__: the parser is not particularly efficient at the
 -- moment.
 
-charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
+charLiteral :: (MonadParsec e s m, Element (Tokens s) ~ Char) => m Char
 charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
   -- and we do know that r will be non-empty if count' succeeds.
@@ -332,18 +333,18 @@ charLiteral = label "literal character" $ do
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
 
-decimal :: (MonadParsec e s m, Token s ~ Char, Integral a) => m a
+decimal :: (MonadParsec e s m, Element (Tokens s) ~ Char, Integral a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
 
 -- | A non-public helper to parse decimal integers.
 
 decimal_
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Char, Integral a)
   => m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum    = foldl' step 0 . otoList
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
 
@@ -357,13 +358,13 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 -- @since 7.0.0
 
 binary
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Char, Integral a)
   => m a
 binary = mkNum
   <$> takeWhile1P Nothing isBinDigit
   <?> "binary integer"
   where
-    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum        = foldl' step 0 . otoList
     step a c     = a * 2 + fromIntegral (Char.digitToInt c)
     isBinDigit x = x == '0' || x == '1'
 {-# INLINEABLE binary #-}
@@ -382,13 +383,13 @@ binary = mkNum
 -- wasn't polymorphic in its return type.
 
 octal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Char, Integral a)
   => m a
 octal = mkNum
   <$> takeWhile1P Nothing Char.isOctDigit
   <?> "octal integer"
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum    = foldl' step 0 . otoList
     step a c = a * 8 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE octal #-}
 
@@ -406,13 +407,13 @@ octal = mkNum
 -- wasn't polymorphic in its return type.
 
 hexadecimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Element (Tokens s) ~ Char, Integral a)
   => m a
 hexadecimal = mkNum
   <$> takeWhile1P Nothing Char.isHexDigit
   <?> "hexadecimal integer"
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum    = foldl' step 0 . otoList
     step a c = a * 16 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE hexadecimal #-}
 
@@ -430,11 +431,11 @@ hexadecimal = mkNum
 -- @since 5.0.0
 
 scientific
-  :: forall e s m. (MonadParsec e s m, Token s ~ Char)
+  :: forall e s m. (MonadParsec e s m, Element (Tokens s) ~ Char)
   => m Scientific
 scientific = do
   c'      <- decimal_
-  SP c e' <- option (SP c' 0) (try $ dotDecimal_ (Proxy :: Proxy s) c')
+  SP c e' <- option (SP c' 0) (try $ dotDecimal_ c')
   e       <- option e' (try $ exponent_ e')
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
@@ -452,30 +453,29 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 --
 -- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
 
-float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
+float :: (MonadParsec e s m, Element (Tokens s) ~ Char, RealFloat a) => m a
 float = do
   c' <- decimal_
   Sci.toRealFloat <$>
-    ((do SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
+    ((do SP c e' <- dotDecimal_ c'
          e       <- option e' (try $ exponent_ e')
          return (Sci.scientific c e))
      <|> (Sci.scientific c' <$> exponent_ 0))
 {-# INLINEABLE float #-}
 
-dotDecimal_ :: (MonadParsec e s m, Token s ~ Char)
-  => Proxy s
-  -> Integer
+dotDecimal_ :: (MonadParsec e s m, Element (Tokens s) ~ Char)
+  => Integer
   -> m SP
-dotDecimal_ pxy c' = do
+dotDecimal_ c' = do
   void (C.char '.')
-  let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
+  let mkNum    = foldl' step (SP c' 0) . otoList
       step (SP a e') c = SP
         (a * 10 + fromIntegral (Char.digitToInt c))
         (e' - 1)
   mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 {-# INLINE dotDecimal_ #-}
 
-exponent_ :: (MonadParsec e s m, Token s ~ Char)
+exponent_ :: (MonadParsec e s m, Element (Tokens s) ~ Char)
   => Int
   -> m Int
 exponent_ e' = do
@@ -495,7 +495,7 @@ exponent_ e' = do
 -- > integer       = lexeme L.decimal
 -- > signedInteger = L.signed spaceConsumer integer
 
-signed :: (MonadParsec e s m, Token s ~ Char, Num a)
+signed :: (MonadParsec e s m, Element (Tokens s) ~ Char, Num a)
   => m ()              -- ^ How to consume white space after the sign
   -> m a               -- ^ How to parse the number itself
   -> m a               -- ^ Parser for signed numbers

@@ -19,13 +19,13 @@ module Text.Megaparsec.Common
   , string' )
 where
 
-import Data.Function (on)
-import Text.Megaparsec
 import qualified Data.CaseInsensitive as CI
+import           Data.Function        (on)
+import           Text.Megaparsec
 
 -- | A synonym for 'chunk'.
 
-string :: MonadParsec e s m => Tokens s -> m (Tokens s)
+string :: (MonadParsec e s m, Eq (Tokens s)) => Tokens s -> m (Tokens s)
 string = chunk
 {-# INLINE string #-}
 
@@ -35,7 +35,7 @@ string = chunk
 -- >>> parseTest (string' "foobar") "foObAr"
 -- "foObAr"
 
-string' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
+string' :: (MonadParsec e s m, CI.FoldCase (Tokens s), Eq (Tokens s))
   => Tokens s
   -> m (Tokens s)
 string' = tokens ((==) `on` CI.mk)

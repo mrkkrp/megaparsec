@@ -22,9 +22,9 @@ module Text.Megaparsec.Lexer
   , symbol' )
 where
 
-import Text.Megaparsec
-import Text.Megaparsec.Common
-import qualified Data.CaseInsensitive as CI
+import qualified Data.CaseInsensitive   as CI
+import           Text.Megaparsec
+import           Text.Megaparsec.Common
 
 ----------------------------------------------------------------------------
 -- White space
@@ -93,7 +93,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 
-symbol :: MonadParsec e s m
+symbol :: (MonadParsec e s m, Eq (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ Symbol to parse
   -> m (Tokens s)
@@ -103,7 +103,7 @@ symbol spc = lexeme spc . string
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 
-symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
+symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s), Eq (Tokens s))
   => m ()              -- ^ How to consume white space after lexeme
   -> Tokens s          -- ^ Symbol to parse (case-insensitive)
   -> m (Tokens s)

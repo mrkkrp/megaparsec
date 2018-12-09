@@ -12,12 +12,14 @@
 --
 -- @since 6.0.0
 
+{-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Text.Megaparsec.Error.Builder
@@ -39,19 +41,20 @@ module Text.Megaparsec.Error.Builder
   , EF )
 where
 
-import Data.Data (Data)
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Proxy
-import Data.Set (Set)
-import Data.Typeable (Typeable)
-import GHC.Generics
-import Text.Megaparsec.Error
-import Text.Megaparsec.Stream
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set           as E
+import           Data.Data              (Data)
+import           Data.List.NonEmpty     (NonEmpty (..))
+import qualified Data.List.NonEmpty     as NE
+import           Data.Set               (Set)
+import qualified Data.Set               as E
+import           Data.Typeable          (Typeable)
+import           GHC.Generics
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.Stream
+
+import           Data.MonoTraversable
 
 #if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
+import           Data.Semigroup
 #endif
 
 ----------------------------------------------------------------------------
@@ -59,24 +62,24 @@ import Data.Semigroup
 
 -- | Auxiliary type for construction of trivial parse errors.
 
-data ET s = ET (Maybe (ErrorItem (Token s))) (Set (ErrorItem (Token s)))
+data ET s = ET (Maybe (ErrorItem (Element (Tokens s)))) (Set (ErrorItem (Element (Tokens s))))
   deriving (Typeable, Generic)
 
-deriving instance Eq (Token s) => Eq (ET s)
+deriving instance Eq (Element (Tokens s)) => Eq (ET s)
 
-deriving instance Ord (Token s) => Ord (ET s)
+deriving instance Ord (Element (Tokens s)) => Ord (ET s)
 
 deriving instance ( Data s
-                  , Data (Token s)
-                  , Ord (Token s)
+                  , Data (Element (Tokens s))
+                  , Ord (Element (Tokens s))
                   ) => Data (ET s)
 
 instance Stream s => Semigroup (ET s) where
   ET us0 ps0 <> ET us1 ps1 = ET (n us0 us1) (E.union ps0 ps1)
     where
-      n Nothing  Nothing = Nothing
-      n (Just x) Nothing = Just x
-      n Nothing (Just y) = Just y
+      n Nothing  Nothing  = Nothing
+      n (Just x) Nothing  = Just x
+      n Nothing (Just y)  = Just y
       n (Just x) (Just y) = Just (max x y)
 
 instance Stream s => Monoid (ET s) where
@@ -121,14 +124,14 @@ errFancy p (EF xs) = FancyError p xs
 
 -- | Construct an “unexpected token” error component.
 
-utok :: Stream s => Token s -> ET s
+utok :: Stream s => Element (Tokens s) -> ET s
 utok = unexp . Tokens . nes
 
 -- | Construct an “unexpected tokens” error component. Empty chunk produces
 -- 'EndOfInput'.
 
 utoks :: forall s. Stream s => Tokens s -> ET s
-utoks = unexp . canonicalizeTokens (Proxy :: Proxy s)
+utoks = unexp . canonicalizeTokens @s
 
 -- | Construct an “unexpected label” error component. Do not use with empty
 -- strings (for empty strings it's bottom).
@@ -145,14 +148,14 @@ ueof = unexp EndOfInput
 
 -- | Construct an “expected token” error component.
 
-etok :: Stream s => Token s -> ET s
+etok :: Stream s => Element (Tokens s) -> ET s
 etok = expe . Tokens . nes
 
 -- | Construct an “expected tokens” error component. Empty chunk produces
 -- 'EndOfInput'.
 
 etoks :: forall s. Stream s => Tokens s -> ET s
-etoks = expe . canonicalizeTokens (Proxy :: Proxy s)
+etoks = expe . canonicalizeTokens @s
 
 -- | Construct an “expected label” error component. Do not use with empty
 -- strings.
@@ -179,23 +182,22 @@ fancy = EF . E.singleton
 -- stream. Empty string produces 'EndOfInput'.
 
 canonicalizeTokens
-  :: Stream s
-  => Proxy s
-  -> Tokens s
-  -> ErrorItem (Token s)
-canonicalizeTokens pxy ts =
-  case NE.nonEmpty (chunkToTokens pxy ts) of
+  :: forall s . Stream s
+  => Tokens s
+  -> ErrorItem (Element (Tokens s))
+canonicalizeTokens ts =
+  case NE.nonEmpty (otoList ts) of
     Nothing -> EndOfInput
     Just xs -> Tokens xs
 
 -- | Lift an unexpected item into 'ET'.
 
-unexp :: Stream s => ErrorItem (Token s) -> ET s
+unexp :: Stream s => ErrorItem (Element (Tokens s)) -> ET s
 unexp u = ET (pure u) E.empty
 
 -- | Lift an expected item into 'ET'.
 
-expe :: Stream s => ErrorItem (Token s) -> ET s
+expe :: Stream s => ErrorItem (Element (Tokens s)) -> ET s
 expe p = ET Nothing (E.singleton p)
 
 -- | Make a singleton non-empty list from a value.

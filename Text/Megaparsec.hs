@@ -45,11 +45,13 @@
 -- signature to your parser to resolve the ambiguity. It's a good idea to
 -- provide type signatures for all top-level definitions.
 
+{-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
@@ -99,17 +101,19 @@ module Text.Megaparsec
   , setParserState )
 where
 
-import Control.Monad.Combinators
-import Control.Monad.Identity
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromJust)
-import Text.Megaparsec.Class
-import Text.Megaparsec.Error
-import Text.Megaparsec.Internal
-import Text.Megaparsec.Pos
-import Text.Megaparsec.State
-import Text.Megaparsec.Stream
-import qualified Data.Set as E
+import           Control.Monad.Combinators
+import           Control.Monad.Identity
+import           Data.List.NonEmpty        (NonEmpty (..))
+import           Data.Maybe                (fromJust)
+import qualified Data.Set                  as E
+import           Text.Megaparsec.Class
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.Internal
+import           Text.Megaparsec.Pos
+import           Text.Megaparsec.State
+import           Text.Megaparsec.Stream
+
+import           Data.MonoTraversable
 
 -- $reexports
 --
@@ -164,7 +168,7 @@ type Parsec e s = ParsecT e s Identity
 parse
   :: Parsec e s a -- ^ Parser to run
   -> String       -- ^ Name of source file
-  -> s            -- ^ Input for parser
+  -> Tokens s            -- ^ Input for parser
   -> Either (ParseErrorBundle s e) a
 parse = runParser
 
@@ -178,7 +182,7 @@ parse = runParser
 -- should be parsed. For example, it can be used when parsing of a single
 -- number according to a specification of its format is desired.
 
-parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
+parseMaybe :: (Ord e, Stream s) => Parsec e s a -> Tokens s -> Maybe a
 parseMaybe p s =
   case parse (p <* eof) "" s of
     Left  _ -> Nothing
@@ -192,7 +196,7 @@ parseTest :: ( ShowErrorComponent e
              , Stream s
              )
   => Parsec e s a -- ^ Parser to run
-  -> s            -- ^ Input for parser
+  -> Tokens s            -- ^ Input for parser
   -> IO ()
 parseTest p input =
   case parse p "" input of
@@ -207,11 +211,11 @@ parseTest p input =
 -- > parseFromFile p file = runParser p file <$> readFile file
 
 runParser
-  :: Parsec e s a -- ^ Parser to run
+  :: forall e s a . Parsec e s a -- ^ Parser to run
   -> String     -- ^ Name of source file
-  -> s          -- ^ Input for parser
+  -> Tokens s          -- ^ Input for parser
   -> Either (ParseErrorBundle s e) a
-runParser p name s = snd $ runParser' p (initialState name s)
+runParser p name sq = snd $ runParser' p (initialState @s name sq)
 
 -- | The function is similar to 'runParser' with the difference that it
 -- accepts and returns parser state. This allows to specify arbitrary
@@ -222,8 +226,8 @@ runParser p name s = snd $ runParser' p (initialState name s)
 
 runParser'
   :: Parsec e s a -- ^ Parser to run
-  -> State s    -- ^ Initial state
-  -> (State s, Either (ParseErrorBundle s e) a)
+  -> State (Tokens s)    -- ^ Initial state
+  -> (State (Tokens s), Either (ParseErrorBundle s e) a)
 runParser' p = runIdentity . runParserT' p
 
 -- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
@@ -232,12 +236,12 @@ runParser' p = runIdentity . runParserT' p
 -- underlying monad @m@ that returns either a 'ParseErrorBundle' ('Left') or
 -- a value of type @a@ ('Right').
 
-runParserT :: Monad m
+runParserT :: forall e s m a . Monad m
   => ParsecT e s m a -- ^ Parser to run
   -> String        -- ^ Name of source file
-  -> s             -- ^ Input for parser
+  -> Tokens s             -- ^ Input for parser
   -> m (Either (ParseErrorBundle s e) a)
-runParserT p name s = snd <$> runParserT' p (initialState name s)
+runParserT p name sq = snd <$> runParserT' p (initialState @s name sq)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
 -- accepts and returns parser state. This is thus the most general way to
@@ -247,8 +251,8 @@ runParserT p name s = snd <$> runParserT' p (initialState name s)
 
 runParserT' :: Monad m
   => ParsecT e s m a -- ^ Parser to run
-  -> State s       -- ^ Initial state
-  -> m (State s, Either (ParseErrorBundle s e) a)
+  -> State (Tokens s)       -- ^ Initial state
+  -> m (State (Tokens s), Either (ParseErrorBundle s e) a)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
   return $ case result of
@@ -262,7 +266,7 @@ runParserT' p s = do
 
 -- | Given name of source file and input construct initial state for parser.
 
-initialState :: String -> s -> State s
+initialState :: String -> Tokens s -> State (Tokens s)
 initialState name s = State
   { stateInput  = s
   , stateOffset = 0
@@ -288,8 +292,8 @@ initialState name s = State
 -- @since 7.0.0
 
 single :: MonadParsec e s m
-  => Token s           -- ^ Token to match
-  -> m (Token s)
+  => Element (Tokens s)           -- ^ Token to match
+  -> m (Element (Tokens s))
 single t = token testToken expected
   where
     testToken x = if x == t then Just x else Nothing
@@ -307,8 +311,8 @@ single t = token testToken expected
 -- @since 7.0.0
 
 satisfy :: MonadParsec e s m
-  => (Token s -> Bool) -- ^ Predicate to apply
-  -> m (Token s)
+  => (Element (Tokens s) -> Bool) -- ^ Predicate to apply
+  -> m (Element (Tokens s))
 satisfy f = token testChar E.empty
   where
     testChar x = if f x then Just x else Nothing
@@ -323,7 +327,7 @@ satisfy f = token testChar E.empty
 --
 -- @since 7.0.0
 
-anySingle :: MonadParsec e s m => m (Token s)
+anySingle :: MonadParsec e s m => m (Element (Tokens s))
 anySingle = satisfy (const True)
 {-# INLINE anySingle #-}
 
@@ -337,8 +341,8 @@ anySingle = satisfy (const True)
 -- @since 7.0.0
 
 anySingleBut :: MonadParsec e s m
-  => Token s           -- ^ Token we should not match
-  -> m (Token s)
+  => Element (Tokens s)           -- ^ Token we should not match
+  -> m (Element (Tokens s))
 anySingleBut t = satisfy (/= t)
 {-# INLINE anySingleBut #-}
 
@@ -362,8 +366,8 @@ anySingleBut t = satisfy (/= t)
 -- @since 7.0.0
 
 oneOf :: (Foldable f, MonadParsec e s m)
-  => f (Token s)       -- ^ Collection of matching tokens
-  -> m (Token s)
+  => f (Element (Tokens s))       -- ^ Collection of matching tokens
+  -> m (Element (Tokens s))
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
@@ -383,8 +387,8 @@ oneOf cs = satisfy (`elem` cs)
 -- @since 7.0.0
 
 noneOf :: (Foldable f, MonadParsec e s m)
-  => f (Token s)       -- ^ Collection of taken we should not match
-  -> m (Token s)
+  => f (Element (Tokens s))       -- ^ Collection of taken we should not match
+  -> m (Element (Tokens s))
 noneOf cs = satisfy (`notElem` cs)
 {-# INLINE noneOf #-}
 
@@ -397,7 +401,7 @@ noneOf cs = satisfy (`notElem` cs)
 --
 -- @since 7.0.0
 
-chunk :: MonadParsec e s m
+chunk :: (MonadParsec e s m, Eq (Tokens s))
   => Tokens s          -- ^ Chunk to match
   -> m (Tokens s)
 chunk = tokens (==)
@@ -416,7 +420,7 @@ infix 0 <?>
 --
 -- > unexpected item = failure (Just item) Set.empty
 
-unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
+unexpected :: MonadParsec e s m => ErrorItem (Element (Tokens s)) -> m a
 unexpected item = failure (Just item) E.empty
 {-# INLINE unexpected #-}
 
@@ -438,7 +442,7 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 --
 -- @since 5.3.0
 
-match :: MonadParsec e s m => m a -> m (Tokens s, a)
+match :: forall e s m a . MonadParsec e s m => m a -> m (Tokens s, a)
 match p = do
   o  <- getOffset
   s  <- getInput
@@ -449,7 +453,7 @@ match p = do
   -- as per its invariants), (tp' - tp) won't be greater than 0, and in that
   -- case 'Just' is guaranteed to be returned as per another invariant of
   -- 'takeN_'.
-  return ((fst . fromJust) (takeN_ (o' - o) s), r)
+  return ((fst . fromJust) (takeN_' @s (o' - o) s), r)
 {-# INLINEABLE match #-}
 
 -- | Specify how to process 'ParseError's that happen inside of this
@@ -506,13 +510,13 @@ atEnd = option False (True <$ hidden eof)
 
 -- | Return the current input.
 
-getInput :: MonadParsec e s m => m s
+getInput :: MonadParsec e s m => m (Tokens s)
 getInput = stateInput <$> getParserState
 {-# INLINE getInput #-}
 
 -- | @'setInput' input@ continues parsing with @input@.
 
-setInput :: MonadParsec e s m => s -> m ()
+setInput :: MonadParsec e s m => Tokens s -> m ()
 setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 {-# INLINE setInput #-}
 
@@ -526,10 +530,10 @@ setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 --
 -- @since 7.0.0
 
-getSourcePos :: MonadParsec e s m => m SourcePos
+getSourcePos :: forall e s m . MonadParsec e s m => m SourcePos
 getSourcePos = do
   st <- getParserState
-  let (pos, pst) = reachOffsetNoLine (stateOffset st) (statePosState st)
+  let (pos, pst) = nreachOffsetNoLine' @s (stateOffset st) (statePosState st)
   setParserState st { statePosState = pst }
   return pos
 {-# INLINE getSourcePos #-}
@@ -559,6 +563,6 @@ setOffset o = updateParserState $ \(State s _ pst) ->
 --
 -- See also: 'getParserState', 'updateParserState'.
 
-setParserState :: MonadParsec e s m => State s -> m ()
+setParserState :: MonadParsec e s m => State (Tokens s) -> m ()
 setParserState st = updateParserState (const st)
 {-# INLINE setParserState #-}
