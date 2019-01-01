@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Char.Lexer
--- Copyright   :  © 2015–2018 Megaparsec contributors
+-- Copyright   :  © 2015–2019 Megaparsec contributors
 --                © 2007 Paolo Martini
 --                © 1999–2001 Daan Leijen
 -- License     :  FreeBSD

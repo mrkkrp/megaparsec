@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Error
--- Copyright   :  © 2015–2018 Megaparsec contributors
+-- Copyright   :  © 2015–2019 Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
