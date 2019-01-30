@@ -301,8 +301,6 @@ instance Stream TL.Text where
 
 data St = St SourcePos ShowS
 
--- {-# UNPACK #-} -- TODO do we need to unpack or not?
-
 -- | A helper definition to facilitate defining 'reachOffset' for various
 -- stream types.
 
