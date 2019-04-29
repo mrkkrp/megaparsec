@@ -25,7 +25,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
-#if MIN_VERSION_base(4,9,0) && !MIN_VERSION_base(4,11,0)
+#if !MIN_VERSION_base(4,11,0)
 {-# OPTIONS -Wno-noncanonical-monoid-instances #-}
 #endif
 
