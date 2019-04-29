@@ -124,11 +124,7 @@ spec = do
     checkCharRange "hexadecimal digit" (['0'..'9'] ++ ['a'..'f'] ++ ['A'..'F']) hexDigitChar
 
   describe "markChar" $
-#if MIN_VERSION_base(4,9,0)
     checkCharRange "mark character" "\71229\7398" markChar
-#else
-    checkCharRange "mark character" "" markChar
-#endif
 
   describe "numberChar" $
     let xs = "\185\178\179\188\189\190" ++ ['0'..'9']

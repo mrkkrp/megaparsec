@@ -1,7 +1,7 @@
 name:                 megaparsec
 version:              7.0.4
 cabal-version:        1.18
-tested-with:          GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
+tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
 license:              BSD2
 license-file:         LICENSE.md
 author:               Megaparsec contributors,
@@ -34,7 +34,7 @@ flag dev
   default:            False
 
 library
-  build-depends:      base         >= 4.8   && < 5.0
+  build-depends:      base         >= 4.9   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , case-insensitive >= 1.2 && < 1.3
                     , containers   >= 0.5   && < 0.7
@@ -44,9 +44,6 @@ library
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2   && < 1.3
                     , transformers >= 0.4   && < 0.6
-  if !impl(ghc >= 8.0)
-    build-depends:    fail         == 4.9.*
-                    , semigroups   == 0.18.*
   exposed-modules:    Text.Megaparsec
                     , Text.Megaparsec.Byte
                     , Text.Megaparsec.Byte.Lexer
@@ -66,7 +63,7 @@ library
     ghc-options:      -O0 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
-  if flag(dev) && impl(ghc >= 8.0)
+  if flag(dev)
     ghc-options:      -Wcompat
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
@@ -98,7 +95,7 @@ test-suite tests
                     , Text.Megaparsec.StreamSpec
                     , Text.MegaparsecSpec
   build-depends:      QuickCheck   >= 2.7   && < 2.13
-                    , base         >= 4.8   && < 5.0
+                    , base         >= 4.9   && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , case-insensitive >= 1.2 && < 1.3
                     , containers   >= 0.5   && < 0.7
@@ -110,22 +107,18 @@ test-suite tests
                     , scientific   >= 0.3.1 && < 0.4
                     , text         >= 0.2   && < 1.3
                     , transformers >= 0.4   && < 0.6
-  if !impl(ghc >= 8.0)
-    build-depends:    semigroups   == 0.18.*
   default-language:   Haskell2010
 
 benchmark bench-speed
   main-is:            Main.hs
   hs-source-dirs:     bench/speed
   type:               exitcode-stdio-1.0
-  build-depends:      base         >= 4.8  && < 5.0
+  build-depends:      base         >= 4.9  && < 5.0
                     , containers   >= 0.5  && < 0.7
                     , criterion    >= 0.6.2.1 && < 1.6
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
                     , text         >= 0.2  && < 1.3
-  if !impl(ghc >= 8.0)
-    build-depends:    semigroups   == 0.18.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else
@@ -136,14 +129,12 @@ benchmark bench-memory
   main-is:            Main.hs
   hs-source-dirs:     bench/memory
   type:               exitcode-stdio-1.0
-  build-depends:      base         >= 4.8  && < 5.0
+  build-depends:      base         >= 4.9  && < 5.0
                     , containers   >= 0.5  && < 0.7
                     , deepseq      >= 1.3  && < 1.5
                     , megaparsec
                     , text         >= 0.2  && < 1.3
                     , weigh        >= 0.0.4
-  if !impl(ghc >= 8.0)
-    build-depends:    semigroups   == 0.18.*
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else

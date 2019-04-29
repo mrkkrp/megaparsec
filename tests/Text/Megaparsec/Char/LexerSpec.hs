@@ -264,14 +264,12 @@ spec = do
     context "when stream is empty" $
       it "signals correct parse error" $
         prs p "" `shouldFailWith` err 0 (ueof <> elabel "literal character")
-#if MIN_VERSION_base(4,9,0)
     context "when given a long escape sequence" $
       it "parses it correctly" $
         property $ \s' -> do
           let s = "\\1114111\\&" ++ s'
           prs p s `shouldParse` '\1114111'
           prs' p s `succeedsLeaving` s'
-#endif
 
   describe "decimal" $ do
     context "when stream begins with decimal digits" $
