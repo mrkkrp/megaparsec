@@ -1,3 +1,9 @@
+## Megaparsec 7.0.5
+
+* Dropped support for GHC 7.10.
+
+* Adapted the code to `MonadFail` changes in `base-4.13`.
+
 ## Megaparsec 7.0.4
 
 * Numerous documentation corrections.
