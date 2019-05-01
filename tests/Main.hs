@@ -3,12 +3,6 @@ module Main (main) where
 import Test.Hspec
 import Test.Hspec.Runner
 
-import qualified Control.Applicative.CombinatorsSpec
-import qualified Control.Applicative.PermutationsSpec
-
-import qualified Control.Monad.CombinatorsSpec
-import qualified Control.Monad.Combinators.ExprSpec
-
 import qualified Text.MegaparsecSpec
 
 import qualified Text.Megaparsec.ByteSpec
@@ -28,12 +22,6 @@ import qualified Text.Megaparsec.StreamSpec
 
 spec :: Spec
 spec = do
-
-  Control.Applicative.CombinatorsSpec.spec
-  Control.Applicative.PermutationsSpec.spec
-
-  Control.Monad.CombinatorsSpec.spec
-  Control.Monad.Combinators.ExprSpec.spec
 
   Text.MegaparsecSpec.spec
 

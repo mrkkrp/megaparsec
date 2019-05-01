@@ -79,11 +79,7 @@ test-suite tests
     ghc-options:      -O0 -Wall -Werror
   else
     ghc-options:      -O2 -Wall
-  other-modules:      Control.Applicative.CombinatorsSpec
-                    , Control.Applicative.PermutationsSpec
-                    , Control.Monad.Combinators.ExprSpec
-                    , Control.Monad.CombinatorsSpec
-                    , Test.Hspec.Megaparsec
+  other-modules:      Test.Hspec.Megaparsec
                     , Test.Hspec.Megaparsec.AdHoc
                     , Text.Megaparsec.Byte.LexerSpec
                     , Text.Megaparsec.ByteSpec

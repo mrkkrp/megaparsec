@@ -4,6 +4,8 @@
 
 * Adapted the code to `MonadFail` changes in `base-4.13`.
 
+* Moved `parser-combinators` tests out of `megaparsec`'s test suite.
+
 ## Megaparsec 7.0.4
 
 * Numerous documentation corrections.
