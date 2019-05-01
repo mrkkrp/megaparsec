@@ -1,5 +1,5 @@
 name:                 megaparsec
-version:              7.0.4
+version:              7.0.5
 cabal-version:        1.18
 tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
 license:              BSD2
