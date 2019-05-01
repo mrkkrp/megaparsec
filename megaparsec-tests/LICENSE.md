@@ -1,6 +1,4 @@
-Copyright © 2015–2019 Megaparsec contributors\
-Copyright © 2007 Paolo Martini\
-Copyright © 1999–2000 Daan Leijen
+Copyright © 2015–2019 Megaparsec contributors
 
 All rights reserved.
 

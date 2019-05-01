@@ -12,6 +12,6 @@ Version of `megaparsec-tests` will be kept in sync with versions of
 
 ## License
 
-Copyright © 2019 Megaparsec contributors
+Copyright © 2015–2019 Megaparsec contributors
 
 Distributed under FreeBSD license.
