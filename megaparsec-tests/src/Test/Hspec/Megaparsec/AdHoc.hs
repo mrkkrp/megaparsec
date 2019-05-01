@@ -1,3 +1,14 @@
+-- |
+-- Module      :  Test.Hspec.Megaparsec.AdHoc
+-- Copyright   :  © 2019 Megaparsec contributors
+-- License     :  FreeBSD
+--
+-- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- Ad-hoc helpers used in Megaparsec's test suite.
+
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes           #-}
