@@ -1,0 +1,79 @@
+name:                 megaparsec-tests
+version:              7.0.4
+cabal-version:        1.18
+tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
+license:              BSD2
+license-file:         LICENSE.md
+author:               Megaparsec contributors
+maintainer:           Mark Karpov <markkarpov92@gmail.com>
+homepage:             https://github.com/mrkkrp/megaparsec
+bug-reports:          https://github.com/mrkkrp/megaparsec/issues
+category:             Parsing
+synopsis:             Test utilities and the test suite of Megaparsec
+build-type:           Simple
+description:          Test utilities and the test suite of Megaparsec.
+extra-doc-files:      README.md
+
+flag dev
+  description:        Turn on development settings.
+  manual:             True
+  default:            False
+
+library
+  hs-source-dirs:     src
+  build-depends:      QuickCheck   >= 2.7   && < 2.13
+                    , base         >= 4.9   && < 5.0
+                    , bytestring   >= 0.2   && < 0.11
+                    , containers   >= 0.5   && < 0.7
+                    , hspec        >= 2.0   && < 3.0
+                    , hspec-expectations >= 0.8 && < 0.9
+                    , hspec-megaparsec >= 2.0 && < 3.0
+                    , megaparsec   == 7.0.4
+                    , mtl          >= 2.0   && < 3.0
+                    , text         >= 0.2   && < 1.3
+                    , transformers >= 0.4   && < 0.6
+  exposed-modules:    Test.Hspec.Megaparsec.AdHoc
+  if flag(dev)
+    ghc-options:      -Wall -Werror -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wnoncanonical-monad-instances
+                      -Wnoncanonical-monadfail-instances
+  else
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
+
+test-suite tests
+  main-is:            Spec.hs
+  hs-source-dirs:     tests
+  type:               exitcode-stdio-1.0
+  if flag(dev)
+    ghc-options:      -O0 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
+  other-modules:      Text.Megaparsec.Byte.LexerSpec
+                    , Text.Megaparsec.ByteSpec
+                    , Text.Megaparsec.Char.LexerSpec
+                    , Text.Megaparsec.CharSpec
+                    , Text.Megaparsec.DebugSpec
+                    , Text.Megaparsec.ErrorSpec
+                    , Text.Megaparsec.PosSpec
+                    , Text.Megaparsec.StreamSpec
+                    , Text.MegaparsecSpec
+  build-depends:      QuickCheck   >= 2.7   && < 2.13
+                    , base         >= 4.9   && < 5.0
+                    , bytestring   >= 0.2   && < 0.11
+                    , case-insensitive >= 1.2 && < 1.3
+                    , containers   >= 0.5   && < 0.7
+                    , hspec        >= 2.0   && < 3.0
+                    , hspec-expectations >= 0.8 && < 0.9
+                    , hspec-megaparsec >= 2.0 && < 3.0
+                    , megaparsec   == 7.0.4
+                    , megaparsec-tests
+                    , mtl          >= 2.0   && < 3.0
+                    , parser-combinators >= 1.0 && < 2.0
+                    , scientific   >= 0.3.1 && < 0.4
+                    , text         >= 0.2   && < 1.3
+                    , transformers >= 0.4   && < 0.6
+  build-tools:        hspec-discover   >= 2.0 && < 3.0
+  default-language:   Haskell2010

@@ -71,44 +71,6 @@ library
                       -Wnoncanonical-monadfail-instances
   default-language:   Haskell2010
 
-test-suite tests
-  main-is:            Main.hs
-  hs-source-dirs:     tests
-  type:               exitcode-stdio-1.0
-  if flag(dev)
-    ghc-options:      -O0 -Wall -Werror
-  else
-    ghc-options:      -O2 -Wall
-  other-modules:      Control.Applicative.CombinatorsSpec
-                    , Control.Applicative.PermutationsSpec
-                    , Control.Monad.Combinators.ExprSpec
-                    , Control.Monad.CombinatorsSpec
-                    , Test.Hspec.Megaparsec
-                    , Test.Hspec.Megaparsec.AdHoc
-                    , Text.Megaparsec.Byte.LexerSpec
-                    , Text.Megaparsec.ByteSpec
-                    , Text.Megaparsec.Char.LexerSpec
-                    , Text.Megaparsec.CharSpec
-                    , Text.Megaparsec.DebugSpec
-                    , Text.Megaparsec.ErrorSpec
-                    , Text.Megaparsec.PosSpec
-                    , Text.Megaparsec.StreamSpec
-                    , Text.MegaparsecSpec
-  build-depends:      QuickCheck   >= 2.7   && < 2.13
-                    , base         >= 4.9   && < 5.0
-                    , bytestring   >= 0.2   && < 0.11
-                    , case-insensitive >= 1.2 && < 1.3
-                    , containers   >= 0.5   && < 0.7
-                    , hspec        >= 2.0   && < 3.0
-                    , hspec-expectations >= 0.8 && < 0.9
-                    , megaparsec
-                    , mtl          >= 2.0   && < 3.0
-                    , parser-combinators >= 1.0 && < 2.0
-                    , scientific   >= 0.3.1 && < 0.4
-                    , text         >= 0.2   && < 1.3
-                    , transformers >= 0.4   && < 0.6
-  default-language:   Haskell2010
-
 benchmark bench-speed
   main-is:            Main.hs
   hs-source-dirs:     bench/speed

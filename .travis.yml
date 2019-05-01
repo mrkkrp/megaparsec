@@ -27,10 +27,12 @@ install:
   - travis_retry cabal update
 
 script:
-  - cabal new-build --enable-tests --enable-benchmarks --flags=dev
-  - cabal new-test
-  - cabal new-haddock
+  - cabal new-build megaparsec megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-test megaparsec-tests
+  - cabal new-haddock megaparsec
+  - cabal new-haddock megaparsec-tests
   - cabal sdist
+  - cd megaparsec-tests && cabal sdist
 
 notifications:
   email: false
