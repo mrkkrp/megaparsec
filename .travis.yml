@@ -24,7 +24,7 @@ before_install:
 install:
   - cabal --version
   - ghc --version
-  - travis_retry cabal update
+  - travis_retry cabal new-update
 
 script:
   - cabal new-build megaparsec megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
