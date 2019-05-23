@@ -28,7 +28,7 @@ install:
 
 script:
   - cabal new-build megaparsec megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
-  - cabal new-test megaparsec-tests
+  - cabal new-test megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
   - cabal new-haddock megaparsec
   - cabal new-haddock megaparsec-tests
   - cabal sdist
