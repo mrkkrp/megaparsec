@@ -3,6 +3,8 @@
 * Generalized `decimal`, `binary`, `octal`, and `hexadecimal` parsers in
   lexer modules so that they `Num` instead of just `Integral`.
 
+* Dropped support for GHC 8.0.
+
 ## Megaparsec 7.0.5
 
 * Dropped support for GHC 7.10.
