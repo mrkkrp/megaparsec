@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Byte.Lexer
--- Copyright   :  © 2015–2019 Megaparsec contributors
+-- Copyright   :  © 2015–present Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>

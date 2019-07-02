@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Text.Megaparsec.Common
--- Copyright   :  © 2018–2019 Megaparsec contributors
+-- Copyright   :  © 2018–present Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
