@@ -332,14 +332,14 @@ charLiteral = label "literal character" $ do
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
 
-decimal :: (MonadParsec e s m, Token s ~ Char, Integral a) => m a
+decimal :: (MonadParsec e s m, Token s ~ Char, Num a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
 
 -- | A non-public helper to parse decimal integers.
 
 decimal_
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
   => m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
   where
@@ -357,7 +357,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 -- @since 7.0.0
 
 binary
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
   => m a
 binary = mkNum
   <$> takeWhile1P Nothing isBinDigit
@@ -382,7 +382,7 @@ binary = mkNum
 -- wasn't polymorphic in its return type.
 
 octal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
   => m a
 octal = mkNum
   <$> takeWhile1P Nothing Char.isOctDigit
@@ -406,7 +406,7 @@ octal = mkNum
 -- wasn't polymorphic in its return type.
 
 hexadecimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
   => m a
 hexadecimal = mkNum
   <$> takeWhile1P Nothing Char.isHexDigit
