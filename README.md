@@ -23,7 +23,6 @@
 * [Related packages](#related-packages)
 * [Prominent projects that use Megaparsec](#prominent-projects-that-use-megaparsec)
 * [Links to announcements and blog posts](#links-to-announcements-and-blog-posts)
-* [Authors](#authors)
 * [Contribution](#contribution)
 * [License](#license)
 
@@ -316,14 +315,6 @@ describing what sort of things are now possible:
 * [Announcing Megaparsec 5](https://markkarpov.com/post/announcing-megaparsec-5.html)
 * [Megaparsec 4 and 5](https://markkarpov.com/post/megaparsec-4-and-5.html)
 * [The original Megaparsec 4.0.0 announcement][original-announcement]
-
-## Authors
-
-The project was started and is currently maintained by Mark Karpov. You can
-find the complete list of contributors in the `AUTHORS.md` file in the
-official repository of the project. Thanks to all the people who propose
-features and ideas, although they are not in `AUTHORS.md`, without them
-Megaparsec would not be so good.
 
 ## Contribution
 

@@ -20,8 +20,7 @@ description:
   Megaparsec is a feature-rich package that strikes a nice balance between
   speed, flexibility, and quality of parse errors.
 
-extra-doc-files:      AUTHORS.md
-                    , CHANGELOG.md
+extra-doc-files:      CHANGELOG.md
                     , README.md
 
 source-repository head
