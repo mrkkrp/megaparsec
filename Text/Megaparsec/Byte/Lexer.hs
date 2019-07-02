@@ -100,7 +100,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- If you need to parse signed integers, see the 'signed' combinator.
 
 decimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Num a)
   => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
@@ -108,7 +108,7 @@ decimal = decimal_ <?> "integer"
 -- | A non-public helper to parse decimal integers.
 
 decimal_
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Num a)
   => m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
   where
@@ -126,7 +126,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
 -- @since 7.0.0
 
 binary
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Num a)
   => m a
 binary = mkNum
   <$> takeWhile1P Nothing isBinDigit
@@ -148,7 +148,7 @@ binary = mkNum
 -- > octal = char 48 >> char' 111 >> L.octal
 
 octal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Num a)
   => m a
 octal = mkNum
   <$> takeWhile1P Nothing isOctDigit
@@ -170,7 +170,7 @@ octal = mkNum
 -- > hexadecimal = char 48 >> char' 120 >> L.hexadecimal
 
 hexadecimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Integral a)
+  :: forall e s m a. (MonadParsec e s m, Token s ~ Word8, Num a)
   => m a
 hexadecimal = mkNum
   <$> takeWhile1P Nothing isHexDigit
