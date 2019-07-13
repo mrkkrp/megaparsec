@@ -217,7 +217,7 @@ scaleDown = scale (`div` 4)
 
 strSourcePos :: Pos -> SourcePos -> String -> SourcePos
 strSourcePos tabWidth ipos input =
-  let (x, _, _) = reachOffset maxBound pstate in x
+  let (_, pst') = reachOffset maxBound pstate in pstateSourcePos pst'
   where
     pstate = PosState
       { pstateInput = input

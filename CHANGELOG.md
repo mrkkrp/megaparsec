@@ -1,3 +1,10 @@
+## Megaparec 8.0.0
+
+* Changed type signatures of `reachOffset` and `reachOffsetNoLine` methods
+  of the `Stream` type class. Instead of three-tuple `reachOffset` now
+  returns two-tuple because `SourcePos` is already contained in the returned
+  `PosState` record.
+
 ## Megaparec 7.1.0
 
 * Generalized `decimal`, `binary`, `octal`, and `hexadecimal` parsers in

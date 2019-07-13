@@ -139,9 +139,8 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- | Given an offset @o@ and initial 'PosState', adjust the state in such
   -- a way that it starts at the offset.
   --
-  -- Return three values (in order):
+  -- Return two values (in order):
   --
-  --     * 'SourcePos' which the given offset @o@ points to.
   --     * 'String' representing the line on which the given offset @o@ is
   --       located. The line should satisfy a number of conditions that are
   --       described below.
@@ -161,12 +160,15 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   --       spaces, which is determined by the 'pstateTabWidth' field of
   --       'PosState'.
   --
+  -- __Note__: type signature of the function was changed in the version
+  -- /8.0.0/.
+  --
   -- @since 7.0.0
 
   reachOffset
     :: Int             -- ^ Offset to reach
     -> PosState s      -- ^ Initial 'PosState' to use
-    -> (SourcePos, String, PosState s) -- ^ (See below)
+    -> (String, PosState s) -- ^ See the description of the function
 
   -- | A version of 'reachOffset' that may be faster because it doesn't need
   -- to fetch the line at which the given offset in located.
@@ -174,18 +176,19 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- The default implementation is this:
   --
   -- > reachOffsetNoLine o pst =
-  -- >   let (spos, _, pst')=  reachOffset o pst
-  -- >   in (spos, pst')
+  -- >   snd (reachOffset o pst)
+  --
+  -- __Note__: type signature of the function was changed in the version
+  -- /8.0.0/.
   --
   -- @since 7.0.0
 
   reachOffsetNoLine
     :: Int             -- ^ Offset to reach
     -> PosState s      -- ^ Initial 'PosState' to use
-    -> (SourcePos, PosState s) -- ^ Reached source position and updated state
+    -> PosState s      -- ^ Reached source position and updated state
   reachOffsetNoLine o pst =
-    let (spos, _, pst') = reachOffset o pst
-    in (spos, pst')
+    snd (reachOffset o pst)
 
 instance Stream String where
   type Token String = Char
@@ -320,9 +323,8 @@ reachOffset'
      -- ^ Offset to reach
   -> PosState s
      -- ^ Initial 'PosState' to use
-  -> (SourcePos, String, PosState s)
-     -- ^ Reached 'SourcePos', line at which 'SourcePos' is located, updated
-     -- 'PosState'
+  -> (String, PosState s)
+     -- ^ Line at which 'SourcePos' is located, updated 'PosState'
 reachOffset' splitAt'
              foldl''
              fromToks
@@ -330,8 +332,7 @@ reachOffset' splitAt'
              (newlineTok, tabTok)
              o
              PosState {..} =
-  ( spos
-  , case expandTab pstateTabWidth
+  ( case expandTab pstateTabWidth
            . addPrefix
            . f
            . fromToks
@@ -391,15 +392,14 @@ reachOffsetNoLine'
      -- ^ Offset to reach
   -> PosState s
      -- ^ Initial 'PosState' to use
-  -> (SourcePos, PosState s)
-     -- ^ Reached 'SourcePos' and updated 'PosState'
+  -> PosState s
+     -- ^ Updated 'PosState'
 reachOffsetNoLine' splitAt'
                    foldl''
                    (newlineTok, tabTok)
                    o
                    PosState {..} =
-  ( spos
-  , PosState
+  ( PosState
       { pstateInput = post
       , pstateOffset = max pstateOffset o
       , pstateSourcePos = spos

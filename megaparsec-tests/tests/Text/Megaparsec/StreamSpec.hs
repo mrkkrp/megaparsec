@@ -404,7 +404,7 @@ describeReachOffset Proxy =
               { pstateInput = "\n" :: s
               }
             o = pstateOffset pst + 1
-            (r, _, _) = reachOffset o pst
+            r = pstateSourcePos . snd $ reachOffset o pst
             SourcePos n l _ = pstateSourcePos pst
         r `shouldBe` SourcePos n (l <> pos1) pos1
     it "returns correct SourcePos (tab)" $
@@ -413,7 +413,7 @@ describeReachOffset Proxy =
               { pstateInput = "\t" :: s
               }
             o = pstateOffset pst + 1
-            (r, _, _) = reachOffset o pst
+            r = pstateSourcePos . snd $ reachOffset o pst
             SourcePos n l c = pstateSourcePos pst
             w = pstateTabWidth pst
         r `shouldBe` SourcePos n l (toNextTab w c)
@@ -423,7 +423,7 @@ describeReachOffset Proxy =
               { pstateInput = "a" :: s
               }
             o = pstateOffset pst + 1
-            (r, _, _) = reachOffset o pst
+            r = pstateSourcePos . snd $ reachOffset o pst
             SourcePos n l c = pstateSourcePos pst
         r `shouldBe` SourcePos n l (c <> pos1)
     it "replaces empty line with <empty line>" $
@@ -432,7 +432,7 @@ describeReachOffset Proxy =
               { pstateInput = "" :: s
               , pstateLinePrefix = ""
               }
-            (_, r, _) = reachOffset o pst
+            (r, _) = reachOffset o pst
         r `shouldBe` "<empty line>"
     it "replaces tabs with spaces in returned line" $
       property $ \pst' -> do
@@ -440,7 +440,7 @@ describeReachOffset Proxy =
               { pstateInput = "\ta\t" :: s
               , pstateLinePrefix = "\t"
               }
-            (_, r, _) = reachOffset 2 pst
+            (r, _) = reachOffset 2 pst
             w = unPos (pstateTabWidth pst)
             r' = replicate (w * 2) ' ' ++ "a" ++ replicate w ' '
         r `shouldBe` r'
@@ -450,7 +450,7 @@ describeReachOffset Proxy =
               { pstateInput = "foo\nbar\nbaz" :: s
               , pstateLinePrefix = "123"
               }
-            (_, r, _) = reachOffset 0 pst
+            (r, _) = reachOffset 0 pst
         r `shouldBe` "123foo"
     it "returns correct line (without line prefix)" $
       property $ \pst' -> do
@@ -458,7 +458,7 @@ describeReachOffset Proxy =
               { pstateInput = "foo\nbar\nbaz" :: s
               , pstateOffset = 0
               }
-            (_, r, _) = reachOffset 4 pst
+            (r, _) = reachOffset 4 pst
         r `shouldBe` "bar"
     it "works incrementally" $
       property $ \os' (NonNegative d) s -> do
@@ -469,7 +469,7 @@ describeReachOffset Proxy =
                    [] -> d
                    xs -> maximum xs + d
             f pst o =
-              let (_, _, pst') = reachOffset o pst
+              let (_, pst') = reachOffset o pst
               in pst'
         reachOffset o' s `shouldBe` reachOffset o' s'
 
@@ -491,7 +491,7 @@ describeReachOffsetNoLine Proxy =
               { pstateInput = "\n" :: s
               }
             o = pstateOffset pst + 1
-            (r, _) = reachOffsetNoLine o pst
+            r = pstateSourcePos (reachOffsetNoLine o pst)
             SourcePos n l _ = pstateSourcePos pst
         r `shouldBe` SourcePos n (l <> pos1) pos1
     it "returns correct SourcePos (tab)" $
@@ -500,7 +500,7 @@ describeReachOffsetNoLine Proxy =
               { pstateInput = "\t" :: s
               }
             o = pstateOffset pst + 1
-            (r, _) = reachOffsetNoLine o pst
+            r = pstateSourcePos (reachOffsetNoLine o pst)
             SourcePos n l c = pstateSourcePos pst
             w = pstateTabWidth pst
         r `shouldBe` SourcePos n l (toNextTab w c)
@@ -510,7 +510,7 @@ describeReachOffsetNoLine Proxy =
               { pstateInput = "a" :: s
               }
             o = pstateOffset pst + 1
-            (r, _) = reachOffsetNoLine o pst
+            r = pstateSourcePos (reachOffsetNoLine o pst)
             SourcePos n l c = pstateSourcePos pst
         r `shouldBe` SourcePos n l (c <> pos1)
     it "works incrementally" $
@@ -522,7 +522,7 @@ describeReachOffsetNoLine Proxy =
                    [] -> d
                    xs -> maximum xs + d
             f pst o =
-              let (_, pst') = reachOffsetNoLine o pst
+              let pst' = reachOffsetNoLine o pst
               in pst'
         reachOffsetNoLine o' s `shouldBe` reachOffsetNoLine o' s'
 
