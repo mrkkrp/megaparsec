@@ -83,9 +83,9 @@ spec = do
             pst' =
               if null xs
                 then pst
-                else snd $ reachOffsetNoLine (last xs) pst
+                else reachOffsetNoLine (last xs) pst
             rs = f <$> xs
-            f x = (x, fst (reachOffsetNoLine x pst))
+            f x = (x, pstateSourcePos (reachOffsetNoLine x pst))
         attachSourcePos id (xs :: [Int]) pst `shouldBe` (rs, pst')
 
   describe "errorBundlePretty" $ do

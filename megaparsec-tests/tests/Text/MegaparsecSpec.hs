@@ -1247,7 +1247,8 @@ spec = do
         property $ \st -> do
           let p :: Parser SourcePos
               p = getSourcePos
-              (spos, _, pst') = reachOffset (stateOffset st) (statePosState st)
+              pst' = snd $ reachOffset (stateOffset st) (statePosState st)
+              spos = pstateSourcePos pst'
           runParser' p st `shouldBe` (st { statePosState = pst' }, Right spos)
 
     describe "setOffset and getOffset" $

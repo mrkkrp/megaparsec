@@ -529,9 +529,9 @@ setInput s = updateParserState (\(State _ o pst) -> State s o pst)
 getSourcePos :: MonadParsec e s m => m SourcePos
 getSourcePos = do
   st <- getParserState
-  let (pos, pst) = reachOffsetNoLine (stateOffset st) (statePosState st)
+  let pst = reachOffsetNoLine (stateOffset st) (statePosState st)
   setParserState st { statePosState = pst }
-  return pos
+  return (pstateSourcePos pst)
 {-# INLINE getSourcePos #-}
 
 -- | Get the number of tokens processed so far.
