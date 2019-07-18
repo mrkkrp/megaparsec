@@ -52,6 +52,7 @@ library
                     , Text.Megaparsec.Error
                     , Text.Megaparsec.Error.Builder
                     , Text.Megaparsec.Internal
+                    , Text.Megaparsec.Internal.TagMap
                     , Text.Megaparsec.Pos
                     , Text.Megaparsec.Stream
   other-modules:      Text.Megaparsec.Class

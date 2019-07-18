@@ -62,22 +62,22 @@ dbg :: forall e s m a.
   => String            -- ^ Debugging label
   -> ParsecT e s m a   -- ^ Parser to debug
   -> ParsecT e s m a   -- ^ Parser that prints debugging messages
-dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
+dbg lbl p = ParsecT $ \s mm cok cerr eok eerr ->
   let l = dbgLog lbl :: DbgItem s e a -> String
       unfold = streamTake 40
-      cok' x s' hs = flip trace (cok x s' hs) $
+      cok' x s' hs mm' = flip trace (cok x s' hs mm') $
         l (DbgIn (unfold (stateInput s))) ++
         l (DbgCOK (streamTake (streamDelta s s') (stateInput s)) x)
-      cerr' err s' = flip trace (cerr err s') $
+      cerr' err s' mm' = flip trace (cerr err s' mm') $
         l (DbgIn (unfold (stateInput s))) ++
         l (DbgCERR (streamTake (streamDelta s s') (stateInput s)) err)
-      eok' x s' hs = flip trace (eok x s' hs) $
+      eok' x s' hs mm' = flip trace (eok x s' hs mm') $
         l (DbgIn (unfold (stateInput s))) ++
         l (DbgEOK (streamTake (streamDelta s s') (stateInput s)) x)
-      eerr' err s' = flip trace (eerr err s') $
+      eerr' err s' mm' = flip trace (eerr err s' mm') $
         l (DbgIn (unfold (stateInput s))) ++
         l (DbgEERR (streamTake (streamDelta s s') (stateInput s)) err)
-  in unParser p s cok' cerr' eok' eerr'
+  in unParser p s mm cok' cerr' eok' eerr'
 
 -- | A single piece of info to be rendered with 'dbgLog'.
 

@@ -172,6 +172,54 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   eof :: m ()
 
+  -- | Commit to the current parsing alternative. If we are currently inside a
+  -- backtracking frame (i.e. the current parser is running inside 'try'),
+  -- the innermost backtracking frame is marked as committed, effectively
+  -- undoing the effects of 'try' combinator.
+  --
+  -- For example, in the following parser, the parser commits to the first branch
+  -- after parsing “foo”. It then encounters the incorrect string “bar” and fails
+  -- even though it is run inside 'try'. The (matching) second branch is not considered
+  -- because the first branch already consumed some input.
+  --
+  -- >>> parseTest (try (string "foo" >> commit >> string "baz") <|> string "foobar") "foobar"
+  -- 1:4:
+  --   |
+  -- 1 | foobar
+  --   |    ^^^
+  -- unexpected "bar"
+  -- expecting "baz"
+  --
+  -- This combinator is very useful if you only want to backtrack on failure on the first part
+  -- of a parser. It allows you to regain some of the error reporting information lost
+  -- when backtracking.
+  --
+  -- @since 8.0.0
+  commit :: m ()
+
+  -- | The parser @'memo' p@ memoizes the inner parser @p@, i.e. the parser @p@
+  -- is run at most once for every possible location in the input stream.
+  --
+  -- There is no automatic memoization, you have to manually mark all parsers you
+  -- want to memoize.
+  -- Ideal candidates for memoization are parsers that are relatively expensive
+  -- to run (e.g. many alternatives or lots of token ingested before failure)
+  -- and parsers that are typically run multiple times during backtracking.
+  -- Note that memoization has associated space (storage of memoized results)
+  -- and time (memo lookup) overhead. In particular, if a lookup in the memoization
+  -- table is more expensive than running the parser, memoization is not a good
+  -- idea.
+  --
+  -- __N.B.__ The memoization is guaranteed to happen transparently (without affecting
+  -- parsing results) /iff/ either the underlying monad does not allow any side
+  -- effects observable during execution (e.g. 'IdentityT' or 'Control.Monad.Reader.ReaderT') or alternatively
+  -- the result of the memoized parser does not depend on any observable side effects.
+  -- This is because Megaparsec has no way to know that any given parser depends
+  -- on such side effects and might need to be re-run.
+  --
+  -- @since 8.0.0
+  memo :: m a -> m a
+
   -- | The parser @'token' test expected@ accepts a token @t@ with result
   -- @x@ when the function @test t@ returns @'Just' x@. @expected@ specifies
   -- the collection of expected items to report in error messages.
@@ -301,6 +349,8 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   observing     (L.StateT m) = L.StateT $ \s ->
     fixs s <$> observing (m s)
   eof                        = lift eof
+  commit                     = lift commit
+  memo          (L.StateT m) = L.StateT $ memo . m
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
@@ -323,6 +373,8 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   observing     (S.StateT m) = S.StateT $ \s ->
     fixs s <$> observing (m s)
   eof                        = lift eof
+  commit                     = lift commit
+  memo          (S.StateT m) = S.StateT $ memo . m
   token test mt              = lift (token test mt)
   tokens e ts                = lift (tokens e ts)
   takeWhileP l f             = lift (takeWhileP l f)
@@ -342,6 +394,8 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
     withRecovery (\e -> L.runReaderT (r e) s) (m s)
   observing     (L.ReaderT m) = L.ReaderT $ observing . m
   eof                         = lift eof
+  commit                      = lift commit
+  memo          (L.ReaderT m) = L.ReaderT $ memo . m
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
@@ -364,6 +418,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   observing     (L.WriterT m) = L.WriterT $
     fixs mempty <$> observing m
   eof                         = lift eof
+  commit                      = lift commit
+  memo          (L.WriterT m) = L.WriterT $ memo m
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
@@ -386,6 +442,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   observing     (S.WriterT m) = S.WriterT $
     fixs mempty <$> observing m
   eof                         = lift eof
+  commit                      = lift commit
+  memo          (S.WriterT m) = S.WriterT $ memo m
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
@@ -412,6 +470,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   observing        (L.RWST m) = L.RWST $ \r s ->
     fixs' s <$> observing (m r s)
   eof                         = lift eof
+  commit                      = lift commit
+  memo             (L.RWST m) = L.RWST $ \r s -> memo (m r s)
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
@@ -438,6 +498,8 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   observing        (S.RWST m) = S.RWST $ \r s ->
     fixs' s <$> observing (m r s)
   eof                         = lift eof
+  commit                      = lift commit
+  memo             (S.RWST m) = S.RWST $ \r s -> memo (m r s)
   token test mt               = lift (token test mt)
   tokens e ts                 = lift (tokens e ts)
   takeWhileP l f              = lift (takeWhileP l f)
@@ -457,6 +519,8 @@ instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
     withRecovery (runIdentityT . r) m
   observing     (IdentityT m) = IdentityT $ observing m
   eof                         = lift eof
+  commit                      = lift commit
+  memo          (IdentityT m) = IdentityT $ memo m
   token test mt               = lift (token test mt)
   tokens e ts                 = lift $ tokens e ts
   takeWhileP l f              = lift (takeWhileP l f)

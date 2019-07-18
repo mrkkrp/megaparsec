@@ -24,6 +24,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE BangPatterns               #-}
 
 module Text.Megaparsec.Internal
   ( -- * Data types
@@ -32,13 +33,24 @@ module Text.Megaparsec.Internal
   , Consumption (..)
   , Result (..)
   , ParsecT (..)
+    -- ** Memoization-related types
+  , Memo (..)
+  , Frame (..)
+  , MemoIndex
     -- * Helper functions
   , toHints
   , withHints
   , accHints
   , refreshLastHint
   , runParsecT
-  , withParsecT )
+  , withParsecT
+    -- ** Memoization-related helpers
+  , mrecord
+  , mlookup
+  , mcommit
+  , mcommitted
+  , mpush
+  , mpop )
 where
 
 import Control.Applicative
@@ -59,9 +71,11 @@ import Text.Megaparsec.Class
 import Text.Megaparsec.Error
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
-import qualified Control.Monad.Fail  as Fail
-import qualified Data.List.NonEmpty  as NE
-import qualified Data.Set            as E
+import qualified Control.Monad.Fail              as Fail
+import qualified Data.IntMap.Strict              as IM
+import qualified Data.List.NonEmpty              as NE
+import qualified Data.Set                        as E
+import qualified Text.Megaparsec.Internal.TagMap as TM
 
 ----------------------------------------------------------------------------
 -- Data types
@@ -113,16 +127,45 @@ data Result s e a
   = OK a                   -- ^ Parser succeeded
   | Error (ParseError s e) -- ^ Parser failed
 
+-- | The index used for the memo table, consisting of an offset and a parser tag.
+type MemoIndex e s m a = (Int, TM.Tag (ParsecT e s m) a)
+
+-- | A backtracking frame
+data Frame = Frame {
+  -- | Whether the current frame is committed
+  frameCommitted :: !Bool,
+  -- | The offset at which we entered this frame
+  frameOffset :: !Int
+  }
+
+-- | The memoization state
+data Memo e s m = Memo {
+  -- | The memoization table
+  table :: !(IM.IntMap (TM.TagMap (ParsecT e s m))),
+  -- | The backtracking stack
+  frames :: ![Frame]
+  }
+
+zmemo :: Memo e s m
+zmemo = Memo IM.empty []
+
+memomap :: forall e s m e' s' m'.
+     (forall a. ParsecT e s m a -> ParsecT e' s' m' a)
+  -> Memo e  s  m
+  -> Memo e' s' m'
+memomap f m = m { table = TM.tmap f <$> table m }
+
 -- | @'ParsecT' e s m a@ is a parser with custom data component of error
 -- @e@, stream type @s@, underlying monad @m@ and return type @a@.
 
 newtype ParsecT e s m a = ParsecT
   { unParser
       :: forall b. State s
-      -> (a -> State s   -> Hints (Token s) -> m b) -- consumed-OK
-      -> (ParseError s e -> State s         -> m b) -- consumed-error
-      -> (a -> State s   -> Hints (Token s) -> m b) -- empty-OK
-      -> (ParseError s e -> State s         -> m b) -- empty-error
+      -> Memo e s m
+      -> (a -> State s   -> Hints (Token s) -> Memo e s m -> m b) -- consumed-OK
+      -> (ParseError s e -> State s         -> Memo e s m -> m b) -- consumed-error
+      -> (a -> State s   -> Hints (Token s) -> Memo e s m -> m b) -- empty-OK
+      -> (ParseError s e -> State s         -> Memo e s m -> m b) -- empty-error
       -> m b }
 
 -- | @since 5.3.0
@@ -153,8 +196,8 @@ instance Functor (ParsecT e s m) where
   fmap = pMap
 
 pMap :: (a -> b) -> ParsecT e s m a -> ParsecT e s m b
-pMap f p = ParsecT $ \s cok cerr eok eerr ->
-  unParser p s (cok . f) cerr (eok . f) eerr
+pMap f p = ParsecT $ \s mm cok cerr eok eerr ->
+  unParser p s mm (cok . f) cerr (eok . f) eerr
 {-# INLINE pMap #-}
 
 -- | 'pure' returns a parser that __succeeds__ without consuming input.
@@ -166,19 +209,19 @@ instance Stream s => Applicative (ParsecT e s m) where
   p1 <* p2 = do { x1 <- p1 ; void p2 ; return x1 }
 
 pPure :: a -> ParsecT e s m a
-pPure x = ParsecT $ \s _ _ eok _ -> eok x s mempty
+pPure x = ParsecT $ \s mm  _ _ eok _ -> eok x s mempty mm
 {-# INLINE pPure #-}
 
 pAp :: Stream s
   => ParsecT e s m (a -> b)
   -> ParsecT e s m a
   -> ParsecT e s m b
-pAp m k = ParsecT $ \s cok cerr eok eerr ->
-  let mcok x s' hs = unParser k s' (cok . x) cerr
+pAp m k = ParsecT $ \s mm cok cerr eok eerr ->
+  let mcok x s' hs mm' = unParser k s' mm' (cok . x) cerr
         (accHints hs (cok . x)) (withHints hs cerr)
-      meok x s' hs = unParser k s' (cok . x) cerr
+      meok x s' hs mm' = unParser k s' mm' (cok . x) cerr
         (accHints hs (eok . x)) (withHints hs eerr)
-  in unParser m s mcok cerr meok eerr
+  in unParser m s mm mcok cerr meok eerr
 {-# INLINE pAp #-}
 
 -- | 'empty' is a parser that __fails__ without consuming input.
@@ -200,21 +243,23 @@ pBind :: Stream s
   => ParsecT e s m a
   -> (a -> ParsecT e s m b)
   -> ParsecT e s m b
-pBind m k = ParsecT $ \s cok cerr eok eerr ->
-  let mcok x s' hs = unParser (k x) s' cok cerr
+pBind m k = ParsecT $ \s mm cok cerr eok eerr ->
+  let mcok x s' hs mm' = unParser (k x) s' mm' cok cerr
         (accHints hs cok) (withHints hs cerr)
-      meok x s' hs = unParser (k x) s' cok cerr
+      mcerr err s' mm' = cerr err s' mm'
+      meok x s' hs mm' = unParser (k x) s' mm' cok cerr
         (accHints hs eok) (withHints hs eerr)
-  in unParser m s mcok cerr meok eerr
+      meerr err s' mm' = eerr err s' mm'
+  in unParser m s mm mcok mcerr meok meerr
 {-# INLINE pBind #-}
 
 instance Stream s => Fail.MonadFail (ParsecT e s m) where
   fail = pFail
 
 pFail :: String -> ParsecT e s m a
-pFail msg = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
+pFail msg = ParsecT $ \s@(State _ o _) mm _ _ _ eerr ->
   let d = E.singleton (ErrorFail msg)
-  in eerr (FancyError o d) s
+  in eerr (FancyError o d) s mm
 {-# INLINE pFail #-}
 
 instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
@@ -241,17 +286,17 @@ instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
       runParsecT (h e) s
 
 mkPT :: Monad m => (State s -> m (Reply e s a)) -> ParsecT e s m a
-mkPT k = ParsecT $ \s cok cerr eok eerr -> do
+mkPT k = ParsecT $ \s mm cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
   case consumption of
     Consumed ->
       case result of
-        OK    x -> cok x s' mempty
-        Error e -> cerr e s'
+        OK    x -> cok x s' mempty mm
+        Error e -> cerr e s' mm
     Virgin ->
       case result of
-        OK    x -> eok x s' mempty
-        Error e -> eerr e s'
+        OK    x -> eok x s' mempty mm
+        Error e -> eerr e s' mm
 
 -- | 'mzero' is a parser that __fails__ without consuming input.
 
@@ -260,21 +305,21 @@ instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
   mplus = pPlus
 
 pZero :: ParsecT e s m a
-pZero = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
-  eerr (TrivialError o Nothing E.empty) s
+pZero = ParsecT $ \s@(State _ o _) mm _ _ _ eerr ->
+  eerr (TrivialError o Nothing E.empty) s mm
 {-# INLINE pZero #-}
 
 pPlus :: (Ord e, Stream s)
   => ParsecT e s m a
   -> ParsecT e s m a
   -> ParsecT e s m a
-pPlus m n = ParsecT $ \s cok cerr eok eerr ->
-  let meerr err ms =
-        let ncerr err' s' = cerr (err' <> err) (longestMatch ms s')
-            neok x s' hs  = eok x s' (toHints (stateOffset s') err <> hs)
-            neerr err' s' = eerr (err' <> err) (longestMatch ms s')
-        in unParser n s cok ncerr neok neerr
-  in unParser m s cok cerr eok meerr
+pPlus m n = ParsecT $ \s m0 cok cerr eok eerr ->
+  let meerr err ms mm =
+        let ncerr err' s' mm' = cerr (err' <> err) (longestMatch ms s') mm'
+            neok x s' hs  mm' = eok x s' (toHints (stateOffset s') err <> hs) mm'
+            neerr err' s' mm' = eerr (err' <> err) (longestMatch ms s') mm'
+        in unParser n s mm cok ncerr neok neerr
+  in unParser m s m0 cok cerr eok meerr
 {-# INLINE pPlus #-}
 
 -- | From two states, return the one with the greater number of processed
@@ -300,8 +345,8 @@ instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
     runParsecT (f a) s
 
 instance MonadTrans (ParsecT e s) where
-  lift amb = ParsecT $ \s _ _ eok _ ->
-    amb >>= \a -> eok a s mempty
+  lift amb = ParsecT $ \s m  _ _ eok _ ->
+    amb >>= \a -> eok a s mempty m
 
 instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   failure           = pFailure
@@ -313,6 +358,8 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   withRecovery      = pWithRecovery
   observing         = pObserving
   eof               = pEof
+  commit            = pCommit
+  memo              = pMemo
   token             = pToken
   tokens            = pTokens
   takeWhileP        = pTakeWhileP
@@ -325,19 +372,19 @@ pFailure
   :: Maybe (ErrorItem (Token s))
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pFailure us ps = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
-  eerr (TrivialError o us ps) s
+pFailure us ps = ParsecT $ \s@(State _ o _) mm _ _ _ eerr ->
+  eerr (TrivialError o us ps) s mm
 {-# INLINE pFailure #-}
 
 pFancyFailure
   :: Set (ErrorFancy e)
   -> ParsecT e s m a
-pFancyFailure xs = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
-  eerr (FancyError o xs) s
+pFancyFailure xs = ParsecT $ \s@(State _ o _) mm _ _ _ eerr ->
+  eerr (FancyError o xs) s mm
 {-# INLINE pFancyFailure #-}
 
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
-pLabel l p = ParsecT $ \s cok cerr eok eerr ->
+pLabel l p = ParsecT $ \s mm cok cerr eok eerr ->
   let el = Label <$> NE.nonEmpty l
       cok' x s' hs =
         case el of
@@ -349,30 +396,99 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
           (TrivialError pos us _) ->
             TrivialError pos us (maybe E.empty E.singleton el)
           _ -> err
-  in unParser p s cok' cerr eok' eerr'
+  in unParser p s mm cok' cerr eok' eerr'
 {-# INLINE pLabel #-}
 
+-- | Look up a parser in the memo table.
+mlookup :: Memo e s m -> MemoIndex e s m a -> Maybe (ParsecT e s m a)
+mlookup m (o, t) = TM.lookup t <=< IM.lookup o $ table m
+
+-- | Record a memoized parser in the memo table.
+mrecord :: Memo e s m -> MemoIndex e s m a -> ParsecT e s m a -> Memo e s m
+mrecord m (o, t) p = m { table = IM.alter go o $ table m }
+  where
+    go Nothing   = Just (TM.singleton t p)
+    go (Just rm) = Just (TM.insert t p rm)
+
+-- | Push a backtracking frame
+mpush :: Int -> Memo e s m -> Memo e s m
+mpush !o (Memo tab frs) = Memo tab (Frame False o : frs)
+
+-- | Pop a backtracking frame
+mpop :: Memo e s m -> Memo e s m
+mpop (Memo _   []) = error "cant pop from empty frame"
+mpop (Memo tab [Frame _ o]) = Memo (snd $ IM.split (o - 1) tab) []
+mpop (Memo tab (_:frs)) = Memo tab frs
+
+-- | Commit to a backtracking frame
+mcommit :: Memo e s m -> Memo e s m
+mcommit (Memo _   []) = error "illegal"
+mcommit (Memo tab (fr:frs)) = Memo tab (fr { frameCommitted = True } : frs)
+
+-- | Is the current backtracking frame committed?
+mcommitted :: Memo e s m -> Bool
+mcommitted (Memo _ []) = error "illegal"
+mcommitted (Memo _ (fr:_)) = frameCommitted fr
+
+pMemo :: forall e s m a. ParsecT e s m a -> ParsecT e s m a
+pMemo !p = ParsecT $ \s@(State _ !o _) !mm cok cerr eok eerr ->
+  let !midx = (o, TM.makeTag p)
+      mcok x s' hs !m =
+        let k :: ParsecT e s m a
+            !k = ParsecT $ \_ km  kcok _ _ _ -> kcok x s' hs km
+            !m' = mrecord m midx k
+        in cok x s' hs m'
+      mcerr err s' !m =
+        let k :: ParsecT e s m a
+            !k = ParsecT $ \_ km  _ kcerr _ _ -> kcerr err s' km
+            !m' = mrecord m midx k
+        in cerr err s' m'
+      meok x s' hs !m =
+        let k :: ParsecT e s m a
+            !k = ParsecT $ \_ km  _ _ keok _ -> keok x s' hs km
+            !m' = mrecord m midx k
+        in eok x s' hs m'
+      meerr err s' !m =
+        let k :: ParsecT e s m a
+            !k = ParsecT $ \_ km  _ _ _ keerr -> keerr err s' km
+            !m' = mrecord m midx k
+        in eerr err s' m'
+  in case mlookup mm midx of
+    Just p' -> unParser p' s mm  cok  cerr  eok  eerr
+    Nothing -> unParser p  s mm mcok mcerr meok meerr
+{-# NOINLINE pMemo #-}
+
+pCommit :: ParsecT e s m ()
+pCommit = ParsecT $ \s mm _ _ eok _ -> eok () s mempty (mcommit mm)
+{-# INLINE pCommit #-}
+
 pTry :: ParsecT e s m a -> ParsecT e s m a
-pTry p = ParsecT $ \s cok _ eok eerr ->
-  let eerr' err _ = eerr err s
-  in unParser p s cok eerr' eok eerr'
+pTry p = ParsecT $ \s@(State _ o _) mm cok cerr eok eerr ->
+  let cok' a s' hs mm' = cok a s' hs (mpop mm')
+      cerr' err s' mm' =
+        if mcommitted mm'
+          then cerr err s' (mpop mm')
+          else eerr err s  (mpop mm')
+      eok' a s' hs mm' = eok a s' hs (mpop mm')
+      eerr' err _ mm' = eerr err s (mpop mm')
+  in unParser p s (mpush o mm) cok' cerr' eok' eerr'
 {-# INLINE pTry #-}
 
 pLookAhead :: ParsecT e s m a -> ParsecT e s m a
-pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
-  let eok' a _ _ = eok a s mempty
-  in unParser p s eok' cerr eok' eerr
+pLookAhead p = ParsecT $ \s mm _ cerr eok eerr ->
+  let eok' a _ _ mm' = eok a s mempty mm'
+  in unParser p s mm eok' cerr eok' eerr
 {-# INLINE pLookAhead #-}
 
 pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
-pNotFollowedBy p = ParsecT $ \s@(State input o _) _ _ eok eerr ->
+pNotFollowedBy p = ParsecT $ \s@(State input o _) mm _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
       unexpect u = TrivialError o (pure u) E.empty
-      cok' _ _ _ = eerr (unexpect what) s
-      cerr'  _ _ = eok () s mempty
-      eok' _ _ _ = eerr (unexpect what) s
-      eerr'  _ _ = eok () s mempty
-  in unParser p s cok' cerr' eok' eerr'
+      cok' _ _ _ mm' = eerr (unexpect what) s mm'
+      cerr'  _ _ mm' = eok () s mempty mm'
+      eok' _ _ _ mm' = eerr (unexpect what) s mm'
+      eerr'  _ _ mm' = eok () s mempty mm'
+  in unParser p s mm cok' cerr' eok' eerr'
 {-# INLINE pNotFollowedBy #-}
 
 pWithRecovery
@@ -380,67 +496,68 @@ pWithRecovery
   => (ParseError s e -> ParsecT e s m a)
   -> ParsecT e s m a
   -> ParsecT e s m a
-pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
-  let mcerr err ms =
-        let rcok x s' _ = cok x s' mempty
-            rcerr   _ _ = cerr err ms
-            reok x s' _ = eok x s' (toHints (stateOffset s') err)
-            reerr   _ _ = cerr err ms
-        in unParser (r err) ms rcok rcerr reok reerr
-      meerr err ms =
-        let rcok x s' _ = cok x s' (toHints (stateOffset s') err)
-            rcerr   _ _ = eerr err ms
-            reok x s' _ = eok x s' (toHints (stateOffset s') err)
-            reerr   _ _ = eerr err ms
-        in unParser (r err) ms rcok rcerr reok reerr
-  in unParser p s cok mcerr eok meerr
+pWithRecovery r p = ParsecT $ \s m  cok cerr eok eerr ->
+  let mcerr err ms mm =
+        let rcok x s' _ mm' = cok x s' mempty mm'
+            rcerr   _ _ mm' = cerr err ms mm'
+            reok x s' _ mm' = eok x s' (toHints (stateOffset s') err) mm'
+            reerr   _ _ mm' = cerr err ms mm'
+        in unParser (r err) ms mm rcok rcerr reok reerr
+      meerr err ms mm =
+        let rcok x s' _ mm' = cok x s' (toHints (stateOffset s') err) mm'
+            rcerr   _ _ mm' = eerr err ms mm'
+            reok x s' _ mm' = eok x s' (toHints (stateOffset s') err) mm'
+            reerr   _ _ mm' = eerr err ms mm'
+        in unParser (r err) ms mm rcok rcerr reok reerr
+  in unParser p s m cok mcerr eok meerr
 {-# INLINE pWithRecovery #-}
 
 pObserving
   :: Stream s
   => ParsecT e s m a
   -> ParsecT e s m (Either (ParseError s e) a)
-pObserving p = ParsecT $ \s cok _ eok _ ->
-  let cerr' err s' = cok (Left err) s' mempty
-      eerr' err s' = eok (Left err) s' (toHints (stateOffset s') err)
-  in unParser p s (cok . Right) cerr' (eok . Right) eerr'
+pObserving p = ParsecT $ \s mm cok _ eok _ ->
+  let cok' x s' hs mm' = cok (Right x) s' hs mm'
+      cerr' err s' mm' = cok (Left err) s' mempty mm'
+      eok' x s' hs mm' = eok (Right x) s' hs mm'
+      eerr' err s' mm' = eok (Left err) s' (toHints (stateOffset s') err) mm'
+  in unParser p s mm cok' cerr' eok' eerr'
 {-# INLINE pObserving #-}
 
 pEof :: forall e s m. Stream s => ParsecT e s m ()
-pEof = ParsecT $ \s@(State input o pst) _ _ eok eerr ->
+pEof = ParsecT $ \s@(State input o pst) mm _ _ eok eerr ->
   case take1_ input of
-    Nothing    -> eok () s mempty
+    Nothing    -> eok () s mempty mm
     Just (x,_) ->
       let us = (pure . Tokens . nes) x
           ps = E.singleton EndOfInput
       in eerr (TrivialError o us ps)
-          (State input o pst)
+          (State input o pst) mm
 {-# INLINE pEof #-}
 
 pToken :: forall e s m a. Stream s
   => (Token s -> Maybe a)
   -> Set (ErrorItem (Token s))
   -> ParsecT e s m a
-pToken test ps = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
+pToken test ps = ParsecT $ \s@(State input o pst) mm cok _ _ eerr ->
   case take1_ input of
     Nothing ->
       let us = pure EndOfInput
-      in eerr (TrivialError o us ps) s
+      in eerr (TrivialError o us ps) s mm
     Just (c,cs) ->
       case test c of
         Nothing ->
           let us = (Just . Tokens . nes) c
-          in eerr (TrivialError o us ps)
-                  (State input o pst)
+          in eerr (TrivialError o us ps) s mm
         Just x ->
-          cok x (State cs (o + 1) pst) mempty
+          cok x (State cs (o + 1) pst) mempty mm
 {-# INLINE pToken #-}
 
 pTokens :: forall e s m. Stream s
   => (Tokens s -> Tokens s -> Bool)
   -> Tokens s
   -> ParsecT e s m (Tokens s)
-pTokens f tts = ParsecT $ \s@(State input o pst) cok _ eok eerr ->
+pTokens f tts = ParsecT $ \s@(State input o pst) mm cok _ eok eerr ->
   let pxy = Proxy :: Proxy s
       unexpect pos' u =
         let us = pure u
@@ -449,22 +566,22 @@ pTokens f tts = ParsecT $ \s@(State input o pst) cok _ eok eerr ->
       len = chunkLength pxy tts
   in case takeN_ len input of
     Nothing ->
-      eerr (unexpect o EndOfInput) s
+      eerr (unexpect o EndOfInput) s mm
     Just (tts', input') ->
       if f tts tts'
         then let st = State input' (o + len) pst
              in if chunkEmpty pxy tts
-                  then eok tts' st mempty
-                  else cok tts' st mempty
+                  then eok tts' st mempty mm
+                  else cok tts' st mempty mm
         else let ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
-             in eerr (unexpect o ps) (State input o pst)
+             in eerr (unexpect o ps) (State input o pst) mm
 {-# INLINE pTokens #-}
 
 pTakeWhileP :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhileP ml f = ParsecT $ \(State input o pst) cok _ eok _ ->
+pTakeWhileP ml f = ParsecT $ \(State input o pst) mm cok _ eok _ ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
       len = chunkLength pxy ts
@@ -473,15 +590,15 @@ pTakeWhileP ml f = ParsecT $ \(State input o pst) cok _ eok _ ->
           Nothing -> mempty
           Just l -> (Hints . pure . E.singleton . Label) l
   in if chunkEmpty pxy ts
-       then eok ts (State input' (o + len) pst) hs
-       else cok ts (State input' (o + len) pst) hs
+       then eok ts (State input' (o + len) pst) hs mm
+       else cok ts (State input' (o + len) pst) hs mm
 {-# INLINE pTakeWhileP #-}
 
 pTakeWhile1P :: forall e s m. Stream s
   => Maybe String
   -> (Token s -> Bool)
   -> ParsecT e s m (Tokens s)
-pTakeWhile1P ml f = ParsecT $ \(State input o pst) cok _ _ eerr ->
+pTakeWhile1P ml f = ParsecT $ \(State input o pst) mm cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       (ts, input') = takeWhile_ f input
       len = chunkLength pxy ts
@@ -497,35 +614,35 @@ pTakeWhile1P ml f = ParsecT $ \(State input o pst) cok _ _ eerr ->
                     Just (t,_) -> Tokens (nes t)
                 ps    = maybe E.empty E.singleton el
             in eerr (TrivialError o us ps)
-                    (State input o pst)
-       else cok ts (State input' (o + len) pst) hs
+                    (State input o pst) mm
+       else cok ts (State input' (o + len) pst) hs mm
 {-# INLINE pTakeWhile1P #-}
 
 pTakeP :: forall e s m. Stream s
   => Maybe String
   -> Int
   -> ParsecT e s m (Tokens s)
-pTakeP ml n = ParsecT $ \s@(State input o pst) cok _ _ eerr ->
+pTakeP ml n = ParsecT $ \s@(State input o pst) mm cok _ _ eerr ->
   let pxy = Proxy :: Proxy s
       el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
   in case takeN_ n input of
        Nothing ->
-         eerr (TrivialError o (pure EndOfInput) ps) s
+         eerr (TrivialError o (pure EndOfInput) ps) s mm
        Just (ts, input') ->
          let len = chunkLength pxy ts
          in if len /= n
            then eerr (TrivialError (o + len) (pure EndOfInput) ps)
-                     (State input o pst)
-           else cok ts (State input' (o + len) pst) mempty
+                     (State input o pst) mm
+           else cok ts (State input' (o + len) pst) mempty mm
 {-# INLINE pTakeP #-}
 
 pGetParserState :: ParsecT e s m (State s)
-pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
+pGetParserState = ParsecT $ \s mm _ _ eok _ -> eok s s mempty mm
 {-# INLINE pGetParserState #-}
 
 pUpdateParserState :: (State s -> State s) -> ParsecT e s m ()
-pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
+pUpdateParserState f = ParsecT $ \s mm _ _ eok _ -> eok () (f s) mempty mm
 {-# INLINE pUpdateParserState #-}
 
 nes :: a -> NonEmpty a
@@ -598,23 +715,31 @@ runParsecT :: Monad m
   => ParsecT e s m a -- ^ Parser to run
   -> State s       -- ^ Initial state
   -> m (Reply e s a)
-runParsecT p s = unParser p s cok cerr eok eerr
+runParsecT p s = unParser p s zmemo cok cerr eok eerr
   where
-    cok a s' _  = return $ Reply s' Consumed (OK a)
-    cerr err s' = return $ Reply s' Consumed (Error err)
-    eok a s' _  = return $ Reply s' Virgin   (OK a)
-    eerr err s' = return $ Reply s' Virgin   (Error err)
+    cok a s' _  _ = return $ Reply s' Consumed (OK a)
+    cerr err s' _ = return $ Reply s' Consumed (Error err)
+    eok a s' _  _ = return $ Reply s' Virgin   (OK a)
+    eerr err s' _ = return $ Reply s' Virgin   (Error err)
 
 -- | Transform any custom errors thrown by the parser using the given
 -- function. Similar in function and purpose to @withExceptT@.
 --
 -- @since 7.0.0
 
-withParsecT :: (Monad m, Ord e')
+withParsecT :: forall e e' s m a. (Monad m, Ord e')
   => (e -> e')
   -> ParsecT e s m a
   -> ParsecT e' s m a
-withParsecT f p =
-  ParsecT $ \s cok cerr eok eerr ->
-    unParser p s cok (cerr . mapParseError f) eok (eerr . mapParseError f)
+withParsecT f = go
+  where
+    go :: forall v. ParsecT e s m v -> ParsecT e' s m v
+    go p = ParsecT $ \s _ cok cerr eok eerr ->
+      let mapmemo :: Memo e s m -> Memo e' s m
+          mapmemo = memomap go
+          cok' a s' hs mm' = cok a s' hs (mapmemo mm')
+          cerr' err s' mm' = cerr (mapParseError f err) s' (mapmemo mm')
+          eok' a s' hs mm' = eok a s' hs (mapmemo mm')
+          eerr' err s' mm' = eerr (mapParseError f err) s' (mapmemo mm')
+      in unParser p s zmemo cok' cerr' eok' eerr'
 {-# INLINE withParsecT #-}
