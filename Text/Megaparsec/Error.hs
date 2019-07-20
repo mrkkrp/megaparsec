@@ -357,10 +357,11 @@ errorBundlePretty ParseErrorBundle {..} =
             then slineLen - rpshift + 1
             else elen
         slineLen = length sline
+        pxy = Proxy :: Proxy s
         elen =
           case e of
             TrivialError _ Nothing _ -> 1
-            TrivialError _ (Just x) _ -> errorItemLength x
+            TrivialError _ (Just x) _ -> errorItemLength pxy x
             FancyError _ xs ->
               E.foldl' (\a b -> max a (errorFancyLength b)) 1 xs
 
@@ -411,9 +412,9 @@ showErrorItem pxy = \case
 
 -- | Get length of the “pointer” to display under a given 'ErrorItem'.
 
-errorItemLength :: ErrorItem t -> Int
-errorItemLength = \case
-  Tokens ts -> NE.length ts
+errorItemLength :: Stream s => Proxy s -> ErrorItem (Token s) -> Int
+errorItemLength pxy = \case
+  Tokens ts -> tokensLength pxy ts
   _         -> 1
 
 -- | Pretty-print an 'ErrorFancy'.

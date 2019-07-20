@@ -1,5 +1,8 @@
 ## Megaparec 8.0.0
 
+* Added the `tokensLength` method to the `Stream` type class to improve
+  support for custom input streams.
+
 * Changed type signatures of `reachOffset` and `reachOffsetNoLine` methods
   of the `Stream` type class. Instead of three-tuple `reachOffset` now
   returns two-tuple because `SourcePos` is already contained in the returned

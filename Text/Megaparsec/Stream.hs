@@ -132,6 +132,15 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
 
   showTokens :: Proxy s -> NonEmpty (Token s) -> String
 
+  -- | Return the number of characters that a non-empty stream of tokens
+  -- spans. The default implementation is sufficient if every token spans
+  -- exactly 1 character.
+  --
+  -- @since 8.0.0
+
+  tokensLength :: Proxy s -> NonEmpty (Token s) -> Int
+  tokensLength Proxy = NE.length
+
   -- | Given an offset @o@ and initial 'PosState', adjust the state in such
   -- a way that it starts at the offset.
   --
