@@ -97,7 +97,7 @@ parse errors to better work in user's domain of interest.
 Megaparsec 7 introduced the `ParseErrorBundle` data type that helps to
 manage multi-error messages and pretty-print them easily and efficiently.
 That version of the library also made the practice of displaying offending
-line the default, similar to how recent versions of GHC do it.
+lines the default, similar to how recent versions of GHC do it.
 
 ### Alex support
 
@@ -250,7 +250,7 @@ dependencies][idris-testimony].
 
 ### Megaparsec vs Earley
 
-[Earley][earley] is a newer library that allows us to safely (it your code
+[Earley][earley] is a newer library that allows us to safely (if your code
 compiles, then it probably works) parse context-free grammars (CFG).
 Megaparsec is a lower-level library compared to Earley, but there are still
 enough reasons to choose it:
