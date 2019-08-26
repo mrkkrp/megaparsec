@@ -288,6 +288,8 @@ you want to add something to the list):
   library for easily using
   [TagSoup](https://hackage.haskell.org/package/tagsoup) as a token type in
   Megaparsec.
+* [`replace-megaparsec`](https://hackage.haskell.org/package/replace-megaparsec)—Stream
+  editing and find-and-replace with Megaparsec.
 
 ## Prominent projects that use Megaparsec
 
