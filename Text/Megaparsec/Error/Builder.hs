@@ -12,7 +12,6 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
@@ -49,10 +48,6 @@ import Text.Megaparsec.Error
 import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
-#if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
-#endif
 
 ----------------------------------------------------------------------------
 -- Data types

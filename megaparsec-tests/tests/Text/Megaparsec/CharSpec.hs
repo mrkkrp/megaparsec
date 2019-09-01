@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP              #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Text.Megaparsec.CharSpec (spec) where
