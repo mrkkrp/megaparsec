@@ -9,7 +9,6 @@
 --
 -- Ad-hoc helpers used in Megaparsec's test suite.
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE RankNTypes           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
@@ -332,7 +331,5 @@ instance Arbitrary B.ByteString where
 instance Arbitrary BL.ByteString where
   arbitrary = BL.pack <$> arbitrary
 
-#if MIN_VERSION_QuickCheck(2,10,0)
 instance Arbitrary a => Arbitrary (NonEmpty a) where
   arbitrary = NE.fromList <$> (arbitrary `suchThat` (not . null))
-#endif

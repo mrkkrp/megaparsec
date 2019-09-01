@@ -5,6 +5,8 @@
   returns two-tuple because `SourcePos` is already contained in the returned
   `PosState` record.
 
+* Dropped support for GHC 8.2.x.
+
 ## Megaparec 7.1.0
 
 * Generalized `decimal`, `binary`, `octal`, and `hexadecimal` parsers in

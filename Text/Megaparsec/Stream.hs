@@ -14,7 +14,6 @@
 --
 -- @since 6.0.0
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
@@ -43,10 +42,6 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Text                  as T
 import qualified Data.Text.Lazy             as TL
-
-#if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
-#endif
 
 -- | Type class for inputs that can be consumed by the library.
 

@@ -16,7 +16,6 @@
 -- "Text.Megaparsec" re-exports it anyway.
 
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE DeriveGeneric       #-}
@@ -61,10 +60,6 @@ import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set           as E
-
-#if !MIN_VERSION_base(4,11,0)
-import Data.Semigroup
-#endif
 
 ----------------------------------------------------------------------------
 -- Parse error type

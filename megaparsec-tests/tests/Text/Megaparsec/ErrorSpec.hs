@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.ErrorSpec (spec) where
@@ -15,10 +14,6 @@ import Test.QuickCheck
 import Text.Megaparsec
 import qualified Data.Semigroup     as S
 import qualified Data.Set           as E
-
-#if !MIN_VERSION_base(4,11,0)
-import Data.Monoid
-#endif
 
 spec :: Spec
 spec = do
