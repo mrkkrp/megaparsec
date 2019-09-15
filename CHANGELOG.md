@@ -5,14 +5,10 @@
   returns two-tuple because `SourcePos` is already contained in the returned
   `PosState` record.
 
-* Dropped support for GHC 8.2.x.
-
-## Megaparec 7.1.0
-
 * Generalized `decimal`, `binary`, `octal`, and `hexadecimal` parsers in
   lexer modules so that they `Num` instead of just `Integral`.
 
-* Dropped support for GHC 8.0.
+* Dropped support for GHC 8.2.x and older.
 
 ## Megaparsec 7.0.5
 
