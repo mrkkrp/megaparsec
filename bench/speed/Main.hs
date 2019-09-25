@@ -117,16 +117,15 @@ breachOffset o0 o1 = bench
   ("reachOffset-" ++ show o0 ++ "-" ++ show o1)
   (nf f (o0 * 80, o1 * 80))
   where
-    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f :: (Int, Int) -> PosState Text
     f (startOffset, targetOffset) =
-      let (x, _, y) = reachOffset targetOffset PosState
-             { pstateInput = manyAs (targetOffset - startOffset)
-             , pstateOffset = startOffset
-             , pstateSourcePos = initialPos ""
-             , pstateTabWidth = defaultTabWidth
-             , pstateLinePrefix = ""
-             }
-      in (x, y)
+      snd $ reachOffset targetOffset PosState
+        { pstateInput = manyAs (targetOffset - startOffset)
+        , pstateOffset = startOffset
+        , pstateSourcePos = initialPos ""
+        , pstateTabWidth = defaultTabWidth
+        , pstateLinePrefix = ""
+        }
 
 -- | Bench the 'reachOffsetNoLine' function.
 
@@ -138,7 +137,7 @@ breachOffsetNoLine o0 o1 = bench
   ("reachOffsetNoLine-" ++ show o0 ++ "-" ++ show o1)
   (nf f (o0 * 80, o1 * 80))
   where
-    f :: (Int, Int) -> (SourcePos, PosState Text)
+    f :: (Int, Int) -> PosState Text
     f (startOffset, targetOffset) =
       reachOffsetNoLine targetOffset PosState
         { pstateInput = manyAs (targetOffset - startOffset)
