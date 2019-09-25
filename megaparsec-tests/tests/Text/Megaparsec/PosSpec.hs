@@ -1,13 +1,18 @@
+{-# LANGUAGE CPP #-}
+
 module Text.Megaparsec.PosSpec (spec) where
 
 import Control.Exception (evaluate)
 import Data.Function (on)
 import Data.List (isInfixOf)
-import Data.Semigroup ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec.Pos
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 spec :: Spec
 spec = do

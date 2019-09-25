@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.Byte.LexerSpec (spec) where
@@ -5,7 +6,6 @@ module Text.Megaparsec.Byte.LexerSpec (spec) where
 import Control.Applicative
 import Data.ByteString (ByteString)
 import Data.Char (intToDigit, toUpper)
-import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void
 import Data.Word (Word8)
@@ -18,6 +18,10 @@ import Text.Megaparsec.Byte.Lexer
 import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Text.Megaparsec.Byte  as B
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 type Parser = Parsec Void ByteString
 

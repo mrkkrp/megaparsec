@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf       #-}
 {-# LANGUAGE TupleSections    #-}
@@ -9,7 +10,6 @@ import Control.Monad
 import Data.Char hiding (ord)
 import Data.List (isInfixOf)
 import Data.Maybe
-import Data.Monoid ((<>))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Void (Void)
 import Numeric (showInt, showIntAtBase, showHex, showOct, showFFloatAlt)
@@ -21,6 +21,10 @@ import Text.Megaparsec
 import Text.Megaparsec.Char.Lexer
 import qualified Data.CaseInsensitive as CI
 import qualified Text.Megaparsec.Char as C
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 spec :: Spec
 spec = do

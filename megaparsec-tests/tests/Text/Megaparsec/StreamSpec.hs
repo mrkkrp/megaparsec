@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,7 +10,6 @@ import Data.Char (isLetter, chr, isControl, isSpace)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Proxy
-import Data.Semigroup ((<>))
 import Data.String (IsString)
 import Data.Word (Word8)
 import Test.Hspec
@@ -21,6 +21,10 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.List.NonEmpty   as NE
 import qualified Data.Text            as T
 import qualified Data.Text.Lazy       as TL
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 spec :: Spec
 spec = do

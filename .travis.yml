@@ -13,6 +13,8 @@ matrix:
       addons: {apt: {packages: [cabal-install-3.0,ghc-8.4.4], sources: [hvr-ghc]}}
     - env: CABALVER=3.0 GHCVER=8.6.5
       addons: {apt: {packages: [cabal-install-3.0,ghc-8.6.5], sources: [hvr-ghc]}}
+    - env: CABALVER=3.0 GHCVER=8.8.1
+      addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.1], sources: [hvr-ghc]}}
 
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
@@ -24,7 +26,7 @@ install:
 
 script:
   - cabal new-build all --enable-tests --enable-benchmarks --flags=dev
-  - cabal new-test all --flags=dev
+  - cabal new-test all --enable-tests --enable-benchmarks --flags=dev
   - cabal new-haddock megaparsec
   - cabal new-haddock megaparsec-tests
   - cabal new-sdist
