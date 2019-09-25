@@ -36,7 +36,6 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 import qualified Data.ByteString             as BS
 import qualified Data.List                   as DL
-import qualified Data.Semigroup              as G
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 
@@ -46,7 +45,7 @@ spec = do
   describe "ParsecT Semigroup instance" $
     it "the associative operation works" $
       property $ \a b -> do
-        let p = pure [a] G.<> pure [b]
+        let p = pure [a] <> pure [b]
         prs p "" `shouldParse` ([a,b] :: [Int])
 
   describe "ParsecT Monoid instance" $ do

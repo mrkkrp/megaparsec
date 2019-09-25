@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.ErrorSpec (spec) where
@@ -12,8 +13,11 @@ import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc ()
 import Test.QuickCheck
 import Text.Megaparsec
-import qualified Data.Semigroup     as S
-import qualified Data.Set           as E
+import qualified Data.Set as E
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 spec :: Spec
 spec = do
@@ -21,7 +25,7 @@ spec = do
   describe "Semigroup instance of ParseError" $
     it "associativity" $
       property $ \x y z ->
-        (x S.<> y) S.<> z === (x S.<> (y S.<> z) :: PE)
+        (x <> y) <> z === (x <> (y <> z) :: PE)
 
   describe "Monoid instance of ParseError" $ do
     it "left identity" $

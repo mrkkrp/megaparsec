@@ -1,7 +1,7 @@
 name:                 megaparsec
 version:              7.0.5
 cabal-version:        1.18
-tested-with:          GHC==8.4.4, GHC==8.6.5
+tested-with:          GHC==8.4.4, GHC==8.6.5, GHC==8.8.1
 license:              BSD2
 license-file:         LICENSE.md
 author:               Megaparsec contributors,
@@ -67,7 +67,6 @@ library
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wnoncanonical-monad-instances
-                      -Wnoncanonical-monadfail-instances
   default-language:   Haskell2010
 
 benchmark bench-speed

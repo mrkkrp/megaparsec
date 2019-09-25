@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Text.Megaparsec.CharSpec (spec) where
@@ -5,7 +6,6 @@ module Text.Megaparsec.CharSpec (spec) where
 import Control.Monad
 import Data.Char
 import Data.List (nub, partition, isPrefixOf)
-import Data.Monoid ((<>))
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.Hspec.Megaparsec.AdHoc
@@ -13,6 +13,10 @@ import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Data.CaseInsensitive as CI
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements [minBound..maxBound]

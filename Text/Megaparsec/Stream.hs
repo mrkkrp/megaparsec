@@ -29,6 +29,7 @@ where
 
 import Data.Char (chr)
 import Data.Foldable (foldl')
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Proxy
@@ -49,11 +50,11 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
 
   -- | Type of token in the stream.
 
-  type Token s :: *
+  type Token s :: Type
 
   -- | Type of “chunk” of the stream.
 
-  type Tokens s :: *
+  type Tokens s :: Type
 
   -- | Lift a single token to chunk of the stream. The default
   -- implementation is:

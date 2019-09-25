@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
@@ -6,7 +7,6 @@ module Main (main) where
 import Control.DeepSeq
 import Criterion.Main
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Void
 import Text.Megaparsec
@@ -15,6 +15,10 @@ import qualified Data.List.NonEmpty         as NE
 import qualified Data.Set                   as E
 import qualified Data.Text                  as T
 import qualified Text.Megaparsec.Char.Lexer as L
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 -- | The type of parser that consumes 'String's.
 
