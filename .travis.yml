@@ -23,8 +23,8 @@ install:
   - travis_retry cabal new-update
 
 script:
-  - cabal new-build megaparsec megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
-  - cabal new-test megaparsec-tests --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-build all --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-test all --flags=dev
   - cabal new-haddock megaparsec
   - cabal new-haddock megaparsec-tests
   - cabal new-sdist
