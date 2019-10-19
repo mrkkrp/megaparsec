@@ -283,13 +283,13 @@ Some prominent projects that use Megaparsec:
 
 * [Idris](https://github.com/idris-lang/Idris-dev)—a general-purpose
   functional programming language with dependent types
+* [Dhall](https://github.com/dhall-lang/dhall-haskell)—an advanced
+  configuration language
+* [hnix](https://github.com/haskell-nix/hnix)—re-implementation of the Nix
+  language in Haskell
 * [Hledger](https://github.com/simonmichael/hledger)—an accounting tool
 * [MMark](https://github.com/mmark-md/mmark)—strict markdown processor for
   writers
-* [Stache](https://github.com/stackbuilders/stache)—Mustache templates for
-  Haskell
-* [Language Puppet](https://github.com/bartavelle/language-puppet)—library
-  for manipulating Puppet manifests
 
 ## Links to announcements and blog posts
 
