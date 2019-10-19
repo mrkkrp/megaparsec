@@ -27,7 +27,7 @@
 * [License](#license)
 
 This is an industrial-strength monadic parser combinator library. Megaparsec
-is a feature-rich package that strikes a nice balance between speed,
+is a feature-rich package that tries to find a nice balance between speed,
 flexibility, and quality of parse errors.
 
 ## Features
@@ -50,8 +50,7 @@ most useful ones are `Monad`, `Applicative`, `Alternative`, and
 `MonadParsec`.
 
 Megaparsec includes all functionality that is typically available in
-Parsec-like libraries and also features some combinators that are quite
-unique to it:
+Parsec-like libraries and also features some special combinators:
 
 * `failure` allows us to report a parse error with unexpected and expected
   items.
@@ -91,8 +90,8 @@ an instance of the `Stream` type class.
 
 ### Error messages
 
-Megaparsec has well-typed error messages and the ability to signal custom
-parse errors to better work in user's domain of interest.
+Megaparsec has typed error messages and the ability to signal custom parse
+errors that better suit user's domain of interest.
 
 Megaparsec 7 introduced the `ParseErrorBundle` data type that helps to
 manage multi-error messages and pretty-print them easily and efficiently.
@@ -103,8 +102,7 @@ lines the default, similar to how recent versions of GHC do it.
 
 Megaparsec works well with streams of tokens produced by tools like Alex.
 The design of the `Stream` type class has been changed significantly in
-versions 6 and 7, but user can still work with custom streams of tokens
-without problems.
+versions 6 and 7, but user can still work with custom streams of tokens.
 
 ### Character and binary parsing
 
@@ -199,8 +197,7 @@ main differences between the two libraries:
   parse error. This makes it a lot easier to figure out where the error
   happened.
 
-* Some quirks and “buggy features” (as well as plain bugs) of original
-  Parsec are fixed. There is no undocumented surprising stuff in Megaparsec.
+* Some quirks and bugs of Parsec are fixed.
 
 * Better support for Unicode parsing in [`Text.Megaparsec.Char`][tm-char].
 
@@ -218,8 +215,8 @@ main differences between the two libraries:
   tag”, e.g. we could build a context stack like “in function definition
   foo”, “in expression x”, etc. This is not possible with Parsec.
 
-* Megaparsec is faster and supports efficient operations on top of `tokens`,
-  `takeWhileP`, `takeWhile1P`, `takeP` like Attoparsec.
+* Megaparsec is faster and supports efficient operations `tokens`,
+  `takeWhileP`, `takeWhile1P`, `takeP`, like Attoparsec.
 
 If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
 Also see [this original announcement][original-announcement] for another
@@ -228,48 +225,37 @@ comparison.
 ### Megaparsec vs Trifecta
 
 [Trifecta][trifecta] is another Haskell library featuring good error
-messages. Some reasons one may question choice of Trifecta is his/her
-parsing library:
+messages. These are the common reasons why Trifecta may be problematic to
+use:
 
 * Complicated, doesn't have any tutorials available, and documentation
   doesn't help at all.
 
 * Trifecta can parse `String` and `ByteString` natively, but not `Text`.
 
-* Trifecta's error messages may be different with their own features, but
-  certainly not as flexible as Megaparsec's error messages in the latest
-  versions.
+* Depends on `lens`, which is a very heavy dependency. If you're not into
+  `lens` and would like to keep your code “vanilla”, you may not like the
+  API.
 
-* Depends on `lens`. This means you'll pull in half of Hackage as transitive
-  dependencies. Also if you're not into `lens` and would like to keep your
-  code “vanilla”, you may not like the API.
-
-[Idris][idris] has recently switched from Trifecta to Megaparsec which
-allowed it to [have better error messages and fewer
-dependencies][idris-testimony].
+[Idris][idris] has switched from Trifecta to Megaparsec which allowed it to
+[have better error messages and fewer dependencies][idris-testimony].
 
 ### Megaparsec vs Earley
 
-[Earley][earley] is a newer library that allows us to safely (if your code
-compiles, then it probably works) parse context-free grammars (CFG).
-Megaparsec is a lower-level library compared to Earley, but there are still
-enough reasons to choose it:
+[Earley][earley] is a newer library that allows us to safely parse
+context-free grammars (CFG). Megaparsec is a lower-level library compared to
+Earley, but there are still enough reasons to choose it:
 
 * Megaparsec is faster.
 
 * Your grammar may be not context-free or you may want introduce some sort
   of state to the parsing process. Almost all non-trivial parsers require
-  something of this sort. Even if your grammar is context-free, state may
-  allow us to add some additional niceties. Earley does not support that.
+  state. Even if your grammar is context-free, state may allow for
+  additional niceties. Earley does not support that.
 
 * Megaparsec's error messages are more flexible allowing to include
   arbitrary data in them, return multiple error messages, mark regions that
   affect any error that happens in those regions, etc.
-
-* The approach Earley uses differs from the conventional monadic parsing. If
-  you work not alone, people you work with, especially beginners, will be
-  much more productive with libraries taking more traditional path to
-  parsing like Megaparsec.
 
 In other words, Megaparsec is less safe but also more powerful.
 
@@ -321,7 +307,8 @@ describing what sort of things are now possible:
 ## Contribution
 
 Issues (bugs, feature requests or otherwise feedback) may be reported in
-[the GitHub issue tracker for this project](https://github.com/mrkkrp/megaparsec/issues).
+[the GitHub issue tracker for this
+project](https://github.com/mrkkrp/megaparsec/issues).
 
 Pull requests are also welcome.
 

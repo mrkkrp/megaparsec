@@ -17,8 +17,8 @@ build-type:           Simple
 description:
 
   This is an industrial-strength monadic parser combinator library.
-  Megaparsec is a feature-rich package that strikes a nice balance between
-  speed, flexibility, and quality of parse errors.
+  Megaparsec is a feature-rich package that tries to find a nice balance
+  between speed, flexibility, and quality of parse errors.
 
 extra-doc-files:      CHANGELOG.md
                     , README.md
