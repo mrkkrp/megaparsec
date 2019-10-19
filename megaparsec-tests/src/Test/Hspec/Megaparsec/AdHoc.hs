@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Test.Hspec.Megaparsec.AdHoc
--- Copyright   :  © 2019 Megaparsec contributors
+-- Copyright   :  © 2019–present Megaparsec contributors
 -- License     :  FreeBSD
 --
 -- Maintainer  :  Mark Karpov <markkarpov92@gmail.com>
