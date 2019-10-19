@@ -1,0 +1,20 @@
+{
+    "something": 5,
+    "another_thing": false,
+    "price": { "min": 200, "max": 400 },
+    "something": 5,
+    "another_thing": false,
+    "price": { "min": 200, "max": 400 },
+    "something": 5,
+    "another_thing": false,
+    "price": { "min": 200, "max": 400 },
+    "something": 5.0,
+    "another_thing": true,
+    "price": { "min": 200, "max": 400 },
+    "something": 533,
+    "another_thing": [1,2,3],
+    "price": { "min": 200, "max": 400 },
+    "something": 5,
+    "another_thing": false,
+    "direction": "north-east"
+}

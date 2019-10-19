@@ -1,0 +1,79 @@
+name:                 parsers-bench
+version:              0.1.0
+cabal-version:        >= 1.18
+tested-with:          GHC==8.6.5
+license:              BSD3
+author:               Mark Karpov <markkarpov92@gmail.com>
+maintainer:           Mark Karpov <markkarpov92@gmail.com>
+homepage:             https://github.com/mrkkrp/megaparsec
+bug-reports:          https://github.com/mrkkrp/megaparsec/issues
+category:             Parsing, Benchmark
+synopsis:             Performance benchmarks: Megaparsec vs Attoparsec
+build-type:           Simple
+description:          Performance benchmarks: Megaparsec vs Attoparsec.
+extra-doc-files:      README.md
+
+source-repository head
+  type:               git
+  location:           https://github.com/mrkkrp/parsers-bench.git
+
+flag dev
+  description:        Turn on development settings.
+  manual:             True
+  default:            False
+
+library
+  build-depends:      base
+                    , attoparsec
+                    , bytestring
+                    , deepseq
+                    , megaparsec
+                    , parser-combinators
+                    , scientific
+                    , text
+                    , time
+                    , unordered-containers
+                    , vector
+  exposed-modules:    ParsersBench.CSV.Attoparsec
+                    , ParsersBench.CSV.Megaparsec
+                    , ParsersBench.Json.Attoparsec
+                    , ParsersBench.Json.Common
+                    , ParsersBench.Json.Megaparsec
+                    , ParsersBench.Log.Attoparsec
+                    , ParsersBench.Log.Common
+                    , ParsersBench.Log.Megaparsec
+  if flag(dev)
+    ghc-options:      -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
+
+benchmark bench-speed
+  main-is:            Main.hs
+  hs-source-dirs:     bench/speed
+  type:               exitcode-stdio-1.0
+  build-depends:      base
+                    , bytestring
+                    , criterion
+                    , deepseq
+                    , parsers-bench
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
+
+benchmark bench-memory
+  main-is:            Main.hs
+  hs-source-dirs:     bench/memory
+  type:               exitcode-stdio-1.0
+  build-depends:      base
+                    , bytestring
+                    , deepseq
+                    , parsers-bench
+                    , weigh
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
+  default-language:   Haskell2010
