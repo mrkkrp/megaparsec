@@ -1,0 +1,18 @@
+diff --git a/src/Idris/Parser/Stack.hs b/src/Idris/Parser/Stack.hs
+index f75789ab6..9e598024e 100644
+--- a/src/Idris/Parser/Stack.hs
++++ b/src/Idris/Parser/Stack.hs
+@@ -76,11 +76,11 @@ parseErrorOffset = P.errorOffset . parseError
+ instance Message ParseError where
+   messageExtent err = sourcePositionFC pos
+     where
+-      (pos, _) = P.reachOffsetNoLine (parseErrorOffset err) (parseErrorPosState err)
++      pos = P.pstateSourcePos $ P.reachOffsetNoLine (parseErrorOffset err) (parseErrorPosState err)
+   messageText = PP.text . init . P.parseErrorTextPretty . parseError
+   messageSource err = Just sline
+     where
+-      (_, sline, _) = P.reachOffset (parseErrorOffset err) (parseErrorPosState err)
++      (sline, _) = P.reachOffset (parseErrorOffset err) (parseErrorPosState err)
+ 
+ -- | A fully formatted parse error, with caret and bar, etc.
+ prettyError :: ParseError -> String

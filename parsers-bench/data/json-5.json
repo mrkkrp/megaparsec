@@ -1,0 +1,5 @@
+{
+    "something": 5,
+    "another_thing": false,
+    "price": { "min": 200, "max": 400 }
+}
