@@ -14,7 +14,6 @@
 --
 -- @since 6.5.0
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -38,7 +37,10 @@ module Text.Megaparsec.Internal
   , accHints
   , refreshLastHint
   , runParsecT
-  , withParsecT )
+  , withParsecT
+  , pBind
+  , pFail
+  )
 where
 
 import Control.Applicative
@@ -57,6 +59,7 @@ import Data.Set (Set)
 import Data.String (IsString (..))
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
+import Text.Megaparsec.Internal.Monad ()
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 import qualified Control.Monad.Fail  as Fail
@@ -186,15 +189,6 @@ pAp m k = ParsecT $ \s cok cerr eok eerr ->
 instance (Ord e, Stream s) => Alternative (ParsecT e s m) where
   empty  = mzero
   (<|>)  = mplus
-
--- | 'return' returns a parser that __succeeds__ without consuming input.
-
-instance Stream s => Monad (ParsecT e s m) where
-  return = pure
-  (>>=)  = pBind
-#if !(MIN_VERSION_base(4,13,0))
-  fail   = Fail.fail
-#endif
 
 pBind :: Stream s
   => ParsecT e s m a
