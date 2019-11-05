@@ -1,0 +1,15 @@
+diff --git a/dhall/src/Dhall/Parser/Combinators.hs b/dhall/src/Dhall/Parser/Combinators.hs
+index 2ad0f243..522a9883 100644
+--- a/src/Dhall/Parser/Combinators.hs
++++ b/src/Dhall/Parser/Combinators.hs
+@@ -128,9 +128,7 @@ instance MonadPlus Parser where
+     -- {-# INLINE mplus #-}
+ 
+ instance Text.Megaparsec.MonadParsec Void Text Parser where
+-    failure u e    = Parser (Text.Megaparsec.failure u e)
+-
+-    fancyFailure e = Parser (Text.Megaparsec.fancyFailure e)
++    parseError e = Parser (Text.Megaparsec.parseError e)
+ 
+     label l (Parser p) = Parser (Text.Megaparsec.label l p)
+ 

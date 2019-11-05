@@ -1,5 +1,10 @@
 ## Megaparec 8.0.0
 
+* The methods `failure` and `fancyFailure` of `MonadParsec` are now ordinary
+  functions and live in `Text.Megaparsec`. They are defined in terms of the
+  new `parseError` method of `MonadParsec`. This method allows us to signal
+  parse errors at a given offset without manipulating parser state manually.
+
 * Added the `tokensLength` method to the `Stream` type class to improve
   support for custom input streams.
 

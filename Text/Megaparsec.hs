@@ -84,6 +84,8 @@ module Text.Megaparsec
   , noneOf
   , chunk
   , (<?>)
+  , failure
+  , fancyFailure
   , unexpected
   , customFailure
   , match
@@ -103,6 +105,7 @@ import Control.Monad.Combinators
 import Control.Monad.Identity
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
+import Data.Set (Set)
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
 import Text.Megaparsec.Internal
@@ -411,6 +414,34 @@ infix 0 <?>
 (<?>) = flip label
 {-# INLINE (<?>) #-}
 
+-- | Stop parsing and report a trivial 'ParseError'.
+--
+-- @since 6.0.0
+
+failure
+  :: MonadParsec e s m
+  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
+  -> Set (ErrorItem (Token s)) -- ^ Expected items
+  -> m a
+failure us ps = do
+  o <- getOffset
+  parseError (TrivialError o us ps)
+{-# INLINE failure #-}
+
+-- | Stop parsing and report a fancy 'ParseError'. To report a single custom
+-- parse error, see 'Text.Megaparsec.customFailure'.
+--
+-- @since 6.0.0
+
+fancyFailure
+  :: MonadParsec e s m
+  => Set (ErrorFancy e) -- ^ Fancy error components
+  -> m a
+fancyFailure xs = do
+  o <- getOffset
+  parseError (FancyError o xs)
+{-# INLINE fancyFailure #-}
+
 -- | The parser @'unexpected' item@ fails with an error message telling
 -- about unexpected item @item@ without consuming any input.
 --
@@ -423,7 +454,7 @@ unexpected item = failure (Just item) E.empty
 -- | Report a custom parse error. For a more general version, see
 -- 'fancyFailure'.
 --
--- > customFailure = fancyFailure . E.singleton . ErrorCustom
+-- > customFailure = fancyFailure . Set.singleton . ErrorCustom
 --
 -- @since 6.3.0
 

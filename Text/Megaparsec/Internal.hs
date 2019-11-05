@@ -304,8 +304,7 @@ instance MonadTrans (ParsecT e s) where
     amb >>= \a -> eok a s mempty
 
 instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
-  failure           = pFailure
-  fancyFailure      = pFancyFailure
+  parseError        = pParseError
   label             = pLabel
   try               = pTry
   lookAhead         = pLookAhead
@@ -321,20 +320,11 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   getParserState    = pGetParserState
   updateParserState = pUpdateParserState
 
-pFailure
-  :: Maybe (ErrorItem (Token s))
-  -> Set (ErrorItem (Token s))
+pParseError
+  :: ParseError s e
   -> ParsecT e s m a
-pFailure us ps = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
-  eerr (TrivialError o us ps) s
-{-# INLINE pFailure #-}
-
-pFancyFailure
-  :: Set (ErrorFancy e)
-  -> ParsecT e s m a
-pFancyFailure xs = ParsecT $ \s@(State _ o _) _ _ _ eerr ->
-  eerr (FancyError o xs) s
-{-# INLINE pFancyFailure #-}
+pParseError e = ParsecT $ \s _ _ _ eerr -> eerr e s
+{-# INLINE pParseError #-}
 
 pLabel :: String -> ParsecT e s m a -> ParsecT e s m a
 pLabel l p = ParsecT $ \s cok cerr eok eerr ->

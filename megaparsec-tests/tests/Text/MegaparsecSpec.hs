@@ -408,19 +408,7 @@ spec = do
 
   describe "primitive combinators" $ do
 
-    describe "failure" $
-      it "signals correct parse error" $
-        property $ \us ps -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (failure us ps)
-          grs p "" (`shouldFailWith` TrivialError 0 us ps)
-
-    describe "fancyFailure" $
-      it "singals correct parse error" $
-        property $ \xs -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (fancyFailure xs)
-          grs p "" (`shouldFailWith` FancyError 0 xs)
+    -- NOTE 'parseError' is tested via 'failure' and 'fancyFailure'.
 
     describe "label" $ do
       context "when inner parser succeeds consuming input" $ do
@@ -1130,6 +1118,20 @@ spec = do
 
     -- NOTE 'chunk' is tested via 'string' in "Text.Megaparsec.Char" and
     -- "Text.Megaparsec.Byte".
+
+    describe "failure" $
+      it "signals correct parse error" $
+        property $ \us ps -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (failure us ps)
+          grs p "" (`shouldFailWith` TrivialError 0 us ps)
+
+    describe "fancyFailure" $
+      it "singals correct parse error" $
+        property $ \xs -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (fancyFailure xs)
+          grs p "" (`shouldFailWith` FancyError 0 xs)
 
     describe "unexpected" $
       it "signals correct parse error" $
