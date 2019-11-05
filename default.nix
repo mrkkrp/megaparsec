@@ -98,7 +98,6 @@ in {
       cachix
       cassava-megaparsec
       cue-sheet
-      dhall
       hledger
       hnix
       language-puppet
@@ -107,6 +106,7 @@ in {
       replace-megaparsec
       stache
       tomland;
+    dhall = patch haskellPackages.dhall ./nix/patches/dhall.patch;
     idris = patch haskellPackages.idris ./nix/patches/idris.patch;
   };
 

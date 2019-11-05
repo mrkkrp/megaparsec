@@ -42,31 +42,19 @@ import qualified Control.Monad.Trans.Writer.Strict as S
 -- | Type class describing monads that implement the full set of primitive
 -- parsers.
 --
--- __Note carefully__ that the following primitives are “fast” and should be
--- taken advantage of as much as possible if your aim is a fast parser:
--- 'tokens', 'takeWhileP', 'takeWhile1P', and 'takeP'.
+-- __Note__ that the following primitives are “fast” and should be taken
+-- advantage of as much as possible if your aim is a fast parser: 'tokens',
+-- 'takeWhileP', 'takeWhile1P', and 'takeP'.
 
 class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
-  -- | The most general way to stop parsing and report a trivial
-  -- 'ParseError'.
+  -- | Stop parsing and report the 'ParseError'. This is the only way to
+  -- control position of the error without manipulating parser state
+  -- manually.
   --
-  -- @since 6.0.0
+  -- @since 8.0.0
 
-  failure
-    :: Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
-    -> Set (ErrorItem (Token s)) -- ^ Expected items
-    -> m a
-
-  -- | The most general way to stop parsing and report a fancy 'ParseError'.
-  -- To report a single custom parse error, see
-  -- 'Text.Megaparsec.customFailure'.
-  --
-  -- @since 6.0.0
-
-  fancyFailure
-    :: Set (ErrorFancy e) -- ^ Fancy error components
-    -> m a
+  parseError :: ParseError s e -> m a
 
   -- | The parser @'label' name p@ behaves as parser @p@, but whenever the
   -- parser @p@ fails /without consuming any input/, it replaces names of
@@ -115,12 +103,11 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- unexpected "le"
   -- expecting "let" or "lexical"
   --
-  -- __Please note__ that as of Megaparsec 4.4.0,
-  -- 'Text.Megaparsec.Char.string' backtracks automatically (see 'tokens'),
-  -- so it does not need 'try'. However, the examples above demonstrate the
-  -- idea behind 'try' so well that it was decided to keep them. You still
-  -- need to use 'try' when your alternatives are complex, composite
-  -- parsers.
+  -- __Note__ that as of Megaparsec 4.4.0, 'Text.Megaparsec.Char.string'
+  -- backtracks automatically (see 'tokens'), so it does not need 'try'.
+  -- However, the examples above demonstrate the idea behind 'try' so well
+  -- that it was decided to keep them. You still need to use 'try' when your
+  -- alternatives are complex, composite parsers.
 
   try :: m a -> m a
 
@@ -288,8 +275,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 -- Lifting through MTL
 
 instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
-  failure us ps              = lift (failure us ps)
-  fancyFailure xs            = lift (fancyFailure xs)
+  parseError e               = lift (parseError e)
   label n       (L.StateT m) = L.StateT $ label n . m
   try           (L.StateT m) = L.StateT $ try . m
   lookAhead     (L.StateT m) = L.StateT $ \s ->
@@ -310,8 +296,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
-  failure us ps              = lift (failure us ps)
-  fancyFailure xs            = lift (fancyFailure xs)
+  parseError e               = lift (parseError e)
   label n       (S.StateT m) = S.StateT $ label n . m
   try           (S.StateT m) = S.StateT $ try . m
   lookAhead     (S.StateT m) = S.StateT $ \s ->
@@ -332,8 +317,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   updateParserState f        = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n       (L.ReaderT m) = L.ReaderT $ label n . m
   try           (L.ReaderT m) = L.ReaderT $ try . m
   lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
@@ -351,8 +335,7 @@ instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n       (L.WriterT m) = L.WriterT $ label n m
   try           (L.WriterT m) = L.WriterT $ try m
   lookAhead     (L.WriterT m) = L.WriterT $
@@ -373,8 +356,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   updateParserState f         = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n       (S.WriterT m) = S.WriterT $ label n m
   try           (S.WriterT m) = S.WriterT $ try m
   lookAhead     (S.WriterT m) = S.WriterT $
@@ -397,8 +379,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
 -- | @since 5.2.0
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n          (L.RWST m) = L.RWST $ \r s -> label n (m r s)
   try              (L.RWST m) = L.RWST $ \r s -> try (m r s)
   lookAhead        (L.RWST m) = L.RWST $ \r s -> do
@@ -423,8 +404,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
 -- | @since 5.2.0
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n          (S.RWST m) = S.RWST $ \r s -> label n (m r s)
   try              (S.RWST m) = S.RWST $ \r s -> try (m r s)
   lookAhead        (S.RWST m) = S.RWST $ \r s -> do
@@ -447,8 +427,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   updateParserState f         = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
-  failure us ps               = lift (failure us ps)
-  fancyFailure xs             = lift (fancyFailure xs)
+  parseError e                = lift (parseError e)
   label n       (IdentityT m) = IdentityT $ label n m
   try                         = IdentityT . try . runIdentityT
   lookAhead     (IdentityT m) = IdentityT $ lookAhead m
