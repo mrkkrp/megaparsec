@@ -75,6 +75,16 @@ module Text.Megaparsec
   , runParserT'
     -- * Primitive combinators
   , MonadParsec (..)
+    -- * Signaling parse errors
+    -- $parse-errors
+  , failure
+  , fancyFailure
+  , unexpected
+  , customFailure
+  , region
+  , registerParseError
+  , registerFailure
+  , registerFancyFailure
     -- * Derivatives of primitive combinators
   , single
   , satisfy
@@ -84,12 +94,7 @@ module Text.Megaparsec
   , noneOf
   , chunk
   , (<?>)
-  , failure
-  , fancyFailure
-  , unexpected
-  , customFailure
   , match
-  , region
   , takeRest
   , atEnd
     -- * Parser state combinators
@@ -112,6 +117,7 @@ import Text.Megaparsec.Internal
 import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as E
 
 -- $reexports
@@ -225,8 +231,8 @@ runParser p name s = snd $ runParser' p (initialState name s)
 
 runParser'
   :: Parsec e s a -- ^ Parser to run
-  -> State s    -- ^ Initial state
-  -> (State s, Either (ParseErrorBundle s e) a)
+  -> State s e    -- ^ Initial state
+  -> (State s e, Either (ParseErrorBundle s e) a)
 runParser' p = runIdentity . runParserT' p
 
 -- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
@@ -250,22 +256,26 @@ runParserT p name s = snd <$> runParserT' p (initialState name s)
 
 runParserT' :: Monad m
   => ParsecT e s m a -- ^ Parser to run
-  -> State s       -- ^ Initial state
-  -> m (State s, Either (ParseErrorBundle s e) a)
+  -> State s e     -- ^ Initial state
+  -> m (State s e, Either (ParseErrorBundle s e) a)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
+  let toBundle es = ParseErrorBundle
+        { bundleErrors =
+            NE.sortWith errorOffset es
+        , bundlePosState = statePosState s
+        }
   return $ case result of
-    OK    x -> (s', Right x)
+    OK x ->
+      case NE.nonEmpty (stateParseErrors s') of
+        Nothing -> (s', Right x)
+        Just de -> (s', Left (toBundle de))
     Error e ->
-      let bundle = ParseErrorBundle
-            { bundleErrors = e :| []
-            , bundlePosState = statePosState s
-            }
-      in (s', Left bundle)
+      (s', Left (toBundle (e :| stateParseErrors s')))
 
 -- | Given name of source file and input construct initial state for parser.
 
-initialState :: String -> s -> State s
+initialState :: String -> s -> State s e
 initialState name s = State
   { stateInput  = s
   , stateOffset = 0
@@ -276,7 +286,133 @@ initialState name s = State
     , pstateTabWidth = defaultTabWidth
     , pstateLinePrefix = ""
     }
+  , stateParseErrors = []
   }
+
+----------------------------------------------------------------------------
+-- Signaling parse errors
+
+-- $parse-errors
+--
+-- The most general function to fail and end parsing is 'parseError'. These
+-- are built on top of it. The section also includes functions starting with
+-- the @register@ prefix which allow users to register “delayed”
+-- 'ParseError's.
+
+-- | Stop parsing and report a trivial 'ParseError'.
+--
+-- @since 6.0.0
+
+failure
+  :: MonadParsec e s m
+  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
+  -> Set (ErrorItem (Token s)) -- ^ Expected items
+  -> m a
+failure us ps = do
+  o <- getOffset
+  parseError (TrivialError o us ps)
+{-# INLINE failure #-}
+
+-- | Stop parsing and report a fancy 'ParseError'. To report a single custom
+-- parse error, see 'Text.Megaparsec.customFailure'.
+--
+-- @since 6.0.0
+
+fancyFailure
+  :: MonadParsec e s m
+  => Set (ErrorFancy e) -- ^ Fancy error components
+  -> m a
+fancyFailure xs = do
+  o <- getOffset
+  parseError (FancyError o xs)
+{-# INLINE fancyFailure #-}
+
+-- | The parser @'unexpected' item@ fails with an error message telling
+-- about unexpected item @item@ without consuming any input.
+--
+-- > unexpected item = failure (Just item) Set.empty
+
+unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
+unexpected item = failure (Just item) E.empty
+{-# INLINE unexpected #-}
+
+-- | Report a custom parse error. For a more general version, see
+-- 'fancyFailure'.
+--
+-- > customFailure = fancyFailure . Set.singleton . ErrorCustom
+--
+-- @since 6.3.0
+
+customFailure :: MonadParsec e s m => e -> m a
+customFailure = fancyFailure . E.singleton . ErrorCustom
+{-# INLINE customFailure #-}
+
+-- | Specify how to process 'ParseError's that happen inside of this
+-- wrapper. This applies to both normal and delayed 'ParseError's.
+--
+-- As a side-effect of the implementation the inner computation will start
+-- with empty collection of delayed errors and they will be updated and
+-- “restored” on the way out of 'region'.
+--
+-- @since 5.3.0
+
+region :: MonadParsec e s m
+  => (ParseError s e -> ParseError s e)
+     -- ^ How to process 'ParseError's
+  -> m a               -- ^ The “region” that the processing applies to
+  -> m a
+region f m = do
+  deSoFar <- stateParseErrors <$> getParserState
+  updateParserState $ \s ->
+    s { stateParseErrors = [] }
+  r <- observing m
+  updateParserState $ \s ->
+    s { stateParseErrors = (f <$> stateParseErrors s) ++ deSoFar }
+  case r of
+    Left err -> parseError (f err)
+    Right x -> return x
+{-# INLINEABLE region #-}
+
+-- | Register a 'ParseError' for later reporting. This action does not end
+-- parsing and has no effect except for adding the given 'ParseError' to the
+-- collection of “delayed” 'ParseError's which will be taken into
+-- consideration at the end of parsing. Only if this collection is empty
+-- parser will succeed. This is the main way to report several parse errors
+-- at once.
+--
+-- @since 8.0.0
+
+registerParseError :: MonadParsec e s m => ParseError s e -> m ()
+registerParseError e = updateParserState $ \s ->
+  s { stateParseErrors = e : stateParseErrors s }
+{-# INLINE registerParseError #-}
+
+-- | Like 'failure', but for delayed 'ParseError's.
+--
+-- @since 8.0.0
+
+registerFailure
+  :: MonadParsec e s m
+  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
+  -> Set (ErrorItem (Token s)) -- ^ Expected items
+  -> m ()
+registerFailure us ps = do
+  o <- getOffset
+  registerParseError (TrivialError o us ps)
+{-# INLINE registerFailure #-}
+
+-- | Like 'fancyFailure', but for delayed 'ParseError's.
+--
+-- @since 8.0.0
+
+registerFancyFailure
+  :: MonadParsec e s m
+  => Set (ErrorFancy e) -- ^ Fancy error components
+  -> m ()
+registerFancyFailure xs = do
+  o <- getOffset
+  registerParseError (FancyError o xs)
+{-# INLINE registerFancyFailure #-}
 
 ----------------------------------------------------------------------------
 -- Derivatives of primitive combinators
@@ -414,54 +550,6 @@ infix 0 <?>
 (<?>) = flip label
 {-# INLINE (<?>) #-}
 
--- | Stop parsing and report a trivial 'ParseError'.
---
--- @since 6.0.0
-
-failure
-  :: MonadParsec e s m
-  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
-  -> Set (ErrorItem (Token s)) -- ^ Expected items
-  -> m a
-failure us ps = do
-  o <- getOffset
-  parseError (TrivialError o us ps)
-{-# INLINE failure #-}
-
--- | Stop parsing and report a fancy 'ParseError'. To report a single custom
--- parse error, see 'Text.Megaparsec.customFailure'.
---
--- @since 6.0.0
-
-fancyFailure
-  :: MonadParsec e s m
-  => Set (ErrorFancy e) -- ^ Fancy error components
-  -> m a
-fancyFailure xs = do
-  o <- getOffset
-  parseError (FancyError o xs)
-{-# INLINE fancyFailure #-}
-
--- | The parser @'unexpected' item@ fails with an error message telling
--- about unexpected item @item@ without consuming any input.
---
--- > unexpected item = failure (Just item) Set.empty
-
-unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
-unexpected item = failure (Just item) E.empty
-{-# INLINE unexpected #-}
-
--- | Report a custom parse error. For a more general version, see
--- 'fancyFailure'.
---
--- > customFailure = fancyFailure . Set.singleton . ErrorCustom
---
--- @since 6.3.0
-
-customFailure :: MonadParsec e s m => e -> m a
-customFailure = fancyFailure . E.singleton . ErrorCustom
-{-# INLINE customFailure #-}
-
 -- | Return both the result of a parse and a chunk of input that was
 -- consumed during parsing. This relies on the change of the 'stateOffset'
 -- value to evaluate how many tokens were consumed. If you mess with it
@@ -482,34 +570,6 @@ match p = do
   -- 'takeN_'.
   return ((fst . fromJust) (takeN_ (o' - o) s), r)
 {-# INLINEABLE match #-}
-
--- | Specify how to process 'ParseError's that happen inside of this
--- wrapper. As a side effect of the current implementation changing
--- 'errorOffset' with this combinator will also change the final
--- 'stateOffset' in the parser state (try to avoid that because
--- 'stateOffset' will go out of sync with factual position in the input
--- stream and pretty-printing of parse errors afterwards will be incorrect).
---
--- @since 5.3.0
-
-region :: MonadParsec e s m
-  => (ParseError s e -> ParseError s e)
-     -- ^ How to process 'ParseError's
-  -> m a               -- ^ The “region” that the processing applies to
-  -> m a
-region f m = do
-  r <- observing m
-  case r of
-    Left err ->
-      case f err of
-        TrivialError o us ps -> do
-          updateParserState $ \st -> st { stateOffset = o }
-          failure us ps
-        FancyError o xs -> do
-          updateParserState $ \st -> st { stateOffset = o }
-          fancyFailure xs
-    Right x -> return x
-{-# INLINEABLE region #-}
 
 -- | Consume the rest of the input and return it as a chunk. This parser
 -- never fails, but may return the empty chunk.
@@ -544,7 +604,7 @@ getInput = stateInput <$> getParserState
 -- | @'setInput' input@ continues parsing with @input@.
 
 setInput :: MonadParsec e s m => s -> m ()
-setInput s = updateParserState (\(State _ o pst) -> State s o pst)
+setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 {-# INLINE setInput #-}
 
 -- | Return the current source position. This function /is not cheap/, do
@@ -582,14 +642,14 @@ getOffset = stateOffset <$> getParserState
 -- @since 7.0.0
 
 setOffset :: MonadParsec e s m => Int -> m ()
-setOffset o = updateParserState $ \(State s _ pst) ->
-  State s o pst
+setOffset o = updateParserState $ \(State s _ pst de) ->
+  State s o pst de
 {-# INLINE setOffset #-}
 
 -- | @'setParserState' st@ sets the parser state to @st@.
 --
 -- See also: 'getParserState', 'updateParserState'.
 
-setParserState :: MonadParsec e s m => State s -> m ()
+setParserState :: MonadParsec e s m => State s e -> m ()
 setParserState st = updateParserState (const st)
 {-# INLINE setParserState #-}

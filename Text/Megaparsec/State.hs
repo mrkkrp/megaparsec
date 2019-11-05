@@ -13,8 +13,11 @@
 --
 -- @since 6.5.0
 
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Text.Megaparsec.State
   ( State (..)
@@ -26,10 +29,12 @@ import Data.Data (Data)
 import Data.Typeable (Typeable)
 import GHC.Generics
 import Text.Megaparsec.Pos
+import {-# SOURCE #-} Text.Megaparsec.Error (ParseError)
 
--- | This is the Megaparsec's state parametrized over stream type @s@.
+-- | This is the Megaparsec's state parametrized over stream type @s@ and
+-- custom error component type @e@.
 
-data State s = State
+data State s e = State
   { stateInput :: s
     -- ^ The rest of input to process
   , stateOffset :: {-# UNPACK #-} !Int
@@ -40,9 +45,27 @@ data State s = State
     -- ^ State that is used for line\/column calculation
     --
     -- @since 7.0.0
-  } deriving (Show, Eq, Data, Typeable, Generic)
+  , stateParseErrors :: [ParseError s e]
+    -- ^ Collection of “delayed” 'ParseError's in reverse order. This means
+    -- that the last registered error is the first element of the list.
+    --
+    -- @since 8.0.0
+  } deriving (Typeable, Generic)
 
-instance NFData s => NFData (State s)
+deriving instance ( Show (ParseError s e)
+                  , Show s
+                  ) => Show (State s e)
+
+deriving instance ( Eq (ParseError s e)
+                  , Eq s
+                  ) => Eq (State s e)
+
+deriving instance ( Data e
+                  , Data (ParseError s e)
+                  , Data s
+                  ) => Data (State s e)
+
+instance (NFData s, NFData (ParseError s e)) => NFData (State s e)
 
 -- | Special kind of state that is used to calculate line\/column positions
 -- on demand.

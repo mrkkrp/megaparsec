@@ -66,13 +66,7 @@ spec = do
           TrivialError pos us ps <> FancyError pos xs `shouldBe`
             (FancyError pos xs :: PE)
 
-  describe "errorOffset" $
-    it "returns error position" $
-      property $ \e ->
-        errorOffset e `shouldBe`
-          (case e :: PE of
-            TrivialError o _ _ -> o
-            FancyError   o _   -> o)
+  -- NOTE 'errorOffset' and 'setErrorOffset' are trivial.
 
   describe "attachSourcePos" $
     it "attaches the positions correctly" $

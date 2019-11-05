@@ -213,7 +213,7 @@ prs'
      -- ^ Parser to run
   -> ByteString
      -- ^ Input for the parser
-  -> (State ByteString, Either (ParseErrorBundle ByteString Void) a)
+  -> (State ByteString Void, Either (ParseErrorBundle ByteString Void) a)
      -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 

@@ -13,3 +13,18 @@ index 2ad0f243..522a9883 100644
  
      label l (Parser p) = Parser (Text.Megaparsec.label l p)
  
+diff --git a/dhall/src/Dhall/Parser/Expression.hs b/dhall/src/Dhall/Parser/Expression.hs
+index 0162b728..76c00ad4 100644
+--- a/src/Dhall/Parser/Expression.hs
++++ b/src/Dhall/Parser/Expression.hs
+@@ -57,8 +57,8 @@ getOffset = Text.Megaparsec.stateTokensProcessed <$> Text.Megaparsec.getParserSt
+ 
+ setOffset :: Text.Megaparsec.MonadParsec e s m => Int -> m ()
+ #if MIN_VERSION_megaparsec(7, 0, 0)
+-setOffset o = Text.Megaparsec.updateParserState $ \(Text.Megaparsec.State s _ pst) ->
+-  Text.Megaparsec.State s o pst
++setOffset o = Text.Megaparsec.updateParserState $ \(Text.Megaparsec.State s _ pst de) ->
++  Text.Megaparsec.State s o pst de
+ #else
+ setOffset o = Text.Megaparsec.updateParserState $ \(Text.Megaparsec.State s p _ stw) ->
+   Text.Megaparsec.State s p o stw

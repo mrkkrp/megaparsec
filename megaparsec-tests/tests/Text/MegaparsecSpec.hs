@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types        #-}
@@ -36,6 +37,7 @@ import qualified Control.Monad.Writer.Lazy   as L
 import qualified Control.Monad.Writer.Strict as S
 import qualified Data.ByteString             as BS
 import qualified Data.List                   as DL
+import qualified Data.List.NonEmpty          as NE
 import qualified Data.Set                    as E
 import qualified Data.Text                   as T
 
@@ -408,7 +410,12 @@ spec = do
 
   describe "primitive combinators" $ do
 
-    -- NOTE 'parseError' is tested via 'failure' and 'fancyFailure'.
+    describe "parseError" $ do
+      it "immediately fails with given parse error" $
+        property $ \st e -> do
+          let p :: MonadParsec Void String m => m ()
+              p = parseError e
+          runParser' p st `shouldBe` (st, Left (mkBundle st (nes e)))
 
     describe "label" $ do
       context "when inner parser succeeds consuming input" $ do
@@ -1038,6 +1045,111 @@ spec = do
             grs  p s (`shouldFailWith` pe)
             grs' p s (`failsLeaving` drop n s)
 
+  describe "signaling parse errors" $ do
+
+    describe "failure" $
+      it "signals correct parse error" $
+        property $ \us ps -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (failure us ps)
+          grs p "" (`shouldFailWith` TrivialError 0 us ps)
+
+    describe "fancyFailure" $
+      it "singals correct parse error" $
+        property $ \xs -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (fancyFailure xs)
+          grs p "" (`shouldFailWith` FancyError 0 xs)
+
+    describe "unexpected" $
+      it "signals correct parse error" $
+        property $ \item -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (unexpected item)
+          grs p "" (`shouldFailWith` TrivialError 0 (pure item) E.empty)
+
+    describe "customFailure" $
+      it "signals correct parse error" $
+        property $ \n st -> do
+          let p :: MonadParsec Int String m => m ()
+              p = void (customFailure n)
+              xs = E.singleton (ErrorCustom n)
+          runParser  p "" (stateInput st) `shouldFailWith` FancyError 0 xs
+          runParser' p st `failsLeaving` stateInput st
+
+    describe "region" $ do
+      let f o' = \case
+            TrivialError o us ps ->
+              FancyError
+                (max o o')
+                (E.singleton . ErrorCustom $ maybe 0 (const 1) us + E.size ps)
+            FancyError o xs ->
+              FancyError
+                (max o o')
+                (E.singleton . ErrorCustom $ E.size xs)
+      context "when inner parser succeeds" $ do
+        it "delayed parse errors get updated correctly" $
+          property $ \st es0 es1 es2 o' n -> do
+            let p :: Parsec Int String Int
+                p = do
+                  forM_ (NE.reverse es0) registerParseError
+                  region (f o') $
+                    forM_ (NE.reverse es1) registerParseError
+                  forM_ (NE.reverse es2) registerParseError
+                  return n
+                es = es2 <> fmap (f o') es1 <> es0
+                st' = st
+                  { stateParseErrors = NE.toList es
+                  }
+            runParser' p st `shouldBe`
+              ( st'
+              , Left (mkBundle st es)
+              )
+      context "when inner parser fails" $ do
+        it "delayed and normal parse errors get updated correctly" $
+          property $ \st es0 es1 e o' -> do
+            let p :: Parsec Int String ()
+                p = do
+                  forM_ (NE.reverse es0) registerParseError
+                  region (f o') $ do
+                    forM_ (NE.reverse es1) registerParseError
+                    void (parseError e)
+                es = fmap (f o') es1 <> es0
+                st' = st
+                  { stateParseErrors = NE.toList es
+                  }
+            runParser' p st `shouldBe`
+              ( st'
+              , Left (mkBundle st (nes (f o' e) <> es))
+              )
+
+    describe "registerParseError" $ do
+      it "immediately fails with given parse error" $
+        property $ \st es -> do
+          let p :: MonadParsec Void String m => m ()
+              p = forM_ (NE.reverse es) registerParseError
+              st' = st
+                 { stateParseErrors = NE.toList es
+                 }
+          runParser' p st `shouldBe`
+            ( st'
+            , Left (mkBundle st es)
+            )
+
+    describe "registerFailure" $
+      it "signals correct parse error" $
+        property $ \us ps -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (registerFailure us ps)
+          grs p "" (`shouldFailWith` TrivialError 0 us ps)
+
+    describe "reisterFancyFailure" $
+      it "singals correct parse error" $
+        property $ \xs -> do
+          let p :: MonadParsec Void String m => m ()
+              p = void (registerFancyFailure xs)
+          grs p "" (`shouldFailWith` FancyError 0 xs)
+
   describe "derivatives from primitive combinators" $ do
 
     -- NOTE 'single' is tested via 'char' in "Text.Megaparsec.Char" and
@@ -1119,76 +1231,12 @@ spec = do
     -- NOTE 'chunk' is tested via 'string' in "Text.Megaparsec.Char" and
     -- "Text.Megaparsec.Byte".
 
-    describe "failure" $
-      it "signals correct parse error" $
-        property $ \us ps -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (failure us ps)
-          grs p "" (`shouldFailWith` TrivialError 0 us ps)
-
-    describe "fancyFailure" $
-      it "singals correct parse error" $
-        property $ \xs -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (fancyFailure xs)
-          grs p "" (`shouldFailWith` FancyError 0 xs)
-
-    describe "unexpected" $
-      it "signals correct parse error" $
-        property $ \item -> do
-          let p :: MonadParsec Void String m => m ()
-              p = void (unexpected item)
-          grs p "" (`shouldFailWith` TrivialError 0 (pure item) E.empty)
-
-    describe "customFailure" $
-      it "signals correct parse error" $
-        property $ \n st -> do
-          let p :: MonadParsec Int String m => m ()
-              p = void (customFailure n)
-              xs = E.singleton (ErrorCustom n)
-          runParser  p "" (stateInput st) `shouldFailWith` FancyError 0 xs
-          runParser' p st `failsLeaving` stateInput st
-
     describe "match" $
       it "return consumed tokens along with the result" $
         property $ \str -> do
           let p  = match (string str)
           prs  p str `shouldParse`     (str,str)
           prs' p str `succeedsLeaving` ""
-
-    describe "region" $ do
-      context "when inner parser succeeds" $
-        it "has no effect" $
-          property $ \st e n -> do
-            let p :: Parser Int
-                p = region (const e) (pure n)
-            runParser' p st `shouldBe` (st, Right (n :: Int))
-      context "when inner parser fails" $
-        it "the given function is used on the parse error" $
-          property $ \st' e o' -> do
-            let p :: Parsec Int String Int
-                p = region f $
-                  case e :: ParseError String Int of
-                    TrivialError _ us ps -> failure us ps
-                    FancyError   _ xs    -> fancyFailure xs
-                f (TrivialError o us ps) = FancyError
-                  (max o o')
-                  (E.singleton . ErrorCustom $ maybe 0 (const 1) us + E.size ps)
-                f (FancyError o xs) = FancyError
-                  (max o o')
-                  (E.singleton . ErrorCustom $ E.size xs)
-                r = FancyError
-                  (max (errorOffset e) o')
-                  (E.singleton . ErrorCustom $
-                    case e of
-                      TrivialError _ us ps -> maybe 0 (const 1) us + E.size ps
-                      FancyError   _ xs    -> E.size xs )
-                finalOffset = max (errorOffset e) o'
-                st = st' { stateOffset = errorOffset e }
-            runParser' p st `shouldBe`
-              ( st { stateOffset = finalOffset }
-              , Left (mkBundle st r)
-              )
 
     describe "takeRest" $
       it "returns rest of the input" $
@@ -1254,14 +1302,15 @@ spec = do
     describe "setParserState and getParserState" $
       it "sets parser state and gets it back" $
         property $ \s1 s2 -> do
-          let p :: MonadParsec Void String m => m (State String)
+          let p :: MonadParsec Void String m => m (State String Void)
               p = do
                 st <- getParserState
                 guard (st == initialState s)
                 setParserState s1
                 updateParserState (f s2)
                 getParserState <* setInput ""
-              f (State s1' o pst) (State s2' _ _) = State (max s1' s2') o pst
+              f (State s1' o pst de1) (State s2' _ _ de2) =
+                State (max s1' s2') o pst (de1 <> de2)
               s = ""
           grs p s (`shouldParse` f s2 s1)
 
@@ -1616,15 +1665,16 @@ instance ShowErrorComponent Int where
   showErrorComponent = show
 
 emulateStrParsing
-  :: State String
+  :: State String Void
   -> String
-  -> (State String, Either (ParseErrorBundle String Void) String)
-emulateStrParsing st@(State i o pst) s =
+  -> (State String Void, Either (ParseErrorBundle String Void) String)
+emulateStrParsing st@(State i o pst de) s =
   if s == take l i
-    then ( State (drop l i) (o + l) pst
-         , Right s )
+    then ( State (drop l i) (o + l) pst de
+         , Right s
+         )
     else ( st
-         , Left (mkBundle st (err o (etoks s <> utoks (take l i))))
+         , Left (mkBundle st (nes (err o (etoks s <> utoks (take l i)))))
          )
   where
     l = length s
@@ -1636,11 +1686,14 @@ eqParser :: (Eq a, Eq (Token s), Eq s)
   -> Bool
 eqParser p1 p2 s = runParser p1 "" s == runParser p2 "" s
 
-mkBundle :: State s -> ParseError s e -> ParseErrorBundle s e
-mkBundle s e = ParseErrorBundle
-  { bundleErrors = e :| []
+mkBundle
+  :: State s e
+  -> NonEmpty (ParseError s e) -- FIXME change back if we don't use it
+  -> ParseErrorBundle s e
+mkBundle s es = ParseErrorBundle
+  { bundleErrors = NE.sortWith errorOffset es
   , bundlePosState = statePosState s
   }
 
-grabTabWidth :: (State a, b) -> Pos
+grabTabWidth :: (State a e, b) -> Pos
 grabTabWidth = pstateTabWidth . statePosState . fst

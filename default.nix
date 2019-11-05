@@ -57,14 +57,20 @@ let
     # normally fails. We want to build it and run the tests anyway, so we
     # have to do these manipulations.
     "parser-combinators-tests" = pkgs.haskell.lib.dontHaddock
-      (super.parser-combinators-tests.overrideAttrs (drv: {
-        installPhase = "mkdir $out";
-        broken = false;
-      }));
+      (patch
+        (super.parser-combinators-tests.overrideAttrs (drv: {
+          installPhase = "mkdir $out";
+          broken = false;
+        }))
+        ./nix/patches/parser-combinators-tests.patch);
     "modern-uri" = doBenchmark super.modern-uri;
-    "mmark" = doBenchmark super.mmark;
+    "mmark" = doBenchmark (patch super.mmark ./nix/patches/mmark.patch);
     "parsers-bench" = doBenchmark
       (super.callCabal2nix "parsers-bench" parsersBenchSource { });
+    "hspec-megaparsec" = patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch;
+    "dhall" = patch super.dhall ./nix/patches/dhall.patch;
+    "idris" = patch super.idris ./nix/patches/idris.patch;
+    "hledger-lib" = patch super.hledger-lib ./nix/patches/hledger-lib.patch;
   };
 
   updatedPkgs = pkgs // {
@@ -98,16 +104,16 @@ in {
       cachix
       cassava-megaparsec
       cue-sheet
+      dhall
       hledger
       hnix
+      idris
       language-puppet
       mmark
       modern-uri
       replace-megaparsec
       stache
       tomland;
-    dhall = patch haskellPackages.dhall ./nix/patches/dhall.patch;
-    idris = patch haskellPackages.idris ./nix/patches/idris.patch;
   };
 
   # Benchmarks:
