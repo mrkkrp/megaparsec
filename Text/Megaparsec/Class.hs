@@ -265,11 +265,11 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   -- | Return the full parser state as a 'State' record.
 
-  getParserState :: m (State s)
+  getParserState :: m (State s e)
 
   -- | @'updateParserState' f@ applies the function @f@ to the parser state.
 
-  updateParserState :: (State s -> State s) -> m ()
+  updateParserState :: (State s e -> State s e) -> m ()
 
 ----------------------------------------------------------------------------
 -- Lifting through MTL

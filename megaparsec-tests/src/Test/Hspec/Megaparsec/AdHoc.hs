@@ -97,7 +97,7 @@ prs'
      -- ^ Parser to run
   -> String
      -- ^ Input for the parser
-  -> (State String, Either (ParseErrorBundle String Void) a)
+  -> (State String Void, Either (ParseErrorBundle String Void) a)
      -- ^ Result of parsing
 prs' p s = runParser' p (initialState s)
 
@@ -140,7 +140,7 @@ grs p s r = do
 grs'
   :: (forall m. MonadParsec Void String m => m a) -- ^ Parser to run
   -> String            -- ^ Input for the parser
-  -> ((State String, Either (ParseErrorBundle String Void) a) -> Expectation)
+  -> ((State String Void, Either (ParseErrorBundle String Void) a) -> Expectation)
     -- ^ How to check result of parsing
   -> Expectation
 grs' p s r = do
@@ -297,7 +297,7 @@ instance (Arbitrary (Token s), Ord (Token s), Arbitrary e, Ord e)
       <$> (getNonNegative <$> arbitrary)
       <*> (E.fromList <$> scaleDown arbitrary) ]
 
-instance Arbitrary s => Arbitrary (State s) where
+instance Arbitrary s => Arbitrary (State s e) where
   arbitrary = do
     input  <- scaleDown arbitrary
     offset <- choose (1, 10000)
@@ -309,6 +309,7 @@ instance Arbitrary s => Arbitrary (State s) where
         { pstateInput = input
         , pstateOffset = offset
         }
+      , stateParseErrors = []
       }
 
 instance Arbitrary s => Arbitrary (PosState s) where

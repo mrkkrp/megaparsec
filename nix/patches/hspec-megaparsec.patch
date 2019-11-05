@@ -1,0 +1,36 @@
+diff --git a/Test/Hspec/Megaparsec.hs b/Test/Hspec/Megaparsec.hs
+index 2645b3c..e639426 100644
+--- a/Test/Hspec/Megaparsec.hs
++++ b/Test/Hspec/Megaparsec.hs
+@@ -184,7 +184,7 @@ failsLeaving
+      , Eq s
+      , Show s
+      )
+-  => (State s, Either (ParseErrorBundle s e) a)
++  => (State s e, Either (ParseErrorBundle s e) a)
+      -- ^ Parser that takes stream and produces result along with actual
+      -- state information
+   -> s                 -- ^ Part of input that should be left unconsumed
+@@ -210,7 +210,7 @@ succeedsLeaving
+      , ShowErrorComponent e
+      , Stream s
+      )
+-  => (State s, Either (ParseErrorBundle s e) a)
++  => (State s e, Either (ParseErrorBundle s e) a)
+      -- ^ Parser that takes stream and produces result along with actual
+      -- state information
+   -> s                 -- ^ Part of input that should be left unconsumed
+@@ -221,11 +221,12 @@ succeedsLeaving
+ 
+ -- | Given input for parsing, construct initial state for parser.
+ 
+-initialState :: s -> State s
++initialState :: s -> State s e
+ initialState s = State
+   { stateInput  = s
+   , stateOffset = 0
+   , statePosState = initialPosState s
++  , stateParseErrors = []
+   }
+ 
+ -- | Given input for parsing, construct initial positional state.

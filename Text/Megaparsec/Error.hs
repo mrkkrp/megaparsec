@@ -15,17 +15,17 @@
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
 
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE UndecidableInstances#-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveFunctor        #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Text.Megaparsec.Error
   ( -- * Parse error type
@@ -34,6 +34,7 @@ module Text.Megaparsec.Error
   , ParseError (..)
   , mapParseError
   , errorOffset
+  , setErrorOffset
   , ParseErrorBundle (..)
   , attachSourcePos
     -- * Pretty-printing
@@ -173,13 +174,21 @@ mapParseError :: Ord e'
 mapParseError _ (TrivialError o u p) = TrivialError o u p
 mapParseError f (FancyError o x) = FancyError o (E.map (fmap f) x)
 
--- | Get offset of given 'ParseError'.
+-- | Get offset of 'ParseError'.
 --
 -- @since 7.0.0
 
 errorOffset :: ParseError s e -> Int
 errorOffset (TrivialError o _ _) = o
 errorOffset (FancyError   o _)   = o
+
+-- | Set offset of 'ParseError'.
+--
+-- @since 8.0.0
+
+setErrorOffset :: Int -> ParseError s e -> ParseError s e
+setErrorOffset o (TrivialError _ u p) = TrivialError o u p
+setErrorOffset o (FancyError _ x) = FancyError o x
 
 -- | Merge two error data structures into one joining their collections of
 -- message items and preferring the longest match. In other words, earlier

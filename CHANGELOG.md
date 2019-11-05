@@ -5,8 +5,20 @@
   new `parseError` method of `MonadParsec`. This method allows us to signal
   parse errors at a given offset without manipulating parser state manually.
 
+* Megaparsec now supports registration of “delayed” parse errors. On lower
+  level we added a new field called `stateParseErrors` to the `State`
+  record. The type also had to change from `State s` to `State s e`. This
+  field contains the list of registered `ParseErrors` that do not end
+  parsing immediately but still will cause failure in the end if the list is
+  not empty. Users are expected to register parse errors using the three
+  functions: `registerParseError`, `registerFailure`, and
+  `registerFancyFailure`. These functions are analogous to those without the
+  `register` prefix, except that they have “delayed” effect.
+
 * Added the `tokensLength` method to the `Stream` type class to improve
   support for custom input streams.
+
+* Added the `setErrorOffset` function to set offset of `ParseError`s.
 
 * Changed type signatures of `reachOffset` and `reachOffsetNoLine` methods
   of the `Stream` type class. Instead of three-tuple `reachOffset` now

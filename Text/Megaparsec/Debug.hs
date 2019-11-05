@@ -125,8 +125,8 @@ showStream pxy ts =
 -- after parsing.
 
 streamDelta
-  :: State s           -- ^ State of parser before consumption
-  -> State s           -- ^ State of parser after consumption
+  :: State s e         -- ^ State of parser before consumption
+  -> State s e         -- ^ State of parser after consumption
   -> Int               -- ^ Number of consumed tokens
 streamDelta s0 s1 = stateOffset s1 - stateOffset s0
 
