@@ -9,7 +9,7 @@
 * [Features](#features)
     * [Core features](#core-features)
     * [Error messages](#error-messages)
-    * [Alex support](#alex-support)
+    * [External lexers](#external-lexers)
     * [Character and binary parsing](#character-and-binary-parsing)
     * [Lexer](#lexer)
 * [Documentation](#documentation)
@@ -52,15 +52,12 @@ most useful ones are `Monad`, `Applicative`, `Alternative`, and
 Megaparsec includes all functionality that is typically available in
 Parsec-like libraries and also features some special combinators:
 
-* `failure` allows us to report a parse error with unexpected and expected
-  items.
-* `fancyFailure` provides a way to report custom parse errors.
+* `parseError` allows us to end parsing and report an arbitrary parse error.
 * `withRecovery` can be used to recover from parse errors “on-the-fly” and
   continue parsing. Once parsing is finished, several parse errors may be
   reported or ignored altogether.
 * `observing` makes it possible to “observe” parse errors without ending
-  parsing (they are returned in `Left`, while normal results are wrapped in
-  `Right`).
+  parsing.
 
 In addition to that, Megaparsec features high-performance combinators
 similar to those found in [Attoparsec][attoparsec]:
@@ -90,19 +87,23 @@ an instance of the `Stream` type class.
 
 ### Error messages
 
-Megaparsec has typed error messages and the ability to signal custom parse
-errors that better suit user's domain of interest.
+* Megaparsec has typed error messages and the ability to signal custom parse
+  errors that better suit user's domain of interest.
 
-Megaparsec 7 introduced the `ParseErrorBundle` data type that helps to
-manage multi-error messages and pretty-print them easily and efficiently.
-That version of the library also made the practice of displaying offending
-lines the default, similar to how recent versions of GHC do it.
+* Since version 8, location of parse errors can independent of current
+  offset in the input stream. It is useful when you want a parse error to
+  point to a particular position after performing some checks.
 
-### Alex support
+* Instead of single parse error Megaparsec produces so-called
+  `ParseErrorBundle` data type that helps to manage multi-error messages and
+  pretty-print them easily and efficiently. Since version 8, reporting
+  multiple parse errors at once has become much easier.
+
+### External lexers
 
 Megaparsec works well with streams of tokens produced by tools like Alex.
-The design of the `Stream` type class has been changed significantly in
-versions 6 and 7, but user can still work with custom streams of tokens.
+The design of the `Stream` type class has been changed significantly in the
+recent versions, but user can still work with custom streams of tokens.
 
 ### Character and binary parsing
 
@@ -144,8 +145,8 @@ Megaparsec.
 ## Performance
 
 Despite being flexible, Megaparsec is also fast. Here is how Megaparsec
-7.0.0 compares to [Attoparsec][attoparsec] 0.13.2.2 (the fastest widely used
-parsing library in the Haskell ecosystem):
+compares to [Attoparsec][attoparsec] (the fastest widely used parsing
+library in the Haskell ecosystem):
 
 Test case         | Execution time | Allocated | Max residency
 ------------------|---------------:|----------:|-------------:
@@ -156,11 +157,17 @@ Log (Megaparsec)  |       337.8 μs | 1,246,496 |        10,912
 JSON (Attoparsec) |       18.20 μs |   128,368 |         9,032
 JSON (Megaparsec) |       25.45 μs |   203,824 |         9,176
 
-The benchmarks were created to guide development of Megaparsec 6 and can be
-found [here][parsers-bench].
+You can run the benchmarks yourself by executing:
 
-If you think your Megaparsec parser is not efficient enough, take a look at
-[these instructions][fast-parser].
+```
+$ nix-bulid -A benches.parsers-bench
+$ cd result/bench
+$ ./bench-memory
+$ ./bench-speed
+```
+
+More information about benchmarking and development can be found
+[here][hacking].
 
 ## Comparison with other solutions
 
@@ -190,8 +197,8 @@ choice.
 Since Megaparsec is a fork of [Parsec][parsec], we are bound to list the
 main differences between the two libraries:
 
-* Better error messages. Megaparsec has well-typed error messages and custom
-  error messages.
+* Better error messages. Megaparsec has typed error messages and custom
+  error messages, it can also report multiple parse errors at once.
 
 * Megaparsec can show the line on which parse error happened as part of
   parse error. This makes it a lot easier to figure out where the error
@@ -213,7 +220,7 @@ main differences between the two libraries:
   parser* before parsing is finished. In particular, it's possible to define
   regions in which parse errors, should they happen, will get a “context
   tag”, e.g. we could build a context stack like “in function definition
-  foo”, “in expression x”, etc. This is not possible with Parsec.
+  foo”, “in expression x”, etc.
 
 * Megaparsec is faster and supports efficient operations `tokens`,
   `takeWhileP`, `takeWhile1P`, `takeP`, like Attoparsec.
@@ -267,6 +274,8 @@ you want to add something to the list):
 * [`hspec-megaparsec`](https://hackage.haskell.org/package/hspec-megaparsec)—utilities
   for testing Megaparsec parsers with with
   [Hspec](https://hackage.haskell.org/package/hspec).
+* [`replace-megaparsec`](https://hackage.haskell.org/package/replace-megaparsec)—Stream
+  editing and find-and-replace with Megaparsec.
 * [`cassava-megaparsec`](https://hackage.haskell.org/package/cassava-megaparsec)—Megaparsec
   parser of CSV files that plays nicely with
   [Cassava](https://hackage.haskell.org/package/cassava).
@@ -274,8 +283,6 @@ you want to add something to the list):
   library for easily using
   [TagSoup](https://hackage.haskell.org/package/tagsoup) as a token type in
   Megaparsec.
-* [`replace-megaparsec`](https://hackage.haskell.org/package/replace-megaparsec)—Stream
-  editing and find-and-replace with Megaparsec.
 
 ## Prominent projects that use Megaparsec
 
@@ -296,6 +303,7 @@ Some prominent projects that use Megaparsec:
 Here are some blog posts mainly announcing new features of the project and
 describing what sort of things are now possible:
 
+* [Megaparsec 8](https://markkarpov.com/post/megaparsec-8.html)
 * [Megaparsec 7](https://markkarpov.com/post/megaparsec-7.html)
 * [Evolution of error messages](https://markkarpov.com/post/evolution-of-error-messages.html)
 * [A major upgrade to Megaparsec: more speed, more power](https://markkarpov.com/post/megaparsec-more-speed-more-power.html)
@@ -310,7 +318,8 @@ Issues (bugs, feature requests or otherwise feedback) may be reported in
 [the GitHub issue tracker for this
 project](https://github.com/mrkkrp/megaparsec/issues).
 
-Pull requests are also welcome.
+Pull requests are also welcome. If you would like to contribute to the
+project, you may find [this document][hacking] helpful.
 
 ## License
 
@@ -322,6 +331,7 @@ Distributed under FreeBSD license.
 
 [hackage]: https://hackage.haskell.org/package/megaparsec
 [tutorials]: https://markkarpov.com/learn-haskell.html#megaparsec-tutorials
+[hacking]: ./HACKING.md
 
 [tm]: https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec.html
 [tm-char]: https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec-Char.html
