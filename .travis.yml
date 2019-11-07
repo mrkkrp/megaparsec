@@ -25,16 +25,12 @@ install:
   - travis_retry cabal new-update
 
 script:
-  # FIXME The recent changes are breaking and we need to release newer
-  # versions of hspec-megaparsec to make the tests work. I'll restore CI
-  # right after release of Megaparsec 8. For now we just test that it builds
-  # on CI and locally using Nix.
-  - cabal new-build megaparsec --enable-tests --enable-benchmarks --flags=dev
-  # - cabal new-test all --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-build all --enable-tests --enable-benchmarks --flags=dev
+  - cabal new-test all --enable-tests --enable-benchmarks --flags=dev
   - cabal new-haddock megaparsec
-  # - cabal new-haddock megaparsec-tests
+  - cabal new-haddock megaparsec-tests
   - cabal new-sdist
-  # - cd megaparsec-tests && cabal new-sdist
+  - cd megaparsec-tests && cabal new-sdist
 
 notifications:
   email: false
