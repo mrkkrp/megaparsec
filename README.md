@@ -137,10 +137,10 @@ documentation on Hackage][hackage].
 
 ## Tutorials
 
-You can find Megaparsec tutorials [here][tutorials]. They should provide
-sufficient guidance to help you start with your parsing tasks. The site also
-has instructions and tips for Parsec users who decide to migrate to
-Megaparsec.
+You can find the most complete Megaparsec tutorial [here][the-tutorial]. It
+should provide sufficient guidance to help you start with your parsing
+tasks. The site also has instructions and tips for Parsec users who decide
+to migrate to Megaparsec.
 
 ## Performance
 
@@ -330,7 +330,7 @@ Copyright © 1999–2000 Daan Leijen
 Distributed under FreeBSD license.
 
 [hackage]: https://hackage.haskell.org/package/megaparsec
-[tutorials]: https://markkarpov.com/learn-haskell.html#megaparsec-tutorials
+[the-tutorial]: https://markkarpov.com/megaparsec/megaparsec.html
 [hacking]: ./HACKING.md
 
 [tm]: https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec.html
