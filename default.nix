@@ -47,6 +47,8 @@ let
         '';
       }));
 
+  doJailbreak = pkgs.haskell.lib.doJailbreak;
+
   megaparsecOverlay = self: super: {
     "megaparsec" = doBenchmark
       (super.callCabal2nix "megaparsec" megaparsecSource { });
@@ -56,21 +58,31 @@ let
     # does not contain an executable nor a library, so its install phase
     # normally fails. We want to build it and run the tests anyway, so we
     # have to do these manipulations.
-    "parser-combinators-tests" = pkgs.haskell.lib.dontHaddock
+    "parser-combinators-tests" = doJailbreak (pkgs.haskell.lib.dontHaddock
       (patch
         (super.parser-combinators-tests.overrideAttrs (drv: {
           installPhase = "mkdir $out";
           broken = false;
         }))
-        ./nix/patches/parser-combinators-tests.patch);
-    "modern-uri" = doBenchmark super.modern-uri;
-    "mmark" = doBenchmark (patch super.mmark ./nix/patches/mmark.patch);
-    "parsers-bench" = doBenchmark
-      (super.callCabal2nix "parsers-bench" parsersBenchSource { });
-    "hspec-megaparsec" = patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch;
-    "dhall" = patch super.dhall ./nix/patches/dhall.patch;
-    "idris" = patch super.idris ./nix/patches/idris.patch;
-    "hledger-lib" = patch super.hledger-lib ./nix/patches/hledger-lib.patch;
+        ./nix/patches/parser-combinators-tests.patch));
+    "modern-uri" = patch (doBenchmark super.modern-uri) ./nix/patches/modern-uri.patch;
+    "mmark" = doJailbreak (doBenchmark (patch super.mmark ./nix/patches/mmark.patch));
+    "parsers-bench" = doJailbreak (doBenchmark
+      (super.callCabal2nix "parsers-bench" parsersBenchSource { }));
+    "hspec-megaparsec" = doJailbreak
+      (patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch);
+    "dhall" = doJailbreak
+      (patch super.dhall ./nix/patches/dhall.patch);
+    "idris" = doJailbreak
+      (patch super.idris ./nix/patches/idris.patch);
+    "hledger-lib" = doJailbreak
+      (patch super.hledger-lib ./nix/patches/hledger-lib.patch);
+    "hledger" = doJailbreak super.hledger;
+    "cue-sheet" = doJailbreak super.cue-sheet;
+    "cassava-megaparsec" = doJailbreak super.cassava-megaparsec;
+    "language-puppet" = doJailbreak super.language-puppet;
+    "stache" = doJailbreak super.stache;
+    "tomland" = doJailbreak super.tomland;
   };
 
   updatedPkgs = pkgs // {
