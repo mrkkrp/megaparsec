@@ -330,7 +330,7 @@ Copyright © 1999–2000 Daan Leijen
 Distributed under FreeBSD license.
 
 [hackage]: https://hackage.haskell.org/package/megaparsec
-[the-tutorial]: https://markkarpov.com/megaparsec/megaparsec.html
+[the-tutorial]: https://markkarpov.com/tutorial/megaparsec.html
 [hacking]: ./HACKING.md
 
 [tm]: https://hackage.haskell.org/package/megaparsec/docs/Text-Megaparsec.html

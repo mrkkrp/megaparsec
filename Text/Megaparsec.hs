@@ -11,8 +11,7 @@
 --
 -- This module includes everything you need to get started writing a parser.
 -- If you are new to Megaparsec and don't know where to begin, take a look
--- at the tutorials
--- <https://markkarpov.com/learn-haskell.html#megaparsec-tutorials>.
+-- at the tutorial <https://markkarpov.com/tutorial/megaparsec.html>.
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
 -- most everything that you may need, we advise to import
