@@ -249,8 +249,8 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   --
   -- The parser is roughly equivalent to:
   --
-  -- > takeP (Just "foo") n = count n (anyChar <?> "foo")
-  -- > takeP Nothing      n = count n anyChar
+  -- > takeP (Just "foo") n = count n (anySingle <?> "foo")
+  -- > takeP Nothing      n = count n anySingle
   --
   -- Note that if the combinator fails due to insufficient number of tokens
   -- in the input stream, it backtracks automatically. No 'try' is necessary
