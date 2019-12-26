@@ -110,7 +110,7 @@ This will create several `result-*` symlinks with benchmarks. It is also
 possible to build benchmarks for just a specific package:
 
 ```console
-$ nix-bulid -A benches.megaparsec # builds megaparsec's microbenchmarks
+$ nix-build -A benches.megaparsec # builds megaparsec's microbenchmarks
 ```
 
 `cd` to `result/bench` and run benchmarks from there because some benchmarks

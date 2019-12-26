@@ -160,7 +160,7 @@ JSON (Megaparsec) |       25.45 μs |   203,824 |         9,176
 You can run the benchmarks yourself by executing:
 
 ```
-$ nix-bulid -A benches.parsers-bench
+$ nix-build -A benches.parsers-bench
 $ cd result/bench
 $ ./bench-memory
 $ ./bench-speed
