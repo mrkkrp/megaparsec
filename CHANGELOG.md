@@ -1,4 +1,4 @@
-## Megaparec 8.0.0
+## Megaparsec 8.0.0
 
 * The methods `failure` and `fancyFailure` of `MonadParsec` are now ordinary
   functions and live in `Text.Megaparsec`. They are defined in terms of the
@@ -308,7 +308,7 @@
   `Text.Megaparsec.Byte` if you intend to parse binary data, then add
   qualified modules you need (permutation parsing, lexing, expression
   parsing, etc.). `Text.Megaparsec.Lexer` was renamed to
-  `Text.Megaparec.Char.Lexer` because many functions in it has the `Token s
+  `Text.Megaparsec.Char.Lexer` because many functions in it has the `Token s
   ~ Char` constraint. There is also `Text.Megaparsec.Byte.Lexer` now,
   although it has fewer functions.
 
@@ -401,17 +401,17 @@
 
 * Added `notChar` in `Text.Megaparsec.Char`.
 
-* Added `space1` in `Text.Megaprasec.Char`. This parser is like `space` but
+* Added `space1` in `Text.Megaparsec.Char`. This parser is like `space` but
   requires at least one space character to be present to succeed.
 
 * Added new module `Text.Megaparsec.Byte`, which is similar to
   `Text.Megaparsec.Char`, but for token streams of the type `Word8` instead
   of `Char`.
 
-* `integer` was dropped from `Text.Megaparec.Char.Lexer`. Use `decimal`
+* `integer` was dropped from `Text.Megaparsec.Char.Lexer`. Use `decimal`
   instead.
 
-* `number` was dropped from `Text.Megaparec.Char.Lexer`. Use `scientific`
+* `number` was dropped from `Text.Megaparsec.Char.Lexer`. Use `scientific`
   instead.
 
 * `decimal`, `octal`, and `hexadecimal` are now polymorphic in their return
@@ -823,7 +823,7 @@
 ### Built-in combinators
 
 * All built-in combinators in `Text.Megaparsec.Combinator` now work with any
-  instance of `Alternative` (some of them even with `Applicaitve`).
+  instance of `Alternative` (some of them even with `Applicative`).
 
 * Added more powerful `count'` parser. This parser can be told to parse from
   `m` to `n` occurrences of some thing. `count` is defined in terms of
