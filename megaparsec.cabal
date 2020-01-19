@@ -1,7 +1,7 @@
 name:                 megaparsec
 version:              8.0.0
 cabal-version:        1.18
-tested-with:          GHC==8.4.4, GHC==8.6.5, GHC==8.8.1
+tested-with:          GHC==8.4.4, GHC==8.6.5, GHC==8.8.2
 license:              BSD2
 license-file:         LICENSE.md
 author:               Megaparsec contributors,
