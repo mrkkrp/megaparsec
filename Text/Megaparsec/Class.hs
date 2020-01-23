@@ -1,3 +1,9 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 -- |
 -- Module      :  Text.Megaparsec.Class
 -- Copyright   :  © 2015–present Megaparsec contributors
@@ -13,31 +19,25 @@
 -- the full set of primitive parsers.
 --
 -- @since 6.5.0
-
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE TupleSections          #-}
-{-# LANGUAGE UndecidableInstances   #-}
-
 module Text.Megaparsec.Class
-  ( MonadParsec (..) )
+  ( MonadParsec (..),
+  )
 where
 
 import Control.Monad
 import Control.Monad.Identity
+import qualified Control.Monad.RWS.Lazy as L
+import qualified Control.Monad.RWS.Strict as S
 import Control.Monad.Trans
+import qualified Control.Monad.Trans.Reader as L
+import qualified Control.Monad.Trans.State.Lazy as L
+import qualified Control.Monad.Trans.State.Strict as S
+import qualified Control.Monad.Trans.Writer.Lazy as L
+import qualified Control.Monad.Trans.Writer.Strict as S
 import Data.Set (Set)
 import Text.Megaparsec.Error
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
-import qualified Control.Monad.RWS.Lazy            as L
-import qualified Control.Monad.RWS.Strict          as S
-import qualified Control.Monad.Trans.Reader        as L
-import qualified Control.Monad.Trans.State.Lazy    as L
-import qualified Control.Monad.Trans.State.Strict  as S
-import qualified Control.Monad.Trans.Writer.Lazy   as L
-import qualified Control.Monad.Trans.Writer.Strict as S
 
 -- | Type class describing monads that implement the full set of primitive
 -- parsers.
@@ -45,28 +45,23 @@ import qualified Control.Monad.Trans.Writer.Strict as S
 -- __Note__ that the following primitives are “fast” and should be taken
 -- advantage of as much as possible if your aim is a fast parser: 'tokens',
 -- 'takeWhileP', 'takeWhile1P', and 'takeP'.
-
 class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
-
   -- | Stop parsing and report the 'ParseError'. This is the only way to
   -- control position of the error without manipulating parser state
   -- manually.
   --
   -- @since 8.0.0
-
   parseError :: ParseError s e -> m a
 
   -- | The parser @'label' name p@ behaves as parser @p@, but whenever the
   -- parser @p@ fails /without consuming any input/, it replaces names of
   -- “expected” tokens with the name @name@.
-
   label :: String -> m a -> m a
 
   -- | @'hidden' p@ behaves just like parser @p@, but it doesn't show any
   -- “expected” tokens in error message when @p@ fails.
   --
   -- Please use 'hidden' instead of the old @'label' ""@ idiom.
-
   hidden :: m a -> m a
   hidden = label ""
 
@@ -108,7 +103,6 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- However, the examples above demonstrate the idea behind 'try' so well
   -- that it was decided to keep them. You still need to use 'try' when your
   -- alternatives are complex, composite parsers.
-
   try :: m a -> m a
 
   -- | If @p@ in @'lookAhead' p@ succeeds (either consuming input or not)
@@ -116,13 +110,11 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- (parser state is not updated as well). If @p@ fails, 'lookAhead' has no
   -- effect, i.e. it will fail consuming input if @p@ fails consuming input.
   -- Combine with 'try' if this is undesirable.
-
   lookAhead :: m a -> m a
 
   -- | @'notFollowedBy' p@ only succeeds when the parser @p@ fails. This
   -- parser /never consumes/ any input and /never modifies/ parser state. It
   -- can be used to implement the “longest match” rule.
-
   notFollowedBy :: m a -> m ()
 
   -- | @'withRecovery' r p@ allows continue parsing even if parser @p@
@@ -136,11 +128,13 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- error messages.
   --
   -- @since 4.4.0
-
-  withRecovery
-    :: (ParseError s e -> m a) -- ^ How to recover from failure
-    -> m a             -- ^ Original parser
-    -> m a             -- ^ Parser that can recover from failures
+  withRecovery ::
+    -- | How to recover from failure
+    (ParseError s e -> m a) ->
+    -- | Original parser
+    m a ->
+    -- | Parser that can recover from failures
+    m a
 
   -- | @'observing' p@ allows to “observe” failure of the @p@ parser, should
   -- it happen, without actually ending parsing but instead getting the
@@ -150,13 +144,12 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- parser works in any way.
   --
   -- @since 5.1.0
-
-  observing
-    :: m a             -- ^ The parser to run
-    -> m (Either (ParseError s e) a)
+  observing ::
+    -- | The parser to run
+    m a ->
+    m (Either (ParseError s e) a)
 
   -- | This parser only succeeds at the end of input.
-
   eof :: m ()
 
   -- | The parser @'token' test expected@ accepts a token @t@ with result
@@ -172,13 +165,12 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   --
   -- __Note__: type signature of this primitive was changed in the version
   -- /7.0.0/.
-
-  token
-    :: (Token s -> Maybe a)
-       -- ^ Matching function for the token to parse
-    -> Set (ErrorItem (Token s))
-       -- ^ Expected items (in case of an error)
-    -> m a
+  token ::
+    -- | Matching function for the token to parse
+    (Token s -> Maybe a) ->
+    -- | Expected items (in case of an error)
+    Set (ErrorItem (Token s)) ->
+    m a
 
   -- | The parser @'tokens' test chk@ parses a chunk of input @chk@ and
   -- returns it. The supplied predicate @test@ is used to check equality of
@@ -204,13 +196,12 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- with 'tokens'-based parsers, such as 'Text.Megaparsec.Char.string' and
   -- 'Text.Megaparsec.Char.string''. This feature /does not/ affect
   -- performance in any way.
-
-  tokens
-    :: (Tokens s -> Tokens s -> Bool)
-       -- ^ Predicate to check equality of chunks
-    -> Tokens s
-       -- ^ Chunk of input to match against
-    -> m (Tokens s)
+  tokens ::
+    -- | Predicate to check equality of chunks
+    (Tokens s -> Tokens s -> Bool) ->
+    -- | Chunk of input to match against
+    Tokens s ->
+    m (Tokens s)
 
   -- | Parse /zero/ or more tokens for which the supplied predicate holds.
   -- Try to use this as much as possible because for many streams the
@@ -225,22 +216,26 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- The combinator never fails, although it may parse the empty chunk.
   --
   -- @since 6.0.0
-
-  takeWhileP
-    :: Maybe String    -- ^ Name for a single token in the row
-    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
-    -> m (Tokens s)    -- ^ A chunk of matching tokens
+  takeWhileP ::
+    -- | Name for a single token in the row
+    Maybe String ->
+    -- | Predicate to use to test tokens
+    (Token s -> Bool) ->
+    -- | A chunk of matching tokens
+    m (Tokens s)
 
   -- | Similar to 'takeWhileP', but fails if it can't parse at least one
   -- token. Note that the combinator either succeeds or fails without
   -- consuming any input, so 'try' is not necessary with it.
   --
   -- @since 6.0.0
-
-  takeWhile1P
-    :: Maybe String    -- ^ Name for a single token in the row
-    -> (Token s -> Bool) -- ^ Predicate to use to test tokens
-    -> m (Tokens s)    -- ^ A chunk of matching tokens
+  takeWhile1P ::
+    -- | Name for a single token in the row
+    Maybe String ->
+    -- | Predicate to use to test tokens
+    (Token s -> Bool) ->
+    -- | A chunk of matching tokens
+    m (Tokens s)
 
   -- | Extract the specified number of tokens from the input stream and
   -- return them packed as a chunk of stream. If there is not enough tokens
@@ -257,199 +252,206 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- with 'takeP'.
   --
   -- @since 6.0.0
-
-  takeP
-    :: Maybe String    -- ^ Name for a single token in the row
-    -> Int             -- ^ How many tokens to extract
-    -> m (Tokens s)    -- ^ A chunk of matching tokens
+  takeP ::
+    -- | Name for a single token in the row
+    Maybe String ->
+    -- | How many tokens to extract
+    Int ->
+    -- | A chunk of matching tokens
+    m (Tokens s)
 
   -- | Return the full parser state as a 'State' record.
-
   getParserState :: m (State s e)
 
   -- | @'updateParserState' f@ applies the function @f@ to the parser state.
-
   updateParserState :: (State s e -> State s e) -> m ()
 
 ----------------------------------------------------------------------------
 -- Lifting through MTL
 
 instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
-  parseError e               = lift (parseError e)
-  label n       (L.StateT m) = L.StateT $ label n . m
-  try           (L.StateT m) = L.StateT $ try . m
-  lookAhead     (L.StateT m) = L.StateT $ \s ->
+  parseError e = lift (parseError e)
+  label n (L.StateT m) = L.StateT $ label n . m
+  try (L.StateT m) = L.StateT $ try . m
+  lookAhead (L.StateT m) = L.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (L.StateT m) = L.StateT $ \s ->
-    notFollowedBy (fst <$> m s) >> return ((),s)
+    notFollowedBy (fst <$> m s) >> return ((), s)
   withRecovery r (L.StateT m) = L.StateT $ \s ->
     withRecovery (\e -> L.runStateT (r e) s) (m s)
-  observing     (L.StateT m) = L.StateT $ \s ->
+  observing (L.StateT m) = L.StateT $ \s ->
     fixs s <$> observing (m s)
-  eof                        = lift eof
-  token test mt              = lift (token test mt)
-  tokens e ts                = lift (tokens e ts)
-  takeWhileP l f             = lift (takeWhileP l f)
-  takeWhile1P l f            = lift (takeWhile1P l f)
-  takeP l n                  = lift (takeP l n)
-  getParserState             = lift getParserState
-  updateParserState f        = lift (updateParserState f)
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
-  parseError e               = lift (parseError e)
-  label n       (S.StateT m) = S.StateT $ label n . m
-  try           (S.StateT m) = S.StateT $ try . m
-  lookAhead     (S.StateT m) = S.StateT $ \s ->
+  parseError e = lift (parseError e)
+  label n (S.StateT m) = S.StateT $ label n . m
+  try (S.StateT m) = S.StateT $ try . m
+  lookAhead (S.StateT m) = S.StateT $ \s ->
     (,s) . fst <$> lookAhead (m s)
   notFollowedBy (S.StateT m) = S.StateT $ \s ->
-    notFollowedBy (fst <$> m s) >> return ((),s)
+    notFollowedBy (fst <$> m s) >> return ((), s)
   withRecovery r (S.StateT m) = S.StateT $ \s ->
     withRecovery (\e -> S.runStateT (r e) s) (m s)
-  observing     (S.StateT m) = S.StateT $ \s ->
+  observing (S.StateT m) = S.StateT $ \s ->
     fixs s <$> observing (m s)
-  eof                        = lift eof
-  token test mt              = lift (token test mt)
-  tokens e ts                = lift (tokens e ts)
-  takeWhileP l f             = lift (takeWhileP l f)
-  takeWhile1P l f            = lift (takeWhile1P l f)
-  takeP l n                  = lift (takeP l n)
-  getParserState             = lift getParserState
-  updateParserState f        = lift (updateParserState f)
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
-  parseError e                = lift (parseError e)
-  label n       (L.ReaderT m) = L.ReaderT $ label n . m
-  try           (L.ReaderT m) = L.ReaderT $ try . m
-  lookAhead     (L.ReaderT m) = L.ReaderT $ lookAhead . m
+  parseError e = lift (parseError e)
+  label n (L.ReaderT m) = L.ReaderT $ label n . m
+  try (L.ReaderT m) = L.ReaderT $ try . m
+  lookAhead (L.ReaderT m) = L.ReaderT $ lookAhead . m
   notFollowedBy (L.ReaderT m) = L.ReaderT $ notFollowedBy . m
   withRecovery r (L.ReaderT m) = L.ReaderT $ \s ->
     withRecovery (\e -> L.runReaderT (r e) s) (m s)
-  observing     (L.ReaderT m) = L.ReaderT $ observing . m
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift (tokens e ts)
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift (updateParserState f)
+  observing (L.ReaderT m) = L.ReaderT $ observing . m
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
-  parseError e                = lift (parseError e)
-  label n       (L.WriterT m) = L.WriterT $ label n m
-  try           (L.WriterT m) = L.WriterT $ try m
-  lookAhead     (L.WriterT m) = L.WriterT $
-    (,mempty) . fst <$> lookAhead m
-  notFollowedBy (L.WriterT m) = L.WriterT $
-    (,mempty) <$> notFollowedBy (fst <$> m)
-  withRecovery r (L.WriterT m) = L.WriterT $
-    withRecovery (L.runWriterT . r) m
-  observing     (L.WriterT m) = L.WriterT $
-    fixs mempty <$> observing m
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift (tokens e ts)
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift (updateParserState f)
+  parseError e = lift (parseError e)
+  label n (L.WriterT m) = L.WriterT $ label n m
+  try (L.WriterT m) = L.WriterT $ try m
+  lookAhead (L.WriterT m) =
+    L.WriterT $
+      (,mempty) . fst <$> lookAhead m
+  notFollowedBy (L.WriterT m) =
+    L.WriterT $
+      (,mempty) <$> notFollowedBy (fst <$> m)
+  withRecovery r (L.WriterT m) =
+    L.WriterT $
+      withRecovery (L.runWriterT . r) m
+  observing (L.WriterT m) =
+    L.WriterT $
+      fixs mempty <$> observing m
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
-  parseError e                = lift (parseError e)
-  label n       (S.WriterT m) = S.WriterT $ label n m
-  try           (S.WriterT m) = S.WriterT $ try m
-  lookAhead     (S.WriterT m) = S.WriterT $
-    (,mempty) . fst <$> lookAhead m
-  notFollowedBy (S.WriterT m) = S.WriterT $
-    (,mempty) <$> notFollowedBy (fst <$> m)
-  withRecovery r (S.WriterT m) = S.WriterT $
-    withRecovery (S.runWriterT . r) m
-  observing     (S.WriterT m) = S.WriterT $
-    fixs mempty <$> observing m
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift (tokens e ts)
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift (updateParserState f)
+  parseError e = lift (parseError e)
+  label n (S.WriterT m) = S.WriterT $ label n m
+  try (S.WriterT m) = S.WriterT $ try m
+  lookAhead (S.WriterT m) =
+    S.WriterT $
+      (,mempty) . fst <$> lookAhead m
+  notFollowedBy (S.WriterT m) =
+    S.WriterT $
+      (,mempty) <$> notFollowedBy (fst <$> m)
+  withRecovery r (S.WriterT m) =
+    S.WriterT $
+      withRecovery (S.runWriterT . r) m
+  observing (S.WriterT m) =
+    S.WriterT $
+      fixs mempty <$> observing m
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 -- | @since 5.2.0
-
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
-  parseError e                = lift (parseError e)
-  label n          (L.RWST m) = L.RWST $ \r s -> label n (m r s)
-  try              (L.RWST m) = L.RWST $ \r s -> try (m r s)
-  lookAhead        (L.RWST m) = L.RWST $ \r s -> do
-    (x,_,_) <- lookAhead (m r s)
-    return (x,s,mempty)
-  notFollowedBy    (L.RWST m) = L.RWST $ \r s -> do
+  parseError e = lift (parseError e)
+  label n (L.RWST m) = L.RWST $ \r s -> label n (m r s)
+  try (L.RWST m) = L.RWST $ \r s -> try (m r s)
+  lookAhead (L.RWST m) = L.RWST $ \r s -> do
+    (x, _, _) <- lookAhead (m r s)
+    return (x, s, mempty)
+  notFollowedBy (L.RWST m) = L.RWST $ \r s -> do
     notFollowedBy (void $ m r s)
-    return ((),s,mempty)
-  withRecovery   n (L.RWST m) = L.RWST $ \r s ->
+    return ((), s, mempty)
+  withRecovery n (L.RWST m) = L.RWST $ \r s ->
     withRecovery (\e -> L.runRWST (n e) r s) (m r s)
-  observing        (L.RWST m) = L.RWST $ \r s ->
+  observing (L.RWST m) = L.RWST $ \r s ->
     fixs' s <$> observing (m r s)
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift (tokens e ts)
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift (updateParserState f)
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 -- | @since 5.2.0
-
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
-  parseError e                = lift (parseError e)
-  label n          (S.RWST m) = S.RWST $ \r s -> label n (m r s)
-  try              (S.RWST m) = S.RWST $ \r s -> try (m r s)
-  lookAhead        (S.RWST m) = S.RWST $ \r s -> do
-    (x,_,_) <- lookAhead (m r s)
-    return (x,s,mempty)
-  notFollowedBy    (S.RWST m) = S.RWST $ \r s -> do
+  parseError e = lift (parseError e)
+  label n (S.RWST m) = S.RWST $ \r s -> label n (m r s)
+  try (S.RWST m) = S.RWST $ \r s -> try (m r s)
+  lookAhead (S.RWST m) = S.RWST $ \r s -> do
+    (x, _, _) <- lookAhead (m r s)
+    return (x, s, mempty)
+  notFollowedBy (S.RWST m) = S.RWST $ \r s -> do
     notFollowedBy (void $ m r s)
-    return ((),s,mempty)
-  withRecovery   n (S.RWST m) = S.RWST $ \r s ->
+    return ((), s, mempty)
+  withRecovery n (S.RWST m) = S.RWST $ \r s ->
     withRecovery (\e -> S.runRWST (n e) r s) (m r s)
-  observing        (S.RWST m) = S.RWST $ \r s ->
+  observing (S.RWST m) = S.RWST $ \r s ->
     fixs' s <$> observing (m r s)
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift (tokens e ts)
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift (updateParserState f)
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift (tokens e ts)
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift (updateParserState f)
 
 instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
-  parseError e                = lift (parseError e)
-  label n       (IdentityT m) = IdentityT $ label n m
-  try                         = IdentityT . try . runIdentityT
-  lookAhead     (IdentityT m) = IdentityT $ lookAhead m
+  parseError e = lift (parseError e)
+  label n (IdentityT m) = IdentityT $ label n m
+  try = IdentityT . try . runIdentityT
+  lookAhead (IdentityT m) = IdentityT $ lookAhead m
   notFollowedBy (IdentityT m) = IdentityT $ notFollowedBy m
-  withRecovery r (IdentityT m) = IdentityT $
-    withRecovery (runIdentityT . r) m
-  observing     (IdentityT m) = IdentityT $ observing m
-  eof                         = lift eof
-  token test mt               = lift (token test mt)
-  tokens e ts                 = lift $ tokens e ts
-  takeWhileP l f              = lift (takeWhileP l f)
-  takeWhile1P l f             = lift (takeWhile1P l f)
-  takeP l n                   = lift (takeP l n)
-  getParserState              = lift getParserState
-  updateParserState f         = lift $ updateParserState f
+  withRecovery r (IdentityT m) =
+    IdentityT $
+      withRecovery (runIdentityT . r) m
+  observing (IdentityT m) = IdentityT $ observing m
+  eof = lift eof
+  token test mt = lift (token test mt)
+  tokens e ts = lift $ tokens e ts
+  takeWhileP l f = lift (takeWhileP l f)
+  takeWhile1P l f = lift (takeWhile1P l f)
+  takeP l n = lift (takeP l n)
+  getParserState = lift getParserState
+  updateParserState f = lift $ updateParserState f
 
 fixs :: s -> Either a (b, s) -> (Either a b, s)
-fixs s (Left a)       = (Left a, s)
+fixs s (Left a) = (Left a, s)
 fixs _ (Right (b, s)) = (Right b, s)
 {-# INLINE fixs #-}
 
 fixs' :: Monoid w => s -> Either a (b, s, w) -> (Either a b, s, w)
-fixs' s (Left a)        = (Left a, s, mempty)
-fixs' _ (Right (b,s,w)) = (Right b, s, w)
+fixs' s (Left a) = (Left a, s, mempty)
+fixs' _ (Right (b, s, w)) = (Right b, s, w)
 {-# INLINE fixs' #-}

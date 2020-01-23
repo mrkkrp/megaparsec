@@ -1,3 +1,11 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 -- |
 -- Module      :  Text.Megaparsec
 -- Copyright   :  © 2015–present Megaparsec contributors
@@ -43,81 +51,79 @@
 -- like “Type variable @e0@ is ambiguous …”, you need to give an explicit
 -- signature to your parser to resolve the ambiguity. It's a good idea to
 -- provide type signatures for all top-level definitions.
-
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
-
 module Text.Megaparsec
   ( -- * Re-exports
     -- $reexports
-    module Text.Megaparsec.Pos
-  , module Text.Megaparsec.Error
-  , module Text.Megaparsec.Stream
-  , module Control.Monad.Combinators
+    module Text.Megaparsec.Pos,
+    module Text.Megaparsec.Error,
+    module Text.Megaparsec.Stream,
+    module Control.Monad.Combinators,
+
     -- * Data types
-  , State (..)
-  , PosState (..)
-  , Parsec
-  , ParsecT
+    State (..),
+    PosState (..),
+    Parsec,
+    ParsecT,
+
     -- * Running parser
-  , parse
-  , parseMaybe
-  , parseTest
-  , runParser
-  , runParser'
-  , runParserT
-  , runParserT'
+    parse,
+    parseMaybe,
+    parseTest,
+    runParser,
+    runParser',
+    runParserT,
+    runParserT',
+
     -- * Primitive combinators
-  , MonadParsec (..)
+    MonadParsec (..),
+
     -- * Signaling parse errors
     -- $parse-errors
-  , failure
-  , fancyFailure
-  , unexpected
-  , customFailure
-  , region
-  , registerParseError
-  , registerFailure
-  , registerFancyFailure
+    failure,
+    fancyFailure,
+    unexpected,
+    customFailure,
+    region,
+    registerParseError,
+    registerFailure,
+    registerFancyFailure,
+
     -- * Derivatives of primitive combinators
-  , single
-  , satisfy
-  , anySingle
-  , anySingleBut
-  , oneOf
-  , noneOf
-  , chunk
-  , (<?>)
-  , match
-  , takeRest
-  , atEnd
+    single,
+    satisfy,
+    anySingle,
+    anySingleBut,
+    oneOf,
+    noneOf,
+    chunk,
+    (<?>),
+    match,
+    takeRest,
+    atEnd,
+
     -- * Parser state combinators
-  , getInput
-  , setInput
-  , getSourcePos
-  , getOffset
-  , setOffset
-  , setParserState )
+    getInput,
+    setInput,
+    getSourcePos,
+    getOffset,
+    setOffset,
+    setParserState,
+  )
 where
 
 import Control.Monad.Combinators
 import Control.Monad.Identity
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
 import Data.Set (Set)
+import qualified Data.Set as E
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
 import Text.Megaparsec.Internal
 import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as E
 
 -- $reexports
 --
@@ -149,7 +155,6 @@ import qualified Data.Set as E
 
 -- | 'Parsec' is a non-transformer variant of the more general 'ParsecT'
 -- monad transformer.
-
 type Parsec e s = ParsecT e s Identity
 
 ----------------------------------------------------------------------------
@@ -168,12 +173,14 @@ type Parsec e s = ParsecT e s Identity
 -- >          Right xs -> print (sum xs)
 -- >
 -- > numbers = decimal `sepBy` char ','
-
-parse
-  :: Parsec e s a -- ^ Parser to run
-  -> String       -- ^ Name of source file
-  -> s            -- ^ Input for parser
-  -> Either (ParseErrorBundle s e) a
+parse ::
+  -- | Parser to run
+  Parsec e s a ->
+  -- | Name of source file
+  String ->
+  -- | Input for parser
+  s ->
+  Either (ParseErrorBundle s e) a
 parse = runParser
 
 -- | @'parseMaybe' p input@ runs the parser @p@ on @input@ and returns the
@@ -185,26 +192,33 @@ parse = runParser
 -- error messages (and thus file names) are not important and entire input
 -- should be parsed. For example, it can be used when parsing of a single
 -- number according to a specification of its format is desired.
-
-parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
+parseMaybe ::
+  (Ord e, Stream s) =>
+  -- | Parser to run
+  Parsec e s a ->
+  -- | Input for parser
+  s ->
+  Maybe a
 parseMaybe p s =
   case parse (p <* eof) "" s of
-    Left  _ -> Nothing
+    Left _ -> Nothing
     Right x -> Just x
 
 -- | The expression @'parseTest' p input@ applies the parser @p@ against the
 -- input @input@ and prints the result to stdout. Useful for testing.
-
-parseTest :: ( ShowErrorComponent e
-             , Show a
-             , Stream s
-             )
-  => Parsec e s a -- ^ Parser to run
-  -> s            -- ^ Input for parser
-  -> IO ()
+parseTest ::
+  ( ShowErrorComponent e,
+    Show a,
+    Stream s
+  ) =>
+  -- | Parser to run
+  Parsec e s a ->
+  -- | Input for parser
+  s ->
+  IO ()
 parseTest p input =
   case parse p "" input of
-    Left  e -> putStr (errorBundlePretty e)
+    Left e -> putStr (errorBundlePretty e)
     Right x -> print x
 
 -- | @'runParser' p file input@ runs parser @p@ on the input stream of
@@ -213,12 +227,14 @@ parseTest p input =
 -- 'ParseErrorBundle' ('Left') or a value of type @a@ ('Right').
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
-
-runParser
-  :: Parsec e s a -- ^ Parser to run
-  -> String     -- ^ Name of source file
-  -> s          -- ^ Input for parser
-  -> Either (ParseErrorBundle s e) a
+runParser ::
+  -- | Parser to run
+  Parsec e s a ->
+  -- | Name of source file
+  String ->
+  -- | Input for parser
+  s ->
+  Either (ParseErrorBundle s e) a
 runParser p name s = snd $ runParser' p (initialState name s)
 
 -- | The function is similar to 'runParser' with the difference that it
@@ -227,11 +243,12 @@ runParser p name s = snd $ runParser' p (initialState name s)
 -- most general way to run a parser over the 'Identity' monad.
 --
 -- @since 4.2.0
-
-runParser'
-  :: Parsec e s a -- ^ Parser to run
-  -> State s e    -- ^ Initial state
-  -> (State s e, Either (ParseErrorBundle s e) a)
+runParser' ::
+  -- | Parser to run
+  Parsec e s a ->
+  -- | Initial state
+  State s e ->
+  (State s e, Either (ParseErrorBundle s e) a)
 runParser' p = runIdentity . runParserT' p
 
 -- | @'runParserT' p file input@ runs parser @p@ on the input list of tokens
@@ -239,12 +256,15 @@ runParser' p = runIdentity . runParserT' p
 -- messages and may be the empty string. Returns a computation in the
 -- underlying monad @m@ that returns either a 'ParseErrorBundle' ('Left') or
 -- a value of type @a@ ('Right').
-
-runParserT :: Monad m
-  => ParsecT e s m a -- ^ Parser to run
-  -> String        -- ^ Name of source file
-  -> s             -- ^ Input for parser
-  -> m (Either (ParseErrorBundle s e) a)
+runParserT ::
+  Monad m =>
+  -- | Parser to run
+  ParsecT e s m a ->
+  -- | Name of source file
+  String ->
+  -- | Input for parser
+  s ->
+  m (Either (ParseErrorBundle s e) a)
 runParserT p name s = snd <$> runParserT' p (initialState name s)
 
 -- | This function is similar to 'runParserT', but like 'runParser'' it
@@ -252,18 +272,21 @@ runParserT p name s = snd <$> runParserT' p (initialState name s)
 -- run a parser.
 --
 -- @since 4.2.0
-
-runParserT' :: Monad m
-  => ParsecT e s m a -- ^ Parser to run
-  -> State s e     -- ^ Initial state
-  -> m (State s e, Either (ParseErrorBundle s e) a)
+runParserT' ::
+  Monad m =>
+  -- | Parser to run
+  ParsecT e s m a ->
+  -- | Initial state
+  State s e ->
+  m (State s e, Either (ParseErrorBundle s e) a)
 runParserT' p s = do
   (Reply s' _ result) <- runParsecT p s
-  let toBundle es = ParseErrorBundle
-        { bundleErrors =
-            NE.sortWith errorOffset es
-        , bundlePosState = statePosState s
-        }
+  let toBundle es =
+        ParseErrorBundle
+          { bundleErrors =
+              NE.sortWith errorOffset es,
+            bundlePosState = statePosState s
+          }
   return $ case result of
     OK x ->
       case NE.nonEmpty (stateParseErrors s') of
@@ -273,20 +296,21 @@ runParserT' p s = do
       (s', Left (toBundle (e :| stateParseErrors s')))
 
 -- | Given name of source file and input construct initial state for parser.
-
 initialState :: String -> s -> State s e
-initialState name s = State
-  { stateInput  = s
-  , stateOffset = 0
-  , statePosState = PosState
-    { pstateInput = s
-    , pstateOffset = 0
-    , pstateSourcePos = initialPos name
-    , pstateTabWidth = defaultTabWidth
-    , pstateLinePrefix = ""
+initialState name s =
+  State
+    { stateInput = s,
+      stateOffset = 0,
+      statePosState =
+        PosState
+          { pstateInput = s,
+            pstateOffset = 0,
+            pstateSourcePos = initialPos name,
+            pstateTabWidth = defaultTabWidth,
+            pstateLinePrefix = ""
+          },
+      stateParseErrors = []
     }
-  , stateParseErrors = []
-  }
 
 ----------------------------------------------------------------------------
 -- Signaling parse errors
@@ -301,12 +325,13 @@ initialState name s = State
 -- | Stop parsing and report a trivial 'ParseError'.
 --
 -- @since 6.0.0
-
-failure
-  :: MonadParsec e s m
-  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
-  -> Set (ErrorItem (Token s)) -- ^ Expected items
-  -> m a
+failure ::
+  MonadParsec e s m =>
+  -- | Unexpected item (if any)
+  Maybe (ErrorItem (Token s)) ->
+  -- | Expected items
+  Set (ErrorItem (Token s)) ->
+  m a
 failure us ps = do
   o <- getOffset
   parseError (TrivialError o us ps)
@@ -316,11 +341,11 @@ failure us ps = do
 -- parse error, see 'Text.Megaparsec.customFailure'.
 --
 -- @since 6.0.0
-
-fancyFailure
-  :: MonadParsec e s m
-  => Set (ErrorFancy e) -- ^ Fancy error components
-  -> m a
+fancyFailure ::
+  MonadParsec e s m =>
+  -- | Fancy error components
+  Set (ErrorFancy e) ->
+  m a
 fancyFailure xs = do
   o <- getOffset
   parseError (FancyError o xs)
@@ -330,7 +355,6 @@ fancyFailure xs = do
 -- about unexpected item @item@ without consuming any input.
 --
 -- > unexpected item = failure (Just item) Set.empty
-
 unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
 unexpected item = failure (Just item) E.empty
 {-# INLINE unexpected #-}
@@ -341,7 +365,6 @@ unexpected item = failure (Just item) E.empty
 -- > customFailure = fancyFailure . Set.singleton . ErrorCustom
 --
 -- @since 6.3.0
-
 customFailure :: MonadParsec e s m => e -> m a
 customFailure = fancyFailure . E.singleton . ErrorCustom
 {-# INLINE customFailure #-}
@@ -354,19 +377,20 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 -- “restored” on the way out of 'region'.
 --
 -- @since 5.3.0
-
-region :: MonadParsec e s m
-  => (ParseError s e -> ParseError s e)
-     -- ^ How to process 'ParseError's
-  -> m a               -- ^ The “region” that the processing applies to
-  -> m a
+region ::
+  MonadParsec e s m =>
+  -- | How to process 'ParseError's
+  (ParseError s e -> ParseError s e) ->
+  -- | The “region” that the processing applies to
+  m a ->
+  m a
 region f m = do
   deSoFar <- stateParseErrors <$> getParserState
   updateParserState $ \s ->
-    s { stateParseErrors = [] }
+    s {stateParseErrors = []}
   r <- observing m
   updateParserState $ \s ->
-    s { stateParseErrors = (f <$> stateParseErrors s) ++ deSoFar }
+    s {stateParseErrors = (f <$> stateParseErrors s) ++ deSoFar}
   case r of
     Left err -> parseError (f err)
     Right x -> return x
@@ -380,21 +404,21 @@ region f m = do
 -- at once.
 --
 -- @since 8.0.0
-
 registerParseError :: MonadParsec e s m => ParseError s e -> m ()
 registerParseError e = updateParserState $ \s ->
-  s { stateParseErrors = e : stateParseErrors s }
+  s {stateParseErrors = e : stateParseErrors s}
 {-# INLINE registerParseError #-}
 
 -- | Like 'failure', but for delayed 'ParseError's.
 --
 -- @since 8.0.0
-
-registerFailure
-  :: MonadParsec e s m
-  => Maybe (ErrorItem (Token s)) -- ^ Unexpected item (if any)
-  -> Set (ErrorItem (Token s)) -- ^ Expected items
-  -> m ()
+registerFailure ::
+  MonadParsec e s m =>
+  -- | Unexpected item (if any)
+  Maybe (ErrorItem (Token s)) ->
+  -- | Expected items
+  Set (ErrorItem (Token s)) ->
+  m ()
 registerFailure us ps = do
   o <- getOffset
   registerParseError (TrivialError o us ps)
@@ -403,11 +427,11 @@ registerFailure us ps = do
 -- | Like 'fancyFailure', but for delayed 'ParseError's.
 --
 -- @since 8.0.0
-
-registerFancyFailure
-  :: MonadParsec e s m
-  => Set (ErrorFancy e) -- ^ Fancy error components
-  -> m ()
+registerFancyFailure ::
+  MonadParsec e s m =>
+  -- | Fancy error components
+  Set (ErrorFancy e) ->
+  m ()
 registerFancyFailure xs = do
   o <- getOffset
   registerParseError (FancyError o xs)
@@ -424,14 +448,15 @@ registerFancyFailure xs = do
 -- 'Text.Megaparsec.Char.char'.
 --
 -- @since 7.0.0
-
-single :: MonadParsec e s m
-  => Token s           -- ^ Token to match
-  -> m (Token s)
+single ::
+  MonadParsec e s m =>
+  -- | Token to match
+  Token s ->
+  m (Token s)
 single t = token testToken expected
   where
     testToken x = if x == t then Just x else Nothing
-    expected    = E.singleton (Tokens (t:|[]))
+    expected = E.singleton (Tokens (t :| []))
 {-# INLINE single #-}
 
 -- | The parser @'satisfy' f@ succeeds for any token for which the supplied
@@ -443,10 +468,11 @@ single t = token testToken expected
 -- See also: 'anySingle', 'anySingleBut', 'oneOf', 'noneOf'.
 --
 -- @since 7.0.0
-
-satisfy :: MonadParsec e s m
-  => (Token s -> Bool) -- ^ Predicate to apply
-  -> m (Token s)
+satisfy ::
+  MonadParsec e s m =>
+  -- | Predicate to apply
+  (Token s -> Bool) ->
+  m (Token s)
 satisfy f = token testChar E.empty
   where
     testChar x = if f x then Just x else Nothing
@@ -460,7 +486,6 @@ satisfy f = token testChar E.empty
 -- See also: 'satisfy', 'anySingleBut'.
 --
 -- @since 7.0.0
-
 anySingle :: MonadParsec e s m => m (Token s)
 anySingle = satisfy (const True)
 {-# INLINE anySingle #-}
@@ -473,10 +498,11 @@ anySingle = satisfy (const True)
 -- See also: 'single', 'anySingle', 'satisfy'.
 --
 -- @since 7.0.0
-
-anySingleBut :: MonadParsec e s m
-  => Token s           -- ^ Token we should not match
-  -> m (Token s)
+anySingleBut ::
+  MonadParsec e s m =>
+  -- | Token we should not match
+  Token s ->
+  m (Token s)
 anySingleBut t = satisfy (/= t)
 {-# INLINE anySingleBut #-}
 
@@ -498,10 +524,11 @@ anySingleBut t = satisfy (/= t)
 -- > quoteSlow = oneOf "'\""
 --
 -- @since 7.0.0
-
-oneOf :: (Foldable f, MonadParsec e s m)
-  => f (Token s)       -- ^ Collection of matching tokens
-  -> m (Token s)
+oneOf ::
+  (Foldable f, MonadParsec e s m) =>
+  -- | Collection of matching tokens
+  f (Token s) ->
+  m (Token s)
 oneOf cs = satisfy (`elem` cs)
 {-# INLINE oneOf #-}
 
@@ -519,10 +546,11 @@ oneOf cs = satisfy (`elem` cs)
 -- because it's faster.
 --
 -- @since 7.0.0
-
-noneOf :: (Foldable f, MonadParsec e s m)
-  => f (Token s)       -- ^ Collection of taken we should not match
-  -> m (Token s)
+noneOf ::
+  (Foldable f, MonadParsec e s m) =>
+  -- | Collection of taken we should not match
+  f (Token s) ->
+  m (Token s)
 noneOf cs = satisfy (`notElem` cs)
 {-# INLINE noneOf #-}
 
@@ -534,15 +562,15 @@ noneOf cs = satisfy (`notElem` cs)
 -- 'Text.Megaparsec.Byte.string'.
 --
 -- @since 7.0.0
-
-chunk :: MonadParsec e s m
-  => Tokens s          -- ^ Chunk to match
-  -> m (Tokens s)
+chunk ::
+  MonadParsec e s m =>
+  -- | Chunk to match
+  Tokens s ->
+  m (Tokens s)
 chunk = tokens (==)
 {-# INLINE chunk #-}
 
 -- | A synonym for 'label' in the form of an operator.
-
 infix 0 <?>
 
 (<?>) :: MonadParsec e s m => m a -> String -> m a
@@ -555,12 +583,11 @@ infix 0 <?>
 -- manually in the argument parser, prepare for troubles.
 --
 -- @since 5.3.0
-
 match :: MonadParsec e s m => m a -> m (Tokens s, a)
 match p = do
-  o  <- getOffset
-  s  <- getInput
-  r  <- p
+  o <- getOffset
+  s <- getInput
+  r <- p
   o' <- getOffset
   -- NOTE The 'fromJust' call here should never fail because if the stream
   -- is empty before 'p' (the only case when 'takeN_' can return 'Nothing'
@@ -576,7 +603,6 @@ match p = do
 -- > takeRest = takeWhileP Nothing (const True)
 --
 -- @since 6.0.0
-
 takeRest :: MonadParsec e s m => m (Tokens s)
 takeRest = takeWhileP Nothing (const True)
 {-# INLINE takeRest #-}
@@ -586,7 +612,6 @@ takeRest = takeWhileP Nothing (const True)
 -- > atEnd = option False (True <$ hidden eof)
 --
 -- @since 6.0.0
-
 atEnd :: MonadParsec e s m => m Bool
 atEnd = option False (True <$ hidden eof)
 {-# INLINE atEnd #-}
@@ -595,13 +620,11 @@ atEnd = option False (True <$ hidden eof)
 -- Parser state combinators
 
 -- | Return the current input.
-
 getInput :: MonadParsec e s m => m s
 getInput = stateInput <$> getParserState
 {-# INLINE getInput #-}
 
 -- | @'setInput' input@ continues parsing with @input@.
-
 setInput :: MonadParsec e s m => s -> m ()
 setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 {-# INLINE setInput #-}
@@ -615,12 +638,11 @@ setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 -- abuses the library.
 --
 -- @since 7.0.0
-
 getSourcePos :: MonadParsec e s m => m SourcePos
 getSourcePos = do
   st <- getParserState
   let pst = reachOffsetNoLine (stateOffset st) (statePosState st)
-  setParserState st { statePosState = pst }
+  setParserState st {statePosState = pst}
   return (pstateSourcePos pst)
 {-# INLINE getSourcePos #-}
 
@@ -629,7 +651,6 @@ getSourcePos = do
 -- See also: 'setOffset'.
 --
 -- @since 7.0.0
-
 getOffset :: MonadParsec e s m => m Int
 getOffset = stateOffset <$> getParserState
 {-# INLINE getOffset #-}
@@ -639,7 +660,6 @@ getOffset = stateOffset <$> getParserState
 -- See also: 'getOffset'.
 --
 -- @since 7.0.0
-
 setOffset :: MonadParsec e s m => Int -> m ()
 setOffset o = updateParserState $ \(State s _ pst de) ->
   State s o pst de
@@ -648,7 +668,6 @@ setOffset o = updateParserState $ \(State s _ pst de) ->
 -- | @'setParserState' st@ sets the parser state to @st@.
 --
 -- See also: 'getParserState', 'updateParserState'.
-
 setParserState :: MonadParsec e s m => State s e -> m ()
 setParserState st = updateParserState (const st)
 {-# INLINE setParserState #-}
