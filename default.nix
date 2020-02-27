@@ -58,31 +58,21 @@ let
     # does not contain an executable nor a library, so its install phase
     # normally fails. We want to build it and run the tests anyway, so we
     # have to do these manipulations.
-    "parser-combinators-tests" = doJailbreak (pkgs.haskell.lib.dontHaddock
-      (patch
-        (super.parser-combinators-tests.overrideAttrs (drv: {
-          installPhase = "mkdir $out";
-          broken = false;
-        }))
-        ./nix/patches/parser-combinators-tests.patch));
-    "modern-uri" = patch (doBenchmark super.modern-uri) ./nix/patches/modern-uri.patch;
-    "mmark" = doJailbreak (doBenchmark (patch super.mmark ./nix/patches/mmark.patch));
-    "parsers-bench" = doJailbreak (doBenchmark
-      (super.callCabal2nix "parsers-bench" parsersBenchSource { }));
-    "hspec-megaparsec" = doJailbreak
-      (patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch);
-    "dhall" = doJailbreak
-      (patch super.dhall ./nix/patches/dhall.patch);
-    "idris" = doJailbreak
-      (patch super.idris ./nix/patches/idris.patch);
-    "hledger-lib" = doJailbreak
-      (patch super.hledger-lib ./nix/patches/hledger-lib.patch);
-    "hledger" = doJailbreak super.hledger;
-    "cue-sheet" = doJailbreak super.cue-sheet;
-    "cassava-megaparsec" = doJailbreak super.cassava-megaparsec;
-    "language-puppet" = doJailbreak super.language-puppet;
-    "stache" = doJailbreak super.stache;
-    "tomland" = doJailbreak super.tomland;
+    "parser-combinators-tests" = pkgs.haskell.lib.dontHaddock
+      (super.parser-combinators-tests_1_2_1.overrideAttrs (drv: {
+        installPhase = "mkdir $out";
+        broken = false;
+      }));
+    "parser-combinators" = super.parser-combinators_1_2_1;
+    "modern-uri" = doBenchmark super.modern-uri;
+    "mmark" = doBenchmark super.mmark_0_0_7_2;
+    "parsers-bench" = doBenchmark
+      (super.callCabal2nix "parsers-bench" parsersBenchSource { });
+    "hspec-megaparsec" = super.hspec-megaparsec_2_1_0;
+    "dhall" = super.dhall_1_29_0;
+    "idris" = doJailbreak (patch super.idris ./nix/patches/idris.patch);
+    "stache" = super.stache_2_1_0;
+    "tomland" = super.tomland_1_2_1_0;
   };
 
   updatedPkgs = pkgs // {
@@ -113,7 +103,7 @@ in {
   # Dependent packages of interest:
   deps = pkgs.recurseIntoAttrs {
     inherit (haskellPackages)
-      cachix
+      # cachix # doesn't build with recent enough dhall
       cassava-megaparsec
       cue-sheet
       dhall
