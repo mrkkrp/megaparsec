@@ -21,7 +21,7 @@ flag dev
 
 library
   hs-source-dirs:     src
-  build-depends:      QuickCheck   >= 2.10  && < 2.14
+  build-depends:      QuickCheck   >= 2.10  && < 2.15
                     , base         >= 4.11  && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , containers   >= 0.5   && < 0.7
@@ -59,7 +59,7 @@ test-suite tests
                     , Text.Megaparsec.PosSpec
                     , Text.Megaparsec.StreamSpec
                     , Text.MegaparsecSpec
-  build-depends:      QuickCheck   >= 2.10  && < 2.14
+  build-depends:      QuickCheck   >= 2.10  && < 2.15
                     , base         >= 4.11  && < 5.0
                     , bytestring   >= 0.2   && < 0.11
                     , case-insensitive >= 1.2 && < 1.3
