@@ -1,18 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module ParsersBench.Json.Common
-  ( Result (..)
-  , Object
-  , Array
-  , Value (..) )
+  ( Result (..),
+    Object,
+    Array,
+    Value (..),
+  )
 where
 
 import Control.DeepSeq
+import qualified Data.HashMap.Strict as H
 import Data.Scientific (Scientific)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics
-import qualified Data.HashMap.Strict as H
 
 data Result a
   = Error String
@@ -25,10 +26,10 @@ type Array = Vector Value
 
 data Value
   = Object !Object
-  | Array  !Array
+  | Array !Array
   | String !Text
   | Number !Scientific
-  | Bool   !Bool
+  | Bool !Bool
   | Null
   deriving (Eq, Show, Generic)
 

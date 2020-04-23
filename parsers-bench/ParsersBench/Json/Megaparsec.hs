@@ -1,22 +1,23 @@
-{-# LANGUAGE CPP               #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module ParsersBench.Json.Megaparsec
-  ( parseJson )
+  ( parseJson,
+  )
 where
 
 import Control.Applicative
 import Data.ByteString (ByteString)
+import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
+import qualified Data.Text.Encoding as TE
 import Data.Vector (Vector)
+import qualified Data.Vector as V
 import Data.Void
 import Data.Word (Word8)
 import ParsersBench.Json.Common
 import Text.Megaparsec
 import Text.Megaparsec.Byte
-import qualified Data.HashMap.Strict        as H
-import qualified Data.Text.Encoding         as TE
-import qualified Data.Vector                as V
 import qualified Text.Megaparsec.Byte.Lexer as L
 
 type Parser = Parsec Void ByteString
@@ -82,7 +83,7 @@ commaSeparated item endByte = do
       v <- item <* space
       ch <- char COMMA <|> char endByte
       if ch == COMMA
-        then space >> (v:) <$> loop
+        then space >> (v :) <$> loop
         else return [v]
 {-# INLINE commaSeparated #-}
 
@@ -91,11 +92,11 @@ value = do
   w <- lookAhead anySingle
   case w of
     DOUBLE_QUOTE -> anySingle *> (String <$> jstring_)
-    OPEN_CURLY   -> anySingle *> object_
-    OPEN_SQUARE  -> anySingle *> array_
-    C_f          -> Bool False <$ string "false"
-    C_t          -> Bool True  <$ string "true"
-    C_n          -> string "null" *> pure Null
+    OPEN_CURLY -> anySingle *> object_
+    OPEN_SQUARE -> anySingle *> array_
+    C_f -> Bool False <$ string "false"
+    C_t -> Bool True <$ string "true"
+    C_n -> string "null" *> pure Null
     _
       | w >= C_0 && w <= C_9 || w == C_MINUS -> Number <$> L.scientific
       | otherwise -> fail "not a valid json value"
@@ -104,6 +105,7 @@ jstring :: Parser Text
 jstring = char DOUBLE_QUOTE *> jstring_
 
 jstring_ :: Parser Text
-jstring_ = TE.decodeUtf8 <$>
-  takeWhileP (Just "string char") (/= DOUBLE_QUOTE) <* char DOUBLE_QUOTE
+jstring_ =
+  TE.decodeUtf8
+    <$> takeWhileP (Just "string char") (/= DOUBLE_QUOTE) <* char DOUBLE_QUOTE
 {-# INLINE jstring_ #-}

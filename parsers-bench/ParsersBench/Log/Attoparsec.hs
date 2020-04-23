@@ -1,10 +1,10 @@
 -- Mostly stolen from:
 -- https://www.schoolofhaskell.com/school/starting-with-haskell/libraries-and-frameworks/text-manipulation/attoparsec
-
 {-# LANGUAGE OverloadedStrings #-}
 
 module ParsersBench.Log.Attoparsec
-  ( parseLog )
+  ( parseLog,
+  )
 where
 
 import Control.Applicative
@@ -33,28 +33,29 @@ parseIP = do
 
 timeParser :: Parser LocalTime
 timeParser = do
-  y  <- count 4 digit
+  y <- count 4 digit
   void (char '-')
   mm <- count 2 digit
   void (char '-')
-  d  <- count 2 digit
+  d <- count 2 digit
   void (char ' ')
-  h  <- count 2 digit
+  h <- count 2 digit
   void (char ':')
-  m  <- count 2 digit
+  m <- count 2 digit
   void (char ':')
-  s  <- count 2 digit
-  return LocalTime
-    { localDay       = fromGregorian (read y) (read mm) (read d)
-    , localTimeOfDay = TimeOfDay (read h) (read m) (read s)
-    }
+  s <- count 2 digit
+  return
+    LocalTime
+      { localDay = fromGregorian (read y) (read mm) (read d),
+        localTimeOfDay = TimeOfDay (read h) (read m) (read s)
+      }
 
 productParser :: Parser Product
 productParser =
-      (Mouse    <$ string "mouse")
-  <|> (Keyboard <$ string "keyboard")
-  <|> (Monitor  <$ string "monitor")
-  <|> (Speakers <$ string "speakers")
+  (Mouse <$ string "mouse")
+    <|> (Keyboard <$ string "keyboard")
+    <|> (Monitor <$ string "monitor")
+    <|> (Speakers <$ string "speakers")
 
 logEntryParser :: Parser LogEntry
 logEntryParser = do

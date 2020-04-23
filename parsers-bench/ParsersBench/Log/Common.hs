@@ -1,10 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module ParsersBench.Log.Common
-  ( IP (..)
-  , Product (..)
-  , LogEntry (..)
-  , Log )
+  ( IP (..),
+    Product (..),
+    LogEntry (..),
+    Log,
+  )
 where
 
 import Control.DeepSeq
@@ -27,10 +28,11 @@ data Product
 instance NFData Product
 
 data LogEntry = LogEntry
-  { entryTime    :: LocalTime
-  , entryIP      :: IP
-  , entryProduct :: Product
-  } deriving (Show, Eq, Generic)
+  { entryTime :: LocalTime,
+    entryIP :: IP,
+    entryProduct :: Product
+  }
+  deriving (Show, Eq, Generic)
 
 instance NFData LogEntry
 

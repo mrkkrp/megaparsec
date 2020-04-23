@@ -1,24 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module ParsersBench.CSV.Megaparsec
-  ( parseCSV )
+  ( parseCSV,
+  )
 where
 
 import Control.Monad
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import Data.Vector (Vector)
+import qualified Data.Vector as V
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Byte
-import qualified Data.ByteString as B
-import qualified Data.Vector     as V
 
 type Parser = Parsec Void ByteString
+
 type Record = Vector Field
-type Field  = ByteString
+
+type Field = ByteString
 
 -- | Parse a CSV file without conversion of individual records.
-
 parseCSV :: ByteString -> [Record]
 parseCSV bs =
   case parse csv "" bs of
@@ -44,10 +46,11 @@ escapedField =
   B.pack <$!> between (char 34) (char 34) (many $ normalChar <|> escapedDq)
   where
     normalChar = anySingleBut 34 <?> "unescaped character"
-    escapedDq  = label "escaped double-quote" (34 <$ string "\"\"")
+    escapedDq = label "escaped double-quote" (34 <$ string "\"\"")
 
 unescapedField :: Parser ByteString
-unescapedField = takeWhileP
-  (Just "unescaped char")
-  (`notElem` [44,34,10,13])
+unescapedField =
+  takeWhileP
+    (Just "unescaped char")
+    (`notElem` [44, 34, 10, 13])
 {-# INLINE unescapedField #-}

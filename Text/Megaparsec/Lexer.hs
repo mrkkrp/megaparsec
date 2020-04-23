@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- Module      :  Text.Megaparsec.Common
 -- Copyright   :  © 2018–present Megaparsec contributors
@@ -11,20 +13,18 @@
 -- it are re-exported in "Text.Megaparsec.Byte" and "Text.Megaparsec.Char".
 --
 -- @since 7.0.0
-
-{-# LANGUAGE FlexibleContexts #-}
-
 module Text.Megaparsec.Lexer
   ( -- * White space
-    space
-  , lexeme
-  , symbol
-  , symbol' )
+    space,
+    lexeme,
+    symbol,
+    symbol',
+  )
 where
 
+import qualified Data.CaseInsensitive as CI
 import Text.Megaparsec
 import Text.Megaparsec.Common
-import qualified Data.CaseInsensitive as CI
 
 ----------------------------------------------------------------------------
 -- White space
@@ -53,15 +53,20 @@ import qualified Data.CaseInsensitive as CI
 -- will fail instantly when parsing of that sort of comment is attempted and
 -- 'space' will just move on or finish depending on whether there is more
 -- white space for it to consume.
-
-space :: MonadParsec e s m
-  => m () -- ^ A parser for space characters which does not accept empty
-          -- input (e.g. 'C.space1')
-  -> m () -- ^ A parser for a line comment (e.g. 'skipLineComment')
-  -> m () -- ^ A parser for a block comment (e.g. 'skipBlockComment')
-  -> m ()
-space sp line block = skipMany $ choice
-  [hidden sp, hidden line, hidden block]
+space ::
+  MonadParsec e s m =>
+  -- | A parser for space characters which does not accept empty
+  -- input (e.g. 'C.space1')
+  m () ->
+  -- | A parser for a line comment (e.g. 'skipLineComment')
+  m () ->
+  -- | A parser for a block comment (e.g. 'skipBlockComment')
+  m () ->
+  m ()
+space sp line block =
+  skipMany $
+    choice
+      [hidden sp, hidden line, hidden block]
 {-# INLINEABLE space #-}
 
 -- | This is a wrapper for lexemes. Typical usage is to supply the first
@@ -70,11 +75,13 @@ space sp line block = skipMany $ choice
 --
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.decimal
-
-lexeme :: MonadParsec e s m
-  => m ()              -- ^ How to consume white space after lexeme
-  -> m a               -- ^ How to parse actual lexeme
-  -> m a
+lexeme ::
+  MonadParsec e s m =>
+  -- | How to consume white space after lexeme
+  m () ->
+  -- | How to parse actual lexeme
+  m a ->
+  m a
 lexeme spc p = p <* spc
 {-# INLINEABLE lexeme #-}
 
@@ -92,20 +99,24 @@ lexeme spc p = p <* spc
 -- > comma     = symbol ","
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
-
-symbol :: MonadParsec e s m
-  => m ()              -- ^ How to consume white space after lexeme
-  -> Tokens s          -- ^ Symbol to parse
-  -> m (Tokens s)
+symbol ::
+  MonadParsec e s m =>
+  -- | How to consume white space after lexeme
+  m () ->
+  -- | Symbol to parse
+  Tokens s ->
+  m (Tokens s)
 symbol spc = lexeme spc . string
 {-# INLINEABLE symbol #-}
 
 -- | Case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
-
-symbol' :: (MonadParsec e s m, CI.FoldCase (Tokens s))
-  => m ()              -- ^ How to consume white space after lexeme
-  -> Tokens s          -- ^ Symbol to parse (case-insensitive)
-  -> m (Tokens s)
+symbol' ::
+  (MonadParsec e s m, CI.FoldCase (Tokens s)) =>
+  -- | How to consume white space after lexeme
+  m () ->
+  -- | Symbol to parse (case-insensitive)
+  Tokens s ->
+  m (Tokens s)
 symbol' spc = lexeme spc . string'
 {-# INLINEABLE symbol' #-}
