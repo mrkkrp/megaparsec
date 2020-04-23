@@ -1,7 +1,7 @@
 {-# LANGUAGE RoleAnnotations #-}
 
 module Text.Megaparsec.Error
-  ( ParseError
+  ( ParseError,
   )
 where
 

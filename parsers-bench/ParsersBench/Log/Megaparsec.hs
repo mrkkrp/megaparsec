@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module ParsersBench.Log.Megaparsec
-  ( parseLog )
+  ( parseLog,
+  )
 where
 
 import Control.Monad
@@ -36,28 +37,29 @@ parseIP = do
 
 timeParser :: Parser LocalTime
 timeParser = do
-  y  <- fmap byteToChar <$> count 4 digitChar
+  y <- fmap byteToChar <$> count 4 digitChar
   void (char 45)
   mm <- fmap byteToChar <$> count 2 digitChar
   void (char 45)
-  d  <- fmap byteToChar <$> count 2 digitChar
+  d <- fmap byteToChar <$> count 2 digitChar
   void (char 32)
-  h  <- fmap byteToChar <$> count 2 digitChar
+  h <- fmap byteToChar <$> count 2 digitChar
   void (char 58)
-  m  <- fmap byteToChar <$> count 2 digitChar
+  m <- fmap byteToChar <$> count 2 digitChar
   void (char 58)
-  s  <- fmap byteToChar <$> count 2 digitChar
-  return LocalTime
-    { localDay       = fromGregorian (read y) (read mm) (read d)
-    , localTimeOfDay = TimeOfDay (read h) (read m) (read s)
-    }
+  s <- fmap byteToChar <$> count 2 digitChar
+  return
+    LocalTime
+      { localDay = fromGregorian (read y) (read mm) (read d),
+        localTimeOfDay = TimeOfDay (read h) (read m) (read s)
+      }
 
 productParser :: Parser Product
 productParser =
-      (Mouse    <$ string "mouse")
-  <|> (Keyboard <$ string "keyboard")
-  <|> (Monitor  <$ string "monitor")
-  <|> (Speakers <$ string "speakers")
+  (Mouse <$ string "mouse")
+    <|> (Keyboard <$ string "keyboard")
+    <|> (Monitor <$ string "monitor")
+    <|> (Speakers <$ string "speakers")
 
 logEntryParser :: Parser LogEntry
 logEntryParser = do

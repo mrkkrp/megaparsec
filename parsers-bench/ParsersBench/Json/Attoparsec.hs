@@ -1,24 +1,24 @@
 -- Mostly stolen from (with simplifications):
 -- https://github.com/bos/attoparsec/blob/master/benchmarks/Aeson.hs
-
-{-# LANGUAGE CPP               #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module ParsersBench.Json.Attoparsec
-  ( parseJson )
+  ( parseJson,
+  )
 where
 
 import Control.Applicative
+import qualified Data.Attoparsec.ByteString as A
 import Data.Attoparsec.ByteString.Char8
 import Data.ByteString (ByteString)
+import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
+import qualified Data.Text.Encoding as TE
 import Data.Vector (Vector)
+import qualified Data.Vector as V
 import Data.Word (Word8)
 import ParsersBench.Json.Common
-import qualified Data.Attoparsec.ByteString as A
-import qualified Data.HashMap.Strict        as H
-import qualified Data.Text.Encoding         as TE
-import qualified Data.Vector                as V
 
 #define CLOSE_CURLY 125
 #define CLOSE_SQUARE 93
@@ -80,7 +80,7 @@ commaSeparated item endByte = do
       v <- item <* skipSpace
       ch <- A.satisfy $ \w -> w == COMMA || w == endByte
       if ch == COMMA
-        then skipSpace >> (v:) <$> loop
+        then skipSpace >> (v :) <$> loop
         else return [v]
 {-# INLINE commaSeparated #-}
 
@@ -88,12 +88,12 @@ value :: Parser Value
 value = do
   w <- A.peekWord8'
   case w of
-    DOUBLE_QUOTE  -> A.anyWord8 *> (String <$> jstring_)
-    OPEN_CURLY    -> A.anyWord8 *> object_
-    OPEN_SQUARE   -> A.anyWord8 *> array_
-    C_f           -> string "false" *> pure (Bool False)
-    C_t           -> string "true" *> pure (Bool True)
-    C_n           -> string "null" *> pure Null
+    DOUBLE_QUOTE -> A.anyWord8 *> (String <$> jstring_)
+    OPEN_CURLY -> A.anyWord8 *> object_
+    OPEN_SQUARE -> A.anyWord8 *> array_
+    C_f -> string "false" *> pure (Bool False)
+    C_t -> string "true" *> pure (Bool True)
+    C_n -> string "null" *> pure Null
     _
       | w >= C_0 && w <= C_9 || w == C_MINUS -> Number <$> scientific
       | otherwise -> fail "not a valid json value"
@@ -102,6 +102,7 @@ jstring :: Parser Text
 jstring = A.word8 DOUBLE_QUOTE *> jstring_
 
 jstring_ :: Parser Text
-jstring_ = TE.decodeUtf8 <$>
-  A.takeWhile (/= DOUBLE_QUOTE) <* A.word8 DOUBLE_QUOTE
+jstring_ =
+  TE.decodeUtf8
+    <$> A.takeWhile (/= DOUBLE_QUOTE) <* A.word8 DOUBLE_QUOTE
 {-# INLINE jstring_ #-}

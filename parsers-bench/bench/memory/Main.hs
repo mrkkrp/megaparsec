@@ -3,14 +3,14 @@ module Main (main) where
 import Control.DeepSeq
 import Control.Monad
 import Data.ByteString (ByteString)
-import Weigh
-import qualified Data.ByteString              as B
-import qualified ParsersBench.CSV.Attoparsec  as A
-import qualified ParsersBench.CSV.Megaparsec  as M
+import qualified Data.ByteString as B
+import qualified ParsersBench.CSV.Attoparsec as A
+import qualified ParsersBench.CSV.Megaparsec as M
 import qualified ParsersBench.Json.Attoparsec as A
 import qualified ParsersBench.Json.Megaparsec as M
-import qualified ParsersBench.Log.Attoparsec  as A
-import qualified ParsersBench.Log.Megaparsec  as M
+import qualified ParsersBench.Log.Attoparsec as A
+import qualified ParsersBench.Log.Megaparsec as M
+import Weigh
 
 main :: IO ()
 main = mainWith $ do
@@ -36,21 +36,24 @@ bparser pre desc f = io (pre ++ "-" ++ desc) m path
 
 csvFiles :: [FilePath]
 csvFiles =
-  [ "csv-5.csv"
-  , "csv-10.csv"
-  , "csv-20.csv"
-  , "csv-40.csv" ]
+  [ "csv-5.csv",
+    "csv-10.csv",
+    "csv-20.csv",
+    "csv-40.csv"
+  ]
 
 logFiles :: [FilePath]
 logFiles =
-  [ "log-5.log"
-  , "log-10.log"
-  , "log-20.log"
-  , "log-40.log" ]
+  [ "log-5.log",
+    "log-10.log",
+    "log-20.log",
+    "log-40.log"
+  ]
 
 jsonFiles :: [FilePath]
 jsonFiles =
-  [ "json-5.json"
-  , "json-10.json"
-  , "json-20.json"
-  , "json-40.json" ]
+  [ "json-5.json",
+    "json-10.json",
+    "json-20.json",
+    "json-40.json"
+  ]

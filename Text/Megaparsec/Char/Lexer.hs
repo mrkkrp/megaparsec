@@ -1,3 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+
 -- |
 -- Module      :  Text.Megaparsec.Char.Lexer
 -- Copyright   :  © 2015–present Megaparsec contributors
@@ -26,54 +31,52 @@
 -- > import qualified Text.Megaparsec.Char.Lexer as L
 --
 -- To do lexing of byte streams, see "Text.Megaparsec.Byte.Lexer".
-
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
-
 module Text.Megaparsec.Char.Lexer
   ( -- * White space
-    space
-  , lexeme
-  , symbol
-  , symbol'
-  , skipLineComment
-  , skipBlockComment
-  , skipBlockCommentNested
+    space,
+    lexeme,
+    symbol,
+    symbol',
+    skipLineComment,
+    skipBlockComment,
+    skipBlockCommentNested,
+
     -- * Indentation
-  , indentLevel
-  , incorrectIndent
-  , indentGuard
-  , nonIndented
-  , IndentOpt (..)
-  , indentBlock
-  , lineFold
+    indentLevel,
+    incorrectIndent,
+    indentGuard,
+    nonIndented,
+    IndentOpt (..),
+    indentBlock,
+    lineFold,
+
     -- * Character and string literals
-  , charLiteral
+    charLiteral,
+
     -- * Numbers
-  , decimal
-  , binary
-  , octal
-  , hexadecimal
-  , scientific
-  , float
-  , signed )
+    decimal,
+    binary,
+    octal,
+    hexadecimal,
+    scientific,
+    float,
+    signed,
+  )
 where
 
 import Control.Applicative
 import Control.Monad (void)
+import qualified Data.Char as Char
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (listToMaybe, fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Proxy
 import Data.Scientific (Scientific)
+import qualified Data.Scientific as Sci
+import qualified Data.Set as E
 import Text.Megaparsec
-import Text.Megaparsec.Lexer
-import qualified Data.Char            as Char
-import qualified Data.Scientific      as Sci
-import qualified Data.Set             as E
 import qualified Text.Megaparsec.Char as C
+import Text.Megaparsec.Lexer
 
 ----------------------------------------------------------------------------
 -- White space
@@ -82,21 +85,24 @@ import qualified Text.Megaparsec.Char as C
 -- comments. Note that it stops just before the newline character but
 -- doesn't consume the newline. Newline is either supposed to be consumed by
 -- 'space' parser or picked up manually.
-
-skipLineComment :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Line comment prefix
-  -> m ()
+skipLineComment ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  -- | Line comment prefix
+  Tokens s ->
+  m ()
 skipLineComment prefix =
   C.string prefix *> void (takeWhileP (Just "character") (/= '\n'))
 {-# INLINEABLE skipLineComment #-}
 
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
-
-skipBlockComment :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Start of block comment
-  -> Tokens s          -- ^ End of block comment
-  -> m ()
+skipBlockComment ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  -- | Start of block comment
+  Tokens s ->
+  -- | End of block comment
+  Tokens s ->
+  m ()
 skipBlockComment start end = p >> void (manyTill anySingle n)
   where
     p = C.string start
@@ -107,11 +113,13 @@ skipBlockComment start end = p >> void (manyTill anySingle n)
 -- comment starting with @start@ and ending with @end@.
 --
 -- @since 5.0.0
-
-skipBlockCommentNested :: (MonadParsec e s m, Token s ~ Char)
-  => Tokens s          -- ^ Start of block comment
-  -> Tokens s          -- ^ End of block comment
-  -> m ()
+skipBlockCommentNested ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  -- | Start of block comment
+  Tokens s ->
+  -- | End of block comment
+  Tokens s ->
+  m ()
 skipBlockCommentNested start end = p >> void (manyTill e n)
   where
     e = skipBlockCommentNested start end <|> void anySingle
@@ -129,7 +137,6 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- > indentLevel = sourceColumn <$> getPosition
 --
 -- @since 4.3.0
-
 indentLevel :: MonadParsec e s m => m Pos
 indentLevel = sourceColumn <$> getSourcePos
 {-# INLINE indentLevel #-}
@@ -142,14 +149,18 @@ indentLevel = sourceColumn <$> getSourcePos
 --     * Actual indentation level
 --
 -- @since 5.0.0
-
-incorrectIndent :: MonadParsec e s m
-  => Ordering  -- ^ Desired ordering between reference level and actual level
-  -> Pos               -- ^ Reference indentation level
-  -> Pos               -- ^ Actual indentation level
-  -> m a
-incorrectIndent ord ref actual = fancyFailure . E.singleton $
-  ErrorIndentation ord ref actual
+incorrectIndent ::
+  MonadParsec e s m =>
+  -- | Desired ordering between reference level and actual level
+  Ordering ->
+  -- | Reference indentation level
+  Pos ->
+  -- | Actual indentation level
+  Pos ->
+  m a
+incorrectIndent ord ref actual =
+  fancyFailure . E.singleton $
+    ErrorIndentation ord ref actual
 {-# INLINEABLE incorrectIndent #-}
 
 -- | @'indentGuard' spaceConsumer ord ref@ first consumes all white space
@@ -162,12 +173,16 @@ incorrectIndent ord ref actual = fancyFailure . E.singleton $
 -- arguments like @'indentGuard' spaceConsumer 'GT' 'pos1'@—this will make
 -- sure you have some indentation. Use returned value to check indentation
 -- on every subsequent line according to syntax of your language.
-
-indentGuard :: MonadParsec e s m
-  => m ()              -- ^ How to consume indentation (white space)
-  -> Ordering -- ^ Desired ordering between reference level and actual level
-  -> Pos               -- ^ Reference indentation level
-  -> m Pos             -- ^ Current column (indentation level)
+indentGuard ::
+  MonadParsec e s m =>
+  -- | How to consume indentation (white space)
+  m () ->
+  -- | Desired ordering between reference level and actual level
+  Ordering ->
+  -- | Reference indentation level
+  Pos ->
+  -- | Current column (indentation level)
+  m Pos
 indentGuard sc ord ref = do
   sc
   actual <- indentLevel
@@ -181,11 +196,13 @@ indentGuard sc ord ref = do
 -- top-level function definitions.
 --
 -- @since 4.3.0
-
-nonIndented :: MonadParsec e s m
-  => m ()              -- ^ How to consume indentation (white space)
-  -> m a               -- ^ How to parse actual data
-  -> m a
+nonIndented ::
+  MonadParsec e s m =>
+  -- | How to consume indentation (white space)
+  m () ->
+  -- | How to parse actual data
+  m a ->
+  m a
 nonIndented sc p = indentGuard sc EQ pos1 *> p
 {-# INLINEABLE nonIndented #-}
 
@@ -193,18 +210,17 @@ nonIndented sc p = indentGuard sc EQ pos1 *> p
 -- 'indentBlock', which see.
 --
 -- @since 4.3.0
-
 data IndentOpt m a b
-  = IndentNone a
-    -- ^ Parse no indented tokens, just return the value
-  | IndentMany (Maybe Pos) ([b] -> m a) (m b)
-    -- ^ Parse many indented tokens (possibly zero), use given indentation
+  = -- | Parse no indented tokens, just return the value
+    IndentNone a
+  | -- | Parse many indented tokens (possibly zero), use given indentation
     -- level (if 'Nothing', use level of the first indented token); the
     -- second argument tells how to get the final result, and the third
     -- argument describes how to parse an indented token
-  | IndentSome (Maybe Pos) ([b] -> m a) (m b)
-    -- ^ Just like 'IndentMany', but requires at least one indented token to
+    IndentMany (Maybe Pos) ([b] -> m a) (m b)
+  | -- | Just like 'IndentMany', but requires at least one indented token to
     -- be present
+    IndentSome (Maybe Pos) ([b] -> m a) (m b)
 
 -- | Parse a “reference” token and a number of other tokens that have
 -- greater (but the same) level of indentation than that of “reference”
@@ -216,15 +232,17 @@ data IndentOpt m a b
 -- space characters.
 --
 -- @since 4.3.0
-
-indentBlock :: (MonadParsec e s m, Token s ~ Char)
-  => m ()              -- ^ How to consume indentation (white space)
-  -> m (IndentOpt m a b) -- ^ How to parse “reference” token
-  -> m a
+indentBlock ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  -- | How to consume indentation (white space)
+  m () ->
+  -- | How to parse “reference” token
+  m (IndentOpt m a b) ->
+  m a
 indentBlock sc r = do
   sc
   ref <- indentLevel
-  a   <- r
+  a <- r
   case a of
     IndentNone x -> x <$ sc
     IndentMany indent f p -> do
@@ -237,33 +255,39 @@ indentBlock sc r = do
     IndentSome indent f p -> do
       pos <- C.eol *> indentGuard sc GT ref
       let lvl = fromMaybe pos indent
-      x <- if | pos <= ref -> incorrectIndent GT ref pos
-              | pos == lvl -> p
-              | otherwise  -> incorrectIndent EQ lvl pos
-      xs  <- indentedItems ref lvl sc p
-      f (x:xs)
+      x <-
+        if  | pos <= ref -> incorrectIndent GT ref pos
+            | pos == lvl -> p
+            | otherwise -> incorrectIndent EQ lvl pos
+      xs <- indentedItems ref lvl sc p
+      f (x : xs)
 {-# INLINEABLE indentBlock #-}
 
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of the public API.
-
-indentedItems :: MonadParsec e s m
-  => Pos               -- ^ Reference indentation level
-  -> Pos               -- ^ Level of the first indented item ('lookAhead'ed)
-  -> m ()              -- ^ How to consume indentation (white space)
-  -> m b               -- ^ How to parse indented tokens
-  -> m [b]
+indentedItems ::
+  MonadParsec e s m =>
+  -- | Reference indentation level
+  Pos ->
+  -- | Level of the first indented item ('lookAhead'ed)
+  Pos ->
+  -- | How to consume indentation (white space)
+  m () ->
+  -- | How to parse indented tokens
+  m b ->
+  m [b]
 indentedItems ref lvl sc p = go
   where
     go = do
       sc
-      pos  <- indentLevel
+      pos <- indentLevel
       done <- isJust <$> optional eof
       if done
         then return []
-        else if | pos <= ref -> return []
-                | pos == lvl -> (:) <$> p <*> go
-                | otherwise  -> incorrectIndent EQ lvl pos
+        else
+          if  | pos <= ref -> return []
+              | pos == lvl -> (:) <$> p <*> go
+              | otherwise -> incorrectIndent EQ lvl pos
 
 -- | Create a parser that supports line-folding. The first argument is used
 -- to consume white space between components of line fold, thus it /must/
@@ -282,11 +306,13 @@ indentedItems ref lvl sc p = go
 -- >   L.symbol sc  "baz" -- for the last symbol we use normal space consumer
 --
 -- @since 5.0.0
-
-lineFold :: MonadParsec e s m
-  => m ()              -- ^ How to consume indentation (white space)
-  -> (m () -> m a)     -- ^ Callback that uses provided space-consumer
-  -> m a
+lineFold ::
+  MonadParsec e s m =>
+  -- | How to consume indentation (white space)
+  m () ->
+  -- | Callback that uses provided space-consumer
+  (m () -> m a) ->
+  m a
 lineFold sc action =
   sc >> indentLevel >>= action . void . indentGuard sc GT
 {-# INLINEABLE lineFold #-}
@@ -310,7 +336,6 @@ lineFold sc action =
 --
 -- __Performance note__: the parser is not particularly efficient at the
 -- moment.
-
 charLiteral :: (MonadParsec e s m, Token s ~ Char) => m Char
 charLiteral = label "literal character" $ do
   -- The @~@ is needed to avoid requiring a MonadFail constraint,
@@ -318,7 +343,7 @@ charLiteral = label "literal character" $ do
   r <- lookAhead (count' 1 10 anySingle)
   case listToMaybe (Char.readLitChar r) of
     Just (c, r') -> c <$ skipCount (length r - length r') anySingle
-    Nothing      -> unexpected (Tokens (head r:|[]))
+    Nothing -> unexpected (Tokens (head r :| []))
 {-# INLINEABLE charLiteral #-}
 
 ----------------------------------------------------------------------------
@@ -331,19 +356,18 @@ charLiteral = label "literal character" $ do
 --
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
-
 decimal :: (MonadParsec e s m, Token s ~ Char, Num a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
 
 -- | A non-public helper to parse decimal integers.
-
-decimal_
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
-  => m a
+decimal_ ::
+  forall e s m a.
+  (MonadParsec e s m, Token s ~ Char, Num a) =>
+  m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
 
@@ -355,16 +379,17 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 -- > binary = char '0' >> char' 'b' >> L.binary
 --
 -- @since 7.0.0
-
-binary
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
-  => m a
-binary = mkNum
-  <$> takeWhile1P Nothing isBinDigit
-  <?> "binary integer"
+binary ::
+  forall e s m a.
+  (MonadParsec e s m, Token s ~ Char, Num a) =>
+  m a
+binary =
+  mkNum
+    <$> takeWhile1P Nothing isBinDigit
+    <?> "binary integer"
   where
-    mkNum        = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
-    step a c     = a * 2 + fromIntegral (Char.digitToInt c)
+    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    step a c = a * 2 + fromIntegral (Char.digitToInt c)
     isBinDigit x = x == '0' || x == '1'
 {-# INLINEABLE binary #-}
 
@@ -380,15 +405,16 @@ binary = mkNum
 --
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
-
-octal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
-  => m a
-octal = mkNum
-  <$> takeWhile1P Nothing Char.isOctDigit
-  <?> "octal integer"
+octal ::
+  forall e s m a.
+  (MonadParsec e s m, Token s ~ Char, Num a) =>
+  m a
+octal =
+  mkNum
+    <$> takeWhile1P Nothing Char.isOctDigit
+    <?> "octal integer"
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 8 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE octal #-}
 
@@ -404,15 +430,16 @@ octal = mkNum
 --
 -- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
-
-hexadecimal
-  :: forall e s m a. (MonadParsec e s m, Token s ~ Char, Num a)
-  => m a
-hexadecimal = mkNum
-  <$> takeWhile1P Nothing Char.isHexDigit
-  <?> "hexadecimal integer"
+hexadecimal ::
+  forall e s m a.
+  (MonadParsec e s m, Token s ~ Char, Num a) =>
+  m a
+hexadecimal =
+  mkNum
+    <$> takeWhile1P Nothing Char.isHexDigit
+    <?> "hexadecimal integer"
   where
-    mkNum    = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 16 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE hexadecimal #-}
 
@@ -428,14 +455,14 @@ hexadecimal = mkNum
 -- see 'signed'.
 --
 -- @since 5.0.0
-
-scientific
-  :: forall e s m. (MonadParsec e s m, Token s ~ Char)
-  => m Scientific
+scientific ::
+  forall e s m.
+  (MonadParsec e s m, Token s ~ Char) =>
+  m Scientific
 scientific = do
-  c'      <- decimal_
+  c' <- decimal_
   SP c e' <- option (SP c' 0) (try $ dotDecimal_ (Proxy :: Proxy s) c')
-  e       <- option e' (try $ exponent_ e')
+  e <- option e' (try $ exponent_ e')
   return (Sci.scientific c e)
 {-# INLINEABLE scientific #-}
 
@@ -451,33 +478,38 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 -- wasn't polymorphic in its return type.
 --
 -- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
-
 float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
 float = do
   c' <- decimal_
-  Sci.toRealFloat <$>
-    ((do SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
-         e       <- option e' (try $ exponent_ e')
-         return (Sci.scientific c e))
-     <|> (Sci.scientific c' <$> exponent_ 0))
+  Sci.toRealFloat
+    <$> ( ( do
+              SP c e' <- dotDecimal_ (Proxy :: Proxy s) c'
+              e <- option e' (try $ exponent_ e')
+              return (Sci.scientific c e)
+          )
+            <|> (Sci.scientific c' <$> exponent_ 0)
+        )
 {-# INLINEABLE float #-}
 
-dotDecimal_ :: (MonadParsec e s m, Token s ~ Char)
-  => Proxy s
-  -> Integer
-  -> m SP
+dotDecimal_ ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  Proxy s ->
+  Integer ->
+  m SP
 dotDecimal_ pxy c' = do
   void (C.char '.')
-  let mkNum    = foldl' step (SP c' 0) . chunkToTokens pxy
-      step (SP a e') c = SP
-        (a * 10 + fromIntegral (Char.digitToInt c))
-        (e' - 1)
+  let mkNum = foldl' step (SP c' 0) . chunkToTokens pxy
+      step (SP a e') c =
+        SP
+          (a * 10 + fromIntegral (Char.digitToInt c))
+          (e' - 1)
   mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 {-# INLINE dotDecimal_ #-}
 
-exponent_ :: (MonadParsec e s m, Token s ~ Char)
-  => Int
-  -> m Int
+exponent_ ::
+  (MonadParsec e s m, Token s ~ Char) =>
+  Int ->
+  m Int
 exponent_ e' = do
   void (C.char' 'e')
   (+ e') <$> signed (return ()) decimal_
@@ -494,11 +526,14 @@ exponent_ e' = do
 -- > lexeme        = L.lexeme spaceConsumer
 -- > integer       = lexeme L.decimal
 -- > signedInteger = L.signed spaceConsumer integer
-
-signed :: (MonadParsec e s m, Token s ~ Char, Num a)
-  => m ()              -- ^ How to consume white space after the sign
-  -> m a               -- ^ How to parse the number itself
-  -> m a               -- ^ Parser for signed numbers
+signed ::
+  (MonadParsec e s m, Token s ~ Char, Num a) =>
+  -- | How to consume white space after the sign
+  m () ->
+  -- | How to parse the number itself
+  m a ->
+  -- | Parser for signed numbers
+  m a
 signed spc p = option id (lexeme spc sign) <*> p
   where
     sign = (id <$ C.char '+') <|> (negate <$ C.char '-')
