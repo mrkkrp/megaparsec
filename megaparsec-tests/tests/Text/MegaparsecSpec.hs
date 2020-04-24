@@ -7,12 +7,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Text.MegaparsecSpec
-  ( spec,
-  )
-where
+module Text.MegaparsecSpec (spec) where
 
 import Control.Monad.Cont
 import Control.Monad.Except

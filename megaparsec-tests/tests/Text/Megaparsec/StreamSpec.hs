@@ -3,10 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Text.Megaparsec.StreamSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.StreamSpec (spec) where
 
 import Control.Monad
 import qualified Data.ByteString as B

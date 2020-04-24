@@ -1,10 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Text.Megaparsec.CharSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.CharSpec (spec) where
 
 import Control.Monad
 import qualified Data.CaseInsensitive as CI

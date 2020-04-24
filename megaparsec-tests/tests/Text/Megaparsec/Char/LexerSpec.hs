@@ -4,10 +4,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Text.Megaparsec.Char.LexerSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.Char.LexerSpec (spec) where
 
 import Control.Monad
 import qualified Data.CaseInsensitive as CI

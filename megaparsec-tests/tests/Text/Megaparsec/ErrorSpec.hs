@@ -1,10 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.Megaparsec.ErrorSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.ErrorSpec (spec) where
 
 import Control.Exception (Exception (..))
 import Data.Functor.Identity

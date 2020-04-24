@@ -1,9 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Text.Megaparsec.PosSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.PosSpec (spec) where
 
 import Control.Exception (evaluate)
 import Data.Function (on)

@@ -2,10 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Main
-  ( main,
-  )
-where
+module Main (main) where
 
 import Control.DeepSeq
 import Control.Monad

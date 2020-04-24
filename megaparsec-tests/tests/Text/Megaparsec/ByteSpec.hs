@@ -1,10 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.Megaparsec.ByteSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.ByteSpec (spec) where
 
 import Control.Monad
 import Data.ByteString (ByteString)

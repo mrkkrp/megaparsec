@@ -1,10 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Text.Megaparsec.DebugSpec
-  ( spec,
-  )
-where
+module Text.Megaparsec.DebugSpec (spec) where
 
 import Control.Monad
 import Test.Hspec
