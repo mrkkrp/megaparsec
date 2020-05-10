@@ -84,6 +84,15 @@ spec = do
       prs space s `shouldParse` ()
       prs' space s `succeedsLeaving` s1
 
+  describe "hspace"
+    $ it "consumes space up to first non-space character"
+    $ property
+    $ \s' -> do
+      let (s0, s1) = partition isHSpace s'
+          s = s0 ++ s1
+      prs hspace s `shouldParse` ()
+      prs' hspace s `succeedsLeaving` s1
+
   describe "space1" $ do
     context "when stream does not start with a space character"
       $ it "signals correct parse error"
@@ -104,6 +113,27 @@ spec = do
     context "when stream is empty"
       $ it "signals correct parse error"
       $ prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+
+  describe "hspace1" $ do
+    context "when stream does not start with a space character"
+      $ it "signals correct parse error"
+      $ property
+      $ \ch s' -> not (isHSpace ch) ==> do
+        let (s0, s1) = partition isHSpace s'
+            s = ch : s0 ++ s1
+        prs hspace1 s `shouldFailWith` err 0 (utok ch <> elabel "white space")
+        prs' hspace1 s `failsLeaving` s
+    context "when stream starts with a space character"
+      $ it "consumes space up to first non-space character"
+      $ property
+      $ \s' -> do
+        let (s0, s1) = partition isHSpace s'
+            s = ' ' : s0 ++ s1
+        prs hspace1 s `shouldParse` ()
+        prs' hspace1 s `succeedsLeaving` s1
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" isControl controlChar
@@ -374,3 +404,7 @@ casei x y =
   x == toLower y
     || x == toUpper y
     || x == toTitle y
+
+-- | Is it a horizontal space character?
+isHSpace :: Char -> Bool
+isHSpace x = isSpace x && x /= '\n' && x /= '\r'

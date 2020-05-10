@@ -367,7 +367,8 @@ reachOffset'
         let SourcePos n l c = apos
             c' = unPos c
             w = unPos pstateTabWidth
-         in if  | ch == newlineTok ->
+         in if
+                | ch == newlineTok ->
                   St
                     (SourcePos n (l <> pos1) pos1)
                     id
@@ -417,7 +418,8 @@ reachOffsetNoLine'
       go (SourcePos n l c) ch =
         let c' = unPos c
             w = unPos pstateTabWidth
-         in if  | ch == newlineTok ->
+         in if
+                | ch == newlineTok ->
                   SourcePos n (l <> pos1) pos1
                 | ch == tabTok ->
                   SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))

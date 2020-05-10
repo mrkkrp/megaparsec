@@ -20,7 +20,9 @@ module Text.Megaparsec.Byte
     eol,
     tab,
     space,
+    hspace,
     space1,
+    hspace1,
 
     -- * Categories of characters
     controlChar,
@@ -47,7 +49,7 @@ module Text.Megaparsec.Byte
 where
 
 import Control.Applicative
-import Data.Char hiding (toLower, toUpper)
+import Data.Char hiding (isSpace, toLower, toUpper)
 import Data.Functor (void)
 import Data.Proxy
 import Data.Word (Word8)
@@ -86,15 +88,29 @@ tab = char 9
 --
 -- See also: 'skipMany' and 'spaceChar'.
 space :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space = void $ takeWhileP (Just "white space") isSpace'
+space = void $ takeWhileP (Just "white space") isSpace
 {-# INLINE space #-}
+
+-- | Like 'space', but does not accept newlines and carriage returns.
+--
+-- @since 8.1.0
+hspace :: (MonadParsec e s m, Token s ~ Word8) => m ()
+hspace = void $ takeWhileP (Just "white space") isHSpace
+{-# INLINE hspace #-}
 
 -- | Skip /one/ or more white space characters.
 --
 -- See also: 'skipSome' and 'spaceChar'.
 space1 :: (MonadParsec e s m, Token s ~ Word8) => m ()
-space1 = void $ takeWhile1P (Just "white space") isSpace'
+space1 = void $ takeWhile1P (Just "white space") isSpace
 {-# INLINE space1 #-}
+
+-- | Like 'space1', but does not accept newlines and carriage returns.
+--
+-- @since 8.1.0
+hspace1 :: (MonadParsec e s m, Token s ~ Word8) => m ()
+hspace1 = void $ takeWhile1P (Just "white space") isHSpace
+{-# INLINE hspace1 #-}
 
 ----------------------------------------------------------------------------
 -- Categories of characters
@@ -107,7 +123,7 @@ controlChar = satisfy (isControl . toChar) <?> "control character"
 -- | Parse a space character, and the control characters: tab, newline,
 -- carriage return, form feed, and vertical tab.
 spaceChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
-spaceChar = satisfy isSpace' <?> "white space"
+spaceChar = satisfy isSpace <?> "white space"
 {-# INLINE spaceChar #-}
 
 -- | Parse an upper-case character.
@@ -201,14 +217,25 @@ char' c =
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | 'Word8'-specialized version of 'isSpace'.
-isSpace' :: Word8 -> Bool
-isSpace' x
+-- | 'Word8'-specialized version of 'Data.Char.isSpace'.
+isSpace :: Word8 -> Bool
+isSpace x
   | x >= 9 && x <= 13 = True
   | x == 32 = True
   | x == 160 = True
   | otherwise = False
-{-# INLINE isSpace' #-}
+{-# INLINE isSpace #-}
+
+-- | Like 'isSpace', but does not accept newlines and carriage returns.
+isHSpace :: Word8 -> Bool
+isHSpace x
+  | x == 9 = True
+  | x == 11 = True
+  | x == 12 = True
+  | x == 32 = True
+  | x == 160 = True
+  | otherwise = False
+{-# INLINE isHSpace #-}
 
 -- | Convert a byte to char.
 toChar :: Word8 -> Char

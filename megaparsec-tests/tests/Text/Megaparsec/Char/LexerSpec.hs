@@ -131,7 +131,8 @@ spec = do
               >>= \x -> sp >> ip EQ x >> sp >> ip GT x >> sp >> scn
             ip = indentGuard scn
             sp = void (symbol sc sbla <* C.eol)
-        if  | col0 <= pos1 ->
+        if
+            | col0 <= pos1 ->
               prs p s `shouldFailWith` errFancy 0 (ii GT pos1 col0)
             | col1 /= col0 ->
               prs p s `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ col0 col1)
@@ -178,7 +179,8 @@ spec = do
               b = symbol sc
               l x = return . (x,)
               ib' = mkPos (fromIntegral ib)
-          if  | col1 <= col0 ->
+          if
+              | col1 <= col0 ->
                 prs p s
                   `shouldFailWith` err (getIndent l1 + g 1) (utok (head sblb) <> eeof)
               | isJust mn && col1 /= ib' ->
@@ -282,7 +284,8 @@ spec = do
             s = concat fragments
             (col0, col1, col2) = (getCol l0, getCol l1, getCol l2)
             (end0, end1) = (getEnd l0, getEnd l1)
-        if  | end0 && col1 <= col0 ->
+        if
+            | end0 && col1 <= col0 ->
               prs p s
                 `shouldFailWith` errFancy (getIndent l1 + g 1) (ii GT col0 col1)
             | end1 && col2 <= col0 ->

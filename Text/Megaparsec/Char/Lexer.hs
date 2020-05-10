@@ -256,7 +256,8 @@ indentBlock sc r = do
       pos <- C.eol *> indentGuard sc GT ref
       let lvl = fromMaybe pos indent
       x <-
-        if  | pos <= ref -> incorrectIndent GT ref pos
+        if
+            | pos <= ref -> incorrectIndent GT ref pos
             | pos == lvl -> p
             | otherwise -> incorrectIndent EQ lvl pos
       xs <- indentedItems ref lvl sc p
@@ -285,7 +286,8 @@ indentedItems ref lvl sc p = go
       if done
         then return []
         else
-          if  | pos <= ref -> return []
+          if
+              | pos <= ref -> return []
               | pos == lvl -> (:) <$> p <*> go
               | otherwise -> incorrectIndent EQ lvl pos
 
