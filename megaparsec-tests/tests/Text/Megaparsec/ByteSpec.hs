@@ -6,7 +6,7 @@ module Text.Megaparsec.ByteSpec (spec) where
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import Data.Char
+import Data.Char hiding (isSpace)
 import Data.Maybe (fromMaybe)
 import Data.Void
 import Data.Word (Word8)
@@ -82,17 +82,26 @@ spec = do
     $ it "consumes space up to first non-space character"
     $ property
     $ \s' -> do
-      let (s0, s1) = B.partition isSpace' s'
+      let (s0, s1) = B.partition isSpace s'
           s = s0 <> s1
       prs space s `shouldParse` ()
       prs' space s `succeedsLeaving` s1
+
+  describe "hspace"
+    $ it "consumes space up to first non-space character"
+    $ property
+    $ \s' -> do
+      let (s0, s1) = B.partition isHSpace s'
+          s = s0 <> s1
+      prs hspace s `shouldParse` ()
+      prs' hspace s `succeedsLeaving` s1
 
   describe "space1" $ do
     context "when stream does not start with a space character"
       $ it "signals correct parse error"
       $ property
-      $ \ch s' -> not (isSpace' ch) ==> do
-        let (s0, s1) = B.partition isSpace' s'
+      $ \ch s' -> not (isSpace ch) ==> do
+        let (s0, s1) = B.partition isSpace s'
             s = B.singleton ch <> s0 <> s1
         prs space1 s `shouldFailWith` err 0 (utok ch <> elabel "white space")
         prs' space1 s `failsLeaving` s
@@ -100,13 +109,34 @@ spec = do
       $ it "consumes space up to first non-space character"
       $ property
       $ \s' -> do
-        let (s0, s1) = B.partition isSpace' s'
+        let (s0, s1) = B.partition isSpace s'
             s = " " <> s0 <> s1
         prs space1 s `shouldParse` ()
         prs' space1 s `succeedsLeaving` s1
     context "when stream is empty"
       $ it "signals correct parse error"
       $ prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+
+  describe "hspace1" $ do
+    context "when stream does not start with a space character"
+      $ it "signals correct parse error"
+      $ property
+      $ \ch s' -> not (isSpace ch) ==> do
+        let (s0, s1) = B.partition isHSpace s'
+            s = B.singleton ch <> s0 <> s1
+        prs hspace1 s `shouldFailWith` err 0 (utok ch <> elabel "white space")
+        prs' hspace1 s `failsLeaving` s
+    context "when stream starts with a space character"
+      $ it "consumes space up to first non-space character"
+      $ property
+      $ \s' -> do
+        let (s0, s1) = B.partition isHSpace s'
+            s = " " <> s0 <> s1
+        prs hspace1 s `shouldParse` ()
+        prs' hspace1 s `succeedsLeaving` s1
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" (isControl . toChar) controlChar
@@ -234,10 +264,20 @@ prs' ::
   (State ByteString Void, Either (ParseErrorBundle ByteString Void) a)
 prs' p s = runParser' p (initialState s)
 
--- | 'Word8'-specialized version of 'isSpace'.
-isSpace' :: Word8 -> Bool
-isSpace' x
+-- | 'Word8'-specialized version of 'Data.Char.isSpace'.
+isSpace :: Word8 -> Bool
+isSpace x
   | x >= 9 && x <= 13 = True
+  | x == 32 = True
+  | x == 160 = True
+  | otherwise = False
+
+-- | Like 'isSpace', but does not accept newlines and carriage returns.
+isHSpace :: Word8 -> Bool
+isHSpace x
+  | x == 9 = True
+  | x == 11 = True
+  | x == 12 = True
   | x == 32 = True
   | x == 160 = True
   | otherwise = False

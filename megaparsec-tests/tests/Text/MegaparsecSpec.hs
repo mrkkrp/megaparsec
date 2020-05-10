@@ -1410,7 +1410,7 @@ spec = do
         runParser' p st `shouldBe` (st', Right stateInput)
 
     describe "atEnd" $ do
-      let p , p' :: Parser Bool
+      let p, p' :: Parser Bool
           p = atEnd
           p' = p <* empty
       context "when stream is empty" $ do

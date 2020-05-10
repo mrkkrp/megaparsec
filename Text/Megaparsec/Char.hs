@@ -22,7 +22,9 @@ module Text.Megaparsec.Char
     eol,
     tab,
     space,
+    hspace,
     space1,
+    hspace1,
 
     -- * Categories of characters
     controlChar,
@@ -98,6 +100,13 @@ space :: (MonadParsec e s m, Token s ~ Char) => m ()
 space = void $ takeWhileP (Just "white space") isSpace
 {-# INLINE space #-}
 
+-- | Like 'space', but does not accept newlines and carriage returns.
+--
+-- @since 8.1.0
+hspace :: (MonadParsec e s m, Token s ~ Char) => m ()
+hspace = void $ takeWhileP (Just "white space") isHSpace
+{-# INLINE hspace #-}
+
 -- | Skip /one/ or more white space characters.
 --
 -- See also: 'skipSome' and 'spaceChar'.
@@ -106,6 +115,13 @@ space = void $ takeWhileP (Just "white space") isSpace
 space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
 space1 = void $ takeWhile1P (Just "white space") isSpace
 {-# INLINE space1 #-}
+
+-- | Like 'space1', but does not accept newlines and carriage returns.
+--
+-- @since 8.1.0
+hspace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
+hspace1 = void $ takeWhile1P (Just "white space") isHSpace
+{-# INLINE hspace1 #-}
 
 ----------------------------------------------------------------------------
 -- Categories of characters
@@ -291,3 +307,10 @@ char' c =
       char (toTitle c)
     ]
 {-# INLINE char' #-}
+
+----------------------------------------------------------------------------
+-- Helpers
+
+-- | Is it a horizontal space character?
+isHSpace :: Char -> Bool
+isHSpace x = isSpace x && x /= '\n' && x /= '\r'

@@ -1,3 +1,8 @@
+## Megaparsec 8.1.0
+
+* Added the functions `hspace` and `hspace1` to the `Text.Megaparsec.Char`
+  and `Text.Megaparsec.Byte` modules.
+
 ## Megaparsec 8.0.0
 
 * The methods `failure` and `fancyFailure` of `MonadParsec` are now ordinary
