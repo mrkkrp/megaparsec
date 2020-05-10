@@ -120,9 +120,6 @@ spec = do
   describe "letterChar" $
     checkCharPred "letter" isAlpha letterChar
 
-  describe "alphaNumChar" $
-    checkCharPred "alphanumeric character" isAlphaNum alphaNumChar
-
   describe "printChar" $
     checkCharPred "printable character" isPrint printChar
 

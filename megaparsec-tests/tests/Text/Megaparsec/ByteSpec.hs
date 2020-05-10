@@ -114,9 +114,6 @@ spec = do
   describe "spaceChar" $
     checkCharRange "white space" [9, 10, 11, 12, 13, 32, 160] spaceChar
 
-  describe "alphaNumChar" $
-    checkCharPred "alphanumeric character" (isAlphaNum . toChar) alphaNumChar
-
   describe "printChar" $
     checkCharPred "printable character" (isPrint . toChar) printChar
 
