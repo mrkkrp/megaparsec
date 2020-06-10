@@ -225,6 +225,20 @@ spec = do
             bsum = foldl (<|>) empty
             s = ">>"
         prs p s `shouldBe` prs p' s
+      context "issue 412" $ do
+        let a = try (char 'a' >> empty)
+            b = void (char 'b')
+            c = pure ()
+            p = ((a <|> b) <|> c) >> char 'd'
+            p' = (a <|> (b <|> c)) >> char 'd'
+            e = err 0 (utok 'a' <> etok 'd' <> etok 'b')
+            s = "aaa"
+        context "left associative" $
+          it "fails with the right error" $
+            prs p s `shouldFailWith` e
+        context "right associative" $
+          it "fails with the right error" $
+            prs p' s `shouldFailWith` e
 
     describe "many" $ do
       context "when stream begins with things argument of many parses"
