@@ -23,7 +23,10 @@
 --
 -- @since 6.0.0
 module Text.Megaparsec.Stream
-  ( Stream (..),
+  (
+    Stream (..),
+    TokenStream(..),
+    WrappedTokenStream(..)
   )
 where
 
@@ -34,6 +37,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import Data.Char (chr)
 import Data.Foldable (foldl')
 import Data.Kind (Type)
+import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
@@ -295,6 +299,131 @@ instance Stream TL.Text where
     reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') o pst
   reachOffsetNoLine o pst =
     reachOffsetNoLine' splitAtTL TL.foldl' ('\n', '\t') o pst
+
+----------------------------------------------------------------------------
+-- Token stream
+
+-- | Type class for streams which are composed of tokens e.g. from a separate lexing step.
+class (Ord (TSToken a), Ord (TSTokens a)) => TokenStream a where
+  -- | Type of token in the stream.
+  type TSToken a
+
+  -- | Type of “chunk” of the stream.
+  type TSTokens a
+
+  -- | Get the input string from the stream.
+  getSource :: a -> String
+
+  -- | Set the input string from the stream.
+  setSource :: String -> a -> a
+
+  -- | Get the tokens of the stream.
+  getTokens :: a -> TSTokens a
+
+  -- | Set the tokens of the stream.
+  setTokens :: TSTokens a -> a -> a
+
+  -- | Pretty-prints a single token.
+  showToken :: Proxy a -> TSToken a -> String
+
+  -- | Get the length of a single token.
+  tokenLength :: Proxy a -> TSToken a -> Int
+
+  -- | Get the start and end source positions of a token.
+  getStartAndEnd :: Proxy a -> TSToken a -> (SourcePos, SourcePos)
+
+-- | Modify the input string of the stream.
+modifySource :: TokenStream a => (String -> String) -> a -> a
+modifySource f x = setSource (f $ getSource x) x
+
+-- | Wrapper for a token stream.
+-- Useful when used with the DerivingVia extension.
+--
+-- > data MyStream = MyStream { getInput :: String, getTokens :: [Token] }
+-- >   deriving Stream via (WrappedTokenStream MyStream)
+-- >
+-- > instance TokenStream Foo where
+-- >   type TSToken Foo = Token
+-- >   type TSTokens Foo = [Token]
+-- >   -- implementations omitted
+newtype WrappedTokenStream a = WTS { unWTS :: a }
+
+-- | Stream instance for a TokenStream comprised of a list of tokens.
+instance (TokenStream a, TSToken a ~ t, TSTokens a ~ [t]) => Stream (WrappedTokenStream a) where
+  type Token (WrappedTokenStream a) = TSToken a
+  type Tokens (WrappedTokenStream a) = TSTokens a
+
+  -- Code below adapted from https://markkarpov.com/tutorial/megaparsec.html#working-with-custom-input-streams.
+
+  tokenToChunk Proxy x = [x]
+  tokensToChunk Proxy xs = xs
+  chunkToTokens Proxy = id
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+
+  take1_ (WTS wts) =
+    case getTokens wts of
+      [] -> Nothing
+      (t:ts) -> Just
+        ( t
+        , WTS . modifySource (drop (tokensLength pxy (t:|[]))) . setTokens ts $ wts
+        )
+    where pxy = Proxy :: Proxy (WrappedTokenStream a)
+
+  takeN_ n (WTS wts)
+    | n <= 0 = Just ([], WTS wts)
+    | null (getSource wts) = Nothing
+    | otherwise =
+        let (x, s') = splitAt n (getTokens wts)
+        in case NE.nonEmpty x of
+          Nothing -> Just (x, WTS . setTokens s' $ wts)
+          Just nex -> Just (x, WTS . modifySource (drop (tokensLength pxy nex)) . setTokens s' $ wts)
+    where pxy = Proxy :: Proxy (WrappedTokenStream a)
+
+  takeWhile_ f (WTS wts) =
+    let (x, s') = span f (getTokens wts)
+    in case NE.nonEmpty x of
+      Nothing -> (x, WTS . setTokens s' $ wts)
+      Just nex -> (x, WTS . modifySource (drop (tokensLength pxy nex)) . setTokens s' $ wts)
+    where pxy = Proxy :: Proxy (WrappedTokenStream a)
+
+  showTokens Proxy = intercalate " "
+    . NE.toList
+    . fmap (showToken pxy)
+    where pxy = Proxy :: Proxy a
+
+  tokensLength Proxy xs = sum (tokenLength pxy <$> xs)
+    where pxy = Proxy :: Proxy a
+
+  reachOffset o PosState {..} =
+    ( prefix ++ restOfLine
+    , PosState
+        { pstateInput = WTS . setSource postStr . setTokens post . unWTS $ pstateInput
+        , pstateOffset = max pstateOffset o
+        , pstateSourcePos = newSourcePos
+        , pstateTabWidth = pstateTabWidth
+        , pstateLinePrefix = prefix
+        }
+    )
+    where
+      prefix =
+        if sameLine
+          then pstateLinePrefix ++ preStr
+          else preStr
+      sameLine = sourceLine newSourcePos == sourceLine pstateSourcePos
+      newSourcePos =
+        case post of
+          [] -> pstateSourcePos
+          (x:_) -> fst (getStartAndEnd pxyA x)
+      (pre, post) = splitAt (o - pstateOffset) (getTokens $ unWTS pstateInput)
+      (preStr, postStr) = splitAt tokensConsumed (getSource $ unWTS pstateInput)
+      tokensConsumed =
+        case NE.nonEmpty pre of
+          Nothing -> 0
+          Just nePre -> tokensLength pxyTSO nePre
+      restOfLine = takeWhile (/= '\n') postStr
+      pxyA = Proxy :: Proxy a
+      pxyTSO = Proxy :: Proxy (WrappedTokenStream a)
 
 ----------------------------------------------------------------------------
 -- Helpers
