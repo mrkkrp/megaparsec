@@ -203,7 +203,8 @@ parseMaybe p s =
 parseTest ::
   ( ShowErrorComponent e,
     Show a,
-    Stream s
+    VisualStream s,
+    TraversableStream s
   ) =>
   -- | Parser to run
   Parsec e s a ->
@@ -632,7 +633,7 @@ setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 -- abuses the library.
 --
 -- @since 7.0.0
-getSourcePos :: MonadParsec e s m => m SourcePos
+getSourcePos :: (TraversableStream s, MonadParsec e s m) => m SourcePos
 getSourcePos = do
   st <- getParserState
   let pst = reachOffsetNoLine (stateOffset st) (statePosState st)

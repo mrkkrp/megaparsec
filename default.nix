@@ -1,5 +1,5 @@
 { pkgs ? (import ./nix/nixpkgs)
-, ghc ? "ghc865"
+, ghc ? "ghc884"
 }:
 
 let
@@ -59,20 +59,21 @@ let
     # normally fails. We want to build it and run the tests anyway, so we
     # have to do these manipulations.
     "parser-combinators-tests" = pkgs.haskell.lib.dontHaddock
-      (super.parser-combinators-tests_1_2_1.overrideAttrs (drv: {
+      (super.parser-combinators-tests.overrideAttrs (drv: {
         installPhase = "mkdir $out";
         broken = false;
       }));
-    "parser-combinators" = super.parser-combinators_1_2_1;
     "modern-uri" = doBenchmark super.modern-uri;
-    "mmark" = doBenchmark super.mmark_0_0_7_2;
     "parsers-bench" = doBenchmark
       (super.callCabal2nix "parsers-bench" parsersBenchSource { });
-    "hspec-megaparsec" = super.hspec-megaparsec_2_1_0;
-    "dhall" = super.dhall_1_29_0;
-    "idris" = doJailbreak (patch super.idris ./nix/patches/idris.patch);
-    "stache" = super.stache_2_1_0;
-    "tomland" = super.tomland_1_2_1_0;
+    "hspec-megaparsec" =
+      patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch;
+    "dhall" =
+      patch super.dhall ./nix/patches/dhall.patch;
+    "idris" =
+      patch super.idris ./nix/patches/idris.patch;
+    "tomland" =
+      patch super.tomland ./nix/patches/tomland.patch;
   };
 
   updatedPkgs = pkgs // {
@@ -103,7 +104,7 @@ in {
   # Dependent packages of interest:
   deps = pkgs.recurseIntoAttrs {
     inherit (haskellPackages)
-      # cachix # doesn't build with recent enough dhall
+      cachix
       cassava-megaparsec
       cue-sheet
       dhall

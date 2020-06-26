@@ -1,0 +1,13 @@
+diff --git a/src/Dhall/Parser/Expression.hs b/src/Dhall/Parser/Expression.hs
+index 3cd51406..0def6b22 100644
+--- a/src/Dhall/Parser/Expression.hs
++++ b/src/Dhall/Parser/Expression.hs
+@@ -36,7 +36,7 @@ import Dhall.Parser.Combinators
+ import Dhall.Parser.Token
+ 
+ -- | Get the current source position
+-getSourcePos :: Text.Megaparsec.MonadParsec e s m =>
++getSourcePos :: (Text.Megaparsec.MonadParsec e s m, Text.Megaparsec.TraversableStream s) =>
+                 m Text.Megaparsec.SourcePos
+ getSourcePos =
+     Text.Megaparsec.getSourcePos

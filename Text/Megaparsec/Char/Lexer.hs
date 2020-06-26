@@ -137,7 +137,7 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- > indentLevel = sourceColumn <$> getPosition
 --
 -- @since 4.3.0
-indentLevel :: MonadParsec e s m => m Pos
+indentLevel :: (TraversableStream s, MonadParsec e s m) => m Pos
 indentLevel = sourceColumn <$> getSourcePos
 {-# INLINE indentLevel #-}
 
@@ -174,7 +174,7 @@ incorrectIndent ord ref actual =
 -- sure you have some indentation. Use returned value to check indentation
 -- on every subsequent line according to syntax of your language.
 indentGuard ::
-  MonadParsec e s m =>
+  (TraversableStream s, MonadParsec e s m) =>
   -- | How to consume indentation (white space)
   m () ->
   -- | Desired ordering between reference level and actual level
@@ -197,7 +197,7 @@ indentGuard sc ord ref = do
 --
 -- @since 4.3.0
 nonIndented ::
-  MonadParsec e s m =>
+  (TraversableStream s, MonadParsec e s m) =>
   -- | How to consume indentation (white space)
   m () ->
   -- | How to parse actual data
@@ -233,7 +233,7 @@ data IndentOpt m a b
 --
 -- @since 4.3.0
 indentBlock ::
-  (MonadParsec e s m, Token s ~ Char) =>
+  (TraversableStream s, MonadParsec e s m, Token s ~ Char) =>
   -- | How to consume indentation (white space)
   m () ->
   -- | How to parse “reference” token
@@ -267,7 +267,7 @@ indentBlock sc r = do
 -- | Grab indented items. This is a helper for 'indentBlock', it's not a
 -- part of the public API.
 indentedItems ::
-  MonadParsec e s m =>
+  (TraversableStream s, MonadParsec e s m) =>
   -- | Reference indentation level
   Pos ->
   -- | Level of the first indented item ('lookAhead'ed)
@@ -309,7 +309,7 @@ indentedItems ref lvl sc p = go
 --
 -- @since 5.0.0
 lineFold ::
-  MonadParsec e s m =>
+  (TraversableStream s, MonadParsec e s m) =>
   -- | How to consume indentation (white space)
   m () ->
   -- | Callback that uses provided space-consumer
@@ -356,8 +356,8 @@ charLiteral = label "literal character" $ do
 --
 -- If you need to parse signed integers, see the 'signed' combinator.
 --
--- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
--- wasn't polymorphic in its return type.
+-- __Note__: before the version /6.0.0/ the function returned 'Integer',
+-- i.e. it wasn't polymorphic in its return type.
 decimal :: (MonadParsec e s m, Token s ~ Char, Num a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
@@ -405,7 +405,7 @@ binary =
 --
 -- > octal = char '0' >> char' 'o' >> L.octal
 --
--- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
+-- __Note__: before version /6.0.0/ the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
 octal ::
   forall e s m a.
@@ -430,7 +430,7 @@ octal =
 --
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 --
--- __Note__: before version 6.0.0 the function returned 'Integer', i.e. it
+-- __Note__: before version /6.0.0/ the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
 hexadecimal ::
   forall e s m a.
@@ -476,10 +476,11 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
 --
--- __Note__: before version 6.0.0 the function returned 'Double', i.e. it
+-- __Note__: before version /6.0.0/ the function returned 'Double', i.e. it
 -- wasn't polymorphic in its return type.
 --
--- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
+-- __Note__: in versions /6.0.0/–/6.1.1/ this function accepted plain
+-- integers.
 float :: (MonadParsec e s m, Token s ~ Char, RealFloat a) => m a
 float = do
   c' <- decimal_

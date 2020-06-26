@@ -24,6 +24,8 @@
 -- @since 6.0.0
 module Text.Megaparsec.Stream
   ( Stream (..),
+    VisualStream (..),
+    TraversableStream (..),
   )
 where
 
@@ -32,12 +34,13 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import Data.Char (chr)
-import Data.Foldable (foldl')
+import Data.Foldable (foldl', toList)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
 import Data.Proxy
+import qualified Data.Sequence as S
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Word (Word8)
@@ -45,6 +48,9 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 
 -- | Type class for inputs that can be consumed by the library.
+--
+-- __Note__: before the version /9.0.0/ the class included the methods from
+-- 'VisualStream' and 'TraversableStream'.
 class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- | Type of token in the stream.
   type Token s :: Type
@@ -113,6 +119,104 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- conceptual point of view.
   takeWhile_ :: (Token s -> Bool) -> s -> (Tokens s, s)
 
+-- | @since 9.0.0
+instance Ord a => Stream [a] where
+  type Token [a] = a
+  type Tokens [a] = [a]
+  tokenToChunk Proxy = pure
+  tokensToChunk Proxy = id
+  chunkToTokens Proxy = id
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+  take1_ [] = Nothing
+  take1_ (t : ts) = Just (t, ts)
+  takeN_ n s
+    | n <= 0 = Just ([], s)
+    | null s = Nothing
+    | otherwise = Just (splitAt n s)
+  takeWhile_ = span
+
+-- | @since 9.0.0
+instance Ord a => Stream (S.Seq a) where
+  type Token (S.Seq a) = a
+  type Tokens (S.Seq a) = S.Seq a
+  tokenToChunk Proxy = pure
+  tokensToChunk Proxy = S.fromList
+  chunkToTokens Proxy = toList
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+  take1_ S.Empty = Nothing
+  take1_ (t S.:<| ts) = Just (t, ts)
+  takeN_ n s
+    | n <= 0 = Just (S.empty, s)
+    | null s = Nothing
+    | otherwise = Just (S.splitAt n s)
+  takeWhile_ = S.spanl
+
+instance Stream B.ByteString where
+  type Token B.ByteString = Word8
+  type Tokens B.ByteString = B.ByteString
+  tokenToChunk Proxy = B.singleton
+  tokensToChunk Proxy = B.pack
+  chunkToTokens Proxy = B.unpack
+  chunkLength Proxy = B.length
+  chunkEmpty Proxy = B.null
+  take1_ = B.uncons
+  takeN_ n s
+    | n <= 0 = Just (B.empty, s)
+    | B.null s = Nothing
+    | otherwise = Just (B.splitAt n s)
+  takeWhile_ = B.span
+
+instance Stream BL.ByteString where
+  type Token BL.ByteString = Word8
+  type Tokens BL.ByteString = BL.ByteString
+  tokenToChunk Proxy = BL.singleton
+  tokensToChunk Proxy = BL.pack
+  chunkToTokens Proxy = BL.unpack
+  chunkLength Proxy = fromIntegral . BL.length
+  chunkEmpty Proxy = BL.null
+  take1_ = BL.uncons
+  takeN_ n s
+    | n <= 0 = Just (BL.empty, s)
+    | BL.null s = Nothing
+    | otherwise = Just (BL.splitAt (fromIntegral n) s)
+  takeWhile_ = BL.span
+
+instance Stream T.Text where
+  type Token T.Text = Char
+  type Tokens T.Text = T.Text
+  tokenToChunk Proxy = T.singleton
+  tokensToChunk Proxy = T.pack
+  chunkToTokens Proxy = T.unpack
+  chunkLength Proxy = T.length
+  chunkEmpty Proxy = T.null
+  take1_ = T.uncons
+  takeN_ n s
+    | n <= 0 = Just (T.empty, s)
+    | T.null s = Nothing
+    | otherwise = Just (T.splitAt n s)
+  takeWhile_ = T.span
+
+instance Stream TL.Text where
+  type Token TL.Text = Char
+  type Tokens TL.Text = TL.Text
+  tokenToChunk Proxy = TL.singleton
+  tokensToChunk Proxy = TL.pack
+  chunkToTokens Proxy = TL.unpack
+  chunkLength Proxy = fromIntegral . TL.length
+  chunkEmpty Proxy = TL.null
+  take1_ = TL.uncons
+  takeN_ n s
+    | n <= 0 = Just (TL.empty, s)
+    | TL.null s = Nothing
+    | otherwise = Just (TL.splitAt (fromIntegral n) s)
+  takeWhile_ = TL.span
+
+-- | Type class for inputs that can also be used for debugging.
+--
+-- @since 9.0.0
+class Stream s => VisualStream s where
   -- | Pretty-print non-empty stream of tokens. This function is also used
   -- to print single tokens (represented as singleton lists).
   --
@@ -127,13 +231,36 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   tokensLength :: Proxy s -> NonEmpty (Token s) -> Int
   tokensLength Proxy = NE.length
 
+instance VisualStream String where
+  showTokens Proxy = stringPretty
+
+instance VisualStream B.ByteString where
+  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
+
+instance VisualStream BL.ByteString where
+  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
+
+instance VisualStream T.Text where
+  showTokens Proxy = stringPretty
+
+instance VisualStream TL.Text where
+  showTokens Proxy = stringPretty
+
+-- | Type class for inputs that can also be used for error reporting.
+--
+-- @since 9.0.0
+class Stream s => TraversableStream s where
+  {-# MINIMAL reachOffset | reachOffsetNoLine #-}
+
   -- | Given an offset @o@ and initial 'PosState', adjust the state in such
   -- a way that it starts at the offset.
   --
   -- Return two values (in order):
   --
-  --     * 'String' representing the line on which the given offset @o@ is
-  --       located. The line should satisfy a number of conditions that are
+  --     * 'Maybe' 'String' representing the line on which the given offset
+  --       @o@ is located. It can be omitted (i.e. 'Nothing'); in that case
+  --       error reporting functions will not show offending lines. If
+  --       returned, the line should satisfy a number of conditions that are
   --       described below.
   --     * The updated 'PosState' which can be in turn used to locate
   --       another offset @o'@ given that @o' >= o@.
@@ -152,7 +279,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   --       'PosState'.
   --
   -- __Note__: type signature of the function was changed in the version
-  -- /8.0.0/.
+  -- /9.0.0/.
   --
   -- @since 7.0.0
   reachOffset ::
@@ -161,7 +288,9 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
     -- | Initial 'PosState' to use
     PosState s ->
     -- | See the description of the function
-    (String, PosState s)
+    (Maybe String, PosState s)
+  reachOffset o pst =
+    (Nothing, reachOffsetNoLine o pst)
 
   -- | A version of 'reachOffset' that may be faster because it doesn't need
   -- to fetch the line at which the given offset in located.
@@ -185,111 +314,35 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   reachOffsetNoLine o pst =
     snd (reachOffset o pst)
 
-instance Stream String where
-  type Token String = Char
-  type Tokens String = String
-  tokenToChunk Proxy = pure
-  tokensToChunk Proxy = id
-  chunkToTokens Proxy = id
-  chunkLength Proxy = length
-  chunkEmpty Proxy = null
-  take1_ [] = Nothing
-  take1_ (t : ts) = Just (t, ts)
-  takeN_ n s
-    | n <= 0 = Just ("", s)
-    | null s = Nothing
-    | otherwise = Just (splitAt n s)
-  takeWhile_ = span
-  showTokens Proxy = stringPretty
-
+instance TraversableStream String where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
     reachOffset' splitAt foldl' id id ('\n', '\t') o pst
   reachOffsetNoLine o pst =
     reachOffsetNoLine' splitAt foldl' ('\n', '\t') o pst
 
-instance Stream B.ByteString where
-  type Token B.ByteString = Word8
-  type Tokens B.ByteString = B.ByteString
-  tokenToChunk Proxy = B.singleton
-  tokensToChunk Proxy = B.pack
-  chunkToTokens Proxy = B.unpack
-  chunkLength Proxy = B.length
-  chunkEmpty Proxy = B.null
-  take1_ = B.uncons
-  takeN_ n s
-    | n <= 0 = Just (B.empty, s)
-    | B.null s = Nothing
-    | otherwise = Just (B.splitAt n s)
-  takeWhile_ = B.span
-  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
-
+instance TraversableStream B.ByteString where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
     reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
   reachOffsetNoLine o pst =
     reachOffsetNoLine' B.splitAt B.foldl' (10, 9) o pst
 
-instance Stream BL.ByteString where
-  type Token BL.ByteString = Word8
-  type Tokens BL.ByteString = BL.ByteString
-  tokenToChunk Proxy = BL.singleton
-  tokensToChunk Proxy = BL.pack
-  chunkToTokens Proxy = BL.unpack
-  chunkLength Proxy = fromIntegral . BL.length
-  chunkEmpty Proxy = BL.null
-  take1_ = BL.uncons
-  takeN_ n s
-    | n <= 0 = Just (BL.empty, s)
-    | BL.null s = Nothing
-    | otherwise = Just (BL.splitAt (fromIntegral n) s)
-  takeWhile_ = BL.span
-  showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
-
+instance TraversableStream BL.ByteString where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
     reachOffset' splitAtBL BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9) o pst
   reachOffsetNoLine o pst =
     reachOffsetNoLine' splitAtBL BL.foldl' (10, 9) o pst
 
-instance Stream T.Text where
-  type Token T.Text = Char
-  type Tokens T.Text = T.Text
-  tokenToChunk Proxy = T.singleton
-  tokensToChunk Proxy = T.pack
-  chunkToTokens Proxy = T.unpack
-  chunkLength Proxy = T.length
-  chunkEmpty Proxy = T.null
-  take1_ = T.uncons
-  takeN_ n s
-    | n <= 0 = Just (T.empty, s)
-    | T.null s = Nothing
-    | otherwise = Just (T.splitAt n s)
-  takeWhile_ = T.span
-  showTokens Proxy = stringPretty
-
+instance TraversableStream T.Text where
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
     reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t') o pst
   reachOffsetNoLine o pst =
     reachOffsetNoLine' T.splitAt T.foldl' ('\n', '\t') o pst
 
-instance Stream TL.Text where
-  type Token TL.Text = Char
-  type Tokens TL.Text = TL.Text
-  tokenToChunk Proxy = TL.singleton
-  tokensToChunk Proxy = TL.pack
-  chunkToTokens Proxy = TL.unpack
-  chunkLength Proxy = fromIntegral . TL.length
-  chunkEmpty Proxy = TL.null
-  take1_ = TL.uncons
-  takeN_ n s
-    | n <= 0 = Just (TL.empty, s)
-    | TL.null s = Nothing
-    | otherwise = Just (TL.splitAt (fromIntegral n) s)
-  takeWhile_ = TL.span
-  showTokens Proxy = stringPretty
-
+instance TraversableStream TL.Text where
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
     reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') o pst
@@ -323,7 +376,7 @@ reachOffset' ::
   -- | Initial 'PosState' to use
   PosState s ->
   -- | Line at which 'SourcePos' is located, updated 'PosState'
-  (String, PosState s)
+  (Maybe String, PosState s)
 reachOffset'
   splitAt'
   foldl''
@@ -332,7 +385,7 @@ reachOffset'
   (newlineTok, tabTok)
   o
   PosState {..} =
-    ( case expandTab pstateTabWidth
+    ( Just $ case expandTab pstateTabWidth
         . addPrefix
         . f
         . fromToks

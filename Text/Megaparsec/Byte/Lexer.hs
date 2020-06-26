@@ -225,7 +225,7 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 -- This function does not parse sign, if you need to parse signed numbers,
 -- see 'signed'.
 --
--- __Note__: in versions 6.0.0–6.1.1 this function accepted plain integers.
+-- __Note__: in versions /6.0.0/–/6.1.1/ this function accepted plain integers.
 float :: (MonadParsec e s m, Token s ~ Word8, RealFloat a) => m a
 float = do
   c' <- decimal_
