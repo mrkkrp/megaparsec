@@ -1,0 +1,24 @@
+diff --git a/test/Test/Toml/Parser/Common.hs b/test/Test/Toml/Parser/Common.hs
+index 43d9069..cc5d9e3 100644
+--- a/test/Test/Toml/Parser/Common.hs
++++ b/test/Test/Toml/Parser/Common.hs
+@@ -39,7 +39,7 @@ import Data.Time (Day, LocalTime (..), TimeOfDay (..), TimeZone, ZonedTime (..),
+                   minutesToTimeZone)
+ import Test.Hspec (Expectation)
+ import Test.Hspec.Megaparsec (shouldFailOn, shouldParse)
+-import Text.Megaparsec (Parsec, ShowErrorComponent, Stream, parse)
++import Text.Megaparsec (Parsec, ShowErrorComponent, Stream, VisualStream, TraversableStream, parse)
+ 
+ import Toml.Parser.Item (tomlP)
+ import Toml.Parser.Key (keyP)
+@@ -50,9 +50,8 @@ import Toml.Type.Key (Key (..))
+ import Toml.Type.TOML (TOML (..))
+ import Toml.Type.UValue (UValue (..))
+ 
+-
+ parseX
+-    :: (ShowErrorComponent e, Stream s, Show a, Eq a)
++    :: (ShowErrorComponent e, Stream s, Show a, Eq a, VisualStream s, TraversableStream s)
+     => Parsec e s a -> s -> a -> Expectation
+ parseX p given expected = parse p "" given `shouldParse` expected
+ 

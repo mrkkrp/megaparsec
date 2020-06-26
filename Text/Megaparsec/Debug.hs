@@ -56,7 +56,7 @@ import Text.Megaparsec.Stream
 -- general.
 dbg ::
   forall e s m a.
-  ( Stream s,
+  ( VisualStream s,
     ShowErrorComponent e,
     Show a
   ) =>
@@ -98,7 +98,7 @@ data DbgItem s e a
 -- | Render a single piece of debugging info.
 dbgLog ::
   forall s e a.
-  (Stream s, ShowErrorComponent e, Show a) =>
+  (VisualStream s, ShowErrorComponent e, Show a) =>
   -- | Debugging label
   String ->
   -- | Information to render
@@ -122,7 +122,7 @@ dbgLog lbl item = prefix msg
         "MATCH (EERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
 
 -- | Pretty-print a list of tokens.
-showStream :: Stream s => Proxy s -> [Token s] -> String
+showStream :: VisualStream s => Proxy s -> [Token s] -> String
 showStream pxy ts =
   case NE.nonEmpty ts of
     Nothing -> "<EMPTY>"

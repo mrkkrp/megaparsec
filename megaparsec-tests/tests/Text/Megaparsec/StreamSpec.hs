@@ -301,7 +301,7 @@ spec = do
 -- | Generic block of tests for the 'showTokens' method.
 describeShowTokens ::
   forall s.
-  ( Stream s,
+  ( VisualStream s,
     IsString (Tokens s),
     Show (Token s),
     Arbitrary (Token s)
@@ -442,7 +442,7 @@ describeShowTokens pxy quotedTokGen =
 -- | Generic block of tests for the 'reachOffset' method.
 describeReachOffset ::
   forall s.
-  ( Stream s,
+  ( TraversableStream s,
     IsString s,
     Show s,
     Arbitrary s
@@ -491,7 +491,7 @@ describeReachOffset Proxy =
                   pstateLinePrefix = ""
                 }
             (r, _) = reachOffset o pst
-        r `shouldBe` "<empty line>"
+        r `shouldBe` Just "<empty line>"
     it "replaces tabs with spaces in returned line" $
       property $ \pst' -> do
         let pst =
@@ -502,7 +502,7 @@ describeReachOffset Proxy =
             (r, _) = reachOffset 2 pst
             w = unPos (pstateTabWidth pst)
             r' = replicate (w * 2) ' ' ++ "a" ++ replicate w ' '
-        r `shouldBe` r'
+        r `shouldBe` Just r'
     it "returns correct line (with line prefix)" $
       property $ \pst' -> do
         let pst =
@@ -511,7 +511,7 @@ describeReachOffset Proxy =
                   pstateLinePrefix = "123"
                 }
             (r, _) = reachOffset 0 pst
-        r `shouldBe` "123foo"
+        r `shouldBe` Just "123foo"
     it "returns correct line (without line prefix)" $
       property $ \pst' -> do
         let pst =
@@ -520,7 +520,7 @@ describeReachOffset Proxy =
                   pstateOffset = 0
                 }
             (r, _) = reachOffset 4 pst
-        r `shouldBe` "bar"
+        r `shouldBe` Just "bar"
     it "works incrementally" $
       property $ \os' (NonNegative d) s -> do
         let os = getNonNegative <$> os'
@@ -537,7 +537,7 @@ describeReachOffset Proxy =
 -- | Generic block of tests for the 'reachOffsetNoLine' method.
 describeReachOffsetNoLine ::
   forall s.
-  ( Stream s,
+  ( TraversableStream s,
     IsString s,
     Show s,
     Arbitrary s

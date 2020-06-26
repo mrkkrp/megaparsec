@@ -275,7 +275,10 @@ contains g r e = property (all f (g e))
     f x = r x `isInfixOf` rendered
 
 mkBundlePE ::
-  (Stream s, ShowErrorComponent e) =>
+  ( VisualStream s,
+    TraversableStream s,
+    ShowErrorComponent e
+  ) =>
   s ->
   ParseError s e ->
   String

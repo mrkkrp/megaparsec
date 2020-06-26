@@ -1,4 +1,11 @@
-## Megaparsec 8.1.0
+## Megaparsec 9.0.0
+
+* Split the `Stream` type class. The methods `showTokens` and `tokensLength`
+  have been put into a separate type class `VisualStream`, while
+  `reachOffset` and `reachOffsetNoLine` are now in `TraversableStream`. This
+  should make defining `Stream` instances for custom streams easier.
+
+* Defined `Stream` instances for lists and `Seq`s.
 
 * Added the functions `hspace` and `hspace1` to the `Text.Megaparsec.Char`
   and `Text.Megaparsec.Byte` modules.

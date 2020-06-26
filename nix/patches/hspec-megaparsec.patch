@@ -1,0 +1,84 @@
+diff --git a/Test/Hspec/Megaparsec.hs b/Test/Hspec/Megaparsec.hs
+index e639426..c0ef679 100644
+--- a/Test/Hspec/Megaparsec.hs
++++ b/Test/Hspec/Megaparsec.hs
+@@ -51,7 +51,8 @@ import qualified Data.List.NonEmpty as NE
+ shouldParse
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      , Eq a
+      )
+@@ -72,7 +73,8 @@ r `shouldParse` v = case r of
+ parseSatisfies
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      , Eq a
+      )
+@@ -106,7 +108,8 @@ p `shouldFailOn` s = shouldFail (p s)
+ shouldSucceedOn
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      )
+   => (s -> Either (ParseErrorBundle s e) a)
+@@ -127,7 +130,8 @@ p `shouldSucceedOn` s = shouldSucceed (p s)
+ shouldFailWith
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      , Eq e
+      )
+@@ -144,7 +148,8 @@ r `shouldFailWith` perr1 = r `shouldFailWithM` [perr1]
+ shouldFailWithM
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      , Eq e
+      )
+@@ -208,7 +213,8 @@ succeedsLeaving
+      , Eq s
+      , Show s
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      )
+   => (State s e, Either (ParseErrorBundle s e) a)
+      -- ^ Parser that takes stream and produces result along with actual
+@@ -261,7 +267,8 @@ shouldFail r = case r of
+ shouldSucceed
+   :: ( HasCallStack
+      , ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      , Show a
+      )
+   => Either (ParseErrorBundle s e) a
+@@ -291,7 +298,8 @@ checkUnconsumed e a = unless (e == a) . expectationFailure $
+ 
+ showBundle
+   :: ( ShowErrorComponent e
+-     , Stream s
++     , VisualStream s
++     , TraversableStream s
+      )
+   => ParseErrorBundle s e
+   -> String

@@ -353,7 +353,10 @@ spec = do
     it "withRange works" $
       do
         let withRange ::
-              (MonadParsec e s m, MonadFix m) =>
+              ( TraversableStream s,
+                MonadParsec e s m,
+                MonadFix m
+              ) =>
               ((SourcePos, SourcePos) -> m a) ->
               m a
             withRange f = do

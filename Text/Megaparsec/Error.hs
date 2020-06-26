@@ -166,7 +166,7 @@ instance
     Show (Token s),
     Show e,
     ShowErrorComponent e,
-    Stream s,
+    VisualStream s,
     Typeable s,
     Typeable e
   ) =>
@@ -291,7 +291,8 @@ instance
     Show (Token s),
     Show e,
     ShowErrorComponent e,
-    Stream s,
+    VisualStream s,
+    TraversableStream s,
     Typeable s,
     Typeable e
   ) =>
@@ -306,7 +307,7 @@ instance
 --
 -- @since 7.0.0
 attachSourcePos ::
-  (Traversable t, Stream s) =>
+  (Traversable t, TraversableStream s) =>
   -- | How to project offset from an item (e.g. 'errorOffset')
   (a -> Int) ->
   -- | The collection of items
@@ -353,7 +354,8 @@ instance ShowErrorComponent Void where
 -- @since 7.0.0
 errorBundlePretty ::
   forall s e.
-  ( Stream s,
+  ( VisualStream s,
+    TraversableStream s,
     ShowErrorComponent e
   ) =>
   -- | Parse error bundle to display
@@ -370,35 +372,36 @@ errorBundlePretty ParseErrorBundle {..} =
       (ShowS, PosState s)
     f (o, !pst) e = (o . (outChunk ++), pst')
       where
-        (sline, pst') = reachOffset (errorOffset e) pst
+        (msline, pst') = reachOffset (errorOffset e) pst
         epos = pstateSourcePos pst'
         outChunk =
           "\n" <> sourcePosPretty epos <> ":\n"
-            <> padding
-            <> "|\n"
-            <> lineNumber
-            <> " | "
-            <> sline
-            <> "\n"
-            <> padding
-            <> "| "
-            <> rpadding
-            <> pointer
-            <> "\n"
+            <> offendingLine
             <> parseErrorTextPretty e
-        lineNumber = (show . unPos . sourceLine) epos
-        padding = replicate (length lineNumber + 1) ' '
-        rpadding =
-          if pointerLen > 0
-            then replicate rpshift ' '
-            else ""
-        rpshift = unPos (sourceColumn epos) - 1
-        pointer = replicate pointerLen '^'
-        pointerLen =
-          if rpshift + elen > slineLen
-            then slineLen - rpshift + 1
-            else elen
-        slineLen = length sline
+        offendingLine =
+          case msline of
+            Nothing -> ""
+            Just sline ->
+              let rpadding =
+                    if pointerLen > 0
+                      then replicate rpshift ' '
+                      else ""
+                  pointerLen =
+                    if rpshift + elen > slineLen
+                      then slineLen - rpshift + 1
+                      else elen
+                  pointer = replicate pointerLen '^'
+                  lineNumber = (show . unPos . sourceLine) epos
+                  padding = replicate (length lineNumber + 1) ' '
+                  rpshift = unPos (sourceColumn epos) - 1
+                  slineLen = length sline
+               in padding <> "|\n" <> lineNumber <> " | " <> sline
+                    <> "\n"
+                    <> padding
+                    <> "| "
+                    <> rpadding
+                    <> pointer
+                    <> "\n"
         pxy = Proxy :: Proxy s
         elen =
           case e of
@@ -412,7 +415,7 @@ errorBundlePretty ParseErrorBundle {..} =
 --
 -- @since 5.0.0
 parseErrorPretty ::
-  (Stream s, ShowErrorComponent e) =>
+  (VisualStream s, ShowErrorComponent e) =>
   -- | Parse error to render
   ParseError s e ->
   -- | Result of rendering
@@ -427,7 +430,7 @@ parseErrorPretty e =
 -- @since 5.1.0
 parseErrorTextPretty ::
   forall s e.
-  (Stream s, ShowErrorComponent e) =>
+  (VisualStream s, ShowErrorComponent e) =>
   -- | Parse error to render
   ParseError s e ->
   -- | Result of rendering
@@ -449,14 +452,14 @@ parseErrorTextPretty (FancyError _ xs) =
 -- Helpers
 
 -- | Pretty-print an 'ErrorItem'.
-showErrorItem :: Stream s => Proxy s -> ErrorItem (Token s) -> String
+showErrorItem :: VisualStream s => Proxy s -> ErrorItem (Token s) -> String
 showErrorItem pxy = \case
   Tokens ts -> showTokens pxy ts
   Label label -> NE.toList label
   EndOfInput -> "end of input"
 
 -- | Get length of the “pointer” to display under a given 'ErrorItem'.
-errorItemLength :: Stream s => Proxy s -> ErrorItem (Token s) -> Int
+errorItemLength :: VisualStream s => Proxy s -> ErrorItem (Token s) -> Int
 errorItemLength pxy = \case
   Tokens ts -> tokensLength pxy ts
   _ -> 1

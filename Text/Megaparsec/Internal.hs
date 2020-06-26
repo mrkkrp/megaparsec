@@ -588,7 +588,7 @@ toHints streamPos = \case
 
 -- | @'withHints' hs c@ makes “error” continuation @c@ use given hints @hs@.
 --
--- Note that if resulting continuation gets 'ParseError' that has custom
+-- __Note__ that if resulting continuation gets 'ParseError' that has custom
 -- data in it, hints are ignored.
 withHints ::
   Stream s =>
