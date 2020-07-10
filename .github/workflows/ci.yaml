@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - synchronize
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cabal: ["3.2"]
+        ghc: ["8.6.5", "8.8.3", "8.10.1"]
+    env:
+      CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-haskell@v1.1.2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+      - run: cabal v2-update
+      - run: cabal v2-freeze $CONFIG
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cabal/packages
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-
+      - run: cabal format
+      - run: pushd megaparsec-tests && cabal format && popd
+      - run: git diff --exit-code --color=always
+      - run: cabal v2-build all $CONFIG
+      - run: cabal v2-test all $CONFIG
+      - run: cabal v2-haddock megaparsec $CONFIG
+      - run: cabal v2-haddock megaparsec-tests $CONFIG
+      - run: cabal v2-sdist
+      - run: pushd megaparsec-tests && cabal v2-sdist && popd
