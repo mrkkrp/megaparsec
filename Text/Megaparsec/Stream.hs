@@ -347,7 +347,7 @@ reachOffset'
           pstateTabWidth = pstateTabWidth,
           pstateLinePrefix =
             if sameLine
-              then-- NOTE We don't use difference lists here because it's
+              then -- NOTE We don't use difference lists here because it's
               -- desirable for 'PosState' to be an instance of 'Eq' and
               -- 'Show'. So we just do appending here. Fortunately several
               -- parse errors on the same line should be relatively rare.

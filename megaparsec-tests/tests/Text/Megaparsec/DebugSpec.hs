@@ -31,9 +31,8 @@ spec = do
             s = "abcd"
         prs p s `shouldFailWith` err 1 (etok 'a')
         prs' p s `failsLeaving` "bcd"
-    context "when inner parser fails consuming input"
-      $ it "has no effect on how parser works"
-      $ do
+    context "when inner parser fails consuming input" $
+      it "has no effect on how parser works" $ do
         let p = dbg "chars" (char 'a' *> char 'c')
             s = "abc"
         prs p s `shouldFailWith` err 1 (utok 'b' <> etok 'c')
@@ -49,9 +48,8 @@ spec = do
             s = "bcd"
         prs p s `shouldFailWith` err 0 (etok 'a')
         prs' p s `failsLeaving` "bcd"
-    context "when inner parser fails without consuming"
-      $ it "has no effect on how parser works"
-      $ do
+    context "when inner parser fails without consuming" $
+      it "has no effect on how parser works" $ do
         let p = dbg "empty" (void empty)
             s = "abc"
         prs p s `shouldFailWith` err 0 mempty
