@@ -1,2 +1,2 @@
 packages: megaparsec.cabal
-        , megaparsec-tests/megaparsec-tests.cabal
+        -- , megaparsec-tests/megaparsec-tests.cabal
