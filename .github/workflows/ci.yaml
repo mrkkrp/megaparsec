@@ -39,6 +39,6 @@ jobs:
       - run: cabal v2-build all $CONFIG
       - run: cabal v2-test all $CONFIG
       - run: cabal v2-haddock megaparsec $CONFIG
-      # - run: cabal v2-haddock megaparsec-tests $CONFIG
+      - run: cabal v2-haddock megaparsec-tests $CONFIG
       - run: cabal v2-sdist
-      # - run: pushd megaparsec-tests && cabal v2-sdist && popd
+      - run: pushd megaparsec-tests && cabal v2-sdist && popd
