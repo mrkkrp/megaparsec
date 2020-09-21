@@ -66,14 +66,12 @@ let
     "modern-uri" = doBenchmark super.modern-uri;
     "parsers-bench" = doBenchmark
       (super.callCabal2nix "parsers-bench" parsersBenchSource { });
-    "hspec-megaparsec" =
-      patch super.hspec-megaparsec ./nix/patches/hspec-megaparsec.patch;
-    "dhall" =
-      patch super.dhall ./nix/patches/dhall.patch;
-    "idris" =
-      patch super.idris ./nix/patches/idris.patch;
-    "tomland" =
-      patch super.tomland ./nix/patches/tomland.patch;
+    "hspec-megaparsec" = super.hspec-megaparsec_2_2_0;
+    "dhall" = doJailbreak (patch super.dhall ./nix/patches/dhall.patch);
+    "idris" = doJailbreak (patch super.idris ./nix/patches/idris.patch);
+    "tomland" = super.tomland_1_3_1_0;
+    "stache" = super.stache_2_2_0;
+    "language-puppet" = doJailbreak super.language-puppet;
   };
 
   updatedPkgs = pkgs // {
