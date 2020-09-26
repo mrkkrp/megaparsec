@@ -118,7 +118,7 @@ space1 = void $ takeWhile1P (Just "white space") isSpace
 
 -- | Like 'space1', but does not accept newlines and carriage returns.
 --
--- @since 8.0.0
+-- @since 9.0.0
 hspace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
 hspace1 = void $ takeWhile1P (Just "white space") isHSpace
 {-# INLINE hspace1 #-}
