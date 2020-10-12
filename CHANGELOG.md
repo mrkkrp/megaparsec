@@ -1,3 +1,9 @@
+## Megaparsec 9.0.1
+
+* Added [Safe
+  Haskell](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/safe_haskell.html)
+  support.
+
 ## Megaparsec 9.0.0
 
 * Split the `Stream` type class. The methods `showTokens` and `tokensLength`

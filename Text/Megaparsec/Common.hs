@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE Safe #-}
 
 -- |
 -- Module      :  Text.Megaparsec.Common
