@@ -1,10 +1,10 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -86,7 +86,12 @@ import Text.Megaparsec.Stream
 -- unexpected 'a'
 -- expecting 'r' or end of input
 newtype Hints t = Hints [Set (ErrorItem t)]
-  deriving (Semigroup, Monoid)
+
+instance Semigroup (Hints t) where
+  Hints xs <> Hints ys = Hints $ xs <> ys
+
+instance Monoid (Hints t) where
+  mempty = Hints mempty
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with returned value) or failure (with parse error), and

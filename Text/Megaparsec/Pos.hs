@@ -1,6 +1,7 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE Safe #-}
 
 -- |
 -- Module      :  Text.Megaparsec.Pos
@@ -48,7 +49,7 @@ import GHC.Generics
 --
 -- @since 5.0.0
 newtype Pos = Pos Int
-  deriving (Show, Eq, Ord, Data, Typeable, NFData)
+  deriving (Show, Eq, Ord, Data, Generic, Typeable, NFData)
 
 -- | Construction of 'Pos' from 'Int'. The function throws
 -- 'InvalidPosException' when given a non-positive argument.

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE Unsafe #-}
 
 -- |
 -- Module      :  Text.Megaparsec.Debug
