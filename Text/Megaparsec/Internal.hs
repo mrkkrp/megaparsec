@@ -285,6 +285,15 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
         Error e -> eerr e s'
 
 -- | 'mzero' is a parser that __fails__ without consuming input.
+--
+-- __Note__: strictly speaking, this instance is unlawful. The right
+-- identity law is does not hold, e.g. in general this is not true:
+--
+-- > v >> mzero = mero
+--
+-- However the following holds:
+--
+-- > try v >> mzero = mzero
 instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
   mzero = pZero
   mplus = pPlus
