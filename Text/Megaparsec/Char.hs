@@ -52,6 +52,7 @@ module Text.Megaparsec.Char
     -- * Single character
     char,
     char',
+    charNegate,
 
     -- * Sequence of characters
     string,
@@ -308,6 +309,20 @@ char' c =
       char (toTitle c)
     ]
 {-# INLINE char' #-}
+
+-- | Combinator to “negate” a single-character parser.
+--
+-- Similar to “negation” of character classes in regex. Will produce a parser
+-- which will parse any single character /except/ the characters allowed
+-- by the input parser.
+--
+-- Parse any single character /except/ a lowercase letter or underscore:
+--
+-- >>> parseTest (charNegate $ lowerChar <|> char '_') "2"
+-- '2'
+charNegate :: (MonadParsec e s m, Token s ~ Char) => m (Token s) -> m (Token s)
+charNegate p = notFollowedBy p *> anySingle
+{-# INLINE charNegate #-}
 
 ----------------------------------------------------------------------------
 -- Helpers
