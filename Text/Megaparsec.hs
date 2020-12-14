@@ -461,6 +461,10 @@ single t = token testToken expected
 -- > digitChar = satisfy isDigit <?> "digit"
 -- > oneOf cs  = satisfy (`elem` cs)
 --
+-- __Performance note__: when you need to parse a single token, it is often
+-- a good idea to use 'satisfy' with the right predicate function instead of
+-- creating a complex parser using the combinators.
+--
 -- See also: 'anySingle', 'anySingleBut', 'oneOf', 'noneOf'.
 --
 -- @since 7.0.0
