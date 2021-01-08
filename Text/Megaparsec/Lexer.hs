@@ -40,7 +40,7 @@ import Text.Megaparsec.Common
 -- from "Text.Megaparsec.Char" for this purpose as well as your own parser
 -- (if you don't want to automatically consume newlines, for example). Make
 -- sure the parser does not succeed on empty input though. In earlier
--- version 'spaceChar' was recommended, but now parsers based on
+-- version 'Text.Megaparsec.Char.spaceChar' was recommended, but now parsers based on
 -- 'takeWhile1P' are preferred because of their speed.
 --
 -- @lineComment@ is used to parse line comments. You can use
