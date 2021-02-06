@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -208,10 +207,6 @@ instance (Ord e, Stream s) => Alternative (ParsecT e s m) where
 instance Stream s => Monad (ParsecT e s m) where
   return = pure
   (>>=) = pBind
-
-#if !(MIN_VERSION_base(4,13,0))
-  fail   = Fail.fail
-#endif
 
 pBind ::
   Stream s =>

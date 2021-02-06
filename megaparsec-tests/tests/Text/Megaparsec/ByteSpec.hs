@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.ByteSpec (spec) where
@@ -16,10 +15,6 @@ import Test.Hspec.Megaparsec.AdHoc hiding (Parser, prs, prs')
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Byte
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 type Parser = Parsec Void ByteString
 

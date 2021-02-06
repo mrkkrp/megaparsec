@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Text.Megaparsec.CharSpec (spec) where
@@ -13,10 +12,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 instance Arbitrary GeneralCategory where
   arbitrary = elements [minBound .. maxBound]

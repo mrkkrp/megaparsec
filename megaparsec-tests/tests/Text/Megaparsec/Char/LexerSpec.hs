@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TupleSections #-}
@@ -21,10 +20,6 @@ import Test.QuickCheck
 import Text.Megaparsec
 import qualified Text.Megaparsec.Char as C
 import Text.Megaparsec.Char.Lexer
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 spec :: Spec
 spec = do
