@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.Byte.LexerSpec (spec) where
@@ -18,10 +17,6 @@ import Test.QuickCheck
 import Text.Megaparsec
 import qualified Text.Megaparsec.Byte as B
 import Text.Megaparsec.Byte.Lexer
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 type Parser = Parsec Void ByteString
 

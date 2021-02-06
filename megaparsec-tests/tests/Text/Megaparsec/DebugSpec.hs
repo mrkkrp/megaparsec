@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Megaparsec.DebugSpec (spec) where
@@ -10,10 +9,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Text.Megaparsec.Debug
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 spec :: Spec
 spec = do

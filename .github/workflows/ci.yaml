@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
-      - uses: mrkkrp/ormolu-action@v1
+      - uses: mrkkrp/ormolu-action@v2
   build:
     runs-on: ubuntu-latest
     needs: ormolu
     strategy:
       matrix:
         cabal: ["3.2"]
-        ghc: ["8.6.5", "8.8.4", "8.10.3"]
+        ghc: ["8.8.4", "8.10.4", "9.0.1"]
     env:
       CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
     steps:
