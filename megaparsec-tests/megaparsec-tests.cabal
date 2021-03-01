@@ -71,7 +71,7 @@ test-suite tests
         hspec-expectations >=0.8 && <0.9,
         hspec-megaparsec >=2.0 && <3.0,
         megaparsec ==9.0.1,
-        megaparsec-tests -any,
+        megaparsec-tests,
         mtl >=2.2.2 && <3.0,
         parser-combinators >=1.0 && <2.0,
         scientific >=0.3.1 && <0.4,
