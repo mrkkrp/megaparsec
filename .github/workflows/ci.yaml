@@ -24,7 +24,7 @@ jobs:
       CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
     steps:
       - uses: actions/checkout@v2.3.4
-      - uses: haskell/actions/setup@v1.1.5
+      - uses: haskell/actions/setup@v1.2
         id: setup-haskell-cabal
         with:
           ghc-version: ${{ matrix.ghc }}
