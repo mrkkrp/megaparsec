@@ -82,7 +82,7 @@ import Text.Megaparsec.Lexer
 ----------------------------------------------------------------------------
 -- White space
 
--- | Given comment prefix this function returns a parser that skips line
+-- | Given a comment prefix this function returns a parser that skips line
 -- comments. Note that it stops just before the newline character but
 -- doesn't consume the newline. Newline is either supposed to be consumed by
 -- 'space' parser or picked up manually.
@@ -223,10 +223,10 @@ data IndentOpt m a b
     -- be present
     IndentSome (Maybe Pos) ([b] -> m a) (m b)
 
--- | Parse a “reference” token and a number of other tokens that have
--- greater (but the same) level of indentation than that of “reference”
--- token. Reference token can influence parsing, see 'IndentOpt' for more
--- information.
+-- | Parse a “reference” token and a number of other tokens that have a
+-- greater (but the same for all of them) level of indentation than that of
+-- the “reference” token. The reference token can influence parsing, see
+-- 'IndentOpt' for more information.
 --
 -- Tokens /must not/ consume newlines after them. On the other hand, the
 -- first argument of this function /must/ consume newlines among other white
@@ -352,8 +352,8 @@ charLiteral = label "literal character" $ do
 ----------------------------------------------------------------------------
 -- Numbers
 
--- | Parse an integer in decimal representation according to the format of
--- integer literals described in the Haskell report.
+-- | Parse an integer in the decimal representation according to the format
+-- of integer literals described in the Haskell report.
 --
 -- If you need to parse signed integers, see the 'signed' combinator.
 --
@@ -374,8 +374,8 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
 
--- | Parse an integer in binary representation. Binary number is expected to
--- be a non-empty sequence of zeroes “0” and ones “1”.
+-- | Parse an integer in binary representation. The binary number is
+-- expected to be a non-empty sequence of zeroes “0” and ones “1”.
 --
 -- You could of course parse some prefix before the actual number:
 --
@@ -396,7 +396,7 @@ binary =
     isBinDigit x = x == '0' || x == '1'
 {-# INLINEABLE binary #-}
 
--- | Parse an integer in octal representation. Representation of octal
+-- | Parse an integer in the octal representation. The format of the octal
 -- number is expected to be according to the Haskell report except for the
 -- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
 -- responsibility of the programmer to parse correct prefix before parsing
@@ -421,7 +421,7 @@ octal =
     step a c = a * 8 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE octal #-}
 
--- | Parse an integer in hexadecimal representation. Representation of
+-- | Parse an integer in the hexadecimal representation. The format of the
 -- hexadecimal number is expected to be according to the Haskell report
 -- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
 -- It is a responsibility of the programmer to parse correct prefix before
@@ -519,10 +519,10 @@ exponent_ e' = do
   (+ e') <$> signed (return ()) decimal_
 {-# INLINE exponent_ #-}
 
--- | @'signed' space p@ parser parses an optional sign character (“+” or
--- “-”), then if there is a sign it consumes optional white space (using
--- @space@ parser), then it runs parser @p@ which should return a number.
--- Sign of the number is changed according to the previously parsed sign
+-- | @'signed' space p@ parses an optional sign character (“+” or “-”), then
+-- if there is a sign it consumes optional white space (using the @space@
+-- parser), then it runs the parser @p@ which should return a number. Sign
+-- of the number is changed according to the previously parsed sign
 -- character.
 --
 -- For example, to parse signed integer you can write:

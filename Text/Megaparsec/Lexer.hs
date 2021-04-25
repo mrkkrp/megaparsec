@@ -30,18 +30,19 @@ import Text.Megaparsec.Common
 ----------------------------------------------------------------------------
 -- White space
 
--- | @'space' sc lineComment blockComment@ produces parser that can parse
+-- | @'space' sc lineComment blockComment@ produces a parser that can parse
 -- white space in general. It's expected that you create such a parser once
 -- and pass it to other functions in this module as needed (when you see
 -- @spaceConsumer@ in documentation, usually it means that something like
 -- 'space' is expected there).
 --
--- @sc@ is used to parse blocks of space characters. You can use 'Text.Megaparsec.Char.space1'
--- from "Text.Megaparsec.Char" for this purpose as well as your own parser
--- (if you don't want to automatically consume newlines, for example). Make
--- sure the parser does not succeed on empty input though. In earlier
--- version 'Text.Megaparsec.Char.spaceChar' was recommended, but now parsers based on
--- 'takeWhile1P' are preferred because of their speed.
+-- @sc@ is used to parse blocks of space characters. You can use
+-- 'Text.Megaparsec.Char.space1' from "Text.Megaparsec.Char" for this
+-- purpose as well as your own parser (if you don't want to automatically
+-- consume newlines, for example). Make sure that the parser does not
+-- succeed on the empty input though. In an earlier version of the library
+-- 'Text.Megaparsec.Char.spaceChar' was recommended, but now parsers based
+-- on 'takeWhile1P' are preferred because of their speed.
 --
 -- @lineComment@ is used to parse line comments. You can use
 -- @skipLineComment@ if you don't need anything special.
@@ -70,7 +71,7 @@ space sp line block =
       [hidden sp, hidden line, hidden block]
 {-# INLINEABLE space #-}
 
--- | This is a wrapper for lexemes. Typical usage is to supply the first
+-- | This is a wrapper for lexemes. The typical usage is to supply the first
 -- argument (parser that consumes white space, probably defined via 'space')
 -- and use the resulting function to wrap parsers for every lexeme.
 --
@@ -110,7 +111,7 @@ symbol ::
 symbol spc = lexeme spc . string
 {-# INLINEABLE symbol #-}
 
--- | Case-insensitive version of 'symbol'. This may be helpful if you're
+-- | A case-insensitive version of 'symbol'. This may be helpful if you're
 -- working with case-insensitive languages.
 symbol' ::
   (MonadParsec e s m, CI.FoldCase (Tokens s)) =>

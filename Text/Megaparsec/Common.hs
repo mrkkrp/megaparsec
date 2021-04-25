@@ -30,7 +30,7 @@ string = chunk
 {-# INLINE string #-}
 
 -- | The same as 'string', but case-insensitive. On success returns string
--- cased as actually parsed input.
+-- cased as the parsed input.
 --
 -- >>> parseTest (string' "foobar") "foObAr"
 -- "foObAr"

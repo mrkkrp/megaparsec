@@ -88,16 +88,16 @@ an instance of the `Stream` type class.
 ### Error messages
 
 * Megaparsec has typed error messages and the ability to signal custom parse
-  errors that better suit user's domain of interest.
+  errors that better suit the user's domain of interest.
 
-* Since version 8, location of parse errors can independent of current
+* Since version 8, the location of parse errors can independent of current
   offset in the input stream. It is useful when you want a parse error to
   point to a particular position after performing some checks.
 
-* Instead of single parse error Megaparsec produces so-called
+* Instead of a single parse error Megaparsec produces so-called
   `ParseErrorBundle` data type that helps to manage multi-error messages and
-  pretty-print them easily and efficiently. Since version 8, reporting
-  multiple parse errors at once has become much easier.
+  pretty-print them. Since version 8, reporting multiple parse errors at
+  once has become easier.
 
 ### External lexers
 
@@ -139,8 +139,7 @@ documentation on Hackage][hackage].
 
 You can find the most complete Megaparsec tutorial [here][the-tutorial]. It
 should provide sufficient guidance to help you start with your parsing
-tasks. The site also has instructions and tips for Parsec users who decide
-to migrate to Megaparsec.
+tasks.
 
 ## Performance
 
@@ -185,12 +184,12 @@ you will need in particular project:
   matters more than quality of error messages.
 
 * *Megaparsec* is good for parsing of source code or other human-readable
-  texts. It has better error messages and it's implemented as monad
+  texts. It has better error messages and it's implemented as a monad
   transformer.
 
-So, if you work with something human-readable where size of input data is
-moderate, just go with Megaparsec, otherwise Attoparsec may be a better
-choice.
+So, if you work with something human-readable where the size of input data
+is moderate, it makes sense to go with Megaparsec, otherwise Attoparsec may
+be a better choice.
 
 ### Megaparsec vs Parsec
 
@@ -209,18 +208,18 @@ main differences between the two libraries:
 * Better support for Unicode parsing in [`Text.Megaparsec.Char`][tm-char].
 
 * Megaparsec has more powerful combinators and can parse languages where
-  indentation matters out-of-the-box.
+  indentation matters.
 
 * Better documentation.
 
 * Megaparsec can recover from parse errors “on the fly” and continue
   parsing.
 
-* Megaparsec allows us to conditionally process parse errors *inside your
-  parser* before parsing is finished. In particular, it's possible to define
-  regions in which parse errors, should they happen, will get a “context
-  tag”, e.g. we could build a context stack like “in function definition
-  foo”, “in expression x”, etc.
+* Megaparsec allows us to conditionally process parse errors inside a
+  running parser. In particular, it's possible to define regions in which
+  parse errors, should they happen, will get a “context tag”, e.g. we could
+  build a context stack like “in function definition foo”, “in expression
+  x”, etc.
 
 * Megaparsec is faster and supports efficient operations `tokens`,
   `takeWhileP`, `takeWhile1P`, `takeP`, like Attoparsec.
@@ -236,13 +235,12 @@ messages. These are the common reasons why Trifecta may be problematic to
 use:
 
 * Complicated, doesn't have any tutorials available, and documentation
-  doesn't help at all.
+  doesn't help much.
 
 * Trifecta can parse `String` and `ByteString` natively, but not `Text`.
 
 * Depends on `lens`, which is a very heavy dependency. If you're not into
-  `lens` and would like to keep your code “vanilla”, you may not like the
-  API.
+  `lens`, you may not like the API.
 
 [Idris][idris] has switched from Trifecta to Megaparsec which allowed it to
 [have better error messages and fewer dependencies][idris-testimony].

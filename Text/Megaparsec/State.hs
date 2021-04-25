@@ -74,8 +74,8 @@ deriving instance
 
 instance (NFData s, NFData (ParseError s e)) => NFData (State s e)
 
--- | Special kind of state that is used to calculate line\/column positions
--- on demand.
+-- | A special kind of state that is used to calculate line\/column
+-- positions on demand.
 --
 -- @since 7.0.0
 data PosState s = PosState

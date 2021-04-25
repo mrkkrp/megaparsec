@@ -96,9 +96,9 @@ instance Ord e => Monoid (EF e) where
 ----------------------------------------------------------------------------
 -- Top-level helpers
 
--- | Assemble a 'ParseError' from offset and @'ET' t@ value. @'ET' t@ is a
--- monoid and can be assembled by combining primitives provided by this
--- module, see below.
+-- | Assemble a 'ParseError' from the offset and the @'ET' t@ value. @'ET'
+-- t@ is a monoid and can be assembled by combining primitives provided by
+-- this module, see below.
 err ::
   -- | 'ParseError' offset
   Int ->
@@ -168,8 +168,8 @@ fancy = EF . E.singleton
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | Construct appropriate 'ErrorItem' representation for given token
--- stream. Empty string produces 'EndOfInput'.
+-- | Construct the appropriate 'ErrorItem' representation for the given
+-- token stream. The empty string produces 'EndOfInput'.
 canonicalizeTokens ::
   Stream s =>
   Proxy s ->
