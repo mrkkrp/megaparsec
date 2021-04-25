@@ -28,8 +28,8 @@ import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 
 -- | @'dbg' label p@ parser works exactly like @p@, but when it's evaluated
--- it also prints information useful for debugging. The @label@ is only used
--- to refer to this parser in the debugging output. This combinator uses the
+-- it prints information useful for debugging. The @label@ is only used to
+-- refer to this parser in the debugging output. This combinator uses the
 -- 'trace' function from "Debug.Trace" under the hood.
 --
 -- Typical usage is to wrap every sub-parser in misbehaving parser with

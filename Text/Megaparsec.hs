@@ -23,7 +23,7 @@
 -- at the tutorial <https://markkarpov.com/tutorial/megaparsec.html>.
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
--- most everything that you may need, we advise to import
+-- almost everything that you may need, we advise to import
 -- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char' tokens
 -- or "Text.Megaparsec.Byte" if you intend to parse binary data.
 --
@@ -191,15 +191,15 @@ parse = runParser
 --
 -- The function is supposed to be useful for lightweight parsing, where
 -- error messages (and thus file names) are not important and entire input
--- should be parsed. For example, it can be used when parsing of a single
--- number according to a specification of its format is desired.
+-- should be consumed. For example, it can be used for parsing of a single
+-- number according to a specification of its format.
 parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
 parseMaybe p s =
   case parse (p <* eof) "" s of
     Left _ -> Nothing
     Right x -> Just x
 
--- | The expression @'parseTest' p input@ applies the parser @p@ against the
+-- | The expression @'parseTest' p input@ applies the parser @p@ on the
 -- input @input@ and prints the result to stdout. Useful for testing.
 parseTest ::
   ( ShowErrorComponent e,
@@ -234,9 +234,9 @@ runParser ::
 runParser p name s = snd $ runParser' p (initialState name s)
 
 -- | The function is similar to 'runParser' with the difference that it
--- accepts and returns parser state. This allows to specify arbitrary
--- textual position at the beginning of parsing, for example. This is the
--- most general way to run a parser over the 'Identity' monad.
+-- accepts and returns the parser state. This allows us e.g. to specify
+-- arbitrary textual position at the beginning of parsing. This is the most
+-- general way to run a parser over the 'Identity' monad.
 --
 -- @since 4.2.0
 runParser' ::
@@ -291,7 +291,8 @@ runParserT' p s = do
     Error e ->
       (s', Left (toBundle (e :| stateParseErrors s')))
 
--- | Given name of source file and input construct initial state for parser.
+-- | Given the name of source file and the input construct the initial state
+-- for a parser.
 initialState :: String -> s -> State s e
 initialState name s =
   State
@@ -395,7 +396,7 @@ region f m = do
 -- | Register a 'ParseError' for later reporting. This action does not end
 -- parsing and has no effect except for adding the given 'ParseError' to the
 -- collection of “delayed” 'ParseError's which will be taken into
--- consideration at the end of parsing. Only if this collection is empty
+-- consideration at the end of parsing. Only if this collection is empty the
 -- parser will succeed. This is the main way to report several parse errors
 -- at once.
 --

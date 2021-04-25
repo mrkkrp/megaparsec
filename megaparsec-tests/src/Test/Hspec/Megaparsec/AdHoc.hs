@@ -81,8 +81,8 @@ type Parser = Parsec Void String
 ----------------------------------------------------------------------------
 -- Helpers to run parsers
 
--- | Apply parser to given input. This is a specialized version of 'parse'
--- that assumes empty file name.
+-- | Apply the parser to the given input. This is a specialized version of
+-- 'parse' that assumes empty file name.
 prs ::
   -- | Parser to run
   Parser a ->
@@ -92,7 +92,8 @@ prs ::
   Either (ParseErrorBundle String Void) a
 prs p = parse p ""
 
--- | Just like 'prs', but allows to inspect the final state of the parser.
+-- | Just like 'prs', but allows us to inspect the final state of the
+-- parser.
 prs' ::
   -- | Parser to run
   Parser a ->

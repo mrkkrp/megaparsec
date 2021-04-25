@@ -48,7 +48,7 @@ import Text.Megaparsec.Stream
 -- 'takeWhileP', 'takeWhile1P', and 'takeP'.
 class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- | Stop parsing and report the 'ParseError'. This is the only way to
-  -- control position of the error without manipulating parser state
+  -- control position of the error without manipulating the parser state
   -- manually.
   --
   -- @since 8.0.0
@@ -66,7 +66,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   hidden :: m a -> m a
   hidden = label ""
 
-  -- | The parser @'try' p@ behaves like parser @p@, except that it
+  -- | The parser @'try' p@ behaves like the parser @p@, except that it
   -- backtracks the parser state when @p@ fails (either consuming input or
   -- not).
   --
@@ -118,13 +118,13 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- can be used to implement the “longest match” rule.
   notFollowedBy :: m a -> m ()
 
-  -- | @'withRecovery' r p@ allows continue parsing even if parser @p@
-  -- fails. In this case @r@ is called with the actual 'ParseError' as its
-  -- argument. Typical usage is to return a value signifying failure to
+  -- | @'withRecovery' r p@ allows us to continue parsing even if the parser
+  -- @p@ fails. In this case @r@ is called with the actual 'ParseError' as
+  -- its argument. Typical usage is to return a value signifying failure to
   -- parse this particular object and to consume some part of the input up
   -- to the point where the next object starts.
   --
-  -- Note that if @r@ fails, original error message is reported as if
+  -- Note that if @r@ fails, the original error message is reported as if
   -- without 'withRecovery'. In no way recovering parser @r@ can influence
   -- error messages.
   --
@@ -137,12 +137,12 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     -- | Parser that can recover from failures
     m a
 
-  -- | @'observing' p@ allows to “observe” failure of the @p@ parser, should
-  -- it happen, without actually ending parsing but instead getting the
-  -- 'ParseError' in 'Left'. On success parsed value is returned in 'Right'
-  -- as usual. Note that this primitive just allows you to observe parse
-  -- errors as they happen, it does not backtrack or change how the @p@
-  -- parser works in any way.
+  -- | @'observing' p@ allows us to “observe” failure of the @p@ parser,
+  -- should it happen, without actually ending parsing but instead getting
+  -- the 'ParseError' in 'Left'. On success parsed value is returned in
+  -- 'Right' as usual. Note that this primitive just allows you to observe
+  -- parse errors as they happen, it does not backtrack or change how the
+  -- @p@ parser works in any way.
   --
   -- @since 5.1.0
   observing ::

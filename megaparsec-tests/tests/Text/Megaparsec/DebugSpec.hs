@@ -13,8 +13,8 @@ import Text.Megaparsec.Debug
 spec :: Spec
 spec = do
   describe "dbg" $ do
-    -- NOTE We don't test properties here to avoid flood of debugging output
-    -- when the test runs.
+    -- NOTE We don't test properties here to avoid a flood of debugging
+    -- output when the test runs.
     context "when inner parser succeeds consuming input" $ do
       it "has no effect on how parser works" $ do
         let p = dbg "char" (char 'a')

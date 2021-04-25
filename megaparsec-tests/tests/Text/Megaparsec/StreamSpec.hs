@@ -586,7 +586,7 @@ describeReachOffsetNoLine Proxy =
                in pst'
         reachOffsetNoLine o' s `shouldBe` reachOffsetNoLine o' s'
 
--- | Get next tab position given tab width and current column.
+-- | Get the next tab position given the tab width and the current column.
 toNextTab ::
   -- | Tab width
   Pos ->

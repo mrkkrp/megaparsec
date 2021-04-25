@@ -77,7 +77,7 @@ bparser name f p = bgroup name (bs <$> stdSeries)
     bs n = env (return (f n, n)) (bench (show n) . nf p')
     p' (s, n) = parse (p (s, n)) "" s
 
--- | Bench the 'errorBundlePretty' function.
+-- | Benchmark the 'errorBundlePretty' function.
 bbundle ::
   -- | Name of the benchmark
   String ->
@@ -111,7 +111,7 @@ bbundle name totalLines sps =
         ("errorBundlePretty-" ++ show totalLines ++ "-" ++ name)
         (nf errorBundlePretty bundle)
 
--- | Bench the 'reachOffset' function.
+-- | Benchmark the 'reachOffset' function.
 breachOffset ::
   -- | Starting offset in 'PosState'
   Int ->
@@ -136,7 +136,7 @@ breachOffset o0 o1 =
               pstateLinePrefix = ""
             }
 
--- | Bench the 'reachOffsetNoLine' function.
+-- | Benchmark the 'reachOffsetNoLine' function.
 breachOffsetNoLine ::
   -- | Starting offset in 'PosState'
   Int ->

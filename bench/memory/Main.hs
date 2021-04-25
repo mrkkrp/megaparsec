@@ -81,7 +81,7 @@ bparser name f p = forM_ stdSeries $ \i -> do
       p' (s, n) = parse (p (s, n)) "" s
   func (name ++ "-" ++ show i) p' arg
 
--- | Bench the 'errorBundlePretty' function.
+-- | Benchmark the 'errorBundlePretty' function.
 bbundle ::
   -- | Name of the benchmark
   String ->
@@ -116,7 +116,7 @@ bbundle name totalLines sps = do
     errorBundlePretty
     bundle
 
--- | Bench the 'reachOffset' function.
+-- | Benchmark the 'reachOffset' function.
 breachOffset ::
   -- | Starting offset in 'PosState'
   Int ->
@@ -142,7 +142,7 @@ breachOffset o0 o1 =
               pstateLinePrefix = ""
             }
 
--- | Bench the 'reachOffsetNoLine' function.
+-- | Benchmark the 'reachOffsetNoLine' function.
 breachOffsetNoLine ::
   -- | Starting offset in 'PosState'
   Int ->

@@ -78,8 +78,8 @@ current dev version of Megaparsec. To do so, follow these steps:
 
 * Attempt to compile the package with current dev version of Megaparsec to
   reproduce the build errors. Often, if the broken package uses stack you
-  can just add path to the updated Megaparsec directory to the `extra-deps`
-  section.
+  can just add the path to the updated Megaparsec directory to the
+  `extra-deps` section.
 
 * Perform whatever changes that are necessary to make the package work.
 

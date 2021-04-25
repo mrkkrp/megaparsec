@@ -7,8 +7,8 @@ had to do before. Another benefit is that we can export some auxiliary
 functions in `megaparsec-tests` which can be used by other test suites, for
 example in the `parser-combinators-tests` package.
 
-Version of `megaparsec-tests` will be kept in sync with versions of
-`megaparsec` from now on.
+The version number of `megaparsec-tests` will be kept in sync with versions
+of `megaparsec` from now on.
 
 ## License
 

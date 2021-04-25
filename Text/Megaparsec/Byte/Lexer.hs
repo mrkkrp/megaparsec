@@ -52,7 +52,7 @@ import Text.Megaparsec.Lexer
 ----------------------------------------------------------------------------
 -- White space
 
--- | Given comment prefix this function returns a parser that skips line
+-- | Given a comment prefix this function returns a parser that skips line
 -- comments. Note that it stops just before the newline character but
 -- doesn't consume the newline. Newline is either supposed to be consumed by
 -- 'space' parser or picked up manually.
@@ -101,8 +101,8 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 ----------------------------------------------------------------------------
 -- Numbers
 
--- | Parse an integer in decimal representation according to the format of
--- integer literals described in the Haskell report.
+-- | Parse an integer in the decimal representation according to the format
+-- of integer literals described in the Haskell report.
 --
 -- If you need to parse signed integers, see the 'signed' combinator.
 decimal ::
@@ -123,8 +123,8 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
     step a w = a * 10 + fromIntegral (w - 48)
 {-# INLINE decimal_ #-}
 
--- | Parse an integer in binary representation. Binary number is expected to
--- be a non-empty sequence of zeroes “0” and ones “1”.
+-- | Parse an integer in the binary representation. The binary number is
+-- expected to be a non-empty sequence of zeroes “0” and ones “1”.
 --
 -- You could of course parse some prefix before the actual number:
 --
@@ -145,7 +145,7 @@ binary =
     isBinDigit w = w == 48 || w == 49
 {-# INLINEABLE binary #-}
 
--- | Parse an integer in octal representation. Representation of octal
+-- | Parse an integer in the octal representation. The format of the octal
 -- number is expected to be according to the Haskell report except for the
 -- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
 -- responsibility of the programmer to parse correct prefix before parsing
@@ -168,7 +168,7 @@ octal =
     isOctDigit w = w - 48 < 8
 {-# INLINEABLE octal #-}
 
--- | Parse an integer in hexadecimal representation. Representation of
+-- | Parse an integer in the hexadecimal representation. The format of the
 -- hexadecimal number is expected to be according to the Haskell report
 -- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
 -- It is a responsibility of the programmer to parse correct prefix before
@@ -291,7 +291,7 @@ signed spc p = option id (lexeme spc sign) <*> p
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | A fast predicate to check if given 'Word8' is a digit in ASCII.
+-- | A fast predicate to check if the given 'Word8' is a digit in ASCII.
 isDigit :: Word8 -> Bool
 isDigit w = w - 48 < 10
 {-# INLINE isDigit #-}

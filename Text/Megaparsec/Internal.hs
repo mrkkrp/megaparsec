@@ -93,8 +93,8 @@ instance Monoid (Hints t) where
   mempty = Hints mempty
 
 -- | All information available after parsing. This includes consumption of
--- input, success (with returned value) or failure (with parse error), and
--- parser state at the end of parsing.
+-- input, success (with the returned value) or failure (with the parse
+-- error), and parser state at the end of parsing.
 --
 -- See also: 'Consumption', 'Result'.
 data Reply e s a = Reply (State s e) Consumption (Result s e a)
@@ -575,7 +575,7 @@ nes x = x :| []
 ----------------------------------------------------------------------------
 -- Helper functions
 
--- | Convert 'ParseError' record to 'Hints'.
+-- | Convert a 'ParseError' record into 'Hints'.
 toHints ::
   Stream s =>
   -- | Current offset in input stream
@@ -655,7 +655,7 @@ runParsecT p s = unParser p s cok cerr eok eerr
 -- | Transform any custom errors thrown by the parser using the given
 -- function. Similar in function and purpose to @withExceptT@.
 --
--- __Note__ that the inner parser will start with empty collection of
+-- __Note__ that the inner parser will start with an empty collection of
 -- “delayed” 'ParseError's. Any delayed 'ParseError's produced in the inner
 -- parser will be lifted by applying the provided function and added to the
 -- collection of delayed parse errors of the outer parser.
@@ -687,5 +687,4 @@ withParsecT f p =
         eok' x st hs = eok x (adjustState st) hs
         eerr' e st = eerr (mapParseError f e) (adjustState st)
      in unParser p s' cok' cerr' eok' eerr'
-  where
 {-# INLINE withParsecT #-}

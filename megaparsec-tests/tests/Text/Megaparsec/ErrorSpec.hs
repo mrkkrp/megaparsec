@@ -252,7 +252,7 @@ spec = do
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | Custom error component to test continuous highlighting for custom
+-- | A custom error component to test continuous highlighting for custom
 -- components.
 newtype CustomErr = CustomErr Int
   deriving (Eq, Ord, Show)
