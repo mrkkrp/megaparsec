@@ -16,6 +16,7 @@
 -- @since 7.0.0
 module Text.Megaparsec.Debug
   ( dbg,
+    dbg',
   )
 where
 
@@ -87,6 +88,29 @@ dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
           l (DbgIn (unfold (stateInput s)))
             ++ l (DbgEERR (streamTake (streamDelta s s') (stateInput s)) err)
    in unParser p s cok' cerr' eok' eerr'
+
+-- | Just like 'dbg', but doesn't require the return value of the parser to
+-- be 'Show'-able.
+--
+-- @since 9.1.0
+dbg' ::
+  forall e s m a.
+  ( VisualStream s,
+    ShowErrorComponent e
+  ) =>
+  -- | Debugging label
+  String ->
+  -- | Parser to debug
+  ParsecT e s m a ->
+  -- | Parser that prints debugging messages
+  ParsecT e s m a
+dbg' lbl p = unBlind <$> dbg lbl (Blind <$> p)
+
+-- | A wrapper type with a dummy 'Show' instance.
+newtype Blind x = Blind {unBlind :: x}
+
+instance Show (Blind x) where
+  show _ = "NOT SHOWN"
 
 -- | A single piece of info to be rendered with 'dbgLog'.
 data DbgItem s e a

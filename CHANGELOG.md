@@ -1,5 +1,8 @@
 ## Megaparsec 9.1.0
 
+* Added `dbg'` in `Text.Megaparsec.Debug` for debugging parsers that have
+  unshowable return values.
+
 * Documentation improvements.
 
 ## Megaparsec 9.0.1
