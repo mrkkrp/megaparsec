@@ -1,3 +1,7 @@
+## Megaparsec 9.1.0
+
+* Documentation improvements.
+
 ## Megaparsec 9.0.1
 
 * Added [Safe
