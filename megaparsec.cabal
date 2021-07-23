@@ -64,7 +64,7 @@ library
         parser-combinators >=1.0 && <2.0,
         scientific >=0.3.1 && <0.4,
         text >=0.2 && <1.3,
-        transformers >=0.4 && <0.6
+        transformers >=0.4 && <0.7
 
     if flag(dev)
         ghc-options: -O0 -Wall -Werror
