@@ -5,6 +5,8 @@ module Main (main) where
 
 import Control.DeepSeq
 import Criterion.Main
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as E
@@ -12,11 +14,15 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void
 import Text.Megaparsec
+import qualified Text.Megaparsec.Byte.Binary as Binary
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
--- | The type of parser that consumes 'String's.
+-- | The type of parser that consumes 'Text'.
 type Parser = Parsec Void Text
+
+-- | The type of parser that consumes 'ByteString'.
+type ParserBs = Parsec Void ByteString
 
 main :: IO ()
 main =
@@ -47,6 +53,8 @@ main =
       bparser "octal" mkInt (const (L.octal :: Parser Integer)),
       bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer)),
       bparser "scientific" mkInt (const L.scientific),
+      bparserBs "word32be" many0x33 (const $ many Binary.word32be),
+      bparserBs "word32le" many0x33 (const $ many Binary.word32le),
       bgroup "" [bbundle "single error" n [n] | n <- stdSeries],
       bbundle "2 errors" 1000 [1, 1000],
       bbundle "4 errors" 1000 [1, 500, 1000],
@@ -73,6 +81,22 @@ bparser ::
   -- | The benchmark
   Benchmark
 bparser name f p = bgroup name (bs <$> stdSeries)
+  where
+    bs n = env (return (f n, n)) (bench (show n) . nf p')
+    p' (s, n) = parse (p (s, n)) "" s
+
+-- | Perform a series to measurements with the same parser.
+bparserBs ::
+  NFData a =>
+  -- | Name of the benchmark group
+  String ->
+  -- | How to construct input
+  (Int -> ByteString) ->
+  -- | The parser receiving its future input
+  ((ByteString, Int) -> ParserBs a) ->
+  -- | The benchmark
+  Benchmark
+bparserBs name f p = bgroup name (bs <$> stdSeries)
   where
     bs n = env (return (f n, n)) (bench (show n) . nf p')
     p' (s, n) = parse (p (s, n)) "" s
@@ -170,6 +194,10 @@ stdSeries = [500, 1000, 2000, 4000]
 -- | Generate that many \'a\' characters.
 manyAs :: Int -> Text
 manyAs n = T.replicate n "a"
+
+-- | Like 'manyAs' but the result is a 'ByteString'.
+many0x33 :: Int -> ByteString
+many0x33 n = B.replicate n 0x33
 
 -- | Like 'manyAs', but interspersed with \'b\'s.
 manyAbs :: Int -> Text

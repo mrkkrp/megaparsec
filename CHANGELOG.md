@@ -1,3 +1,8 @@
+## Megaparsec 9.2.0
+
+* Added parsers for binary representations (little/big endian) of numbers in
+  `Text.Megaparsec.Byte.Binary`.
+
 ## Megaparsec 9.1.0
 
 * Added `dbg'` in `Text.Megaparsec.Debug` for debugging parsers that have

@@ -5,6 +5,8 @@ module Main (main) where
 
 import Control.DeepSeq
 import Control.Monad
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as E
@@ -12,12 +14,16 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void
 import Text.Megaparsec
+import qualified Text.Megaparsec.Byte.Binary as Binary
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Weigh
 
--- | The type of parser that consumes 'String's.
+-- | The type of parser that consumes 'Text'.
 type Parser = Parsec Void Text
+
+-- | The type of parser that consumes 'ByteString'.
+type ParserBs = Parsec Void ByteString
 
 main :: IO ()
 main = mainWith $ do
@@ -48,6 +54,8 @@ main = mainWith $ do
   bparser "octal" mkInt (const (L.octal :: Parser Integer))
   bparser "hexadecimal" mkInt (const (L.hexadecimal :: Parser Integer))
   bparser "scientific" mkInt (const L.scientific)
+  bparserBs "word32be" many0x33 (const $ many Binary.word32be)
+  bparserBs "word32le" many0x33 (const $ many Binary.word32le)
 
   forM_ stdSeries $ \n ->
     bbundle "single error" n [n]
@@ -77,6 +85,21 @@ bparser ::
   ((Text, Int) -> Parser a) ->
   Weigh ()
 bparser name f p = forM_ stdSeries $ \i -> do
+  let arg = (f i, i)
+      p' (s, n) = parse (p (s, n)) "" s
+  func (name ++ "-" ++ show i) p' arg
+
+-- | Perform a series of measurements with the same parser.
+bparserBs ::
+  NFData a =>
+  -- | Name of the benchmark group
+  String ->
+  -- | How to construct input
+  (Int -> ByteString) ->
+  -- | The parser receiving its future input
+  ((ByteString, Int) -> ParserBs a) ->
+  Weigh ()
+bparserBs name f p = forM_ stdSeries $ \i -> do
   let arg = (f i, i)
       p' (s, n) = parse (p (s, n)) "" s
   func (name ++ "-" ++ show i) p' arg
@@ -177,6 +200,10 @@ stdSeries = [500, 1000, 2000, 4000]
 -- | Generate that many \'a\' characters.
 manyAs :: Int -> Text
 manyAs n = T.replicate n "a"
+
+-- | Like 'manyAs' but the result is a 'ByteString'.
+many0x33 :: Int -> ByteString
+many0x33 n = B.replicate n 0x33
 
 -- | Like 'manyAs', but interspersed with \'b\'s.
 manyAbs :: Int -> Text
