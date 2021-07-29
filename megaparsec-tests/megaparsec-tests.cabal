@@ -50,6 +50,7 @@ test-suite tests
     build-tools:      hspec-discover >=2.0 && <3.0
     hs-source-dirs:   tests
     other-modules:
+        Text.Megaparsec.Byte.BinarySpec
         Text.Megaparsec.Byte.LexerSpec
         Text.Megaparsec.ByteSpec
         Text.Megaparsec.Char.LexerSpec
