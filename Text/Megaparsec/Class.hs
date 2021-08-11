@@ -153,14 +153,14 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- | This parser only succeeds at the end of input.
   eof :: m ()
 
-  -- | The parser @'token' test expected@ accepts a token @t@ with result
-  -- @x@ when the function @test t@ returns @'Just' x@. @expected@ specifies
-  -- the collection of expected items to report in error messages.
+  -- | The parser @'token' test expected@ accepts tokens for which the
+  -- matching function @test@ returns 'Just' results. If 'Nothing' is
+  -- returned the @expected@ set is used to report the items that were
+  -- expected.
   --
-  -- This is the most primitive combinator for accepting tokens. For
-  -- example, the 'Text.Megaparsec.satisfy' parser is implemented as:
+  -- For example, the 'Text.Megaparsec.satisfy' parser is implemented as:
   --
-  -- > satisfy f = token testToken E.empty
+  -- > satisfy f = token testToken Set.empty
   -- >   where
   -- >     testToken x = if f x then Just x else Nothing
   --
@@ -169,7 +169,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   token ::
     -- | Matching function for the token to parse
     (Token s -> Maybe a) ->
-    -- | Expected items (in case of an error)
+    -- | Used in the error message to mention the items that were expected
     Set (ErrorItem (Token s)) ->
     m a
 
