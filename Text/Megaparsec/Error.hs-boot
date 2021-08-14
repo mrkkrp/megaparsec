@@ -1,4 +1,5 @@
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE Safe #-}
 
 module Text.Megaparsec.Error
   ( ParseError,
