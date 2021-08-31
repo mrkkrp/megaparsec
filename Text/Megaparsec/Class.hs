@@ -205,11 +205,9 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     m (Tokens s)
 
   -- | Parse /zero/ or more tokens for which the supplied predicate holds.
-  -- Try to use this as much as possible because for many streams the
+  -- Try to use this as much as possible because for many streams this
   -- combinator is much faster than parsers built with
   -- 'Control.Monad.Combinators.many' and 'Text.Megaparsec.satisfy'.
-  --
-  -- The following equations should clarify the behavior:
   --
   -- > takeWhileP (Just "foo") f = many (satisfy f <?> "foo")
   -- > takeWhileP Nothing      f = many (satisfy f)
@@ -226,8 +224,15 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     m (Tokens s)
 
   -- | Similar to 'takeWhileP', but fails if it can't parse at least one
-  -- token. Note that the combinator either succeeds or fails without
-  -- consuming any input, so 'try' is not necessary with it.
+  -- token. Try to use this as much as possible because for many streams
+  -- this combinator is much faster than parsers built with
+  -- 'Control.Monad.Combinators.some' and 'Text.Megaparsec.satisfy'.
+  --
+  -- > takeWhile1P (Just "foo") f = some (satisfy f <?> "foo")
+  -- > takeWhile1P Nothing      f = some (satisfy f)
+  --
+  -- Note that the combinator either succeeds or fails without consuming any
+  -- input, so 'try' is not necessary with it.
   --
   -- @since 6.0.0
   takeWhile1P ::
