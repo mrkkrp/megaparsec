@@ -1,3 +1,5 @@
+*Megaparsec follows [SemVer](https://semver.org/).*
+
 ## Megaparsec 9.2.0
 
 * Added parsers for binary representations (little/big endian) of numbers in
