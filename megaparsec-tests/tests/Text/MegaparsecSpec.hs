@@ -26,7 +26,6 @@ import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
 import qualified Data.List as DL
-import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Semigroup
 import qualified Data.Set as E
@@ -220,17 +219,15 @@ spec = do
     describe "many" $ do
       context "when stream begins with things argument of many parses" $
         it "they are parsed" $
-          property $ \a' b' c' -> do
-            let [a, b, c] = getNonNegative <$> [a', b', c']
-                p = many (char 'a')
+          property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
+            let p = many (char 'a')
                 s = abcRow a b c
             prs p s `shouldParse` replicate a 'a'
             prs' p s `succeedsLeaving` drop a s
       context "when stream does not begin with thing argument of many parses" $
         it "does nothing" $
-          property $ \a' b' c' -> do
-            let [a, b, c] = getNonNegative <$> [a', b', c']
-                p = many (char 'd')
+          property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
+            let p = many (char 'd')
                 s = abcRow a b c
             prs p s `shouldParse` ""
             prs' p s `succeedsLeaving` s
@@ -249,9 +246,8 @@ spec = do
                 (utok 'c' <> etok 'a' <> etok 'b' <> eeof)
       context "when the argument parser succeeds without consuming" $
         it "is run nevertheless" $
-          property $ \n' -> do
-            let n = getSmall (getNonNegative n') :: Integer
-                p = void . many $ do
+          property $ \(NonNegative (Small n)) -> do
+            let p = void . many $ do
                   x <- S.get
                   if x < n then S.modify (+ 1) else empty
                 v :: S.State Integer (Either (ParseErrorBundle String Void) ())
@@ -261,18 +257,15 @@ spec = do
     describe "some" $ do
       context "when stream begins with things argument of some parses" $
         it "they are parsed" $
-          property $ \a' b' c' -> do
-            let a = getPositive a'
-                [b, c] = getNonNegative <$> [b', c']
-                p = some (char 'a')
+          property $ \(Positive a) (NonNegative b) (NonNegative c) -> do
+            let p = some (char 'a')
                 s = abcRow a b c
             prs p s `shouldParse` replicate a 'a'
             prs' p s `succeedsLeaving` drop a s
       context "when stream does not begin with thing argument of some parses" $
         it "signals correct parse error" $
-          property $ \a' b' c' -> do
-            let [a, b, c] = getNonNegative <$> [a', b', c']
-                p = some (char 'd')
+          property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
+            let p = some (char 'd')
                 s = abcRow a b c ++ "g"
             prs p s `shouldFailWith` err 0 (utok (head s) <> etok 'd')
             prs' p s `failsLeaving` s
@@ -801,7 +794,7 @@ spec = do
               grs p s (`shouldFailWith` err 0 mempty)
               grs' p s (`failsLeaving` s)
       it "works in complex situations too" $
-        property $ \a' b' c' -> do
+        property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
           let p :: MonadParsec Void String m => m (Either (ParseError String Void) String)
               p =
                 let g = count' 1 3 . char
@@ -811,7 +804,6 @@ spec = do
               v (Left m) _ = Left m
               ma = if a < 3 then etok 'a' else mempty
               s = abcRow a b c
-              [a, b, c] = getNonNegative <$> [a', b', c']
               f = flip shouldFailWith
               z = flip shouldParse
               r
@@ -1257,9 +1249,8 @@ spec = do
     describe "oneOf" $ do
       context "when stream begins with one of specified characters" $
         it "parses the character" $
-          property $ \chs' n s -> do
-            let chs = getNonEmpty chs'
-                ch = chs !! (getNonNegative n `rem` length chs)
+          property $ \(NonEmpty chs) (NonNegative n) s -> do
+            let ch = chs !! (n `rem` length chs)
                 s' = ch : s
             grs (oneOf chs) s' (`shouldParse` ch)
             grs' (oneOf chs) s' (`succeedsLeaving` s)
@@ -1285,9 +1276,8 @@ spec = do
               grs' (noneOf chs) s' (`succeedsLeaving` s)
       context "when stream begins with one of specified characters" $
         it "signals correct parse error" $
-          property $ \chs' n s -> do
-            let chs = getNonEmpty chs'
-                ch = chs !! (getNonNegative n `rem` length chs)
+          property $ \(NonEmpty chs) (NonNegative n) s -> do
+            let ch = chs !! (n `rem` length chs)
                 s' = ch : s
             grs (noneOf chs) s' (`shouldFailWith` err 0 (utok ch))
             grs' (noneOf chs) s' (`failsLeaving` s')
@@ -1420,9 +1410,8 @@ spec = do
 
     describe "notFollowedBy" $
       it "generally works" $
-        property $ \a' b' c' -> do
+        property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
           let p = many (char =<< ask) <* notFollowedBy eof <* many anySingle
-              [a, b, c] = getNonNegative <$> [a', b', c']
               s = abcRow a b c
           if b > 0 || c > 0
             then prs (runReaderT p 'a') s `shouldParse` replicate a 'a'
@@ -1767,7 +1756,7 @@ eqParser p1 p2 s = runParser p1 "" s == runParser p2 "" s
 
 mkBundle ::
   State s e ->
-  NonEmpty (ParseError s e) ->
+  NE.NonEmpty (ParseError s e) ->
   ParseErrorBundle s e
 mkBundle s es =
   ParseErrorBundle

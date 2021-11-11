@@ -12,25 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.3.4
-      - uses: mrkkrp/ormolu-action@v2
+      - uses: mrkkrp/ormolu-action@v5
   build:
     runs-on: ubuntu-latest
     needs: ormolu
     strategy:
       matrix:
-        cabal: ["3.4"]
-        ghc: ["8.8.4", "8.10.5", "9.0.1"]
+        cabal: ["3.6"]
+        ghc: ["8.10.7", "9.0.1", "9.2.1"]
     env:
       CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
     steps:
       - uses: actions/checkout@v2.3.4
-      - uses: haskell/actions/setup@v1.2
+      - uses: haskell/actions/setup@v1.2.7
         id: setup-haskell-cabal
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
-      - run: cabal v2-update
-      - run: cabal v2-freeze $CONFIG
+      - run: cabal update
+      - run: cabal freeze $CONFIG
       - uses: actions/cache@v2.1.3
         with:
           path: |
@@ -42,9 +42,9 @@ jobs:
       - run: cabal format
       - run: pushd megaparsec-tests && cabal format && popd
       - run: git diff --exit-code --color=always
-      - run: cabal v2-build all $CONFIG
-      - run: cabal v2-test all $CONFIG
-      - run: cabal v2-haddock megaparsec $CONFIG
-      - run: cabal v2-haddock megaparsec-tests $CONFIG
-      - run: cabal v2-sdist
-      - run: pushd megaparsec-tests && cabal v2-sdist && popd
+      - run: cabal build all $CONFIG
+      - run: cabal test all $CONFIG
+      - run: cabal haddock megaparsec $CONFIG
+      - run: cabal haddock megaparsec-tests $CONFIG
+      - run: cabal sdist
+      - run: pushd megaparsec-tests && cabal sdist && popd

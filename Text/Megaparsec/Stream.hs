@@ -423,17 +423,17 @@ reachOffset'
             w = unPos pstateTabWidth
          in if
                 | ch == newlineTok ->
-                  St
-                    (SourcePos n (l <> pos1) pos1)
-                    id
+                    St
+                      (SourcePos n (l <> pos1) pos1)
+                      id
                 | ch == tabTok ->
-                  St
-                    (SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)))
-                    (g . (fromTok ch :))
+                    St
+                      (SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w)))
+                      (g . (fromTok ch :))
                 | otherwise ->
-                  St
-                    (SourcePos n l (c <> pos1))
-                    (g . (fromTok ch :))
+                    St
+                      (SourcePos n l (c <> pos1))
+                      (g . (fromTok ch :))
 {-# INLINE reachOffset' #-}
 
 -- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
@@ -474,11 +474,11 @@ reachOffsetNoLine'
             w = unPos pstateTabWidth
          in if
                 | ch == newlineTok ->
-                  SourcePos n (l <> pos1) pos1
+                    SourcePos n (l <> pos1) pos1
                 | ch == tabTok ->
-                  SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
+                    SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
                 | otherwise ->
-                  SourcePos n l (c <> pos1)
+                    SourcePos n l (c <> pos1)
 {-# INLINE reachOffsetNoLine' #-}
 
 -- | Like 'BL.splitAt' but accepts the index as an 'Int'.
