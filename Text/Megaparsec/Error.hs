@@ -498,7 +498,7 @@ messageItemsPretty ::
 messageItemsPretty prefix ts
   | E.null ts = ""
   | otherwise =
-    prefix <> (orList . NE.fromList . E.toAscList) ts <> "\n"
+      prefix <> (orList . NE.fromList . E.toAscList) ts <> "\n"
 
 -- | Print a pretty list where items are separated with commas and the word
 -- “or” according to the rules of English punctuation.
