@@ -331,7 +331,7 @@ instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
           Error _ -> error "mfix ParsecT"
     runParsecT (f a) s
 
-instance MonadTrans (ParsecT e s) where
+instance Stream s => MonadTrans (ParsecT e s) where
   lift amb = ParsecT $ \s _ _ eok _ ->
     amb >>= \a -> eok a s mempty
 
