@@ -11,14 +11,18 @@
 
 module Text.MegaparsecSpec (spec) where
 
-import Control.Monad.Cont
-import Control.Monad.Except
-import Control.Monad.Identity
+import Control.Monad (ap, forM_, guard, unless, void, when)
+import Control.Monad.Cont (Cont, callCC, runCont)
+import Control.Monad.Except (catchError, throwError)
+import Control.Monad.Fix (MonadFix)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Identity (runIdentity)
 import qualified Control.Monad.RWS.Lazy as L
 import qualified Control.Monad.RWS.Strict as S
-import Control.Monad.Reader
+import Control.Monad.Reader (Reader, ask, asks, local, runReader, runReaderT)
 import qualified Control.Monad.State.Lazy as L
 import qualified Control.Monad.State.Strict as S
+import Control.Monad.Trans.Except (Except, runExcept)
 import qualified Control.Monad.Writer.Lazy as L
 import qualified Control.Monad.Writer.Strict as S
 import qualified Data.ByteString as BS

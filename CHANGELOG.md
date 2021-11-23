@@ -1,5 +1,9 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.2.1
+
+* Builds with `mtl-2.3` and `transformers-0.6`.
+
 ## Megaparsec 9.2.0
 
 * Added parsers for binary representations (little/big endian) of numbers in
