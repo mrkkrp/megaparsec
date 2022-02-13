@@ -5,7 +5,7 @@ license:         BSD-2-Clause
 license-file:    LICENSE.md
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
 author:          Megaparsec contributors
-tested-with:     ghc ==8.10.7 ghc ==9.0.1 ghc ==9.2.1
+tested-with:     ghc ==8.10.7 ghc ==9.0.2 ghc ==9.2.1
 homepage:        https://github.com/mrkkrp/megaparsec
 bug-reports:     https://github.com/mrkkrp/megaparsec/issues
 synopsis:        Test utilities and the test suite of Megaparsec
