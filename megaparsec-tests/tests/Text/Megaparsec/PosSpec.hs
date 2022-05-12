@@ -14,8 +14,8 @@ spec = do
     context "when the argument is a non-positive number" $
       it "throws InvalidPosException" $
         property $ \n ->
-          n <= 0
-            ==> evaluate (mkPos n) `shouldThrow` (== InvalidPosException n)
+          n <= 0 ==>
+            evaluate (mkPos n) `shouldThrow` (== InvalidPosException n)
     context "when the argument is not 0" $
       it "returns Pos with the given value" $
         property $ \n ->

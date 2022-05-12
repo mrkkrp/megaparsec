@@ -375,7 +375,9 @@ errorBundlePretty ParseErrorBundle {..} =
         (msline, pst') = reachOffset (errorOffset e) pst
         epos = pstateSourcePos pst'
         outChunk =
-          "\n" <> sourcePosPretty epos <> ":\n"
+          "\n"
+            <> sourcePosPretty epos
+            <> ":\n"
             <> offendingLine
             <> parseErrorTextPretty e
         offendingLine =
@@ -395,7 +397,11 @@ errorBundlePretty ParseErrorBundle {..} =
                   padding = replicate (length lineNumber + 1) ' '
                   rpshift = unPos (sourceColumn epos) - 1
                   slineLen = length sline
-               in padding <> "|\n" <> lineNumber <> " | " <> sline
+               in padding
+                    <> "|\n"
+                    <> lineNumber
+                    <> " | "
+                    <> sline
                     <> "\n"
                     <> padding
                     <> "| "
@@ -469,7 +475,8 @@ showErrorFancy :: ShowErrorComponent e => ErrorFancy e -> String
 showErrorFancy = \case
   ErrorFail msg -> msg
   ErrorIndentation ord ref actual ->
-    "incorrect indentation (got " <> show (unPos actual)
+    "incorrect indentation (got "
+      <> show (unPos actual)
       <> ", should be "
       <> p
       <> show (unPos ref)
