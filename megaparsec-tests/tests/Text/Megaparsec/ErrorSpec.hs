@@ -185,7 +185,10 @@ spec = do
             w = unPos w'
             tabRep = replicate w ' '
         errorBundlePretty bundle
-          `shouldBe` ( "1:" ++ show (w + 1) ++ ":\n  |\n1 | " ++ tabRep
+          `shouldBe` ( "1:"
+                         ++ show (w + 1)
+                         ++ ":\n  |\n1 | "
+                         ++ tabRep
                          ++ "something"
                          ++ tabRep
                          ++ "\n  | "

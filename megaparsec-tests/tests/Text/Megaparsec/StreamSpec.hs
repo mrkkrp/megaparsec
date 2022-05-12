@@ -51,8 +51,8 @@ spec = do
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
-            not (null s)
-              ==> take1_ (s :: String) === Just (head s, tail s)
+            not (null s) ==>
+              take1_ (s :: String) === Just (head s, tail s)
     describe "takeN_" $ do
       context "requested length is 0" $
         it "returns Just empty chunk and original stream" $
@@ -66,8 +66,8 @@ spec = do
         context "stream is not empty" $
           it "returns a chunk of correct length and rest of the stream" $
             property $ \(Positive n) s ->
-              not (null s)
-                ==> takeN_ n (s :: String) === Just (splitAt n s)
+              not (null s) ==>
+                takeN_ n (s :: String) === Just (splitAt n s)
     describe "takeWhile_" $
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
@@ -104,8 +104,8 @@ spec = do
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
-            not (B.null s)
-              ==> take1_ (s :: B.ByteString) === B.uncons s
+            not (B.null s) ==>
+              take1_ (s :: B.ByteString) === B.uncons s
     describe "takeN_" $ do
       context "requested length is 0" $
         it "returns Just empty chunk and original stream" $
@@ -119,8 +119,8 @@ spec = do
         context "stream is not empty" $
           it "returns a chunk of correct length and rest of the stream" $
             property $ \(Positive n) s ->
-              not (B.null s)
-                ==> takeN_ n (s :: B.ByteString) === Just (B.splitAt n s)
+              not (B.null s) ==>
+                takeN_ n (s :: B.ByteString) === Just (B.splitAt n s)
     describe "takeWhile_" $
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
@@ -158,8 +158,8 @@ spec = do
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
-            not (BL.null s)
-              ==> take1_ (s :: BL.ByteString) === BL.uncons s
+            not (BL.null s) ==>
+              take1_ (s :: BL.ByteString) === BL.uncons s
     describe "takeN_" $ do
       context "requested length is 0" $
         it "returns Just empty chunk and original stream" $
@@ -173,8 +173,8 @@ spec = do
         context "stream is not empty" $
           it "returns a chunk of correct length and rest of the stream" $
             property $ \(Positive n) s ->
-              not (BL.null s)
-                ==> takeN_ n (s :: BL.ByteString) === Just (BL.splitAt (fromIntegral n) s)
+              not (BL.null s) ==>
+                takeN_ n (s :: BL.ByteString) === Just (BL.splitAt (fromIntegral n) s)
     describe "takeWhile_" $
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
@@ -212,8 +212,8 @@ spec = do
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
-            not (T.null s)
-              ==> take1_ (s :: T.Text) === T.uncons s
+            not (T.null s) ==>
+              take1_ (s :: T.Text) === T.uncons s
     describe "takeN_" $ do
       context "requested length is 0" $
         it "returns Just empty chunk and original stream" $
@@ -227,8 +227,8 @@ spec = do
         context "stream is not empty" $
           it "returns a chunk of correct length and rest of the stream" $
             property $ \(Positive n) s ->
-              not (T.null s)
-                ==> takeN_ n (s :: T.Text) === Just (T.splitAt n s)
+              not (T.null s) ==>
+                takeN_ n (s :: T.Text) === Just (T.splitAt n s)
     describe "takeWhile_" $
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->
@@ -265,8 +265,8 @@ spec = do
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
-            not (TL.null s)
-              ==> take1_ (s :: TL.Text) === TL.uncons s
+            not (TL.null s) ==>
+              take1_ (s :: TL.Text) === TL.uncons s
     describe "takeN_" $ do
       context "requested length is 0" $
         it "returns Just empty chunk and original stream" $
@@ -280,8 +280,8 @@ spec = do
         context "stream is not empty" $
           it "returns a chunk of correct length and rest of the stream" $
             property $ \(Positive n) s ->
-              not (TL.null s)
-                ==> takeN_ n (s :: TL.Text) === Just (TL.splitAt (fromIntegral n) s)
+              not (TL.null s) ==>
+                takeN_ n (s :: TL.Text) === Just (TL.splitAt (fromIntegral n) s)
     describe "takeWhile_" $
       it "extracts a chunk that is a prefix consisting of matching tokens" $
         property $ \s ->

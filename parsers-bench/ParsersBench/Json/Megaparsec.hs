@@ -107,5 +107,6 @@ jstring = char DOUBLE_QUOTE *> jstring_
 jstring_ :: Parser Text
 jstring_ =
   TE.decodeUtf8
-    <$> takeWhileP (Just "string char") (/= DOUBLE_QUOTE) <* char DOUBLE_QUOTE
+    <$> takeWhileP (Just "string char") (/= DOUBLE_QUOTE)
+    <* char DOUBLE_QUOTE
 {-# INLINE jstring_ #-}

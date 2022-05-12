@@ -104,5 +104,6 @@ jstring = A.word8 DOUBLE_QUOTE *> jstring_
 jstring_ :: Parser Text
 jstring_ =
   TE.decodeUtf8
-    <$> A.takeWhile (/= DOUBLE_QUOTE) <* A.word8 DOUBLE_QUOTE
+    <$> A.takeWhile (/= DOUBLE_QUOTE)
+    <* A.word8 DOUBLE_QUOTE
 {-# INLINE jstring_ #-}

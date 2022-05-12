@@ -803,7 +803,8 @@ spec = do
               p =
                 let g = count' 1 3 . char
                  in v
-                      <$> withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a') <*> g 'c'
+                      <$> withRecovery (\e -> Left e <$ g 'b') (Right <$> g 'a')
+                      <*> g 'c'
               v (Right x) y = Right (x ++ y)
               v (Left m) _ = Left m
               ma = if a < 3 then etok 'a' else mempty
