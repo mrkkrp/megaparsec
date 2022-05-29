@@ -359,6 +359,8 @@ charLiteral = label "literal character" $ do
 --
 -- __Note__: before the version /6.0.0/ the function returned 'Integer',
 -- i.e. it wasn't polymorphic in its return type.
+--
+-- __Warning__: this function does not perform range checks.
 decimal :: (MonadParsec e s m, Token s ~ Char, Num a) => m a
 decimal = decimal_ <?> "integer"
 {-# INLINEABLE decimal #-}
@@ -380,6 +382,8 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 -- You could of course parse some prefix before the actual number:
 --
 -- > binary = char '0' >> char' 'b' >> L.binary
+--
+-- __Warning__: this function does not perform range checks.
 --
 -- @since 7.0.0
 binary ::
@@ -408,6 +412,8 @@ binary =
 --
 -- __Note__: before version /6.0.0/ the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
+--
+-- __Warning__: this function does not perform range checks.
 octal ::
   forall e s m a.
   (MonadParsec e s m, Token s ~ Char, Num a) =>
@@ -433,6 +439,8 @@ octal =
 --
 -- __Note__: before version /6.0.0/ the function returned 'Integer', i.e. it
 -- wasn't polymorphic in its return type.
+--
+-- __Warning__: this function does not perform range checks.
 hexadecimal ::
   forall e s m a.
   (MonadParsec e s m, Token s ~ Char, Num a) =>
