@@ -105,6 +105,8 @@ skipBlockCommentNested start end = p >> void (manyTill e n)
 -- of integer literals described in the Haskell report.
 --
 -- If you need to parse signed integers, see the 'signed' combinator.
+--
+-- __Warning__: this function does not perform range checks.
 decimal ::
   forall e s m a.
   (MonadParsec e s m, Token s ~ Word8, Num a) =>
@@ -130,6 +132,8 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
 --
 -- > binary = char 48 >> char' 98 >> L.binary
 --
+-- __Warning__: this function does not perform range checks.
+--
 -- @since 7.0.0
 binary ::
   forall e s m a.
@@ -154,6 +158,8 @@ binary =
 -- For example you can make it conform to the Haskell report like this:
 --
 -- > octal = char 48 >> char' 111 >> L.octal
+--
+-- __Warning__: this function does not perform range checks.
 octal ::
   forall e s m a.
   (MonadParsec e s m, Token s ~ Word8, Num a) =>
@@ -177,6 +183,8 @@ octal =
 -- For example you can make it conform to the Haskell report like this:
 --
 -- > hexadecimal = char 48 >> char' 120 >> L.hexadecimal
+--
+-- __Warning__: this function does not perform range checks.
 hexadecimal ::
   forall e s m a.
   (MonadParsec e s m, Token s ~ Word8, Num a) =>
