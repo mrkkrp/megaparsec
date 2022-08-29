@@ -355,7 +355,7 @@ instance TraversableStream TL.Text where
 
 -- | An internal helper state type combining a difference 'String' and an
 -- unboxed 'SourcePos'.
-data St = St SourcePos ShowS
+data St = St {-# UNPACK #-} !SourcePos ShowS
 
 -- | A helper definition to facilitate defining 'reachOffset' for various
 -- stream types.
