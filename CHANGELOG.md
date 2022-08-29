@@ -1,5 +1,11 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Unreleased
+
+* Fixed a space leak in the implementations of the `reachOffset` and
+  `reachOffsetNoLine` methods of `TraversableStream`. [Issue
+  486](https://github.com/mrkkrp/megaparsec/issues/486).
+
 ## Megaparsec 9.2.1
 
 * Builds with `mtl-2.3` and `transformers-0.6`.
