@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Unreleased
+## Megaparsec 9.2.2
 
 * Fixed a space leak in the implementations of the `reachOffset` and
   `reachOffsetNoLine` methods of `TraversableStream`. [Issue
