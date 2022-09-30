@@ -9,6 +9,10 @@
   negative, similar to when `n == 0`. [Issue
   497](https://github.com/mrkkrp/megaparsec/issues/497).
 
+* Added the `MonadParsecDbg` type class in `Text.Megaparsec.Debug`. The type
+  class allows us to use `dbg` in MTL monad transformers. [Issue
+  488](https://github.com/mrkkrp/megaparsec/issues/488)
+
 ## Megaparsec 9.2.2
 
 * Fixed a space leak in the implementations of the `reachOffset` and

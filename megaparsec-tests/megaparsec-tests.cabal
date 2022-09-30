@@ -76,6 +76,7 @@ test-suite tests
         mtl >=2.2.2 && <3.0,
         parser-combinators >=1.0 && <2.0,
         scientific >=0.3.1 && <0.4,
+        temporary >=1.1 && <1.4,
         text >=0.2 && <2.1,
         transformers >=0.4 && <0.7
 
