@@ -71,6 +71,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec
 import Test.QuickCheck
 import Text.Megaparsec
+import Text.Megaparsec.Debug (MonadParsecDbg)
 
 ----------------------------------------------------------------------------
 -- Types
@@ -120,7 +121,7 @@ prs_ p = parse (p <* eof) ""
 -- all supported monads transformers in turn).
 grs ::
   -- | Parser to run
-  (forall m. MonadParsec Void String m => m a) ->
+  (forall m. MonadParsecDbg Void String m => m a) ->
   -- | Input for the parser
   String ->
   -- | How to check result of parsing
@@ -140,7 +141,7 @@ grs p s r = do
 -- | 'grs'' to 'grs' is as 'prs'' to 'prs'.
 grs' ::
   -- | Parser to run
-  (forall m. MonadParsec Void String m => m a) ->
+  (forall m. MonadParsecDbg Void String m => m a) ->
   -- | Input for the parser
   String ->
   -- | How to check result of parsing
