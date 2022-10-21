@@ -229,9 +229,8 @@ data IndentOpt m a b
 -- the “reference” token. The reference token can influence parsing, see
 -- 'IndentOpt' for more information.
 --
--- Tokens /must not/ consume newlines after them. On the other hand, the
--- first argument of this function /must/ consume newlines among other white
--- space characters.
+-- __Note__: the first argument of this function /must/ consume newlines
+-- among other white space characters.
 --
 -- @since 4.3.0
 indentBlock ::
