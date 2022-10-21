@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.3.0
+
+* Now `label` can override more than one group of hints in the parser it
+  wraps. [Issue 482](https://github.com/mrkkrp/megaparsec/issues/482).
+
 ## Megaparsec 9.2.2
 
 * Fixed a space leak in the implementations of the `reachOffset` and

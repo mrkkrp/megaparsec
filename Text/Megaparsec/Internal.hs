@@ -36,7 +36,7 @@ module Text.Megaparsec.Internal
     toHints,
     withHints,
     accHints,
-    refreshLastHint,
+    refreshHints,
     runParsecT,
     withParsecT,
   )
@@ -85,12 +85,12 @@ import Text.Megaparsec.Stream
 -- 1:2:
 -- unexpected 'a'
 -- expecting 'r' or end of input
-newtype Hints t = Hints [Set (ErrorItem t)]
+newtype Hints t = Hints (Set (ErrorItem t))
 
-instance Semigroup (Hints t) where
+instance Ord t => Semigroup (Hints t) where
   Hints xs <> Hints ys = Hints $ xs <> ys
 
-instance Monoid (Hints t) where
+instance Ord t => Monoid (Hints t) where
   mempty = Hints mempty
 
 -- | All information available after parsing. This includes consumption of
@@ -170,7 +170,7 @@ instance Stream s => Applicative (ParsecT e s m) where
   p1 *> p2 = p1 `pBind` const p2
   p1 <* p2 = do x1 <- p1; void p2; return x1
 
-pPure :: a -> ParsecT e s m a
+pPure :: Stream s => a -> ParsecT e s m a
 pPure x = ParsecT $ \s _ _ eok _ -> eok x s mempty
 {-# INLINE pPure #-}
 
@@ -267,7 +267,7 @@ instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
     runParsecT p s `catchError` \e ->
       runParsecT (h e) s
 
-mkPT :: Monad m => (State s e -> m (Reply e s a)) -> ParsecT e s m a
+mkPT :: (Stream s, Monad m) => (State s e -> m (Reply e s a)) -> ParsecT e s m a
 mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
   case consumption of
@@ -364,9 +364,9 @@ pLabel l p = ParsecT $ \s cok cerr eok eerr ->
   let el = Label <$> NE.nonEmpty l
       cok' x s' hs =
         case el of
-          Nothing -> cok x s' (refreshLastHint hs Nothing)
+          Nothing -> cok x s' (refreshHints hs Nothing)
           Just _ -> cok x s' hs
-      eok' x s' hs = eok x s' (refreshLastHint hs el)
+      eok' x s' hs = eok x s' (refreshHints hs el)
       eerr' err = eerr $
         case err of
           (TrivialError pos us _) ->
@@ -381,7 +381,7 @@ pTry p = ParsecT $ \s cok _ eok eerr ->
    in unParser p s cok eerr' eok eerr'
 {-# INLINE pTry #-}
 
-pLookAhead :: ParsecT e s m a -> ParsecT e s m a
+pLookAhead :: Stream s => ParsecT e s m a -> ParsecT e s m a
 pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
   let eok' a _ _ = eok a s mempty
    in unParser p s eok' cerr eok' eerr
@@ -504,7 +504,7 @@ pTakeWhileP ml f = ParsecT $ \(State input o pst de) cok _ eok _ ->
       hs =
         case ml >>= NE.nonEmpty of
           Nothing -> mempty
-          Just l -> (Hints . pure . E.singleton . Label) l
+          Just l -> (Hints . E.singleton . Label) l
    in if chunkEmpty pxy ts
         then eok ts (State input' (o + len) pst de) hs
         else cok ts (State input' (o + len) pst de) hs
@@ -524,7 +524,7 @@ pTakeWhile1P ml f = ParsecT $ \(State input o pst de) cok _ _ eerr ->
       hs =
         case el of
           Nothing -> mempty
-          Just l -> (Hints . pure . E.singleton) l
+          Just l -> (Hints . E.singleton) l
    in if chunkEmpty pxy ts
         then
           let us = pure $
@@ -561,11 +561,11 @@ pTakeP ml n = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
                 else cok ts (State input' (o + len) pst de) mempty
 {-# INLINE pTakeP #-}
 
-pGetParserState :: ParsecT e s m (State s e)
+pGetParserState :: Stream s => ParsecT e s m (State s e)
 pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 {-# INLINE pGetParserState #-}
 
-pUpdateParserState :: (State s e -> State s e) -> ParsecT e s m ()
+pUpdateParserState :: Stream s => (State s e -> State s e) -> ParsecT e s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
@@ -591,7 +591,7 @@ toHints streamPos = \case
     -- there might have been backtracking with 'try' and in that case we
     -- must not convert such a parse error to hints.
     if streamPos == errOffset
-      then Hints (if E.null ps then [] else [ps])
+      then Hints (if E.null ps then E.empty else ps)
       else mempty
   FancyError _ _ -> mempty
 {-# INLINE toHints #-}
@@ -613,30 +613,32 @@ withHints ::
   m b
 withHints (Hints ps') c e =
   case e of
-    TrivialError pos us ps -> c (TrivialError pos us (E.unions (ps : ps')))
+    TrivialError pos us ps -> c (TrivialError pos us (E.union ps ps'))
     _ -> c e
 {-# INLINE withHints #-}
 
 -- | @'accHints' hs c@ results in “OK” continuation that will add given
 -- hints @hs@ to third argument of original continuation @c@.
 accHints ::
+  Stream s =>
   -- | 'Hints' to add
-  Hints t ->
+  Hints (Token s) ->
   -- | An “OK” continuation to alter
-  (a -> State s e -> Hints t -> m b) ->
+  (a -> State s e -> Hints (Token s) -> m b) ->
   -- | Altered “OK” continuation
-  (a -> State s e -> Hints t -> m b)
+  (a -> State s e -> Hints (Token s) -> m b)
 accHints hs1 c x s hs2 = c x s (hs1 <> hs2)
 {-# INLINE accHints #-}
 
--- | Replace the most recent group of hints (if any) with the given
--- 'ErrorItem' (or delete it if 'Nothing' is given). This is used in the
--- 'label' primitive.
-refreshLastHint :: Hints t -> Maybe (ErrorItem t) -> Hints t
-refreshLastHint (Hints []) _ = Hints []
-refreshLastHint (Hints (_ : xs)) Nothing = Hints xs
-refreshLastHint (Hints (_ : xs)) (Just m) = Hints (E.singleton m : xs)
-{-# INLINE refreshLastHint #-}
+-- | Replace the hints with the given 'ErrorItem' (or delete it if 'Nothing'
+-- is given). This is used in the 'label' primitive.
+refreshHints :: Hints t -> Maybe (ErrorItem t) -> Hints t
+refreshHints (Hints _) Nothing = Hints E.empty
+refreshHints (Hints hs) (Just m) =
+  if E.null hs
+    then Hints hs
+    else Hints (E.singleton m)
+{-# INLINE refreshHints #-}
 
 -- | Low-level unpacking of the 'ParsecT' type.
 runParsecT ::
