@@ -370,7 +370,7 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 -- wrapper. This applies to both normal and delayed 'ParseError's.
 --
 -- As a side-effect of the implementation the inner computation will start
--- with empty collection of delayed errors and they will be updated and
+-- with an empty collection of delayed errors and they will be updated and
 -- “restored” on the way out of 'region'.
 --
 -- @since 5.3.0
