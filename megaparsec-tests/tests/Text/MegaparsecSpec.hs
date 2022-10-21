@@ -470,14 +470,20 @@ spec = do
                 let p :: MonadParsec Void String m => m String
                     p = label lbl (many (char a)) <* empty
                 grs p "" (`shouldFailWith` err 0 (elabel lbl))
-      context "when inner parser fails without consuming" $
+      context "when inner parser fails without consuming" $ do
         it "is mentioned in parse error via its label" $
           property $ \lbl ->
             not (null lbl) ==> do
               let p :: MonadParsec Void String m => m ()
                   p = label lbl empty
               grs p "" (`shouldFailWith` err 0 (elabel lbl))
-
+        context "when inner parser is composite with 2-hint sources" $
+          it "both hint groups are replaced by the label" $
+            property $ \lbl a b ->
+              not (null lbl) && a /= b ==> do
+                let p :: MonadParsec Void String m => m (Maybe Char)
+                    p = label lbl (optional (char a) *> optional (char b)) <* empty
+                grs p "" (`shouldFailWith` err 0 (elabel lbl))
     describe "hidden" $ do
       context "when inner parser succeeds consuming input" $ do
         context "inner parser does not produce any hints" $
