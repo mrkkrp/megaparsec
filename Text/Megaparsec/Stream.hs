@@ -7,6 +7,7 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      :  Text.Megaparsec.Stream
@@ -25,11 +26,14 @@
 -- @since 6.0.0
 module Text.Megaparsec.Stream
   ( Stream (..),
+    ShareInput (..),
+    NoShareInput (..),
     VisualStream (..),
     TraversableStream (..),
   )
 where
 
+import Data.Bifunctor (second)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
@@ -49,6 +53,12 @@ import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 
 -- | Type class for inputs that can be consumed by the library.
+--
+-- Note that the 'Stream' instances for 'Text' and 'ByteString' (strict and
+-- lazy) default to "input sharing" (see 'ShareInput', 'NoShareInput'). We plan
+-- to move away from input sharing in a future major release; if you want to
+-- retain the current behaviour and are concerned with maximum performance you
+-- should consider using the 'ShareInput' wrapper explicitly.
 --
 -- __Note__: before the version /9.0.0/ the class included the methods from
 -- 'VisualStream' and 'TraversableStream'.
@@ -154,65 +164,246 @@ instance Ord a => Stream (S.Seq a) where
     | otherwise = Just (S.splitAt n s)
   takeWhile_ = S.spanl
 
-instance Stream B.ByteString where
-  type Token B.ByteString = Word8
-  type Tokens B.ByteString = B.ByteString
+-- | This wrapper selects the input-sharing 'Stream' implementation for
+-- 'T.Text' ('TL.Text') and 'B.ByteString' ('BL.ByteString'). By input
+-- sharing we mean that our parsers will use slices whenever possible to
+-- avoid having to copy parts of the input. See also the documentation of
+-- 'T.split'.
+--
+-- Note that using slices is in general faster than copying; on the other
+-- hand it also has the potential for causing surprising memory leaks: if
+-- any slice of the input survives in the output, holding on to the output
+-- will force the entire input 'T.Text'/'B.ByteString' to stay in memory!
+-- Even when using lazy 'TL.Text'/'BL.ByteString' we will hold on to whole
+-- chunks at a time leading to to significantly worse memory residency in
+-- some cases.
+--
+-- See 'NoShareInput' for a somewhat slower implementation that avoids this
+-- memory leak scenario.
+--
+-- @since 9.3.0
+newtype ShareInput a = ShareInput {unShareInput :: a}
+
+instance Stream (ShareInput B.ByteString) where
+  type Token (ShareInput B.ByteString) = Word8
+  type Tokens (ShareInput B.ByteString) = B.ByteString
   tokenToChunk Proxy = B.singleton
   tokensToChunk Proxy = B.pack
   chunkToTokens Proxy = B.unpack
   chunkLength Proxy = B.length
   chunkEmpty Proxy = B.null
-  take1_ = B.uncons
-  takeN_ n s
-    | n <= 0 = Just (B.empty, s)
+  take1_ (ShareInput s) = second ShareInput <$> B.uncons s
+  takeN_ n (ShareInput s)
+    | n <= 0 = Just (B.empty, ShareInput s)
     | B.null s = Nothing
-    | otherwise = Just (B.splitAt n s)
-  takeWhile_ = B.span
+    | otherwise = Just . second ShareInput $ B.splitAt n s
+  takeWhile_ p (ShareInput s) = second ShareInput $ B.span p s
 
-instance Stream BL.ByteString where
-  type Token BL.ByteString = Word8
-  type Tokens BL.ByteString = BL.ByteString
+instance Stream (ShareInput BL.ByteString) where
+  type Token (ShareInput BL.ByteString) = Word8
+  type Tokens (ShareInput BL.ByteString) = BL.ByteString
   tokenToChunk Proxy = BL.singleton
   tokensToChunk Proxy = BL.pack
   chunkToTokens Proxy = BL.unpack
   chunkLength Proxy = fromIntegral . BL.length
   chunkEmpty Proxy = BL.null
-  take1_ = BL.uncons
-  takeN_ n s
-    | n <= 0 = Just (BL.empty, s)
+  take1_ (ShareInput s) = second ShareInput <$> BL.uncons s
+  takeN_ n (ShareInput s)
+    | n <= 0 = Just (BL.empty, ShareInput s)
     | BL.null s = Nothing
-    | otherwise = Just (BL.splitAt (fromIntegral n) s)
-  takeWhile_ = BL.span
+    | otherwise = Just . second ShareInput $ BL.splitAt (fromIntegral n) s
+  takeWhile_ p (ShareInput s) = second ShareInput $ BL.span p s
 
-instance Stream T.Text where
-  type Token T.Text = Char
-  type Tokens T.Text = T.Text
+instance Stream (ShareInput T.Text) where
+  type Token (ShareInput T.Text) = Char
+  type Tokens (ShareInput T.Text) = T.Text
   tokenToChunk Proxy = T.singleton
   tokensToChunk Proxy = T.pack
   chunkToTokens Proxy = T.unpack
   chunkLength Proxy = T.length
   chunkEmpty Proxy = T.null
-  take1_ = T.uncons
-  takeN_ n s
-    | n <= 0 = Just (T.empty, s)
+  take1_ (ShareInput s) = second ShareInput <$> T.uncons s
+  takeN_ n (ShareInput s)
+    | n <= 0 = Just (T.empty, ShareInput s)
     | T.null s = Nothing
-    | otherwise = Just (T.splitAt n s)
-  takeWhile_ = T.span
+    | otherwise = Just . second ShareInput $ T.splitAt n s
+  takeWhile_ p (ShareInput s) = second ShareInput $ T.span p s
 
-instance Stream TL.Text where
-  type Token TL.Text = Char
-  type Tokens TL.Text = TL.Text
+instance Stream (ShareInput TL.Text) where
+  type Token (ShareInput TL.Text) = Char
+  type Tokens (ShareInput TL.Text) = TL.Text
   tokenToChunk Proxy = TL.singleton
   tokensToChunk Proxy = TL.pack
   chunkToTokens Proxy = TL.unpack
   chunkLength Proxy = fromIntegral . TL.length
   chunkEmpty Proxy = TL.null
-  take1_ = TL.uncons
-  takeN_ n s
-    | n <= 0 = Just (TL.empty, s)
+  take1_ (ShareInput s) = second ShareInput <$> TL.uncons s
+  takeN_ n (ShareInput s)
+    | n <= 0 = Just (TL.empty, ShareInput s)
     | TL.null s = Nothing
-    | otherwise = Just (TL.splitAt (fromIntegral n) s)
-  takeWhile_ = TL.span
+    | otherwise = Just . second ShareInput $ TL.splitAt (fromIntegral n) s
+  takeWhile_ p (ShareInput s) = second ShareInput $ TL.span p s
+
+-- | This wrapper selects the no-input-sharing 'Stream' implementation for
+-- 'T.Text' ('TL.Text') and 'B.ByteString' ('BL.ByteString'). This means
+-- that our parsers will create independent copies rather than using slices
+-- of the input. See also the documentation of 'T.copy'.
+--
+-- More importantly, any parser output will be independent of the input, and
+-- holding on to parts of the output will never prevent the input from being
+-- garbage collected.
+--
+-- For maximum performance you might consider using 'ShareInput' instead,
+-- but beware of its pitfalls!
+--
+-- @since 9.3.0
+newtype NoShareInput a = NoShareInput {unNoShareInput :: a}
+
+instance Stream (NoShareInput B.ByteString) where
+  type Token (NoShareInput B.ByteString) = Word8
+  type Tokens (NoShareInput B.ByteString) = B.ByteString
+  tokenToChunk Proxy = B.singleton
+  tokensToChunk Proxy = B.pack
+  chunkToTokens Proxy = B.unpack
+  chunkLength Proxy = B.length
+  chunkEmpty Proxy = B.null
+  take1_ (NoShareInput s) = second NoShareInput <$> B.uncons s
+  takeN_ n (NoShareInput s)
+    | n <= 0 = Just (B.empty, NoShareInput s)
+    | B.null s = Nothing
+    | otherwise =
+        let (result, rest) = B.splitAt n s
+            -- To avoid sharing the entire input we create a clean copy of the result.
+            unSharedResult = B.copy result
+         in Just (unSharedResult, NoShareInput rest)
+  takeWhile_ p (NoShareInput s) =
+    let (result, rest) = B.span p s
+        -- Ditto.
+        unSharedResult = B.copy result
+     in (unSharedResult, NoShareInput rest)
+
+instance Stream (NoShareInput BL.ByteString) where
+  type Token (NoShareInput BL.ByteString) = Word8
+  type Tokens (NoShareInput BL.ByteString) = BL.ByteString
+  tokenToChunk Proxy = BL.singleton
+  tokensToChunk Proxy = BL.pack
+  chunkToTokens Proxy = BL.unpack
+  chunkLength Proxy = fromIntegral . BL.length
+  chunkEmpty Proxy = BL.null
+  take1_ (NoShareInput s) = second NoShareInput <$> BL.uncons s
+  takeN_ n (NoShareInput s)
+    | n <= 0 = Just (BL.empty, NoShareInput s)
+    | BL.null s = Nothing
+    | otherwise =
+        let (result, rest) = BL.splitAt (fromIntegral n) s
+            -- To avoid sharing the entire input we create a clean copy of the result.
+            unSharedResult = BL.copy result
+         in Just (unSharedResult, NoShareInput rest)
+  takeWhile_ p (NoShareInput s) =
+    let (result, rest) = BL.span p s
+        -- Ditto.
+        unSharedResult = BL.copy result
+     in (unSharedResult, NoShareInput rest)
+
+instance Stream (NoShareInput T.Text) where
+  type Token (NoShareInput T.Text) = Char
+  type Tokens (NoShareInput T.Text) = T.Text
+  tokenToChunk Proxy = T.singleton
+  tokensToChunk Proxy = T.pack
+  chunkToTokens Proxy = T.unpack
+  chunkLength Proxy = T.length
+  chunkEmpty Proxy = T.null
+  take1_ (NoShareInput s) = second NoShareInput <$> T.uncons s
+  takeN_ n (NoShareInput s)
+    | n <= 0 = Just (T.empty, NoShareInput s)
+    | T.null s = Nothing
+    | otherwise =
+        let (result, rest) = T.splitAt n s
+            -- To avoid sharing the entire input we create a clean copy of the result.
+            unSharedResult = T.copy result
+         in Just (unSharedResult, NoShareInput rest)
+  takeWhile_ p (NoShareInput s) =
+    let (result, rest) = T.span p s
+        unSharedResult = T.copy result
+     in (unSharedResult, NoShareInput rest)
+
+instance Stream (NoShareInput TL.Text) where
+  type Token (NoShareInput TL.Text) = Char
+  type Tokens (NoShareInput TL.Text) = TL.Text
+  tokenToChunk Proxy = TL.singleton
+  tokensToChunk Proxy = TL.pack
+  chunkToTokens Proxy = TL.unpack
+  chunkLength Proxy = fromIntegral . TL.length
+  chunkEmpty Proxy = TL.null
+  take1_ (NoShareInput s) = second NoShareInput <$> TL.uncons s
+  takeN_ n (NoShareInput s)
+    | n <= 0 = Just (TL.empty, NoShareInput s)
+    | TL.null s = Nothing
+    | otherwise =
+        let (result, rest) = TL.splitAt (fromIntegral n) s
+            -- To avoid sharing the entire input we create a clean copy of the result.
+            unSharedResult = tlCopy result
+         in Just (unSharedResult, NoShareInput rest)
+  takeWhile_ p (NoShareInput s) =
+    let (result, rest) = TL.span p s
+        unSharedResult = tlCopy result
+     in (unSharedResult, NoShareInput rest)
+
+-- | Create an independent copy of a TL.Text, akin to BL.copy.
+tlCopy :: TL.Text -> TL.Text
+tlCopy = TL.fromStrict . T.copy . TL.toStrict
+{-# INLINE tlCopy #-}
+
+-- Since we are using @{-# LANGUAGE Safe #-}@ we can't use deriving via in
+-- these cases.
+
+instance Stream B.ByteString where
+  type Token B.ByteString = Token (ShareInput B.ByteString)
+  type Tokens B.ByteString = Tokens (ShareInput B.ByteString)
+  tokenToChunk Proxy = tokenToChunk (Proxy :: Proxy (ShareInput B.ByteString))
+  tokensToChunk Proxy = tokensToChunk (Proxy :: Proxy (ShareInput B.ByteString))
+  chunkToTokens Proxy = chunkToTokens (Proxy :: Proxy (ShareInput B.ByteString))
+  chunkLength Proxy = chunkLength (Proxy :: Proxy (ShareInput B.ByteString))
+  chunkEmpty Proxy = chunkEmpty (Proxy :: Proxy (ShareInput B.ByteString))
+  take1_ s = second unShareInput <$> take1_ (ShareInput s)
+  takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
+  takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+
+instance Stream BL.ByteString where
+  type Token BL.ByteString = Token (ShareInput BL.ByteString)
+  type Tokens BL.ByteString = Tokens (ShareInput BL.ByteString)
+  tokenToChunk Proxy = tokenToChunk (Proxy :: Proxy (ShareInput BL.ByteString))
+  tokensToChunk Proxy = tokensToChunk (Proxy :: Proxy (ShareInput BL.ByteString))
+  chunkToTokens Proxy = chunkToTokens (Proxy :: Proxy (ShareInput BL.ByteString))
+  chunkLength Proxy = chunkLength (Proxy :: Proxy (ShareInput BL.ByteString))
+  chunkEmpty Proxy = chunkEmpty (Proxy :: Proxy (ShareInput BL.ByteString))
+  take1_ s = second unShareInput <$> take1_ (ShareInput s)
+  takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
+  takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+
+instance Stream T.Text where
+  type Token T.Text = Token (ShareInput T.Text)
+  type Tokens T.Text = Tokens (ShareInput T.Text)
+  tokenToChunk Proxy = tokenToChunk (Proxy :: Proxy (ShareInput T.Text))
+  tokensToChunk Proxy = tokensToChunk (Proxy :: Proxy (ShareInput T.Text))
+  chunkToTokens Proxy = chunkToTokens (Proxy :: Proxy (ShareInput T.Text))
+  chunkLength Proxy = chunkLength (Proxy :: Proxy (ShareInput T.Text))
+  chunkEmpty Proxy = chunkEmpty (Proxy :: Proxy (ShareInput T.Text))
+  take1_ s = second unShareInput <$> take1_ (ShareInput s)
+  takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
+  takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+
+instance Stream TL.Text where
+  type Token TL.Text = Token (ShareInput TL.Text)
+  type Tokens TL.Text = Tokens (ShareInput TL.Text)
+  tokenToChunk Proxy = tokenToChunk (Proxy :: Proxy (ShareInput TL.Text))
+  tokensToChunk Proxy = tokensToChunk (Proxy :: Proxy (ShareInput TL.Text))
+  chunkToTokens Proxy = chunkToTokens (Proxy :: Proxy (ShareInput TL.Text))
+  chunkLength Proxy = chunkLength (Proxy :: Proxy (ShareInput TL.Text))
+  chunkEmpty Proxy = chunkEmpty (Proxy :: Proxy (ShareInput TL.Text))
+  take1_ s = second unShareInput <$> take1_ (ShareInput s)
+  takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
+  takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
 
 -- | Type class for inputs that can also be used for debugging.
 --
