@@ -13,6 +13,11 @@
   class allows us to use `dbg` in MTL monad transformers. [Issue
   488](https://github.com/mrkkrp/megaparsec/issues/488).
 
+* Introduced the `ShareInput` and `NoShareInput` newtype wrappers in
+  `Text.Megaparsec.Stream` in order to allow the user to choose how the
+  input should be sliced and shared during the parsing. [Issue
+  492](https://github.com/mrkkrp/megaparsec/issues/492).
+
 ## Megaparsec 9.2.2
 
 * Fixed a space leak in the implementations of the `reachOffset` and
