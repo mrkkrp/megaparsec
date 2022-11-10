@@ -544,8 +544,9 @@ pTakeP ::
   Maybe String ->
   Int ->
   ParsecT e s m (Tokens s)
-pTakeP ml n = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
-  let pxy = Proxy :: Proxy s
+pTakeP ml n' = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
+  let n = max 0 n'
+      pxy = Proxy :: Proxy s
       el = Label <$> (ml >>= NE.nonEmpty)
       ps = maybe E.empty E.singleton el
    in case takeN_ n input of
