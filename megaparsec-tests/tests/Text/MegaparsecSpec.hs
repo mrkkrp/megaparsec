@@ -1066,6 +1066,21 @@ spec = do
                     p = takeP Nothing 0
                 grs p s (`shouldParse` "")
                 grs' p s (`succeedsLeaving` s)
+      context "when taking <0 tokens" $ do
+        context "when stream is empty" $
+          it "succeeds returning zero-length chunk" $
+            property $ \(Negative n) -> do
+              let p :: MonadParsec Void String m => m String
+                  p = takeP Nothing n
+              grs p "" (`shouldParse` "")
+        context "when stream is not empty" $
+          it "succeeds returning zero-length chunk" $
+            property $ \(Negative n) s ->
+              not (null s) ==> do
+                let p :: MonadParsec Void String m => m String
+                    p = takeP Nothing n
+                grs p s (`shouldParse` "")
+                grs' p s (`succeedsLeaving` s)
       context "when taking >0 tokens" $ do
         context "when stream is empty" $ do
           context "with label" $

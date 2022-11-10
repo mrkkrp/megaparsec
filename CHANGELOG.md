@@ -5,6 +5,10 @@
 * Now `label` can override more than one group of hints in the parser it
   wraps. [Issue 482](https://github.com/mrkkrp/megaparsec/issues/482).
 
+* `takeP n` now returns the empty chunk of the input stream when `n` is
+  negative, similar to when `n == 0`. [Issue
+  497](https://github.com/mrkkrp/megaparsec/issues/497).
+
 ## Megaparsec 9.2.2
 
 * Fixed a space leak in the implementations of the `reachOffset` and
