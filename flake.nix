@@ -87,6 +87,7 @@
         "modern-uri" = doBenchmark super.modern-uri;
         "parsers-bench" = doBenchmark
           (super.callCabal2nix "parsers-bench" parsersBenchSource { });
+        "mmark" = doBenchmark super.mmark;
       };
 
       updatedPkgs = pkgs // {
