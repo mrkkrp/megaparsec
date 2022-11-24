@@ -11,7 +11,7 @@
 
 * Added the `MonadParsecDbg` type class in `Text.Megaparsec.Debug`. The type
   class allows us to use `dbg` in MTL monad transformers. [Issue
-  488](https://github.com/mrkkrp/megaparsec/issues/488)
+  488](https://github.com/mrkkrp/megaparsec/issues/488).
 
 ## Megaparsec 9.2.2
 
