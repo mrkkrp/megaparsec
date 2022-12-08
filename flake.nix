@@ -141,7 +141,8 @@
         megaparsec = sdistTarball haskellPackages.megaparsec;
         megaparsec-tests = sdistTarball haskellPackages.megaparsec-tests;
       };
-
+      haskellLanguageServer = pkgs.haskell.lib.overrideCabal haskellPackages.haskell-language-server
+        (_: { enableSharedExecutables = true; });
     in
     flake-utils.lib.eachDefaultSystem (system:
       {
@@ -164,6 +165,7 @@
           buildInputs = with haskellPackages; [
             cabal-install
             ghcid
+            haskellLanguageServer
           ];
         };
       });
