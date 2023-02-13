@@ -59,9 +59,9 @@ import Text.Megaparsec.Stream
 data ET s = ET (Maybe (ErrorItem (Token s))) (Set (ErrorItem (Token s)))
   deriving (Typeable, Generic)
 
-deriving instance Eq (Token s) => Eq (ET s)
+deriving instance (Eq (Token s)) => Eq (ET s)
 
-deriving instance Ord (Token s) => Ord (ET s)
+deriving instance (Ord (Token s)) => Ord (ET s)
 
 deriving instance
   ( Data s,
@@ -70,7 +70,7 @@ deriving instance
   ) =>
   Data (ET s)
 
-instance Stream s => Semigroup (ET s) where
+instance (Stream s) => Semigroup (ET s) where
   ET us0 ps0 <> ET us1 ps1 = ET (n us0 us1) (E.union ps0 ps1)
     where
       n Nothing Nothing = Nothing
@@ -78,7 +78,7 @@ instance Stream s => Semigroup (ET s) where
       n Nothing (Just y) = Just y
       n (Just x) (Just y) = Just (max x y)
 
-instance Stream s => Monoid (ET s) where
+instance (Stream s) => Monoid (ET s) where
   mempty = ET Nothing E.empty
   mappend = (<>)
 
@@ -86,10 +86,10 @@ instance Stream s => Monoid (ET s) where
 newtype EF e = EF (Set (ErrorFancy e))
   deriving (Eq, Ord, Data, Typeable, Generic)
 
-instance Ord e => Semigroup (EF e) where
+instance (Ord e) => Semigroup (EF e) where
   EF xs0 <> EF xs1 = EF (E.union xs0 xs1)
 
-instance Ord e => Monoid (EF e) where
+instance (Ord e) => Monoid (EF e) where
   mempty = EF E.empty
   mappend = (<>)
 
@@ -122,43 +122,43 @@ errFancy p (EF xs) = FancyError p xs
 -- Error components
 
 -- | Construct an “unexpected token” error component.
-utok :: Stream s => Token s -> ET s
+utok :: (Stream s) => Token s -> ET s
 utok = unexp . Tokens . nes
 
 -- | Construct an “unexpected tokens” error component. Empty chunk produces
 -- 'EndOfInput'.
-utoks :: forall s. Stream s => Tokens s -> ET s
+utoks :: forall s. (Stream s) => Tokens s -> ET s
 utoks = unexp . canonicalizeTokens (Proxy :: Proxy s)
 
 -- | Construct an “unexpected label” error component. Do not use with empty
 -- strings (for empty strings it's bottom).
-ulabel :: Stream s => String -> ET s
+ulabel :: (Stream s) => String -> ET s
 ulabel label
   | label == "" = error "Text.Megaparsec.Error.Builder.ulabel: empty label"
   | otherwise = unexp . Label . NE.fromList $ label
 
 -- | Construct an “unexpected end of input” error component.
-ueof :: Stream s => ET s
+ueof :: (Stream s) => ET s
 ueof = unexp EndOfInput
 
 -- | Construct an “expected token” error component.
-etok :: Stream s => Token s -> ET s
+etok :: (Stream s) => Token s -> ET s
 etok = expe . Tokens . nes
 
 -- | Construct an “expected tokens” error component. Empty chunk produces
 -- 'EndOfInput'.
-etoks :: forall s. Stream s => Tokens s -> ET s
+etoks :: forall s. (Stream s) => Tokens s -> ET s
 etoks = expe . canonicalizeTokens (Proxy :: Proxy s)
 
 -- | Construct an “expected label” error component. Do not use with empty
 -- strings.
-elabel :: Stream s => String -> ET s
+elabel :: (Stream s) => String -> ET s
 elabel label
   | label == "" = error "Text.Megaparsec.Error.Builder.elabel: empty label"
   | otherwise = expe . Label . NE.fromList $ label
 
 -- | Construct an “expected end of input” error component.
-eeof :: Stream s => ET s
+eeof :: (Stream s) => ET s
 eeof = expe EndOfInput
 
 -- | Construct a custom error component.
@@ -171,7 +171,7 @@ fancy = EF . E.singleton
 -- | Construct the appropriate 'ErrorItem' representation for the given
 -- token stream. The empty string produces 'EndOfInput'.
 canonicalizeTokens ::
-  Stream s =>
+  (Stream s) =>
   Proxy s ->
   Tokens s ->
   ErrorItem (Token s)
@@ -181,11 +181,11 @@ canonicalizeTokens pxy ts =
     Just xs -> Tokens xs
 
 -- | Lift an unexpected item into 'ET'.
-unexp :: Stream s => ErrorItem (Token s) -> ET s
+unexp :: (Stream s) => ErrorItem (Token s) -> ET s
 unexp u = ET (pure u) E.empty
 
 -- | Lift an expected item into 'ET'.
-expe :: Stream s => ErrorItem (Token s) -> ET s
+expe :: (Stream s) => ErrorItem (Token s) -> ET s
 expe p = ET Nothing (E.singleton p)
 
 -- | Make a singleton non-empty list from a value.

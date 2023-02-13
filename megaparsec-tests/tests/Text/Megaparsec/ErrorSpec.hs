@@ -266,7 +266,7 @@ instance ShowErrorComponent CustomErr where
 
 type PE = ParseError String Void
 
-contains :: Foldable t => (PE -> t a) -> (a -> String) -> PE -> Property
+contains :: (Foldable t) => (PE -> t a) -> (a -> String) -> PE -> Property
 contains g r e = property (all f (g e))
   where
     rendered = parseErrorPretty e

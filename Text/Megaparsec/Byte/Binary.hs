@@ -185,7 +185,7 @@ int64be = anyBE (Just "big-endian 64 int")
 --
 -- Performs ceiling division, so byte-unaligned types (bitsize not a
 -- multiple of 8) should work, but further usage is not tested.
-finiteByteSize :: forall a. FiniteBits a => Int
+finiteByteSize :: forall a. (FiniteBits a) => Int
 finiteByteSize = finiteBitSize @a undefined `ceilDiv` 8
   where
     ceilDiv x y = (x + y - 1) `div` y

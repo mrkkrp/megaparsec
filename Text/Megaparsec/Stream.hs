@@ -131,7 +131,7 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   takeWhile_ :: (Token s -> Bool) -> s -> (Tokens s, s)
 
 -- | @since 9.0.0
-instance Ord a => Stream [a] where
+instance (Ord a) => Stream [a] where
   type Token [a] = a
   type Tokens [a] = [a]
   tokenToChunk Proxy = pure
@@ -148,7 +148,7 @@ instance Ord a => Stream [a] where
   takeWhile_ = span
 
 -- | @since 9.0.0
-instance Ord a => Stream (S.Seq a) where
+instance (Ord a) => Stream (S.Seq a) where
   type Token (S.Seq a) = a
   type Tokens (S.Seq a) = S.Seq a
   tokenToChunk Proxy = pure
@@ -408,7 +408,7 @@ instance Stream TL.Text where
 -- | Type class for inputs that can also be used for debugging.
 --
 -- @since 9.0.0
-class Stream s => VisualStream s where
+class (Stream s) => VisualStream s where
   -- | Pretty-print non-empty stream of tokens. This function is also used
   -- to print single tokens (represented as singleton lists).
   --
@@ -441,7 +441,7 @@ instance VisualStream TL.Text where
 -- | Type class for inputs that can also be used for error reporting.
 --
 -- @since 9.0.0
-class Stream s => TraversableStream s where
+class (Stream s) => TraversableStream s where
   {-# MINIMAL reachOffset | reachOffsetNoLine #-}
 
   -- | Given an offset @o@ and initial 'PosState', adjust the state in such
@@ -552,7 +552,7 @@ data St = St {-# UNPACK #-} !SourcePos ShowS
 -- stream types.
 reachOffset' ::
   forall s.
-  Stream s =>
+  (Stream s) =>
   -- | How to split input stream at given offset
   (Int -> s -> (Tokens s, s)) ->
   -- | How to fold over input stream
@@ -630,7 +630,7 @@ reachOffset'
 -- | Like 'reachOffset'' but for 'reachOffsetNoLine'.
 reachOffsetNoLine' ::
   forall s.
-  Stream s =>
+  (Stream s) =>
   -- | How to split input stream at given offset
   (Int -> s -> (Tokens s, s)) ->
   -- | How to fold over input stream

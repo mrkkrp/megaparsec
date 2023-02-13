@@ -76,7 +76,7 @@ main = mainWith $ do
 
 -- | Perform a series of measurements with the same parser.
 bparser ::
-  NFData a =>
+  (NFData a) =>
   -- | Name of the benchmark group
   String ->
   -- | How to construct input
@@ -91,7 +91,7 @@ bparser name f p = forM_ stdSeries $ \i -> do
 
 -- | Perform a series of measurements with the same parser.
 bparserBs ::
-  NFData a =>
+  (NFData a) =>
   -- | Name of the benchmark group
   String ->
   -- | How to construct input

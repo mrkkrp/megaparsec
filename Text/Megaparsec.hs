@@ -253,7 +253,7 @@ runParser' p = runIdentity . runParserT' p
 -- underlying monad @m@ that returns either a 'ParseErrorBundle' ('Left') or
 -- a value of type @a@ ('Right').
 runParserT ::
-  Monad m =>
+  (Monad m) =>
   -- | Parser to run
   ParsecT e s m a ->
   -- | Name of source file
@@ -269,7 +269,7 @@ runParserT p name s = snd <$> runParserT' p (initialState name s)
 --
 -- @since 4.2.0
 runParserT' ::
-  Monad m =>
+  (Monad m) =>
   -- | Parser to run
   ParsecT e s m a ->
   -- | Initial state
@@ -323,7 +323,7 @@ initialState name s =
 --
 -- @since 6.0.0
 failure ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Unexpected item (if any)
   Maybe (ErrorItem (Token s)) ->
   -- | Expected items
@@ -339,7 +339,7 @@ failure us ps = do
 --
 -- @since 6.0.0
 fancyFailure ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Fancy error components
   Set (ErrorFancy e) ->
   m a
@@ -352,7 +352,7 @@ fancyFailure xs = do
 -- about unexpected item @item@ without consuming any input.
 --
 -- > unexpected item = failure (Just item) Set.empty
-unexpected :: MonadParsec e s m => ErrorItem (Token s) -> m a
+unexpected :: (MonadParsec e s m) => ErrorItem (Token s) -> m a
 unexpected item = failure (Just item) E.empty
 {-# INLINE unexpected #-}
 
@@ -362,7 +362,7 @@ unexpected item = failure (Just item) E.empty
 -- > customFailure = fancyFailure . Set.singleton . ErrorCustom
 --
 -- @since 6.3.0
-customFailure :: MonadParsec e s m => e -> m a
+customFailure :: (MonadParsec e s m) => e -> m a
 customFailure = fancyFailure . E.singleton . ErrorCustom
 {-# INLINE customFailure #-}
 
@@ -375,7 +375,7 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 --
 -- @since 5.3.0
 region ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | How to process 'ParseError's
   (ParseError s e -> ParseError s e) ->
   -- | The “region” that the processing applies to
@@ -401,7 +401,7 @@ region f m = do
 -- at once.
 --
 -- @since 8.0.0
-registerParseError :: MonadParsec e s m => ParseError s e -> m ()
+registerParseError :: (MonadParsec e s m) => ParseError s e -> m ()
 registerParseError e = updateParserState $ \s ->
   s {stateParseErrors = e : stateParseErrors s}
 {-# INLINE registerParseError #-}
@@ -410,7 +410,7 @@ registerParseError e = updateParserState $ \s ->
 --
 -- @since 8.0.0
 registerFailure ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Unexpected item (if any)
   Maybe (ErrorItem (Token s)) ->
   -- | Expected items
@@ -425,7 +425,7 @@ registerFailure us ps = do
 --
 -- @since 8.0.0
 registerFancyFailure ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Fancy error components
   Set (ErrorFancy e) ->
   m ()
@@ -446,7 +446,7 @@ registerFancyFailure xs = do
 --
 -- @since 7.0.0
 single ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Token to match
   Token s ->
   m (Token s)
@@ -470,7 +470,7 @@ single t = token testToken expected
 --
 -- @since 7.0.0
 satisfy ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Predicate to apply
   (Token s -> Bool) ->
   m (Token s)
@@ -487,7 +487,7 @@ satisfy f = token testChar E.empty
 -- See also: 'satisfy', 'anySingleBut'.
 --
 -- @since 7.0.0
-anySingle :: MonadParsec e s m => m (Token s)
+anySingle :: (MonadParsec e s m) => m (Token s)
 anySingle = satisfy (const True)
 {-# INLINE anySingle #-}
 
@@ -500,7 +500,7 @@ anySingle = satisfy (const True)
 --
 -- @since 7.0.0
 anySingleBut ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Token we should not match
   Token s ->
   m (Token s)
@@ -564,7 +564,7 @@ noneOf cs = satisfy (`notElem` cs)
 --
 -- @since 7.0.0
 chunk ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Chunk to match
   Tokens s ->
   m (Tokens s)
@@ -574,7 +574,7 @@ chunk = tokens (==)
 -- | A synonym for 'label' in the form of an operator.
 infix 0 <?>
 
-(<?>) :: MonadParsec e s m => m a -> String -> m a
+(<?>) :: (MonadParsec e s m) => m a -> String -> m a
 (<?>) = flip label
 {-# INLINE (<?>) #-}
 
@@ -584,7 +584,7 @@ infix 0 <?>
 -- manually in the argument parser, prepare for troubles.
 --
 -- @since 5.3.0
-match :: MonadParsec e s m => m a -> m (Tokens s, a)
+match :: (MonadParsec e s m) => m a -> m (Tokens s, a)
 match p = do
   o <- getOffset
   s <- getInput
@@ -604,7 +604,7 @@ match p = do
 -- > takeRest = takeWhileP Nothing (const True)
 --
 -- @since 6.0.0
-takeRest :: MonadParsec e s m => m (Tokens s)
+takeRest :: (MonadParsec e s m) => m (Tokens s)
 takeRest = takeWhileP Nothing (const True)
 {-# INLINE takeRest #-}
 
@@ -613,7 +613,7 @@ takeRest = takeWhileP Nothing (const True)
 -- > atEnd = option False (True <$ hidden eof)
 --
 -- @since 6.0.0
-atEnd :: MonadParsec e s m => m Bool
+atEnd :: (MonadParsec e s m) => m Bool
 atEnd = option False (True <$ hidden eof)
 {-# INLINE atEnd #-}
 
@@ -621,12 +621,12 @@ atEnd = option False (True <$ hidden eof)
 -- Parser state combinators
 
 -- | Return the current input.
-getInput :: MonadParsec e s m => m s
+getInput :: (MonadParsec e s m) => m s
 getInput = stateInput <$> getParserState
 {-# INLINE getInput #-}
 
 -- | @'setInput' input@ continues parsing with @input@.
-setInput :: MonadParsec e s m => s -> m ()
+setInput :: (MonadParsec e s m) => s -> m ()
 setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 {-# INLINE setInput #-}
 
@@ -652,7 +652,7 @@ getSourcePos = do
 -- See also: 'setOffset'.
 --
 -- @since 7.0.0
-getOffset :: MonadParsec e s m => m Int
+getOffset :: (MonadParsec e s m) => m Int
 getOffset = stateOffset <$> getParserState
 {-# INLINE getOffset #-}
 
@@ -661,7 +661,7 @@ getOffset = stateOffset <$> getParserState
 -- See also: 'getOffset'.
 --
 -- @since 7.0.0
-setOffset :: MonadParsec e s m => Int -> m ()
+setOffset :: (MonadParsec e s m) => Int -> m ()
 setOffset o = updateParserState $ \(State s _ pst de) ->
   State s o pst de
 {-# INLINE setOffset #-}
@@ -669,6 +669,6 @@ setOffset o = updateParserState $ \(State s _ pst de) ->
 -- | @'setParserState' st@ sets the parser state to @st@.
 --
 -- See also: 'getParserState', 'updateParserState'.
-setParserState :: MonadParsec e s m => State s e -> m ()
+setParserState :: (MonadParsec e s m) => State s e -> m ()
 setParserState st = updateParserState (const st)
 {-# INLINE setParserState #-}

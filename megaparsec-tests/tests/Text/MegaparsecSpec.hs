@@ -422,7 +422,7 @@ spec = do
     describe "parseError" $ do
       it "immediately fails with given parse error" $
         property $ \st e -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = parseError e
           runParser' p st `shouldBe` (st, Left (mkBundle st (nes e)))
 
@@ -432,7 +432,7 @@ spec = do
           it "collection of hints remains empty" $
             property $ \lbl a ->
               not (null lbl) ==> do
-                let p :: MonadParsec Void String m => m Char
+                let p :: (MonadParsec Void String m) => m Char
                     p = label lbl (char a) <* empty
                     s = [a]
                 grs p s (`shouldFailWith` err 1 mempty)
@@ -441,7 +441,7 @@ spec = do
           it "does not alter the hints" $
             property $ \lbl a ->
               not (null lbl) ==> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = label lbl (many (char a)) <* empty
                     s = [a]
                 grs p s (`shouldFailWith` err 1 (etok a))
@@ -450,7 +450,7 @@ spec = do
         it "reports parse error without modification" $
           property $ \lbl a b c ->
             not (null lbl) && b /= c ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = label lbl (char a *> char b)
                   s = [a, c]
               grs p s (`shouldFailWith` err 1 (utok c <> etok b))
@@ -460,28 +460,28 @@ spec = do
           it "collection of hints remains empty" $
             property $ \lbl a ->
               not (null lbl) ==> do
-                let p :: MonadParsec Void String m => m Char
+                let p :: (MonadParsec Void String m) => m Char
                     p = label lbl (return a) <* empty
                 grs p "" (`shouldFailWith` err 0 mempty)
         context "inner parser produces hints" $
           it "replaces the last hint with given label" $
             property $ \lbl a ->
               not (null lbl) ==> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = label lbl (many (char a)) <* empty
                 grs p "" (`shouldFailWith` err 0 (elabel lbl))
       context "when inner parser fails without consuming" $ do
         it "is mentioned in parse error via its label" $
           property $ \lbl ->
             not (null lbl) ==> do
-              let p :: MonadParsec Void String m => m ()
+              let p :: (MonadParsec Void String m) => m ()
                   p = label lbl empty
               grs p "" (`shouldFailWith` err 0 (elabel lbl))
         context "when inner parser is composite with 2-hint sources" $
           it "both hint groups are replaced by the label" $
             property $ \lbl a b ->
               not (null lbl) && a /= b ==> do
-                let p :: MonadParsec Void String m => m (Maybe Char)
+                let p :: (MonadParsec Void String m) => m (Maybe Char)
                     p = label lbl (optional (char a) *> optional (char b)) <* empty
                 grs p "" (`shouldFailWith` err 0 (elabel lbl))
     describe "hidden" $ do
@@ -489,7 +489,7 @@ spec = do
         context "inner parser does not produce any hints" $
           it "collection of hints remains empty" $
             property $ \a -> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = hidden (char a) <* empty
                   s = [a]
               grs p s (`shouldFailWith` err 1 mempty)
@@ -497,7 +497,7 @@ spec = do
         context "inner parser produces hints" $
           it "hides the parser in the error message" $
             property $ \a -> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = hidden (many (char a)) <* empty
                   s = [a]
               grs p s (`shouldFailWith` err 1 mempty)
@@ -506,7 +506,7 @@ spec = do
         it "reports parse error without modification" $
           property $ \a b c ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = hidden (char a *> char b)
                   s = [a, c]
               grs p s (`shouldFailWith` err 1 (utok c <> etok b))
@@ -515,19 +515,19 @@ spec = do
         context "inner parser does not produce any hints" $
           it "collection of hints remains empty" $
             property $ \a -> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = hidden (return a) <* empty
               grs p "" (`shouldFailWith` err 0 mempty)
         context "inner parser produces hints" $
           it "hides the parser in the error message" $
             property $ \a -> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = hidden (many (char a)) <* empty
               grs p "" (`shouldFailWith` err 0 mempty)
       context "when inner parser fails without consuming" $
         it "hides the parser in the error message" $
           do
-            let p :: MonadParsec Void String m => m ()
+            let p :: (MonadParsec Void String m) => m ()
                 p = hidden empty
             grs p "" (`shouldFailWith` err 0 mempty)
 
@@ -535,7 +535,7 @@ spec = do
       context "when inner parser succeeds consuming" $
         it "try has no effect" $
           property $ \a -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = try (char a)
                 s = [a]
             grs p s (`shouldParse` a)
@@ -544,7 +544,7 @@ spec = do
         it "backtracks, it appears as if the parser has not consumed anything" $
           property $ \a b c ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = try (char a *> char b)
                   s = [a, c]
               grs p s (`shouldFailWith` err 1 (utok c <> etok b))
@@ -552,7 +552,7 @@ spec = do
         it "hints from the inner parse error do not leak" $
           property $ \a b c ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m (Maybe Char)
+              let p :: (MonadParsec Void String m) => m (Maybe Char)
                   p = (optional . try) (char a *> char b) <* empty
                   s = [a, c]
               grs p s (`shouldFailWith` err 0 mempty)
@@ -560,13 +560,13 @@ spec = do
       context "when inner parser succeeds without consuming" $
         it "try has no effect" $
           property $ \a -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = try (return a)
             grs p "" (`shouldParse` a)
       context "when inner parser fails without consuming" $
         it "try backtracks parser state anyway" $
           property $ \w -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = try (setTabWidth w *> empty)
             grs p "" (`shouldFailWith` err 0 mempty)
             grs' p "" ((`shouldBe` defaultTabWidth) . grabTabWidth)
@@ -575,14 +575,14 @@ spec = do
       context "when inner parser succeeds consuming" $ do
         it "result is returned but parser state is not changed" $
           property $ \a w -> do
-            let p :: MonadParsec Void String m => m Pos
+            let p :: (MonadParsec Void String m) => m Pos
                 p = lookAhead (setTabWidth w *> char a) *> getTabWidth
                 s = [a]
             grs p s (`shouldParse` defaultTabWidth)
             grs' p s (`succeedsLeaving` s)
         it "hints are not preserved" $
           property $ \a -> do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = lookAhead (many (char a)) <* empty
                 s = [a]
             grs p s (`shouldFailWith` err 0 mempty)
@@ -591,7 +591,7 @@ spec = do
         it "error message is reported as usual" $
           property $ \a b c ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = lookAhead (char a *> char b)
                   s = [a, c]
               grs p s (`shouldFailWith` err 1 (utok c <> etok b))
@@ -599,7 +599,7 @@ spec = do
       context "when inner parser succeeds without consuming" $ do
         it "result is returned but parser state in not changed" $
           property $ \a w -> do
-            let p :: MonadParsec Void String m => m Pos
+            let p :: (MonadParsec Void String m) => m Pos
                 p = lookAhead (setTabWidth w *> char a) *> getTabWidth
                 s = [a]
             grs p s (`shouldParse` defaultTabWidth)
@@ -607,7 +607,7 @@ spec = do
         it "hints are not preserved" $
           property $ \a b ->
             a /= b ==> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = lookAhead (many (char a)) <* empty
                   s = [b]
               grs p s (`shouldFailWith` err 0 mempty)
@@ -615,7 +615,7 @@ spec = do
       context "when inner parser fails without consuming" $
         it "error message is reported as usual" $
           do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = lookAhead empty
             grs p "" (`shouldFailWith` err 0 mempty)
 
@@ -623,7 +623,7 @@ spec = do
       context "when inner parser succeeds consuming" $
         it "signals correct parse error" $
           property $ \a w -> do
-            let p :: MonadParsec Void String m => m ()
+            let p :: (MonadParsec Void String m) => m ()
                 p = notFollowedBy (setTabWidth w <* char a)
                 s = [a]
             grs p s (`shouldFailWith` err 0 (utok a))
@@ -633,7 +633,7 @@ spec = do
         it "succeeds without consuming" $
           property $ \a b c w ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m ()
+              let p :: (MonadParsec Void String m) => m ()
                   p = notFollowedBy (setTabWidth w *> char a *> char b)
                   s = [a, c]
               grs' p s (`succeedsLeaving` s)
@@ -641,7 +641,7 @@ spec = do
         it "hints are not preserved" $
           property $ \a b ->
             a /= b ==> do
-              let p :: MonadParsec Void String m => m ()
+              let p :: (MonadParsec Void String m) => m ()
                   p = notFollowedBy (char b *> many (char a) <* char a) <* empty
                   s = [b, b]
               grs p s (`shouldFailWith` err 0 mempty)
@@ -649,7 +649,7 @@ spec = do
       context "when inner parser succeeds without consuming" $
         it "signals correct parse error" $
           property $ \a w -> do
-            let p :: MonadParsec Void String m => m ()
+            let p :: (MonadParsec Void String m) => m ()
                 p = notFollowedBy (setTabWidth w *> return a)
                 s = [a]
             grs p s (`shouldFailWith` err 0 (utok a))
@@ -658,13 +658,13 @@ spec = do
       context "when inner parser fails without consuming" $ do
         it "succeeds without consuming" $
           property $ \w -> do
-            let p :: MonadParsec Void String m => m ()
+            let p :: (MonadParsec Void String m) => m ()
                 p = notFollowedBy (setTabWidth w *> empty)
             grs p "" (`shouldParse` ())
             grs' p "" ((`shouldBe` defaultTabWidth) . grabTabWidth)
         it "hints are not preserved" $
           property $ \a -> do
-            let p :: MonadParsec Void String m => m ()
+            let p :: (MonadParsec Void String m) => m ()
                 p = notFollowedBy (many (char a) <* char a) <* empty
                 s = ""
             grs p s (`shouldFailWith` err 0 mempty)
@@ -674,7 +674,7 @@ spec = do
       context "when inner parser succeeds consuming" $
         it "the result is returned as usual" $
           property $ \a as -> do
-            let p :: MonadParsec Void String m => m (Maybe Char)
+            let p :: (MonadParsec Void String m) => m (Maybe Char)
                 p = withRecovery (const $ return Nothing) (pure <$> char a)
                 s = a : as
             grs p s (`shouldParse` Just a)
@@ -684,7 +684,7 @@ spec = do
           it "its result is returned and position is advanced" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (\e -> Left e <$ string (c : as))
@@ -695,7 +695,7 @@ spec = do
           it "hints are not preserved" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (\e -> Left e <$ string (c : as))
@@ -708,7 +708,7 @@ spec = do
           it "the original parse error (and state) is reported" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (\e -> Left e <$ char c <* empty)
@@ -720,7 +720,7 @@ spec = do
           it "its result is returned (and state)" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p = withRecovery (return . Left) (Right <$> char a <* char b)
                     s = a : c : as
                 grs p s (`shouldParse` Left (err 1 (utok c <> etok b)))
@@ -728,7 +728,7 @@ spec = do
           it "original hints are preserved" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (return . Left)
@@ -741,7 +741,7 @@ spec = do
           it "the original parse error (and state) is reported" $
             property $ \a b c as ->
               b /= c ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (\e -> Left e <$ empty)
@@ -752,7 +752,7 @@ spec = do
       context "when inner parser succeeds without consuming" $
         it "the result is returned as usual" $
           property $ \a s -> do
-            let p :: MonadParsec Void String m => m (Maybe Char)
+            let p :: (MonadParsec Void String m) => m (Maybe Char)
                 p = withRecovery (const $ return Nothing) (return a)
             grs p s (`shouldParse` a)
             grs' p s (`succeedsLeaving` s)
@@ -760,7 +760,7 @@ spec = do
         context "when recovering parser succeeds consuming input" $
           it "its result is returned and position is advanced" $
             property $ \a as -> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = withRecovery (\e -> Left e <$ string s) empty
                   s = a : as
               grs p s (`shouldParse` Left (err 0 mempty))
@@ -769,7 +769,7 @@ spec = do
           it "the original parse error (and state) is reported" $
             property $ \a b as ->
               a /= b ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                     p =
                       withRecovery
                         (\e -> Left e <$ char a <* char b <* empty)
@@ -780,14 +780,14 @@ spec = do
         context "when recovering parser succeeds without consuming" $ do
           it "its result is returned (and state)" $
             property $ \s -> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = withRecovery (return . Left) empty
               grs p s (`shouldParse` Left (err 0 mempty))
               grs' p s (`succeedsLeaving` s)
           it "original hints are preserved" $
             property $ \a b as ->
               a /= b ==> do
-                let p :: MonadParsec Void String m => m (Either (ParseError String Void) String)
+                let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) String)
                     p =
                       withRecovery
                         (return . Left)
@@ -799,13 +799,13 @@ spec = do
         context "when recovering parser fails without consuming" $
           it "the original parse error (and state) is reported" $
             property $ \s -> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = withRecovery (\e -> Left e <$ empty) empty
               grs p s (`shouldFailWith` err 0 mempty)
               grs' p s (`failsLeaving` s)
       it "works in complex situations too" $
         property $ \(NonNegative a) (NonNegative b) (NonNegative c) -> do
-          let p :: MonadParsec Void String m => m (Either (ParseError String Void) String)
+          let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) String)
               p =
                 let g = count' 1 3 . char
                  in v
@@ -836,7 +836,7 @@ spec = do
       context "when inner parser succeeds consuming" $
         it "returns its result in Right" $
           property $ \a as -> do
-            let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+            let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                 p = observing (char a)
                 s = a : as
             grs p s (`shouldParse` Right a)
@@ -845,7 +845,7 @@ spec = do
         it "returns its parse error in Left preserving state" $
           property $ \a b c as ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = observing (char a *> char b)
                   s = a : c : as
               grs p s (`shouldParse` Left (err 1 (utok c <> etok b)))
@@ -853,7 +853,7 @@ spec = do
         it "does not create any hints" $
           property $ \a b c as ->
             b /= c ==> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = observing (char a *> char b) *> empty
                   s = a : c : as
               grs p s (`shouldFailWith` err 1 mempty)
@@ -861,21 +861,21 @@ spec = do
       context "when inner parser succeeds without consuming" $
         it "returns its result in Right" $
           property $ \a s -> do
-            let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+            let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                 p = observing (return a)
             grs p s (`shouldParse` Right a)
             grs' p s (`succeedsLeaving` s)
       context "when inner parser fails without consuming" $ do
         it "returns its parse error in Left preserving state" $
           property $ \s -> do
-            let p :: MonadParsec Void String m => m (Either (ParseError String Void) ())
+            let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) ())
                 p = observing empty
             grs p s (`shouldParse` Left (err 0 mempty))
             grs' p s (`succeedsLeaving` s)
         it "creates correct hints" $
           property $ \a b as ->
             a /= b ==> do
-              let p :: MonadParsec Void String m => m (Either (ParseError String Void) Char)
+              let p :: (MonadParsec Void String m) => m (Either (ParseError String Void) Char)
                   p = observing (char a) <* empty
                   s = b : as
               grs p s (`shouldFailWith` err 0 (etok a))
@@ -898,7 +898,7 @@ spec = do
       context "when supplied predicate is satisfied" $
         it "succeeds" $
           property $ \a as -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = token (testChar a) (expected a)
                 s = a : as
             grs p s (`shouldParse` a)
@@ -907,7 +907,7 @@ spec = do
         it "signals correct parse error" $
           property $ \a b as ->
             a /= b ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = token (testChar b) (expected b)
                   s = a : as
                   us = pure (Tokens $ nes a)
@@ -917,7 +917,7 @@ spec = do
       context "when stream is empty" $
         it "signals correct parse error" $
           property $ \a -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = token (testChar a) ps
                 us = pure EndOfInput
                 ps = expected a
@@ -927,7 +927,7 @@ spec = do
       context "when stream is prefixed with given string" $
         it "parses the string" $
           property $ \str s -> do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = tokens (==) str
                 s' = str ++ s
             grs p s' (`shouldParse` str)
@@ -936,7 +936,7 @@ spec = do
         it "signals correct parse error" $
           property $ \str s ->
             not (str `isPrefixOf` s) ==> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = tokens (==) str
                   z = take (length str) s
               grs p s (`shouldFailWith` err 0 (utoks z <> etoks str))
@@ -944,7 +944,7 @@ spec = do
       context "when matching the empty string" $
         it "eok continuation is used" $
           property $ \str s -> do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = (tokens (==) "" <* empty) <|> pure str
             grs p s (`shouldParse` str)
             grs' p s (`succeedsLeaving` s)
@@ -954,19 +954,19 @@ spec = do
         it "consumes all matching tokens, zero or more" $
           property $ \s ->
             not (null s) ==> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = takeWhileP Nothing isLetter
                   (z, zs) = DL.span isLetter s
               grs p s (`shouldParse` z)
               grs' p s (`succeedsLeaving` zs)
       context "when stream is empty" $
         it "succeeds returning empty chunk" $ do
-          let p :: MonadParsec Void String m => m String
+          let p :: (MonadParsec Void String m) => m String
               p = takeWhileP Nothing isLetter
           grs p "" (`shouldParse` "")
           grs' p "" (`succeedsLeaving` "")
       context "with two takeWhileP in a row (testing hints)" $ do
-        let p :: MonadParsec Void String m => m String
+        let p :: (MonadParsec Void String m) => m String
             p = do
               void $ takeWhileP (Just "foo") (== 'a')
               void $ takeWhileP (Just "bar") (== 'b')
@@ -985,7 +985,7 @@ spec = do
             grs' p s (`failsLeaving` "")
       context "without label (testing hints)" $
         it "there are no hints" $ do
-          let p :: MonadParsec Void String m => m String
+          let p :: (MonadParsec Void String m) => m String
               p = takeWhileP Nothing (== 'a') <* empty
               s = "aaa"
           grs p s (`shouldFailWith` err 3 mempty)
@@ -995,7 +995,7 @@ spec = do
       context "when stream is prefixed with matching tokens" $
         it "consumes the tokens" $
           property $ \s' -> do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = takeWhile1P Nothing isLetter
                 s = 'a' : s'
                 (z, zs) = DL.span isLetter s
@@ -1004,7 +1004,7 @@ spec = do
       context "when stream is not prefixed with at least one matching token" $
         it "signals correct parse error" $
           property $ \s' -> do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = takeWhile1P (Just "foo") isLetter
                 s = '3' : s'
                 pe = err 0 (utok '3' <> elabel "foo")
@@ -1013,20 +1013,20 @@ spec = do
       context "when stream is empty" $ do
         context "with label" $
           it "signals correct parse error" $ do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = takeWhile1P (Just "foo") isLetter
                 pe = err 0 (ueof <> elabel "foo")
             grs p "" (`shouldFailWith` pe)
             grs' p "" (`failsLeaving` "")
         context "without label" $
           it "signals correct parse error" $ do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = takeWhile1P Nothing isLetter
                 pe = err 0 ueof
             grs p "" (`shouldFailWith` pe)
             grs' p "" (`failsLeaving` "")
       context "with two takeWhile1P in a row (testing hints)" $ do
-        let p :: MonadParsec Void String m => m String
+        let p :: (MonadParsec Void String m) => m String
             p = do
               void $ takeWhile1P (Just "foo") (== 'a')
               void $ takeWhile1P (Just "bar") (== 'b')
@@ -1045,7 +1045,7 @@ spec = do
             grs' p s (`failsLeaving` "")
       context "without label (testing hints)" $
         it "there are no hints" $ do
-          let p :: MonadParsec Void String m => m String
+          let p :: (MonadParsec Void String m) => m String
               p = takeWhile1P Nothing (== 'a') <* empty
               s = "aaa"
           grs p s (`shouldFailWith` err 3 mempty)
@@ -1055,14 +1055,14 @@ spec = do
       context "when taking 0 tokens" $ do
         context "when stream is empty" $
           it "succeeds returning zero-length chunk" $ do
-            let p :: MonadParsec Void String m => m String
+            let p :: (MonadParsec Void String m) => m String
                 p = takeP Nothing 0
             grs p "" (`shouldParse` "")
         context "when stream is not empty" $
           it "succeeds returning zero-length chunk" $
             property $ \s ->
               not (null s) ==> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = takeP Nothing 0
                 grs p s (`shouldParse` "")
                 grs' p s (`succeedsLeaving` s)
@@ -1070,14 +1070,14 @@ spec = do
         context "when stream is empty" $
           it "succeeds returning zero-length chunk" $
             property $ \(Negative n) -> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = takeP Nothing n
               grs p "" (`shouldParse` "")
         context "when stream is not empty" $
           it "succeeds returning zero-length chunk" $
             property $ \(Negative n) s ->
               not (null s) ==> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = takeP Nothing n
                 grs p s (`shouldParse` "")
                 grs' p s (`succeedsLeaving` s)
@@ -1086,7 +1086,7 @@ spec = do
           context "with label" $
             it "signals correct parse error" $
               property $ \(Positive n) -> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = takeP (Just "foo") n
                     pe = err 0 (ueof <> elabel "foo")
                 grs p "" (`shouldFailWith` pe)
@@ -1094,14 +1094,14 @@ spec = do
           context "without label" $
             it "signals correct parse error" $
               property $ \(Positive n) -> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = takeP Nothing n
                     pe = err 0 ueof
                 grs p "" (`shouldFailWith` pe)
         context "when stream has not enough tokens" $
           it "signals correct parse error" $
             property $ \(Positive n) s -> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = takeP (Just "foo") n
                   m = length s
                   pe = err m (ueof <> elabel "foo")
@@ -1112,7 +1112,7 @@ spec = do
           it "succeeds returning the extracted tokens" $
             property $ \(Positive n) s ->
               length s >= n ==> do
-                let p :: MonadParsec Void String m => m String
+                let p :: (MonadParsec Void String m) => m String
                     p = takeP (Just "foo") n
                     (s0, s1) = splitAt n s
                 grs p s (`shouldParse` s0)
@@ -1121,7 +1121,7 @@ spec = do
         it "there are no hints to influence the parse error" $
           property $ \(Positive n) s ->
             length s >= n ==> do
-              let p :: MonadParsec Void String m => m String
+              let p :: (MonadParsec Void String m) => m String
                   p = takeP (Just "foo") n <* empty
                   pe = err n mempty
               grs p s (`shouldFailWith` pe)
@@ -1131,28 +1131,28 @@ spec = do
     describe "failure" $
       it "signals correct parse error" $
         property $ \us ps -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = void (failure us ps)
           grs p "" (`shouldFailWith` TrivialError 0 us ps)
 
     describe "fancyFailure" $
       it "singals correct parse error" $
         property $ \xs -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = void (fancyFailure xs)
           grs p "" (`shouldFailWith` FancyError 0 xs)
 
     describe "unexpected" $
       it "signals correct parse error" $
         property $ \item -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = void (unexpected item)
           grs p "" (`shouldFailWith` TrivialError 0 (pure item) E.empty)
 
     describe "customFailure" $
       it "signals correct parse error" $
         property $ \n st -> do
-          let p :: MonadParsec Int String m => m ()
+          let p :: (MonadParsec Int String m) => m ()
               p = void (customFailure n)
               xs = E.singleton (ErrorCustom n)
           runParser p "" (stateInput st) `shouldFailWith` FancyError 0 xs
@@ -1209,7 +1209,7 @@ spec = do
     describe "registerParseError" $ do
       it "immediately fails with given parse error" $
         property $ \st es -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = forM_ (NE.reverse es) registerParseError
               st' =
                 st
@@ -1223,14 +1223,14 @@ spec = do
     describe "registerFailure" $
       it "signals correct parse error" $
         property $ \us ps -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = void (registerFailure us ps)
           grs p "" (`shouldFailWith` TrivialError 0 us ps)
 
     describe "reisterFancyFailure" $
       it "singals correct parse error" $
         property $ \xs -> do
-          let p :: MonadParsec Void String m => m ()
+          let p :: (MonadParsec Void String m) => m ()
               p = void (registerFancyFailure xs)
           grs p "" (`shouldFailWith` FancyError 0 xs)
 
@@ -1239,7 +1239,7 @@ spec = do
     -- "Text.Megaparsec.Byte".
 
     describe "anySingle" $ do
-      let p :: MonadParsec Void String m => m Char
+      let p :: (MonadParsec Void String m) => m Char
           p = anySingle
       context "when stream is not empty" $
         it "succeeds consuming next character in the stream" $
@@ -1255,7 +1255,7 @@ spec = do
       context "when stream begins with the character specified as argument" $
         it "signals correct parse error" $
           property $ \ch s' -> do
-            let p :: MonadParsec Void String m => m Char
+            let p :: (MonadParsec Void String m) => m Char
                 p = anySingleBut ch
                 s = ch : s'
             grs p s (`shouldFailWith` err 0 (utok ch))
@@ -1264,7 +1264,7 @@ spec = do
         it "parses first character in the stream" $
           property $ \ch s ->
             not (null s) && ch /= head s ==> do
-              let p :: MonadParsec Void String m => m Char
+              let p :: (MonadParsec Void String m) => m Char
                   p = anySingleBut ch
               grs p s (`shouldParse` head s)
               grs' p s (`succeedsLeaving` tail s)
@@ -1388,7 +1388,7 @@ spec = do
     describe "setParserState and getParserState" $
       it "sets parser state and gets it back" $
         property $ \s1 s2 -> do
-          let p :: MonadParsec Void String m => m (State String Void)
+          let p :: (MonadParsec Void String m) => m (State String Void)
               p = do
                 st <- getParserState
                 guard (st == initialState s)

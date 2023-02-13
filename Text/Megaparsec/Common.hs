@@ -25,7 +25,7 @@ import Data.Function (on)
 import Text.Megaparsec
 
 -- | A synonym for 'chunk'.
-string :: MonadParsec e s m => Tokens s -> m (Tokens s)
+string :: (MonadParsec e s m) => Tokens s -> m (Tokens s)
 string = chunk
 {-# INLINE string #-}
 

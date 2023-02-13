@@ -80,7 +80,7 @@ data ErrorItem t
     EndOfInput
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
 
-instance NFData t => NFData (ErrorItem t)
+instance (NFData t) => NFData (ErrorItem t)
 
 -- | Additional error data, extendable by user. When no custom data is
 -- necessary, the type is typically indexed by 'Void' to “cancel” the
@@ -98,7 +98,7 @@ data ErrorFancy e
     ErrorCustom e
   deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
 
-instance NFData a => NFData (ErrorFancy a) where
+instance (NFData a) => NFData (ErrorFancy a) where
   rnf (ErrorFail str) = rnf str
   rnf (ErrorIndentation ord ref act) = ord `seq` rnf ref `seq` rnf act
   rnf (ErrorCustom a) = rnf a
@@ -180,7 +180,7 @@ instance
 --
 -- @since 7.0.0
 mapParseError ::
-  Ord e' =>
+  (Ord e') =>
   (e -> e') ->
   ParseError s e ->
   ParseError s e'
@@ -332,7 +332,7 @@ attachSourcePos projectOffset xs = runState (traverse f xs)
 -- | The type class defines how to print a custom component of 'ParseError'.
 --
 -- @since 5.0.0
-class Ord a => ShowErrorComponent a where
+class (Ord a) => ShowErrorComponent a where
   -- | Pretty-print a component of 'ParseError'.
   showErrorComponent :: a -> String
 
@@ -458,20 +458,20 @@ parseErrorTextPretty (FancyError _ xs) =
 -- Helpers
 
 -- | Pretty-print an 'ErrorItem'.
-showErrorItem :: VisualStream s => Proxy s -> ErrorItem (Token s) -> String
+showErrorItem :: (VisualStream s) => Proxy s -> ErrorItem (Token s) -> String
 showErrorItem pxy = \case
   Tokens ts -> showTokens pxy ts
   Label label -> NE.toList label
   EndOfInput -> "end of input"
 
 -- | Get length of the “pointer” to display under a given 'ErrorItem'.
-errorItemLength :: VisualStream s => Proxy s -> ErrorItem (Token s) -> Int
+errorItemLength :: (VisualStream s) => Proxy s -> ErrorItem (Token s) -> Int
 errorItemLength pxy = \case
   Tokens ts -> tokensLength pxy ts
   _ -> 1
 
 -- | Pretty-print an 'ErrorFancy'.
-showErrorFancy :: ShowErrorComponent e => ErrorFancy e -> String
+showErrorFancy :: (ShowErrorComponent e) => ErrorFancy e -> String
 showErrorFancy = \case
   ErrorFail msg -> msg
   ErrorIndentation ord ref actual ->
@@ -489,7 +489,7 @@ showErrorFancy = \case
   ErrorCustom a -> showErrorComponent a
 
 -- | Get length of the “pointer” to display under a given 'ErrorFancy'.
-errorFancyLength :: ShowErrorComponent e => ErrorFancy e -> Int
+errorFancyLength :: (ShowErrorComponent e) => ErrorFancy e -> Int
 errorFancyLength = \case
   ErrorCustom a -> errorComponentLen a
   _ -> 1
