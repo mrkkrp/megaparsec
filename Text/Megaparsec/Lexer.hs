@@ -56,7 +56,7 @@ import Text.Megaparsec.Common
 -- 'space' will just move on or finish depending on whether there is more
 -- white space for it to consume.
 space ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | A parser for space characters which does not accept empty
   -- input (e.g. 'Text.Megaparsec.Char.space1')
   m () ->
@@ -78,7 +78,7 @@ space sp line block =
 -- > lexeme  = L.lexeme spaceConsumer
 -- > integer = lexeme L.decimal
 lexeme ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | How to consume white space after lexeme
   m () ->
   -- | How to parse actual lexeme
@@ -102,7 +102,7 @@ lexeme spc p = p <* spc
 -- > colon     = symbol ":"
 -- > dot       = symbol "."
 symbol ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | How to consume white space after lexeme
   m () ->
   -- | Symbol to parse

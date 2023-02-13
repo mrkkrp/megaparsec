@@ -121,7 +121,7 @@ prs_ p = parse (p <* eof) ""
 -- all supported monads transformers in turn).
 grs ::
   -- | Parser to run
-  (forall m. MonadParsecDbg Void String m => m a) ->
+  (forall m. (MonadParsecDbg Void String m) => m a) ->
   -- | Input for the parser
   String ->
   -- | How to check result of parsing
@@ -141,7 +141,7 @@ grs p s r = do
 -- | 'grs'' to 'grs' is as 'prs'' to 'prs'.
 grs' ::
   -- | Parser to run
-  (forall m. MonadParsecDbg Void String m => m a) ->
+  (forall m. (MonadParsecDbg Void String m) => m a) ->
   -- | Input for the parser
   String ->
   -- | How to check result of parsing
@@ -158,18 +158,18 @@ grs' p s r = do
   r (prs' (evalRWSTL p) s)
   r (prs' (evalRWSTS p) s)
 
-evalWriterTL :: Monad m => L.WriterT [Int] m a -> m a
+evalWriterTL :: (Monad m) => L.WriterT [Int] m a -> m a
 evalWriterTL = fmap fst . L.runWriterT
 
-evalWriterTS :: Monad m => S.WriterT [Int] m a -> m a
+evalWriterTS :: (Monad m) => S.WriterT [Int] m a -> m a
 evalWriterTS = fmap fst . S.runWriterT
 
-evalRWSTL :: Monad m => L.RWST () [Int] () m a -> m a
+evalRWSTL :: (Monad m) => L.RWST () [Int] () m a -> m a
 evalRWSTL m = do
   (a, _, _) <- L.runRWST m () ()
   return a
 
-evalRWSTS :: Monad m => S.RWST () [Int] () m a -> m a
+evalRWSTS :: (Monad m) => S.RWST () [Int] () m a -> m a
 evalRWSTS m = do
   (a, _, _) <- S.runRWST m () ()
   return a
@@ -201,11 +201,11 @@ rightOrder p s s' =
     prs_ p s `shouldParse` s'
 
 -- | Get tab width from 'PosState'. Use with care only for testing.
-getTabWidth :: MonadParsec e s m => m Pos
+getTabWidth :: (MonadParsec e s m) => m Pos
 getTabWidth = pstateTabWidth . statePosState <$> getParserState
 
 -- | Set tab width in 'PosState'. Use with care only for testing.
-setTabWidth :: MonadParsec e s m => Pos -> m ()
+setTabWidth :: (MonadParsec e s m) => Pos -> m ()
 setTabWidth w = updateParserState $ \st ->
   let pst = statePosState st
    in st {statePosState = pst {pstateTabWidth = w}}
@@ -277,7 +277,7 @@ instance Arbitrary SourcePos where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary t => Arbitrary (ErrorItem t) where
+instance (Arbitrary t) => Arbitrary (ErrorItem t) where
   arbitrary =
     oneof
       [ Tokens <$> (NE.fromList . getNonEmpty <$> arbitrary),
@@ -307,7 +307,7 @@ instance
           <*> (E.fromList <$> scaleDown arbitrary)
       ]
 
-instance Arbitrary s => Arbitrary (State s e) where
+instance (Arbitrary s) => Arbitrary (State s e) where
   arbitrary = do
     input <- scaleDown arbitrary
     offset <- choose (1, 10000)
@@ -324,7 +324,7 @@ instance Arbitrary s => Arbitrary (State s e) where
           stateParseErrors = []
         }
 
-instance Arbitrary s => Arbitrary (PosState s) where
+instance (Arbitrary s) => Arbitrary (PosState s) where
   arbitrary =
     PosState
       <$> arbitrary
@@ -345,5 +345,5 @@ instance Arbitrary B.ByteString where
 instance Arbitrary BL.ByteString where
   arbitrary = BL.pack <$> arbitrary
 
-instance Arbitrary a => Arbitrary (NonEmpty a) where
+instance (Arbitrary a) => Arbitrary (NonEmpty a) where
   arbitrary = NE.fromList <$> (arbitrary `suchThat` (not . null))

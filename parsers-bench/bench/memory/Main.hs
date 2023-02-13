@@ -28,7 +28,7 @@ main = mainWith $ do
   forM_ jsonFiles $ \file ->
     bparser "JSON (Megaparsec)" file M.parseJson
 
-bparser :: NFData a => String -> FilePath -> (ByteString -> a) -> Weigh ()
+bparser :: (NFData a) => String -> FilePath -> (ByteString -> a) -> Weigh ()
 bparser pre desc f = io (pre ++ "-" ++ desc) m path
   where
     path = "data/" ++ desc

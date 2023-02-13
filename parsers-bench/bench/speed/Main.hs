@@ -34,7 +34,7 @@ main =
         [bparser file M.parseJson | file <- jsonFiles]
     ]
 
-bparser :: NFData a => FilePath -> (ByteString -> a) -> Benchmark
+bparser :: (NFData a) => FilePath -> (ByteString -> a) -> Benchmark
 bparser desc f = env (B.readFile path) (bench desc . nf f)
   where
     path = "data/" ++ desc

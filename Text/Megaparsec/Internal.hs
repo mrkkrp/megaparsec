@@ -87,10 +87,10 @@ import Text.Megaparsec.Stream
 -- expecting 'r' or end of input
 newtype Hints t = Hints (Set (ErrorItem t))
 
-instance Ord t => Semigroup (Hints t) where
+instance (Ord t) => Semigroup (Hints t) where
   Hints xs <> Hints ys = Hints $ xs <> ys
 
-instance Ord t => Monoid (Hints t) where
+instance (Ord t) => Monoid (Hints t) where
   mempty = Hints mempty
 
 -- | All information available after parsing. This includes consumption of
@@ -164,18 +164,18 @@ pMap f p = ParsecT $ \s cok cerr eok eerr ->
 {-# INLINE pMap #-}
 
 -- | 'pure' returns a parser that __succeeds__ without consuming input.
-instance Stream s => Applicative (ParsecT e s m) where
+instance (Stream s) => Applicative (ParsecT e s m) where
   pure = pPure
   (<*>) = pAp
   p1 *> p2 = p1 `pBind` const p2
   p1 <* p2 = do x1 <- p1; void p2; return x1
 
-pPure :: Stream s => a -> ParsecT e s m a
+pPure :: (Stream s) => a -> ParsecT e s m a
 pPure x = ParsecT $ \s _ _ eok _ -> eok x s mempty
 {-# INLINE pPure #-}
 
 pAp ::
-  Stream s =>
+  (Stream s) =>
   ParsecT e s m (a -> b) ->
   ParsecT e s m a ->
   ParsecT e s m b
@@ -205,12 +205,12 @@ instance (Ord e, Stream s) => Alternative (ParsecT e s m) where
   (<|>) = mplus
 
 -- | 'return' returns a parser that __succeeds__ without consuming input.
-instance Stream s => Monad (ParsecT e s m) where
+instance (Stream s) => Monad (ParsecT e s m) where
   return = pure
   (>>=) = pBind
 
 pBind ::
-  Stream s =>
+  (Stream s) =>
   ParsecT e s m a ->
   (a -> ParsecT e s m b) ->
   ParsecT e s m b
@@ -234,7 +234,7 @@ pBind m k = ParsecT $ \s cok cerr eok eerr ->
    in unParser m s mcok cerr meok eerr
 {-# INLINE pBind #-}
 
-instance Stream s => Fail.MonadFail (ParsecT e s m) where
+instance (Stream s) => Fail.MonadFail (ParsecT e s m) where
   fail = pFail
 
 pFail :: String -> ParsecT e s m a
@@ -332,7 +332,7 @@ instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
           Error _ -> error "mfix ParsecT"
     runParsecT (f a) s
 
-instance Stream s => MonadTrans (ParsecT e s) where
+instance (Stream s) => MonadTrans (ParsecT e s) where
   lift amb = ParsecT $ \s _ _ eok _ ->
     amb >>= \a -> eok a s mempty
 
@@ -381,13 +381,13 @@ pTry p = ParsecT $ \s cok _ eok eerr ->
    in unParser p s cok eerr' eok eerr'
 {-# INLINE pTry #-}
 
-pLookAhead :: Stream s => ParsecT e s m a -> ParsecT e s m a
+pLookAhead :: (Stream s) => ParsecT e s m a -> ParsecT e s m a
 pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
   let eok' a _ _ = eok a s mempty
    in unParser p s eok' cerr eok' eerr
 {-# INLINE pLookAhead #-}
 
-pNotFollowedBy :: Stream s => ParsecT e s m a -> ParsecT e s m ()
+pNotFollowedBy :: (Stream s) => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input o _ _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
       unexpect u = TrivialError o (pure u) E.empty
@@ -399,7 +399,7 @@ pNotFollowedBy p = ParsecT $ \s@(State input o _ _) _ _ eok eerr ->
 {-# INLINE pNotFollowedBy #-}
 
 pWithRecovery ::
-  Stream s =>
+  (Stream s) =>
   (ParseError s e -> ParsecT e s m a) ->
   ParsecT e s m a ->
   ParsecT e s m a
@@ -420,7 +420,7 @@ pWithRecovery r p = ParsecT $ \s cok cerr eok eerr ->
 {-# INLINE pWithRecovery #-}
 
 pObserving ::
-  Stream s =>
+  (Stream s) =>
   ParsecT e s m a ->
   ParsecT e s m (Either (ParseError s e) a)
 pObserving p = ParsecT $ \s cok _ eok _ ->
@@ -429,7 +429,7 @@ pObserving p = ParsecT $ \s cok _ eok _ ->
    in unParser p s (cok . Right) cerr' (eok . Right) eerr'
 {-# INLINE pObserving #-}
 
-pEof :: forall e s m. Stream s => ParsecT e s m ()
+pEof :: forall e s m. (Stream s) => ParsecT e s m ()
 pEof = ParsecT $ \s@(State input o pst de) _ _ eok eerr ->
   case take1_ input of
     Nothing -> eok () s mempty
@@ -443,7 +443,7 @@ pEof = ParsecT $ \s@(State input o pst de) _ _ eok eerr ->
 
 pToken ::
   forall e s m a.
-  Stream s =>
+  (Stream s) =>
   (Token s -> Maybe a) ->
   Set (ErrorItem (Token s)) ->
   ParsecT e s m a
@@ -465,7 +465,7 @@ pToken test ps = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
 
 pTokens ::
   forall e s m.
-  Stream s =>
+  (Stream s) =>
   (Tokens s -> Tokens s -> Bool) ->
   Tokens s ->
   ParsecT e s m (Tokens s)
@@ -493,7 +493,7 @@ pTokens f tts = ParsecT $ \s@(State input o pst de) cok _ eok eerr ->
 
 pTakeWhileP ::
   forall e s m.
-  Stream s =>
+  (Stream s) =>
   Maybe String ->
   (Token s -> Bool) ->
   ParsecT e s m (Tokens s)
@@ -512,7 +512,7 @@ pTakeWhileP ml f = ParsecT $ \(State input o pst de) cok _ eok _ ->
 
 pTakeWhile1P ::
   forall e s m.
-  Stream s =>
+  (Stream s) =>
   Maybe String ->
   (Token s -> Bool) ->
   ParsecT e s m (Tokens s)
@@ -540,7 +540,7 @@ pTakeWhile1P ml f = ParsecT $ \(State input o pst de) cok _ _ eerr ->
 
 pTakeP ::
   forall e s m.
-  Stream s =>
+  (Stream s) =>
   Maybe String ->
   Int ->
   ParsecT e s m (Tokens s)
@@ -562,11 +562,11 @@ pTakeP ml n' = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
                 else cok ts (State input' (o + len) pst de) mempty
 {-# INLINE pTakeP #-}
 
-pGetParserState :: Stream s => ParsecT e s m (State s e)
+pGetParserState :: (Stream s) => ParsecT e s m (State s e)
 pGetParserState = ParsecT $ \s _ _ eok _ -> eok s s mempty
 {-# INLINE pGetParserState #-}
 
-pUpdateParserState :: Stream s => (State s e -> State s e) -> ParsecT e s m ()
+pUpdateParserState :: (Stream s) => (State s e -> State s e) -> ParsecT e s m ()
 pUpdateParserState f = ParsecT $ \s _ _ eok _ -> eok () (f s) mempty
 {-# INLINE pUpdateParserState #-}
 
@@ -579,7 +579,7 @@ nes x = x :| []
 
 -- | Convert a 'ParseError' record into 'Hints'.
 toHints ::
-  Stream s =>
+  (Stream s) =>
   -- | Current offset in input stream
   Int ->
   -- | Parse error to convert
@@ -602,7 +602,7 @@ toHints streamPos = \case
 -- __Note__ that if resulting continuation gets 'ParseError' that has custom
 -- data in it, hints are ignored.
 withHints ::
-  Stream s =>
+  (Stream s) =>
   -- | Hints to use
   Hints (Token s) ->
   -- | Continuation to influence
@@ -621,7 +621,7 @@ withHints (Hints ps') c e =
 -- | @'accHints' hs c@ results in “OK” continuation that will add given
 -- hints @hs@ to third argument of original continuation @c@.
 accHints ::
-  Stream s =>
+  (Stream s) =>
   -- | 'Hints' to add
   Hints (Token s) ->
   -- | An “OK” continuation to alter
@@ -643,7 +643,7 @@ refreshHints (Hints hs) (Just m) =
 
 -- | Low-level unpacking of the 'ParsecT' type.
 runParsecT ::
-  Monad m =>
+  (Monad m) =>
   -- | Parser to run
   ParsecT e s m a ->
   -- | Initial state

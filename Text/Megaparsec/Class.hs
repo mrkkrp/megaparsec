@@ -275,7 +275,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 ----------------------------------------------------------------------------
 -- Lifting through MTL
 
-instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
+instance (MonadParsec e s m) => MonadParsec e s (L.StateT st m) where
   parseError e = lift (parseError e)
   label n (L.StateT m) = L.StateT $ label n . m
   try (L.StateT m) = L.StateT $ try . m
@@ -296,7 +296,7 @@ instance MonadParsec e s m => MonadParsec e s (L.StateT st m) where
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
 
-instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
+instance (MonadParsec e s m) => MonadParsec e s (S.StateT st m) where
   parseError e = lift (parseError e)
   label n (S.StateT m) = S.StateT $ label n . m
   try (S.StateT m) = S.StateT $ try . m
@@ -317,7 +317,7 @@ instance MonadParsec e s m => MonadParsec e s (S.StateT st m) where
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
 
-instance MonadParsec e s m => MonadParsec e s (L.ReaderT r m) where
+instance (MonadParsec e s m) => MonadParsec e s (L.ReaderT r m) where
   parseError e = lift (parseError e)
   label n (L.ReaderT m) = L.ReaderT $ label n . m
   try (L.ReaderT m) = L.ReaderT $ try . m
@@ -433,7 +433,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
 
-instance MonadParsec e s m => MonadParsec e s (IdentityT m) where
+instance (MonadParsec e s m) => MonadParsec e s (IdentityT m) where
   parseError e = lift (parseError e)
   label n (IdentityT m) = IdentityT $ label n m
   try = IdentityT . try . runIdentityT
@@ -457,7 +457,7 @@ fixs s (Left a) = (Left a, s)
 fixs _ (Right (b, s)) = (Right b, s)
 {-# INLINE fixs #-}
 
-fixs' :: Monoid w => s -> Either a (b, s, w) -> (Either a b, s, w)
+fixs' :: (Monoid w) => s -> Either a (b, s, w) -> (Either a b, s, w)
 fixs' s (Left a) = (Left a, s, mempty)
 fixs' _ (Right (b, s, w)) = (Right b, s, w)
 {-# INLINE fixs' #-}

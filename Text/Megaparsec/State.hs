@@ -92,4 +92,4 @@ data PosState s = PosState
   }
   deriving (Show, Eq, Data, Typeable, Generic)
 
-instance NFData s => NFData (PosState s)
+instance (NFData s) => NFData (PosState s)

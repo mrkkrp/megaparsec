@@ -43,7 +43,7 @@ import Text.Megaparsec.Stream
 -- | Type class describing parser monads that can trace during evaluation.
 --
 -- @since 9.3.0
-class MonadParsec e s m => MonadParsecDbg e s m where
+class (MonadParsec e s m) => MonadParsecDbg e s m where
   -- | @'dbg' label p@ parser works exactly like @p@, but when it's evaluated
   -- it prints information useful for debugging. The @label@ is only used to
   -- refer to this parser in the debugging output. This combinator uses the
@@ -70,7 +70,7 @@ class MonadParsec e s m => MonadParsecDbg e s m where
   -- function that worked only in 'ParsecT'. It was first introduced in the
   -- version /7.0.0/.
   dbg ::
-    Show a =>
+    (Show a) =>
     -- | Debugging label
     String ->
     -- | Parser to debug
@@ -109,7 +109,7 @@ instance
     dbgWithComment "STATE" str $ S.runStateT sma s
 
 instance
-  MonadParsecDbg e s m =>
+  (MonadParsecDbg e s m) =>
   MonadParsecDbg e s (L.ReaderT r m)
   where
   dbg = L.mapReaderT . dbg
@@ -182,7 +182,7 @@ instance
     ((a, st), w) <- first unComment . unComment <$> dbg str smth
     pure (a, st, w)
 
-instance MonadParsecDbg e s m => MonadParsecDbg e s (IdentityT m) where
+instance (MonadParsecDbg e s m) => MonadParsecDbg e s (IdentityT m) where
   dbg = mapIdentityT . dbg
 
 -- | @'dbgWithComment' label_a label_c m@ traces the first component of the
@@ -273,7 +273,7 @@ dbgLog lbl item = prefix msg
         "MATCH (EERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
 
 -- | Pretty-print a list of tokens.
-showStream :: VisualStream s => Proxy s -> [Token s] -> String
+showStream :: (VisualStream s) => Proxy s -> [Token s] -> String
 showStream pxy ts =
   case NE.nonEmpty ts of
     Nothing -> "<EMPTY>"
@@ -293,7 +293,7 @@ streamDelta ::
 streamDelta s0 s1 = stateOffset s1 - stateOffset s0
 
 -- | Extract a given number of tokens from the stream.
-streamTake :: forall s. Stream s => Int -> s -> [Token s]
+streamTake :: forall s. (Stream s) => Int -> s -> [Token s]
 streamTake n s =
   case fst <$> takeN_ n s of
     Nothing -> []
@@ -304,7 +304,7 @@ streamTake n s =
 --
 -- @since 9.1.0
 dbg' ::
-  MonadParsecDbg e s m =>
+  (MonadParsecDbg e s m) =>
   -- | Debugging label
   String ->
   -- | Parser to debug

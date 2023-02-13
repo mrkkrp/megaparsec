@@ -152,7 +152,7 @@ indentLevel = sourceColumn <$> getSourcePos
 --
 -- @since 5.0.0
 incorrectIndent ::
-  MonadParsec e s m =>
+  (MonadParsec e s m) =>
   -- | Desired ordering between reference level and actual level
   Ordering ->
   -- | Reference indentation level

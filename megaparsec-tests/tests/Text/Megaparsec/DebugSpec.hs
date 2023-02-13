@@ -30,14 +30,14 @@ spec = do
   describe "dbg" $ do
     context "when inner parser succeeds consuming input" $ do
       it "has no effect on how parser works" $ do
-        let p :: MonadParsecDbg Void String m => m Char
+        let p :: (MonadParsecDbg Void String m) => m Char
             p = dbg "char" (char 'a')
             s = "ab"
         shouldStderr p s "char> IN: \"ab\"\nchar> MATCH (COK): 'a'\nchar> VALUE: 'a'\n\n"
         grs p s (`shouldParse` 'a')
         grs' p s (`succeedsLeaving` "b")
       it "its hints are preserved" $ do
-        let p :: MonadParsecDbg Void String m => m String
+        let p :: (MonadParsecDbg Void String m) => m String
             p = dbg "many chars" (many (char 'a')) <* empty
             s = "abcd"
         shouldStderr p s "many chars> IN: \"abcd\"\nmany chars> MATCH (COK): 'a'\nmany chars> VALUE: \"a\"\n\n"
@@ -45,7 +45,7 @@ spec = do
         grs' p s (`failsLeaving` "bcd")
     context "when inner parser fails consuming input" $
       it "has no effect on how parser works" $ do
-        let p :: MonadParsecDbg Void String m => m Char
+        let p :: (MonadParsecDbg Void String m) => m Char
             p = dbg "chars" (char 'a' *> char 'c')
             s = "abc"
         shouldStderr p s "chars> IN: \"abc\"\nchars> MATCH (CERR): 'a'\nchars> ERROR:\nchars> offset=1:\nchars> unexpected 'b'\nchars> expecting 'c'\n\n"
@@ -53,14 +53,14 @@ spec = do
         grs' p s (`failsLeaving` "bc")
     context "when inner parser succeeds without consuming" $ do
       it "has no effect on how parser works" $ do
-        let p :: MonadParsecDbg Void String m => m Char
+        let p :: (MonadParsecDbg Void String m) => m Char
             p = dbg "return" (return 'a')
             s = "abc"
         shouldStderr p s "return> IN: \"abc\"\nreturn> MATCH (EOK): <EMPTY>\nreturn> VALUE: 'a'\n\n"
         grs p s (`shouldParse` 'a')
         grs' p s (`succeedsLeaving` s)
       it "its hints are preserved" $ do
-        let p :: MonadParsecDbg Void String m => m String
+        let p :: (MonadParsecDbg Void String m) => m String
             p = dbg "many chars" (many (char 'a')) <* empty
             s = "bcd"
         shouldStderr p s "many chars> IN: \"bcd\"\nmany chars> MATCH (EOK): <EMPTY>\nmany chars> VALUE: \"\"\n\n"
@@ -68,7 +68,7 @@ spec = do
         grs' p s (`failsLeaving` "bcd")
     context "when inner parser fails without consuming" $
       it "has no effect on how parser works" $ do
-        let p :: MonadParsecDbg Void String m => m ()
+        let p :: (MonadParsecDbg Void String m) => m ()
             p = dbg "empty" (void empty)
             s = "abc"
         shouldStderr p s "empty> IN: \"abc\"\nempty> MATCH (EERR): <EMPTY>\nempty> ERROR:\nempty> offset=0:\nempty> unknown parse error\n\n"
