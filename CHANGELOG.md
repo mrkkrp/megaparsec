@@ -8,6 +8,11 @@
 * Hints are no longer lost in certain methods of MTL instances for
   `ParsecT`. [Issue 528](https://github.com/mrkkrp/megaparsec/issues/528).
 
+* Added a new method to the `MonadParsec` type class—`mkParsec`. This can be
+  used to construct “new primitives” with arbitrary behavior at the expense
+  of having to dive into Megaparsec's internals. [PR
+  514](https://github.com/mrkkrp/megaparsec/pull/514).
+
 ## Megaparsec 9.3.1
 
 * Fixed a bug related to processing of tabs when error messages are

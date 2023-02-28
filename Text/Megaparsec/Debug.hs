@@ -216,7 +216,7 @@ instance (Show c, Show a) => Show (ShowComment c a) where
   show (ShowComment lbl (a, c)) = show a ++ " (" ++ lbl ++ ": " ++ show c ++ ")"
 
 instance
-  (VisualStream s, ShowErrorComponent e) =>
+  (VisualStream s, ShowErrorComponent e, Monad m) =>
   MonadParsecDbg e s (ParsecT e s m)
   where
   dbg lbl p = ParsecT $ \s cok cerr eok eerr ->
