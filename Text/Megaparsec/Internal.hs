@@ -95,7 +95,8 @@ instance (Ord t) => Monoid (Hints t) where
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with the returned value) or failure (with the parse
--- error), and parser state at the end of parsing.
+-- error), and parser state at the end of parsing. 'Reply' can also be used
+-- to resume parsing.
 --
 -- See also: 'Consumption', 'Result'.
 data Reply e s a = Reply (State s e) Consumption (Result s e a)
@@ -107,7 +108,7 @@ data Consumption
   = -- | Some part of input stream was consumed
     Consumed
   | -- | No input was consumed
-    Virgin
+    NotConsumed
 
 -- | Whether the parser has failed or not. On success we include the
 -- resulting value, on failure we include a 'ParseError'.
@@ -150,7 +151,7 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
 
 -- | @since 6.3.0
 instance
-  (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e) =>
+  (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e, Monad m) =>
   IsString (ParsecT e s m a)
   where
   fromString s = tokens (==) (fromString s)
@@ -248,37 +249,41 @@ instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
 
 instance (Stream s, MonadReader r m) => MonadReader r (ParsecT e s m) where
   ask = lift ask
-  local f p = mkPT $ \s -> local f (runParsecT p s)
+  local f p = mkParsecT $ \s -> local f (runParsecT p s)
 
 instance (Stream s, MonadState st m) => MonadState st (ParsecT e s m) where
   get = lift get
   put = lift . put
 
 instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
-  callCC f = mkPT $ \s ->
+  callCC f = mkParsecT $ \s ->
     callCC $ \c ->
-      runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
+      runParsecT (f (\a -> mkParsecT $ \s' -> c (pack s' a))) s
     where
-      pack s a = Reply s Virgin (OK mempty a)
+      pack s a = Reply s NotConsumed (OK mempty a)
 
 instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
   throwError = lift . throwError
-  p `catchError` h = mkPT $ \s ->
+  p `catchError` h = mkParsecT $ \s ->
     runParsecT p s `catchError` \e ->
       runParsecT (h e) s
 
-mkPT :: (Stream s, Monad m) => (State s e -> m (Reply e s a)) -> ParsecT e s m a
-mkPT k = ParsecT $ \s cok cerr eok eerr -> do
+mkParsecT ::
+  (Stream s, Monad m) =>
+  (State s e -> m (Reply e s a)) ->
+  ParsecT e s m a
+mkParsecT k = ParsecT $ \s cok cerr eok eerr -> do
   (Reply s' consumption result) <- k s
   case consumption of
     Consumed ->
       case result of
         OK hs x -> cok x s' hs
         Error e -> cerr e s'
-    Virgin ->
+    NotConsumed ->
       case result of
         OK hs x -> eok x s' hs
         Error e -> eerr e s'
+{-# INLINE mkParsecT #-}
 
 -- | 'mzero' is a parser that __fails__ without consuming input.
 --
@@ -326,7 +331,7 @@ longestMatch s1@(State _ o1 _ _) s2@(State _ o2 _ _) =
 
 -- | @since 6.0.0
 instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
-  mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
+  mfix f = mkParsecT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
     let a = case result of
           OK _ a' -> a'
           Error _ -> error "mfix ParsecT"
@@ -336,7 +341,7 @@ instance (Stream s) => MonadTrans (ParsecT e s) where
   lift amb = ParsecT $ \s _ _ eok _ ->
     amb >>= \a -> eok a s mempty
 
-instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
+instance (Ord e, Stream s, Monad m) => MonadParsec e s (ParsecT e s m) where
   parseError = pParseError
   label = pLabel
   try = pTry
@@ -352,6 +357,7 @@ instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   takeP = pTakeP
   getParserState = pGetParserState
   updateParserState = pUpdateParserState
+  mkParsec f = mkParsecT (pure . f)
 
 pParseError ::
   ParseError s e ->
@@ -653,8 +659,8 @@ runParsecT p s = unParser p s cok cerr eok eerr
   where
     cok a s' hs = return $ Reply s' Consumed (OK hs a)
     cerr err s' = return $ Reply s' Consumed (Error err)
-    eok a s' hs = return $ Reply s' Virgin (OK hs a)
-    eerr err s' = return $ Reply s' Virgin (Error err)
+    eok a s' hs = return $ Reply s' NotConsumed (OK hs a)
+    eerr err s' = return $ Reply s' NotConsumed (Error err)
 
 -- | Transform any custom errors thrown by the parser using the given
 -- function. Similar in function and purpose to @withExceptT@.

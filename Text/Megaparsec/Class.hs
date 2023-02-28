@@ -37,6 +37,7 @@ import qualified Control.Monad.Trans.Writer.Lazy as L
 import qualified Control.Monad.Trans.Writer.Strict as S
 import Data.Set (Set)
 import Text.Megaparsec.Error
+import {-# SOURCE #-} Text.Megaparsec.Internal (Reply)
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
 
@@ -272,6 +273,13 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- | @'updateParserState' f@ applies the function @f@ to the parser state.
   updateParserState :: (State s e -> State s e) -> m ()
 
+  -- | An escape hatch for defining custom 'MonadParsec' primitives. You
+  -- will need to import "Text.Megaparsec.Internal" in order to construct
+  -- 'Reply'.
+  --
+  -- @since 9.4.0
+  mkParsec :: (State s e -> Reply e s a) -> m a
+
 ----------------------------------------------------------------------------
 -- Lifting through MTL
 
@@ -295,6 +303,7 @@ instance (MonadParsec e s m) => MonadParsec e s (L.StateT st m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 instance (MonadParsec e s m) => MonadParsec e s (S.StateT st m) where
   parseError e = lift (parseError e)
@@ -316,6 +325,7 @@ instance (MonadParsec e s m) => MonadParsec e s (S.StateT st m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 instance (MonadParsec e s m) => MonadParsec e s (L.ReaderT r m) where
   parseError e = lift (parseError e)
@@ -334,6 +344,7 @@ instance (MonadParsec e s m) => MonadParsec e s (L.ReaderT r m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   parseError e = lift (parseError e)
@@ -359,6 +370,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.WriterT w m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   parseError e = lift (parseError e)
@@ -384,6 +396,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.WriterT w m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 -- | @since 5.2.0
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) where
@@ -408,6 +421,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (L.RWST r w st m) wher
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 -- | @since 5.2.0
 instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) where
@@ -432,6 +446,7 @@ instance (Monoid w, MonadParsec e s m) => MonadParsec e s (S.RWST r w st m) wher
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift (updateParserState f)
+  mkParsec f = lift (mkParsec f)
 
 instance (MonadParsec e s m) => MonadParsec e s (IdentityT m) where
   parseError e = lift (parseError e)
@@ -451,6 +466,7 @@ instance (MonadParsec e s m) => MonadParsec e s (IdentityT m) where
   takeP l n = lift (takeP l n)
   getParserState = lift getParserState
   updateParserState f = lift $ updateParserState f
+  mkParsec f = lift (mkParsec f)
 
 fixs :: s -> Either a (b, s) -> (Either a b, s)
 fixs s (Left a) = (Left a, s)

@@ -42,6 +42,7 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck hiding (label)
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Internal as Internal
 import Prelude hiding (concat, span)
 
 spec :: Spec
@@ -1773,6 +1774,26 @@ spec = do
               let p = observing (S.put s1 <* empty)
               prs (S.runRWST p (r :: Int) (s0 :: Int)) ""
                 `shouldParse` (Left (err 0 mempty), s0, mempty :: [Int])
+
+    describe "mkParsec" $
+      it "enables defining new primitives" $ do
+        -- This example lifts breakOn from text, although in order to re-use
+        -- the machinery that we have here it parses String, hence
+        -- conversions. The parser always succeeds.
+        let breakOn end = mkParsec $ \s ->
+              let (pre, post) = T.breakOn end (T.pack $ stateInput s)
+               in Internal.Reply
+                    ( s
+                        { stateInput = T.unpack post,
+                          stateOffset = stateOffset s + T.length pre
+                        }
+                    )
+                    ( if T.null pre
+                        then Internal.NotConsumed
+                        else Internal.Consumed
+                    )
+                    (Internal.OK mempty (T.unpack pre))
+        prs (breakOn "x") "abxcd" `shouldParse` "ab"
 
 ----------------------------------------------------------------------------
 -- Helpers
