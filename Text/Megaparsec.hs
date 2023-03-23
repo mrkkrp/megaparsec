@@ -174,6 +174,8 @@ type Parsec e s = ParsecT e s Identity
 -- >          Right xs -> print (sum xs)
 -- >
 -- > numbers = decimal `sepBy` char ','
+--
+-- 'parse' is the same as 'runParser'.
 parse ::
   -- | Parser to run
   Parsec e s a ->
@@ -223,6 +225,8 @@ parseTest p input =
 -- 'ParseErrorBundle' ('Left') or a value of type @a@ ('Right').
 --
 -- > parseFromFile p file = runParser p file <$> readFile file
+--
+-- 'runParser' is the same as 'parse'.
 runParser ::
   -- | Parser to run
   Parsec e s a ->
