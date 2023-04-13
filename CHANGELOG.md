@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Unreleased
+
+* Dropped a number of redundant constraints here and there. [PR
+  523](https://github.com/mrkkrp/megaparsec/pull/523).
+
 ## Megaparsec 9.4.1
 
 * Removed `Monad m` constraints in several places where they were introduced

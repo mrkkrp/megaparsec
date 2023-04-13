@@ -29,7 +29,6 @@ library
         bytestring >=0.2 && <0.12,
         containers >=0.5 && <0.7,
         hspec >=2.0 && <3.0,
-        hspec-expectations >=0.8 && <0.9,
         hspec-megaparsec >=2.0 && <3.0,
         megaparsec ==9.4.1,
         mtl >=2.2.2 && <3.0,
@@ -38,8 +37,8 @@ library
 
     if flag(dev)
         ghc-options:
-            -Wall -Werror -Wcompat -Wincomplete-record-updates
-            -Wincomplete-uni-patterns -Wnoncanonical-monad-instances
+            -Wall -Werror -Wredundant-constraints -Wpartial-fields
+            -Wunused-packages
 
     else
         ghc-options: -O2 -Wall

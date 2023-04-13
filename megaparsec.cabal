@@ -68,15 +68,13 @@ library
         transformers >=0.4 && <0.7
 
     if flag(dev)
-        ghc-options: -O0 -Wall -Werror
+        ghc-options: -Wall -Werror -Wpartial-fields -Wunused-packages
 
     else
         ghc-options: -O2 -Wall
 
-    if flag(dev)
-        ghc-options:
-            -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
-            -Wnoncanonical-monad-instances -Wno-missing-home-modules
+    if (flag(dev) && !impl(ghc ==9.6.1))
+        ghc-options: -Wredundant-constraints
 
 benchmark bench-speed
     type:             exitcode-stdio-1.0
