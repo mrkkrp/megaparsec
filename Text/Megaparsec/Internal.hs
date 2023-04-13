@@ -269,7 +269,7 @@ instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
       runParsecT (h e) s
 
 mkParsecT ::
-  (Stream s, Monad m) =>
+  (Monad m) =>
   (State s e -> m (Reply e s a)) ->
   ParsecT e s m a
 mkParsecT k = ParsecT $ \s cok cerr eok eerr -> do
@@ -286,7 +286,6 @@ mkParsecT k = ParsecT $ \s cok cerr eok eerr -> do
 {-# INLINE mkParsecT #-}
 
 pmkParsec ::
-  (Stream s) =>
   (State s e -> Reply e s a) ->
   ParsecT e s m a
 pmkParsec k = ParsecT $ \s cok cerr eok eerr ->
@@ -690,7 +689,7 @@ runParsecT p s = unParser p s cok cerr eok eerr
 -- @since 7.0.0
 withParsecT ::
   forall e e' s m a.
-  (Monad m, Ord e') =>
+  (Ord e') =>
   (e -> e') ->
   -- | Inner parser
   ParsecT e s m a ->

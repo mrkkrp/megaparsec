@@ -122,7 +122,7 @@ errFancy p (EF xs) = FancyError p xs
 -- Error components
 
 -- | Construct an “unexpected token” error component.
-utok :: (Stream s) => Token s -> ET s
+utok :: Token s -> ET s
 utok = unexp . Tokens . nes
 
 -- | Construct an “unexpected tokens” error component. Empty chunk produces
@@ -132,17 +132,17 @@ utoks = unexp . canonicalizeTokens (Proxy :: Proxy s)
 
 -- | Construct an “unexpected label” error component. Do not use with empty
 -- strings (for empty strings it's bottom).
-ulabel :: (Stream s) => String -> ET s
+ulabel :: String -> ET s
 ulabel label
   | label == "" = error "Text.Megaparsec.Error.Builder.ulabel: empty label"
   | otherwise = unexp . Label . NE.fromList $ label
 
 -- | Construct an “unexpected end of input” error component.
-ueof :: (Stream s) => ET s
+ueof :: ET s
 ueof = unexp EndOfInput
 
 -- | Construct an “expected token” error component.
-etok :: (Stream s) => Token s -> ET s
+etok :: Token s -> ET s
 etok = expe . Tokens . nes
 
 -- | Construct an “expected tokens” error component. Empty chunk produces
@@ -152,13 +152,13 @@ etoks = expe . canonicalizeTokens (Proxy :: Proxy s)
 
 -- | Construct an “expected label” error component. Do not use with empty
 -- strings.
-elabel :: (Stream s) => String -> ET s
+elabel :: String -> ET s
 elabel label
   | label == "" = error "Text.Megaparsec.Error.Builder.elabel: empty label"
   | otherwise = expe . Label . NE.fromList $ label
 
 -- | Construct an “expected end of input” error component.
-eeof :: (Stream s) => ET s
+eeof :: ET s
 eeof = expe EndOfInput
 
 -- | Construct a custom error component.
@@ -181,11 +181,11 @@ canonicalizeTokens pxy ts =
     Just xs -> Tokens xs
 
 -- | Lift an unexpected item into 'ET'.
-unexp :: (Stream s) => ErrorItem (Token s) -> ET s
+unexp :: ErrorItem (Token s) -> ET s
 unexp u = ET (pure u) E.empty
 
 -- | Lift an expected item into 'ET'.
-expe :: (Stream s) => ErrorItem (Token s) -> ET s
+expe :: ErrorItem (Token s) -> ET s
 expe p = ET Nothing (E.singleton p)
 
 -- | Make a singleton non-empty list from a value.

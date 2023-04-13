@@ -99,7 +99,7 @@ skipLineComment prefix =
 -- | @'skipBlockComment' start end@ skips non-nested block comment starting
 -- with @start@ and ending with @end@.
 skipBlockComment ::
-  (MonadParsec e s m, Token s ~ Char) =>
+  (MonadParsec e s m) =>
   -- | Start of block comment
   Tokens s ->
   -- | End of block comment
