@@ -496,7 +496,7 @@ describeReachOffset Proxy =
                 }
             (r, _) = reachOffset 2 pst
             w = unPos (pstateTabWidth pst)
-            r' = replicate (w * 2) ' ' ++ "a" ++ replicate w ' '
+            r' = replicate (w * 2) ' ' ++ "a" ++ replicate (max 1 (w - 1)) ' '
         r `shouldBe` Just r'
     it "returns correct line (with line prefix)" $
       property $ \pst' -> do

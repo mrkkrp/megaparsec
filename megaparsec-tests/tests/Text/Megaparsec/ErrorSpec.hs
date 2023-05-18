@@ -167,9 +167,12 @@ spec = do
             errorBundlePretty bundle
               `shouldBe` "1:10:\n  |\n1 | foo\n  | \nunexpected 'o'\nexpecting 'x'\n"
     it "takes tab width into account correctly" $
-      property $ \w' -> do
-        let s = "\tsomething\t" :: String
-            pe = err 1 (utok 's' <> etok 'x') :: PE
+      property $ \w' i' -> do
+        let w = unPos w'
+            i = unPos i' `rem` (w * 2)
+            as = replicate i 'a'
+            s = "\t" ++ as ++ "\tb" :: String
+            pe = err (2 + i) (utok 'b' <> etok 'x') :: PE
             bundle =
               ParseErrorBundle
                 { bundleErrors = pe :| [],
@@ -182,18 +185,19 @@ spec = do
                         pstateLinePrefix = ""
                       }
                 }
-            w = unPos w'
-            tabRep = replicate w ' '
+            secondTabApparentWidth = w - (i `rem` w)
+            errColumn = w + i + secondTabApparentWidth
         errorBundlePretty bundle
           `shouldBe` ( "1:"
-                         ++ show (w + 1)
+                         ++ show (errColumn + 1)
                          ++ ":\n  |\n1 | "
-                         ++ tabRep
-                         ++ "something"
-                         ++ tabRep
+                         ++ replicate w ' '
+                         ++ as
+                         ++ replicate secondTabApparentWidth ' '
+                         ++ "b"
                          ++ "\n  | "
-                         ++ tabRep
-                         ++ "^\nunexpected 's'\nexpecting 'x'\n"
+                         ++ replicate errColumn ' '
+                         ++ "^\nunexpected 'b'\nexpecting 'x'\n"
                      )
     it "displays multi-error bundle correctly" $ do
       let s = "something\ngood\n" :: String

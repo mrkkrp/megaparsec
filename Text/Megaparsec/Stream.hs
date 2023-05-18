@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -745,10 +746,10 @@ expandTab ::
   Pos ->
   String ->
   String
-expandTab w' = go 0
+expandTab w' = go 0 0
   where
-    go 0 [] = []
-    go 0 ('\t' : xs) = go w xs
-    go 0 (x : xs) = x : go 0 xs
-    go n xs = ' ' : go (n - 1) xs
+    go _ 0 [] = []
+    go !i 0 ('\t' : xs) = go i (w - (i `rem` w)) xs
+    go !i 0 (x : xs) = x : go (i + 1) 0 xs
+    go !i n xs = ' ' : go (i + 1) (n - 1) xs
     w = unPos w'
