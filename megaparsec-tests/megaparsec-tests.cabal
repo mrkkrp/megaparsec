@@ -1,6 +1,6 @@
 cabal-version:   2.4
 name:            megaparsec-tests
-version:         9.3.0
+version:         9.3.1
 license:         BSD-2-Clause
 license-file:    LICENSE.md
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
@@ -31,7 +31,7 @@ library
         hspec >=2.0 && <3.0,
         hspec-expectations >=0.8 && <0.9,
         hspec-megaparsec >=2.0 && <3.0,
-        megaparsec ==9.3.0,
+        megaparsec ==9.3.1,
         mtl >=2.2.2 && <3.0,
         text >=0.2 && <2.1,
         transformers >=0.4 && <0.7
@@ -71,7 +71,7 @@ test-suite tests
         hspec >=2.0 && <3.0,
         hspec-expectations >=0.8 && <0.9,
         hspec-megaparsec >=2.0 && <3.0,
-        megaparsec ==9.3.0,
+        megaparsec ==9.3.1,
         megaparsec-tests,
         mtl >=2.2.2 && <3.0,
         parser-combinators >=1.0 && <2.0,
