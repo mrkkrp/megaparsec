@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.3.1
+
+* Fixed a bug related to processing of tabs when error messages are
+  rendered. [Issue 524](https://github.com/mrkkrp/megaparsec/issues/524).
+
 ## Megaparsec 9.3.0
 
 * Now `label` can override more than one group of hints in the parser it
