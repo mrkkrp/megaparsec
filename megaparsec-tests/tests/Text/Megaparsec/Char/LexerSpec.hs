@@ -119,14 +119,14 @@ spec = do
               ip = indentGuard scn
               sp = void (symbol sc sbla <* C.eol)
           if
-              | col0 <= pos1 ->
-                  prs p s `shouldFailWith` errFancy 0 (ii GT pos1 col0)
-              | col1 /= col0 ->
-                  prs p s `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ col0 col1)
-              | col2 <= col0 ->
-                  prs p s `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col0 col2)
-              | otherwise ->
-                  prs p s `shouldParse` ()
+            | col0 <= pos1 ->
+                prs p s `shouldFailWith` errFancy 0 (ii GT pos1 col0)
+            | col1 /= col0 ->
+                prs p s `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ col0 col1)
+            | col2 <= col0 ->
+                prs p s `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col0 col2)
+            | otherwise ->
+                prs p s `shouldParse` ()
 
   describe "nonIdented" $
     it "works as intended" $
@@ -165,33 +165,33 @@ spec = do
               l x = return . (x,)
               ib' = mkPos (fromIntegral ib)
           if
-              | col1 <= col0 ->
-                  prs p s
-                    `shouldFailWith` err (getIndent l1 + g 1) (utok (head sblb) <> eeof)
-              | isJust mn && col1 /= ib' ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ ib' col1)
-              | col2 <= col1 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col1 col2)
-              | col3 == col2 ->
-                  prs p s
-                    `shouldFailWith` err (getIndent l3 + g 3) (utoks sblb <> etoks sblc <> eeof)
-              | col3 <= col0 ->
-                  prs p s
-                    `shouldFailWith` err (getIndent l3 + g 3) (utok (head sblb) <> eeof)
-              | col3 < col1 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l3 + g 3) (ii EQ col1 col3)
-              | col3 > col1 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l3 + g 3) (ii EQ col2 col3)
-              | col4 <= col3 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l4 + g 4) (ii GT col3 col4)
-              | otherwise ->
-                  prs p s
-                    `shouldParse` (sbla, [(sblb, [sblc]), (sblb, [sblc])])
+            | col1 <= col0 ->
+                prs p s
+                  `shouldFailWith` err (getIndent l1 + g 1) (utok (head sblb) <> eeof)
+            | isJust mn && col1 /= ib' ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l1 + g 1) (ii EQ ib' col1)
+            | col2 <= col1 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col1 col2)
+            | col3 == col2 ->
+                prs p s
+                  `shouldFailWith` err (getIndent l3 + g 3) (utoks sblb <> etoks sblc <> eeof)
+            | col3 <= col0 ->
+                prs p s
+                  `shouldFailWith` err (getIndent l3 + g 3) (utok (head sblb) <> eeof)
+            | col3 < col1 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l3 + g 3) (ii EQ col1 col3)
+            | col3 > col1 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l3 + g 3) (ii EQ col2 col3)
+            | col4 <= col3 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l4 + g 4) (ii GT col3 col4)
+            | otherwise ->
+                prs p s
+                  `shouldParse` (sbla, [(sblb, [sblc]), (sblb, [sblc])])
     it "IndentMany works as intended (newline at the end)" $
       property $
         forAll ((<>) <$> mkIndent sbla 0 <*> mkWhiteSpaceNl) $ \s -> do
@@ -266,13 +266,13 @@ spec = do
               (col0, col1, col2) = (getCol l0, getCol l1, getCol l2)
               (end0, end1) = (getEnd l0, getEnd l1)
           if
-              | end0 && col1 <= col0 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l1 + g 1) (ii GT col0 col1)
-              | end1 && col2 <= col0 ->
-                  prs p s
-                    `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col0 col2)
-              | otherwise -> prs p s `shouldParse` (sbla, sblb, sblc)
+            | end0 && col1 <= col0 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l1 + g 1) (ii GT col0 col1)
+            | end1 && col2 <= col0 ->
+                prs p s
+                  `shouldFailWith` errFancy (getIndent l2 + g 2) (ii GT col0 col2)
+            | otherwise -> prs p s `shouldParse` (sbla, sblb, sblc)
 
   describe "charLiteral" $ do
     let p = charLiteral
