@@ -258,9 +258,9 @@ indentBlock sc r = do
       let lvl = fromMaybe pos indent
       x <-
         if
-            | pos <= ref -> incorrectIndent GT ref pos
-            | pos == lvl -> p
-            | otherwise -> incorrectIndent EQ lvl pos
+          | pos <= ref -> incorrectIndent GT ref pos
+          | pos == lvl -> p
+          | otherwise -> incorrectIndent EQ lvl pos
       xs <- indentedItems ref lvl sc p
       f (x : xs)
 {-# INLINEABLE indentBlock #-}
@@ -288,9 +288,9 @@ indentedItems ref lvl sc p = go
         then return []
         else
           if
-              | pos <= ref -> return []
-              | pos == lvl -> (:) <$> p <*> go
-              | otherwise -> incorrectIndent EQ lvl pos
+            | pos <= ref -> return []
+            | pos == lvl -> (:) <$> p <*> go
+            | otherwise -> incorrectIndent EQ lvl pos
 
 -- | Create a parser that supports line-folding. The first argument is used
 -- to consume white space between components of line fold, thus it /must/
