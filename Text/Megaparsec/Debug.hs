@@ -31,8 +31,10 @@ import qualified Control.Monad.Trans.State.Strict as S
 import qualified Control.Monad.Trans.Writer.Lazy as L
 import qualified Control.Monad.Trans.Writer.Strict as S
 import Data.Bifunctor (Bifunctor (first))
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy
+import qualified Data.Set as E
 import Debug.Trace
 import Text.Megaparsec.Class (MonadParsec)
 import Text.Megaparsec.Error
@@ -223,7 +225,7 @@ instance
         cok' x s' hs =
           flip trace (cok x s' hs) $
             l (DbgIn (unfold (stateInput s)))
-              ++ l (DbgCOK (streamTake (streamDelta s s') (stateInput s)) x)
+              ++ l (DbgCOK (streamTake (streamDelta s s') (stateInput s)) x hs)
         cerr' err s' =
           flip trace (cerr err s') $
             l (DbgIn (unfold (stateInput s)))
@@ -231,7 +233,7 @@ instance
         eok' x s' hs =
           flip trace (eok x s' hs) $
             l (DbgIn (unfold (stateInput s)))
-              ++ l (DbgEOK (streamTake (streamDelta s s') (stateInput s)) x)
+              ++ l (DbgEOK (streamTake (streamDelta s s') (stateInput s)) x hs)
         eerr' err s' =
           flip trace (eerr err s') $
             l (DbgIn (unfold (stateInput s)))
@@ -241,9 +243,9 @@ instance
 -- | A single piece of info to be rendered with 'dbgLog'.
 data DbgItem s e a
   = DbgIn [Token s]
-  | DbgCOK [Token s] a
+  | DbgCOK [Token s] a (Hints (Token s))
   | DbgCERR [Token s] (ParseError s e)
-  | DbgEOK [Token s] a
+  | DbgEOK [Token s] a (Hints (Token s))
   | DbgEERR [Token s] (ParseError s e)
 
 -- | Render a single piece of debugging info.
@@ -260,15 +262,26 @@ dbgLog lbl item = prefix msg
   where
     prefix = unlines . fmap ((lbl ++ "> ") ++) . lines
     pxy = Proxy :: Proxy s
+    showHints hs = "[" ++ List.intercalate "," (showErrorItem pxy <$> E.toAscList hs) ++ "]"
     msg = case item of
       DbgIn ts ->
         "IN: " ++ showStream pxy ts
-      DbgCOK ts a ->
-        "MATCH (COK): " ++ showStream pxy ts ++ "\nVALUE: " ++ show a
+      DbgCOK ts a (Hints hs) ->
+        "MATCH (COK): "
+          ++ showStream pxy ts
+          ++ "\nVALUE: "
+          ++ show a
+          ++ "\nHINTS: "
+          ++ showHints hs
       DbgCERR ts e ->
         "MATCH (CERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
-      DbgEOK ts a ->
-        "MATCH (EOK): " ++ showStream pxy ts ++ "\nVALUE: " ++ show a
+      DbgEOK ts a (Hints hs) ->
+        "MATCH (EOK): "
+          ++ showStream pxy ts
+          ++ "\nVALUE: "
+          ++ show a
+          ++ "\nHINTS: "
+          ++ showHints hs
       DbgEERR ts e ->
         "MATCH (EERR): " ++ showStream pxy ts ++ "\nERROR:\n" ++ parseErrorPretty e
 

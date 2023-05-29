@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.4.0
+
+* `dbg` now prints hints among other debug information. [PR
+  530](https://github.com/mrkkrp/megaparsec/pull/530).
+
 ## Megaparsec 9.3.1
 
 * Fixed a bug related to processing of tabs when error messages are
