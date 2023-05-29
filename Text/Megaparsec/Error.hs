@@ -43,6 +43,7 @@ module Text.Megaparsec.Error
     errorBundlePretty,
     parseErrorPretty,
     parseErrorTextPretty,
+    showErrorItem,
   )
 where
 
@@ -458,6 +459,8 @@ parseErrorTextPretty (FancyError _ xs) =
 -- Helpers
 
 -- | Pretty-print an 'ErrorItem'.
+--
+-- @since 9.4.0
 showErrorItem :: (VisualStream s) => Proxy s -> ErrorItem (Token s) -> String
 showErrorItem pxy = \case
   Tokens ts -> showTokens pxy ts

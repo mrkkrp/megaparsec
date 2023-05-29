@@ -33,16 +33,23 @@ spec = do
         let p :: (MonadParsecDbg Void String m) => m Char
             p = dbg "char" (char 'a')
             s = "ab"
-        shouldStderr p s "char> IN: \"ab\"\nchar> MATCH (COK): 'a'\nchar> VALUE: 'a'\n\n"
+        shouldStderr p s "char> IN: \"ab\"\nchar> MATCH (COK): 'a'\nchar> VALUE: 'a'\nchar> HINTS: []\n\n"
         grs p s (`shouldParse` 'a')
         grs' p s (`succeedsLeaving` "b")
       it "its hints are preserved" $ do
         let p :: (MonadParsecDbg Void String m) => m String
             p = dbg "many chars" (many (char 'a')) <* empty
             s = "abcd"
-        shouldStderr p s "many chars> IN: \"abcd\"\nmany chars> MATCH (COK): 'a'\nmany chars> VALUE: \"a\"\n\n"
+        shouldStderr p s "many chars> IN: \"abcd\"\nmany chars> MATCH (COK): 'a'\nmany chars> VALUE: \"a\"\nmany chars> HINTS: ['a']\n\n"
         grs p s (`shouldFailWith` err 1 (etok 'a'))
         grs' p s (`failsLeaving` "bcd")
+      it "prints several hints correctly" $ do
+        let p :: (MonadParsecDbg Void String m) => m (Maybe Char)
+            p = dbg "a or b" (optional (char 'a' <|> char 'b')) <* empty
+            s = ""
+        shouldStderr p s "a or b> IN: <EMPTY>\na or b> MATCH (EOK): <EMPTY>\na or b> VALUE: Nothing\na or b> HINTS: ['a','b']\n\n"
+        grs p s (`shouldFailWith` err 0 (etok 'a' <> etok 'b'))
+        grs' p s (`failsLeaving` "")
     context "when inner parser fails consuming input" $
       it "has no effect on how parser works" $ do
         let p :: (MonadParsecDbg Void String m) => m Char
@@ -56,14 +63,14 @@ spec = do
         let p :: (MonadParsecDbg Void String m) => m Char
             p = dbg "return" (return 'a')
             s = "abc"
-        shouldStderr p s "return> IN: \"abc\"\nreturn> MATCH (EOK): <EMPTY>\nreturn> VALUE: 'a'\n\n"
+        shouldStderr p s "return> IN: \"abc\"\nreturn> MATCH (EOK): <EMPTY>\nreturn> VALUE: 'a'\nreturn> HINTS: []\n\n"
         grs p s (`shouldParse` 'a')
         grs' p s (`succeedsLeaving` s)
       it "its hints are preserved" $ do
         let p :: (MonadParsecDbg Void String m) => m String
             p = dbg "many chars" (many (char 'a')) <* empty
             s = "bcd"
-        shouldStderr p s "many chars> IN: \"bcd\"\nmany chars> MATCH (EOK): <EMPTY>\nmany chars> VALUE: \"\"\n\n"
+        shouldStderr p s "many chars> IN: \"bcd\"\nmany chars> MATCH (EOK): <EMPTY>\nmany chars> VALUE: \"\"\nmany chars> HINTS: ['a']\n\n"
         grs p s (`shouldFailWith` err 0 (etok 'a'))
         grs' p s (`failsLeaving` "bcd")
     context "when inner parser fails without consuming" $
@@ -87,8 +94,8 @@ spec = do
             tell [2]
         s1 = "a"
         s2 = "abcd"
-        stderr1 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (LOG: [1])\n\n"
-        stderr2 = "a> IN: \"abcd\"\na> MATCH (COK): 'a'\na> VALUE: 'a' (LOG: [])\n\nb> IN: \"bcd\"\nb> MATCH (COK): 'b'\nb> VALUE: 'b' (LOG: [])\n\nc> IN: \"cd\"\nc> MATCH (COK): \"cd\"\nc> VALUE: () (LOG: [1,2])\n\n"
+        stderr1 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (LOG: [1])\na> HINTS: []\n\n"
+        stderr2 = "a> IN: \"abcd\"\na> MATCH (COK): 'a'\na> VALUE: 'a' (LOG: [])\na> HINTS: []\n\nb> IN: \"bcd\"\nb> MATCH (COK): 'b'\nb> VALUE: 'b' (LOG: [])\nb> HINTS: []\n\nc> IN: \"cd\"\nc> MATCH (COK): \"cd\"\nc> VALUE: () (LOG: [1,2])\nc> HINTS: []\n\n"
         r1 = ((), [0, 1])
         r2 = ((), [0, 1, 2])
     context "Lazy WriterT instance of MonadParsecDbg" $ do
@@ -118,8 +125,8 @@ spec = do
             modify succ
         s3 = "a"
         s4 = "abcd"
-        stderr3 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (STATE: 2)\n\n"
-        stderr4 = "a> IN: \"abcd\"\na> MATCH (COK): 'a'\na> VALUE: 'a' (STATE: 0)\n\nb> IN: \"bcd\"\nb> MATCH (COK): 'b'\nb> VALUE: 'b' (STATE: 1)\n\nc> IN: \"cd\"\nc> MATCH (COK): \"cd\"\nc> VALUE: () (STATE: 3)\n\n"
+        stderr3 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (STATE: 2)\na> HINTS: []\n\n"
+        stderr4 = "a> IN: \"abcd\"\na> MATCH (COK): 'a'\na> VALUE: 'a' (STATE: 0)\na> HINTS: []\n\nb> IN: \"bcd\"\nb> MATCH (COK): 'b'\nb> VALUE: 'b' (STATE: 1)\nb> HINTS: []\n\nc> IN: \"cd\"\nc> MATCH (COK): \"cd\"\nc> VALUE: () (STATE: 3)\nc> HINTS: []\n\n"
         r3 = ((), 2)
         r4 = ((), 3)
     context "Lazy StateT instance of MonadParsecDbg" $ do
@@ -142,8 +149,8 @@ spec = do
           modify succ
           dbg "a" (single 'a' >> tell [1] >> modify succ)
         s5 = "a"
-        stderr5 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (STATE: 2) (LOG: [1])\n\n"
-        stderr7 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (LOG: [1]) (STATE: 2)\n\n"
+        stderr5 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (STATE: 2) (LOG: [1])\na> HINTS: []\n\n"
+        stderr7 = "a> IN: 'a'\na> MATCH (COK): 'a'\na> VALUE: () (LOG: [1]) (STATE: 2)\na> HINTS: []\n\n"
         r5 = ((), 2, [0, 1])
         p6 :: (MonadParsecDbg Void String m, MonadWriter [Int] m, MonadState Int m) => m ()
         p6 = do
@@ -179,6 +186,7 @@ spec = do
 -- | Check that running the given parser on the input prints the expected
 -- string to the 'stderr'.
 shouldStderr ::
+  (HasCallStack) =>
   -- | The parser to test
   Parser a ->
   -- | Input for the parser
