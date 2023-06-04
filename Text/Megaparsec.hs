@@ -288,7 +288,7 @@ runParserT' p s = do
             bundlePosState = statePosState s
           }
   return $ case result of
-    OK x ->
+    OK _ x ->
       case NE.nonEmpty (stateParseErrors s') of
         Nothing -> (s', Right x)
         Just de -> (s', Left (toBundle de))
