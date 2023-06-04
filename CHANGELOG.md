@@ -5,6 +5,9 @@
 * `dbg` now prints hints among other debug information. [PR
   530](https://github.com/mrkkrp/megaparsec/pull/530).
 
+* Hints are no longer lost in certain methods of MTL instances for
+  `ParsecT`. [Issue 528](https://github.com/mrkkrp/megaparsec/issues/528).
+
 ## Megaparsec 9.3.1
 
 * Fixed a bug related to processing of tabs when error messages are

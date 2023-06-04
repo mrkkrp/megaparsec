@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -370,29 +370,54 @@ spec = do
             )
 
   describe "ParsecT MonadReader instance" $ do
-    describe "ask" $
+    describe "ask" $ do
       it "returns correct value of context" $
         property $ \n -> do
           let p = ask :: ParsecT Void String (Reader Integer) Integer
           runReader (runParserT p "" "") n `shouldBe` Right n
+      it "preserves hints" $
+        property $ \a b (n :: Integer) ->
+          a /= b ==> do
+            let p :: ParsecT Void String (Reader Integer) Integer
+                p = optional (char a) *> ask <* hidden eof
+            runReader (runParserT p "" [b]) n `shouldFailWith` err 0 (utok b <> etok a)
 
-    describe "local" $
+    describe "local" $ do
       it "modifies reader context correctly" $
         property $ \n k -> do
           let p = local (+ k) ask :: ParsecT Void String (Reader Integer) Integer
           runReader (runParserT p "" "") n `shouldBe` Right (n + k)
+      it "preserves hints" $
+        property $ \a b (n :: Integer) ->
+          a /= b ==> do
+            let p :: ParsecT Void String (Reader Integer) (Maybe Char)
+                p = local (+ 1) (optional (char a)) <* hidden eof
+            runReader (runParserT p "" [b]) n `shouldFailWith` err 0 (utok b <> etok a)
 
   describe "ParsecT MonadState instance" $ do
-    describe "get" $
+    describe "get" $ do
       it "returns correct state value" $
         property $ \n -> do
           let p = L.get :: ParsecT Void String (L.State Integer) Integer
           L.evalState (runParserT p "" "") n `shouldBe` Right n
-    describe "put" $
+      it "preserves hints" $
+        property $ \a b (n :: Integer) ->
+          a /= b ==> do
+            let p :: ParsecT Void String (L.State Integer) Integer
+                p = optional (char a) *> L.get <* hidden eof
+            L.evalState (runParserT p "" [b]) n `shouldFailWith` err 0 (utok b <> etok a)
+
+    describe "put" $ do
       it "replaces state value" $
         property $ \a b -> do
           let p = L.put b :: ParsecT Void String (L.State Integer) ()
           L.execState (runParserT p "" "") a `shouldBe` b
+      it "preserves hints" $
+        property $ \a b (n :: Integer) (n' :: Integer) ->
+          a /= b ==> do
+            let p :: ParsecT Void String (L.State Integer) ()
+                p = optional (char a) *> L.put n' <* hidden eof
+            L.evalState (runParserT p "" [b]) n `shouldFailWith` err 0 (utok b <> etok a)
 
   describe "ParsecT MonadCont instance" $
     describe "callCC" $

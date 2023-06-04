@@ -114,8 +114,8 @@ data Consumption
 --
 -- See also: 'Consumption', 'Reply'.
 data Result s e a
-  = -- | Parser succeeded
-    OK a
+  = -- | Parser succeeded (includes hints)
+    OK (Hints (Token s)) a
   | -- | Parser failed
     Error (ParseError s e)
 
@@ -259,7 +259,7 @@ instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
     callCC $ \c ->
       runParsecT (f (\a -> mkPT $ \s' -> c (pack s' a))) s
     where
-      pack s a = Reply s Virgin (OK a)
+      pack s a = Reply s Virgin (OK mempty a)
 
 instance (Stream s, MonadError e' m) => MonadError e' (ParsecT e s m) where
   throwError = lift . throwError
@@ -273,11 +273,11 @@ mkPT k = ParsecT $ \s cok cerr eok eerr -> do
   case consumption of
     Consumed ->
       case result of
-        OK x -> cok x s' mempty
+        OK hs x -> cok x s' hs
         Error e -> cerr e s'
     Virgin ->
       case result of
-        OK x -> eok x s' mempty
+        OK hs x -> eok x s' hs
         Error e -> eerr e s'
 
 -- | 'mzero' is a parser that __fails__ without consuming input.
@@ -328,7 +328,7 @@ longestMatch s1@(State _ o1 _ _) s2@(State _ o2 _ _) =
 instance (Stream s, MonadFix m) => MonadFix (ParsecT e s m) where
   mfix f = mkPT $ \s -> mfix $ \(~(Reply _ _ result)) -> do
     let a = case result of
-          OK a' -> a'
+          OK _ a' -> a'
           Error _ -> error "mfix ParsecT"
     runParsecT (f a) s
 
@@ -651,9 +651,9 @@ runParsecT ::
   m (Reply e s a)
 runParsecT p s = unParser p s cok cerr eok eerr
   where
-    cok a s' _ = return $ Reply s' Consumed (OK a)
+    cok a s' hs = return $ Reply s' Consumed (OK hs a)
     cerr err s' = return $ Reply s' Consumed (Error err)
-    eok a s' _ = return $ Reply s' Virgin (OK a)
+    eok a s' hs = return $ Reply s' Virgin (OK hs a)
     eerr err s' = return $ Reply s' Virgin (Error err)
 
 -- | Transform any custom errors thrown by the parser using the given
