@@ -27,3 +27,4 @@ dist-*/
 dist/
 stack.yaml
 stack.yaml.lock
+.vscode
