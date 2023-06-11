@@ -1,6 +1,6 @@
 cabal-version:   2.4
 name:            megaparsec
-version:         9.3.1
+version:         9.4.0
 license:         BSD-2-Clause
 license-file:    LICENSE.md
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
