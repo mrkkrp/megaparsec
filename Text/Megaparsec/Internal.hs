@@ -151,7 +151,7 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
 
 -- | @since 6.3.0
 instance
-  (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e, Monad m) =>
+  (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e) =>
   IsString (ParsecT e s m a)
   where
   fromString s = tokens (==) (fromString s)
@@ -285,6 +285,23 @@ mkParsecT k = ParsecT $ \s cok cerr eok eerr -> do
         Error e -> eerr e s'
 {-# INLINE mkParsecT #-}
 
+pmkParsec ::
+  (Stream s) =>
+  (State s e -> Reply e s a) ->
+  ParsecT e s m a
+pmkParsec k = ParsecT $ \s cok cerr eok eerr ->
+  let (Reply s' consumption result) = k s
+   in case consumption of
+        Consumed ->
+          case result of
+            OK hs x -> cok x s' hs
+            Error e -> cerr e s'
+        NotConsumed ->
+          case result of
+            OK hs x -> eok x s' hs
+            Error e -> eerr e s'
+{-# INLINE pmkParsec #-}
+
 -- | 'mzero' is a parser that __fails__ without consuming input.
 --
 -- __Note__: strictly speaking, this instance is unlawful. The right
@@ -341,7 +358,7 @@ instance (Stream s) => MonadTrans (ParsecT e s) where
   lift amb = ParsecT $ \s _ _ eok _ ->
     amb >>= \a -> eok a s mempty
 
-instance (Ord e, Stream s, Monad m) => MonadParsec e s (ParsecT e s m) where
+instance (Ord e, Stream s) => MonadParsec e s (ParsecT e s m) where
   parseError = pParseError
   label = pLabel
   try = pTry
@@ -357,7 +374,7 @@ instance (Ord e, Stream s, Monad m) => MonadParsec e s (ParsecT e s m) where
   takeP = pTakeP
   getParserState = pGetParserState
   updateParserState = pUpdateParserState
-  mkParsec f = mkParsecT (pure . f)
+  mkParsec = pmkParsec
 
 pParseError ::
   ParseError s e ->
