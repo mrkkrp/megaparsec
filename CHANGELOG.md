@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.4.1
+
+* Removed `Monad m` constraints in several places where they were introduced
+  in 9.4.0. [Issue 532](https://github.com/mrkkrp/megaparsec/issues/532).
+
 ## Megaparsec 9.4.0
 
 * `dbg` now prints hints among other debug information. [PR
