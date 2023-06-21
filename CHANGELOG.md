@@ -5,6 +5,9 @@
 * Dropped a number of redundant constraints here and there. [PR
   523](https://github.com/mrkkrp/megaparsec/pull/523).
 
+* Added a `MonadWriter` instance for `ParsecT`. [PR
+  534](https://github.com/mrkkrp/megaparsec/pull/534).
+
 ## Megaparsec 9.4.1
 
 * Removed `Monad m` constraints in several places where they were introduced
