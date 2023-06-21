@@ -51,6 +51,7 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
+import Control.Monad.Writer.Class
 import Control.Monad.Trans
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
@@ -101,6 +102,13 @@ instance (Ord t) => Monoid (Hints t) where
 -- See also: 'Consumption', 'Result'.
 data Reply e s a = Reply (State s e) Consumption (Result s e a)
 
+instance Functor (Reply e s) where
+    fmap f (Reply st con res) = Reply st con (fmap f res)
+instance Foldable (Reply e s) where
+    foldMap f (Reply _ _ res) = foldMap f res
+instance Traversable (Reply e s) where
+    traverse f (Reply st con res) = fmap (Reply st con) (traverse f res)
+
 -- | Whether the input has been consumed or not.
 --
 -- See also: 'Result', 'Reply'.
@@ -119,6 +127,15 @@ data Result s e a
     OK (Hints (Token s)) a
   | -- | Parser failed
     Error (ParseError s e)
+instance Functor (Result s e) where
+    fmap f (OK hs a) = OK hs (f a)
+    fmap _ (Error e) = Error e
+instance Foldable (Result s e) where
+    foldMap f (OK _ a) = f a
+    foldMap _ (Error _) = mempty
+instance Traversable (Result s e) where
+    traverse f (OK hs a) = fmap (OK hs) (f a)
+    traverse _ (Error e) = pure (Error e)
 
 -- | @'ParsecT' e s m a@ is a parser with custom data component of error
 -- @e@, stream type @s@, underlying monad @m@ and return type @a@.
@@ -249,11 +266,26 @@ instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
 
 instance (Stream s, MonadReader r m) => MonadReader r (ParsecT e s m) where
   ask = lift ask
-  local f p = mkParsecT $ \s -> local f (runParsecT p s)
+  local f = hoistP (local f)
 
 instance (Stream s, MonadState st m) => MonadState st (ParsecT e s m) where
   get = lift get
   put = lift . put
+
+-- lifts 'listen' through 'Reply' using its 'Functor' instance
+listenP :: MonadWriter w m => 
+    m (Reply e s a) -> m (Reply e s (a,w))
+listenP = fmap (\(repl,w) -> fmap (flip (,) w) repl) . listen
+
+-- lifts 'pass' through 'Reply' using its 'Traversable' instance
+passP :: MonadWriter w m => 
+    m (Reply e s (a,w -> w)) -> m (Reply e s a)
+passP = pass . fmap ((\(end,t) -> (t,appEndo end)) . traverse (\(a,ww) -> (Endo ww,a)))
+
+instance (Stream s, MonadWriter w m) => MonadWriter w (ParsecT e s m) where
+    tell w = lift (tell w)
+    listen = hoistP listenP
+    pass   = hoistP passP
 
 instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
   callCC f = mkParsecT $ \s ->
@@ -284,6 +316,12 @@ mkParsecT k = ParsecT $ \s cok cerr eok eerr -> do
         OK hs x -> eok x s' hs
         Error e -> eerr e s'
 {-# INLINE mkParsecT #-}
+
+-- can be used to implement MonadReader and MonadWriter
+hoistP :: (Stream s, Monad m, Monad n) => 
+    (m (Reply e s a) -> n (Reply e s b)) -> 
+    ParsecT e s m a -> ParsecT e s n b
+hoistP h p = mkParsecT (\s -> h (runParsecT p s))
 
 pmkParsec ::
   (Stream s) =>
