@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -52,6 +54,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Control.Monad.State.Class
 import Control.Monad.Trans
+import Control.Monad.Writer.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy
@@ -100,6 +103,7 @@ instance (Ord t) => Monoid (Hints t) where
 --
 -- See also: 'Consumption', 'Result'.
 data Reply e s a = Reply (State s e) Consumption (Result s e a)
+  deriving (Functor)
 
 -- | Whether the input has been consumed or not.
 --
@@ -119,6 +123,7 @@ data Result s e a
     OK (Hints (Token s)) a
   | -- | Parser failed
     Error (ParseError s e)
+  deriving (Functor)
 
 -- | @'ParsecT' e s m a@ is a parser with custom data component of error
 -- @e@, stream type @s@, underlying monad @m@ and return type @a@.
@@ -249,11 +254,29 @@ instance (Stream s, MonadIO m) => MonadIO (ParsecT e s m) where
 
 instance (Stream s, MonadReader r m) => MonadReader r (ParsecT e s m) where
   ask = lift ask
-  local f p = mkParsecT $ \s -> local f (runParsecT p s)
+  local f = hoistP (local f)
 
 instance (Stream s, MonadState st m) => MonadState st (ParsecT e s m) where
   get = lift get
   put = lift . put
+
+hoistP ::
+  (Monad m) =>
+  (m (Reply e s a) -> m (Reply e s b)) ->
+  ParsecT e s m a ->
+  ParsecT e s m b
+hoistP h p = mkParsecT (h . runParsecT p)
+
+-- | @since 9.5.0
+instance (Stream s, MonadWriter w m) => MonadWriter w (ParsecT e s m) where
+  tell w = lift (tell w)
+  listen = hoistP (fmap (\(repl, w) -> fmap (,w) repl) . listen)
+  pass = hoistP $ \m -> pass $ do
+    Reply st consumption r <- m
+    let (r', ww') = case r of
+          OK hs (x, ww) -> (OK hs x, ww)
+          Error e -> (Error e, id)
+    return (Reply st consumption r', ww')
 
 instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
   callCC f = mkParsecT $ \s ->
