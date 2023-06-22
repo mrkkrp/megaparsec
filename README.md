@@ -264,14 +264,6 @@ Earley, but there are still enough reasons to choose it:
 
 In other words, Megaparsec is less safe but also more powerful.
 
-### Speeding up Megaparsec 
-
-Megaparsec's type class `MonadParsec` allows you to 
-construct your parser from generic components 
-and instantiate to instances of varying performance. 
-See for example the 
-[faster-megaparsec][faster-megaparsec] package. 
-
 ## Related packages
 
 The following packages are designed to be used with Megaparsec (open a PR if
@@ -290,6 +282,8 @@ you want to add something to the list):
   [TagSoup](https://hackage.haskell.org/package/tagsoup) as a token type in
   Megaparsec.
 * [`parser-combinators`](https://hackage.haskell.org/package/parser-combinators)—provides permutation and expression parsers [previously bundled with Megaparsec](https://markkarpov.com/post/megaparsec-7.html#parsercombinators-grows-megaparsec-shrinks).
+* [`faster-megaparsec`](https://hackage.haskell.org/package/faster-megaparsec)—speeds up parsing 
+  by trying a simple `MonadParsec` instance and falls back to `ParsecT` to report errors. 
 
 ## Prominent projects that use Megaparsec
 
@@ -350,7 +344,6 @@ Distributed under FreeBSD license.
 [parsec]: https://hackage.haskell.org/package/parsec
 [trifecta]: https://hackage.haskell.org/package/trifecta
 [earley]: https://hackage.haskell.org/package/Earley
-[faster-megaparsec]: https://hackage.haskell.org/package/faster-megaparsec
 [idris]: https://www.idris-lang.org/
 [idris-testimony]: https://twitter.com/edwinbrady/status/950084043282010117?s=09
 
