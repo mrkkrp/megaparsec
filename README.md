@@ -282,6 +282,8 @@ you want to add something to the list):
   [TagSoup](https://hackage.haskell.org/package/tagsoup) as a token type in
   Megaparsec.
 * [`parser-combinators`](https://hackage.haskell.org/package/parser-combinators)—provides permutation and expression parsers [previously bundled with Megaparsec](https://markkarpov.com/post/megaparsec-7.html#parsercombinators-grows-megaparsec-shrinks).
+* [`faster-megaparsec`](https://hackage.haskell.org/package/faster-megaparsec)—speeds up parsing
+  by trying a simple `MonadParsec` instance and falls back to `ParsecT` to report errors.
 
 ## Prominent projects that use Megaparsec
 
