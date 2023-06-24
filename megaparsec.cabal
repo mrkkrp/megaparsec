@@ -91,7 +91,9 @@ benchmark bench-speed
         text >=0.2 && <2.1
 
     if flag(dev)
-        ghc-options: -O2 -Wall -Werror
+        ghc-options:
+            -Wall -Werror -Wredundant-constraints -Wpartial-fields
+            -Wunused-packages
 
     else
         ghc-options: -O2 -Wall
@@ -111,7 +113,9 @@ benchmark bench-memory
         weigh >=0.0.4
 
     if flag(dev)
-        ghc-options: -O2 -Wall -Werror
+        ghc-options:
+            -Wall -Werror -Wredundant-constraints -Wpartial-fields
+            -Wunused-packages
 
     else
         ghc-options: -O2 -Wall
