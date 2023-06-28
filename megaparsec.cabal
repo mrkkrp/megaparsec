@@ -9,7 +9,7 @@ author:
     Paolo Martini <paolo@nemail.it>,
     Daan Leijen <daan@microsoft.com>
 
-tested-with:     ghc ==9.2.7 ghc ==9.4.4 ghc ==9.6.1
+tested-with:     ghc ==9.2.8 ghc ==9.4.4 ghc ==9.6.2
 homepage:        https://github.com/mrkkrp/megaparsec
 bug-reports:     https://github.com/mrkkrp/megaparsec/issues
 synopsis:        Monadic parser combinators
@@ -73,7 +73,7 @@ library
     else
         ghc-options: -O2 -Wall
 
-    if (flag(dev) && !impl(ghc ==9.6.1))
+    if (flag(dev) && !impl(ghc ==9.6.2))
         ghc-options: -Wredundant-constraints
 
 benchmark bench-speed
