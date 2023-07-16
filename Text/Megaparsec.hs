@@ -295,24 +295,6 @@ runParserT' p s = do
     Error e ->
       (s', Left (toBundle (e :| stateParseErrors s')))
 
--- | Given the name of source file and the input construct the initial state
--- for a parser.
-initialState :: String -> s -> State s e
-initialState name s =
-  State
-    { stateInput = s,
-      stateOffset = 0,
-      statePosState =
-        PosState
-          { pstateInput = s,
-            pstateOffset = 0,
-            pstateSourcePos = initialPos name,
-            pstateTabWidth = defaultTabWidth,
-            pstateLinePrefix = ""
-          },
-      stateParseErrors = []
-    }
-
 ----------------------------------------------------------------------------
 -- Signaling parse errors
 
