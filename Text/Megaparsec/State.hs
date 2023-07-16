@@ -21,7 +21,9 @@
 -- @since 6.5.0
 module Text.Megaparsec.State
   ( State (..),
+    initialState,
     PosState (..),
+    initialPosState,
   )
 where
 
@@ -74,6 +76,24 @@ deriving instance
 
 instance (NFData s, NFData (ParseError s e)) => NFData (State s e)
 
+-- | Given the name of the source file and the input construct the initial
+-- state for a parser.
+--
+-- @since 9.6.0
+initialState ::
+  -- | Name of the file the input is coming from
+  FilePath ->
+  -- | Input
+  s ->
+  State s e
+initialState name s =
+  State
+    { stateInput = s,
+      stateOffset = 0,
+      statePosState = initialPosState name s,
+      stateParseErrors = []
+    }
+
 -- | A special kind of state that is used to calculate line\/column
 -- positions on demand.
 --
@@ -93,3 +113,22 @@ data PosState s = PosState
   deriving (Show, Eq, Data, Typeable, Generic)
 
 instance (NFData s) => NFData (PosState s)
+
+-- | Given the name of source file and the input construct the initial
+-- positional state.
+--
+-- @since 9.6.0
+initialPosState ::
+  -- | Name of the file the input is coming from
+  FilePath ->
+  -- | Input
+  s ->
+  PosState s
+initialPosState name s =
+  PosState
+    { pstateInput = s,
+      pstateOffset = 0,
+      pstateSourcePos = initialPos name,
+      pstateTabWidth = defaultTabWidth,
+      pstateLinePrefix = ""
+    }
