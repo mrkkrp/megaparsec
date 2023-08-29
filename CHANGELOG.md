@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Unreleased
+## Megaparsec 9.5.0
 
 * Dropped a number of redundant constraints here and there. [PR
   523](https://github.com/mrkkrp/megaparsec/pull/523).
