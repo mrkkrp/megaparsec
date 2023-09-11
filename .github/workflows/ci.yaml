@@ -11,7 +11,7 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: haskell-actions/run-ormolu@v14
   build:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
     env:
       CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: haskell/actions/setup@v2
         id: setup-haskell-cabal
         with:
