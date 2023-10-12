@@ -32,7 +32,7 @@ library
         hspec-megaparsec >=2.0 && <3.0,
         megaparsec ==9.5.0,
         mtl >=2.2.2 && <3.0,
-        text >=0.2 && <2.1,
+        text >=0.2 && <2.2,
         transformers >=0.4 && <0.7
 
     if flag(dev)
@@ -74,7 +74,7 @@ test-suite tests
         mtl >=2.2.2 && <3.0,
         scientific >=0.3.1 && <0.4,
         temporary >=1.1 && <1.4,
-        text >=0.2 && <2.1,
+        text >=0.2 && <2.2,
         transformers >=0.4 && <0.7
 
     if flag(dev)
