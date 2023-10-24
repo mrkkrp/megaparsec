@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Unreleased
+## Megaparsec 9.6.0
 
 * Added the functions `initialState` and `initialPosState` to
   `Text.Megaparsec.State`. [Issue
