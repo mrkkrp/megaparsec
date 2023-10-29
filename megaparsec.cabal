@@ -46,13 +46,13 @@ library
         Text.Megaparsec.Error.Builder
         Text.Megaparsec.Internal
         Text.Megaparsec.Pos
+        Text.Megaparsec.State
         Text.Megaparsec.Stream
 
     other-modules:
         Text.Megaparsec.Class
         Text.Megaparsec.Common
         Text.Megaparsec.Lexer
-        Text.Megaparsec.State
 
     default-language: Haskell2010
     build-depends:

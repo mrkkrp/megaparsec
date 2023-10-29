@@ -1,5 +1,11 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.6.1
+
+* Exposed `Text.Megaparsec.State`, so that the new functions (`initialState`
+  and `initialPosState`) can be actually imported from it. [PR
+  549](https://github.com/mrkkrp/megaparsec/pull/549).
+
 ## Megaparsec 9.6.0
 
 * Added the functions `initialState` and `initialPosState` to
