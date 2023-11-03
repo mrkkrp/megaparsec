@@ -1,6 +1,6 @@
 cabal-version:   2.4
 name:            megaparsec-tests
-version:         9.6.0
+version:         9.6.1
 license:         BSD-2-Clause
 license-file:    LICENSE.md
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
@@ -30,7 +30,7 @@ library
         containers >=0.5 && <0.8,
         hspec >=2 && <3,
         hspec-megaparsec >=2 && <3,
-        megaparsec ==9.6.0,
+        megaparsec ==9.6.1,
         mtl >=2.2.2 && <3,
         text >=0.2 && <2.2,
         transformers >=0.4 && <0.7
@@ -69,7 +69,7 @@ test-suite tests
         containers >=0.5 && <0.8,
         hspec >=2 && <3,
         hspec-megaparsec >=2 && <3,
-        megaparsec ==9.6.0,
+        megaparsec ==9.6.1,
         megaparsec-tests,
         mtl >=2.2.2 && <3,
         scientific >=0.3.1 && <0.4,
