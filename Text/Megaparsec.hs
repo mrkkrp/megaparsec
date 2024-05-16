@@ -516,7 +516,7 @@ oneOf ::
   -- | Collection of matching tokens
   f (Token s) ->
   m (Token s)
-oneOf cs = satisfy (`elem` cs)
+oneOf cs = satisfy (\x -> elem x cs)
 {-# INLINE oneOf #-}
 
 -- | As the dual of 'oneOf', @'noneOf' ts@ succeeds if the current token
@@ -538,7 +538,7 @@ noneOf ::
   -- | Collection of taken we should not match
   f (Token s) ->
   m (Token s)
-noneOf cs = satisfy (`notElem` cs)
+noneOf cs = satisfy (\x -> notElem x cs)
 {-# INLINE noneOf #-}
 
 -- | @'chunk' chk@ only matches the chunk @chk@.

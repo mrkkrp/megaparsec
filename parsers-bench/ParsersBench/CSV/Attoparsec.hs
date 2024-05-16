@@ -53,5 +53,5 @@ escapedField =
 
 unescapedField :: Parser ByteString
 unescapedField =
-  A.takeWhile (`notElem` (",\"\n\r" :: String))
+  A.takeWhile (\x -> notElem x [',', '\"', '\n', '\r'])
 {-# INLINE unescapedField #-}

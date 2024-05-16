@@ -52,5 +52,5 @@ unescapedField :: Parser ByteString
 unescapedField =
   takeWhileP
     (Just "unescaped char")
-    (`notElem` [44, 34, 10, 13])
+    (\x -> notElem x [44, 34, 10, 13])
 {-# INLINE unescapedField #-}
