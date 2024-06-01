@@ -4,7 +4,7 @@ version:         0.1.0
 license:         BSD3
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
 author:          Mark Karpov <markkarpov92@gmail.com>
-tested-with:     ghc ==8.6.5
+tested-with:     ghc ==9.6.3 ghc ==9.8.2 ghc ==9.10.1
 homepage:        https://github.com/mrkkrp/megaparsec
 bug-reports:     https://github.com/mrkkrp/megaparsec/issues
 synopsis:        Performance benchmarks: Megaparsec vs Attoparsec
