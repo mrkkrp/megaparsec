@@ -58,6 +58,7 @@ test-suite tests
         Text.Megaparsec.ErrorSpec
         Text.Megaparsec.PosSpec
         Text.Megaparsec.StreamSpec
+        Text.Megaparsec.UnicodeSpec
         Text.MegaparsecSpec
 
     default-language:   Haskell2010

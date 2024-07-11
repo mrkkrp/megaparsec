@@ -64,6 +64,7 @@ import GHC.Generics
 import Text.Megaparsec.Pos
 import Text.Megaparsec.State
 import Text.Megaparsec.Stream
+import qualified Text.Megaparsec.Unicode as Unicode
 
 ----------------------------------------------------------------------------
 -- Parse error type
@@ -397,7 +398,7 @@ errorBundlePretty ParseErrorBundle {..} =
                   lineNumber = (show . unPos . sourceLine) epos
                   padding = replicate (length lineNumber + 1) ' '
                   rpshift = unPos (sourceColumn epos) - 1
-                  slineLen = length sline
+                  slineLen = Unicode.stringLength sline
                in padding
                     <> "|\n"
                     <> lineNumber

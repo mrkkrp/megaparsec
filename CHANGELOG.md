@@ -1,5 +1,11 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Upcoming
+
+* Implemented correct handling of wide Unicode characters in error messages.
+  To that end, a new module `Text.Megaparsec.Unicode` was introduced. [Issue
+  370](https://github.com/mrkkrp/megaparsec/issues/370).
+
 ## Megaparsec 9.6.1
 
 * Exposed `Text.Megaparsec.State`, so that the new functions (`initialState`
