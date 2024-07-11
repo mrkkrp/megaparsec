@@ -52,6 +52,7 @@ import qualified Data.Text.Lazy as TL
 import Data.Word (Word8)
 import Text.Megaparsec.Pos
 import Text.Megaparsec.State
+import qualified Text.Megaparsec.Unicode as Unicode
 
 -- | Type class for inputs that can be consumed by the library.
 --
@@ -426,6 +427,7 @@ class (Stream s) => VisualStream s where
 
 instance VisualStream String where
   showTokens Proxy = stringPretty
+  tokensLength Proxy = Unicode.stringLength
 
 instance VisualStream B.ByteString where
   showTokens Proxy = stringPretty . fmap (chr . fromIntegral)
@@ -435,9 +437,11 @@ instance VisualStream BL.ByteString where
 
 instance VisualStream T.Text where
   showTokens Proxy = stringPretty
+  tokensLength Proxy = Unicode.stringLength
 
 instance VisualStream TL.Text where
   showTokens Proxy = stringPretty
+  tokensLength Proxy = Unicode.stringLength
 
 -- | Type class for inputs that can also be used for error reporting.
 --
@@ -510,37 +514,37 @@ class (Stream s) => TraversableStream s where
 instance TraversableStream String where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' splitAt foldl' id id ('\n', '\t') o pst
+    reachOffset' splitAt foldl' id id ('\n', '\t') charInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAt foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' splitAt foldl' ('\n', '\t') charInc o pst
 
 instance TraversableStream B.ByteString where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) o pst
+    reachOffset' B.splitAt B.foldl' B8.unpack (chr . fromIntegral) (10, 9) byteInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' B.splitAt B.foldl' (10, 9) o pst
+    reachOffsetNoLine' B.splitAt B.foldl' (10, 9) byteInc o pst
 
 instance TraversableStream BL.ByteString where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' splitAtBL BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9) o pst
+    reachOffset' splitAtBL BL.foldl' BL8.unpack (chr . fromIntegral) (10, 9) byteInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAtBL BL.foldl' (10, 9) o pst
+    reachOffsetNoLine' splitAtBL BL.foldl' (10, 9) byteInc o pst
 
 instance TraversableStream T.Text where
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
-    reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t') o pst
+    reachOffset' T.splitAt T.foldl' T.unpack id ('\n', '\t') charInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' T.splitAt T.foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' T.splitAt T.foldl' ('\n', '\t') charInc o pst
 
 instance TraversableStream TL.Text where
   -- NOTE Do not eta-reduce (breaks inlining of reachOffset').
   reachOffset o pst =
-    reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') o pst
+    reachOffset' splitAtTL TL.foldl' TL.unpack id ('\n', '\t') charInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAtTL TL.foldl' ('\n', '\t') o pst
+    reachOffsetNoLine' splitAtTL TL.foldl' ('\n', '\t') charInc o pst
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -564,6 +568,8 @@ reachOffset' ::
   (Token s -> Char) ->
   -- | Newline token and tab token
   (Token s, Token s) ->
+  -- | Increment in column position for a token
+  (Token s -> Pos) ->
   -- | Offset to reach
   Int ->
   -- | Initial 'PosState' to use
@@ -576,6 +582,7 @@ reachOffset'
   fromToks
   fromTok
   (newlineTok, tabTok)
+  columnIncrement
   o
   PosState {..} =
     ( Just $ case expandTab pstateTabWidth
@@ -624,7 +631,7 @@ reachOffset'
                     (g . (fromTok ch :))
               | otherwise ->
                   St
-                    (SourcePos n l (c <> pos1))
+                    (SourcePos n l (c <> columnIncrement ch))
                     (g . (fromTok ch :))
 {-# INLINE reachOffset' #-}
 
@@ -639,6 +646,8 @@ reachOffsetNoLine' ::
   -- | Newline token and tab token
   (Token s, Token s) ->
   -- | Offset to reach
+  -- | Increment in column position for a token
+  (Token s -> Pos) ->
   Int ->
   -- | Initial 'PosState' to use
   PosState s ->
@@ -648,6 +657,7 @@ reachOffsetNoLine'
   splitAt'
   foldl''
   (newlineTok, tabTok)
+  columnIncrement
   o
   PosState {..} =
     ( PosState
@@ -670,7 +680,7 @@ reachOffsetNoLine'
               | ch == tabTok ->
                   SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
               | otherwise ->
-                  SourcePos n l (c <> pos1)
+                  SourcePos n l (c <> columnIncrement ch)
 {-# INLINE reachOffsetNoLine' #-}
 
 -- | Like 'BL.splitAt' but accepts the index as an 'Int'.
@@ -753,3 +763,13 @@ expandTab w' = go 0 0
     go !i 0 (x : xs) = x : go (i + 1) 0 xs
     go !i n xs = ' ' : go (i + 1) (n - 1) xs
     w = unPos w'
+
+-- | Return increment in column position that corresponds to the given
+-- 'Char'.
+charInc :: Char -> Pos
+charInc ch = if Unicode.isWideChar ch then pos1 <> pos1 else pos1
+
+-- | Return increment in column position that corresponds to the given
+-- 'Word8'.
+byteInc :: Word8 -> Pos
+byteInc _ = pos1

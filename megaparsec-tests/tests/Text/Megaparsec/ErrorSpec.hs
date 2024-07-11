@@ -199,6 +199,41 @@ spec = do
                          ++ replicate errColumn ' '
                          ++ "^\nunexpected 'b'\nexpecting 'x'\n"
                      )
+    context "in the presence of wide characters" $ do
+      it "calculates column positions correctly" $ do
+        let s = "구구 이면" :: String
+            pe = err 2 (ulabel "space" <> etok '이') :: PE
+            bundle =
+              ParseErrorBundle
+                { bundleErrors = pe :| [],
+                  bundlePosState =
+                    PosState
+                      { pstateInput = s,
+                        pstateOffset = 0,
+                        pstateSourcePos = initialPos "",
+                        pstateTabWidth = defaultTabWidth,
+                        pstateLinePrefix = ""
+                      }
+                }
+        errorBundlePretty bundle
+          `shouldBe` "1:5:\n  |\n1 | 구구 이면\n  |     ^\nunexpected space\nexpecting '이'\n"
+      it "uses continuous highlighting" $ do
+        let s = "구구 이면" :: String
+            pe = err 3 (utok '이' <> etok '구') :: PE
+            bundle =
+              ParseErrorBundle
+                { bundleErrors = pe :| [],
+                  bundlePosState =
+                    PosState
+                      { pstateInput = s,
+                        pstateOffset = 0,
+                        pstateSourcePos = initialPos "",
+                        pstateTabWidth = defaultTabWidth,
+                        pstateLinePrefix = ""
+                      }
+                }
+        errorBundlePretty bundle
+          `shouldBe` "1:6:\n  |\n1 | 구구 이면\n  |      ^^\nunexpected '이'\nexpecting '구'\n"
     it "displays multi-error bundle correctly" $ do
       let s = "something\ngood\n" :: String
           pe0 = err 2 (utok 'm' <> etok 'x') :: PE

@@ -48,6 +48,7 @@ library
         Text.Megaparsec.Pos
         Text.Megaparsec.State
         Text.Megaparsec.Stream
+        Text.Megaparsec.Unicode
 
     other-modules:
         Text.Megaparsec.Class
@@ -56,6 +57,7 @@ library
 
     default-language: Haskell2010
     build-depends:
+        array >=0.5.3 && <0.6,
         base >=4.15 && <5,
         bytestring >=0.2 && <0.13,
         case-insensitive >=1.2 && <1.3,
