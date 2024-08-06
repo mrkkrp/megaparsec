@@ -5,6 +5,8 @@
 * Implemented correct handling of wide Unicode characters in error messages.
   To that end, a new module `Text.Megaparsec.Unicode` was introduced. [Issue
   370](https://github.com/mrkkrp/megaparsec/issues/370).
+* Inlined `Applicative` operators `(<*)` and `(*>)`. [PR
+  566](https://github.com/mrkkrp/megaparsec/pull/566).
 
 ## Megaparsec 9.6.1
 

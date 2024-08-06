@@ -174,7 +174,9 @@ instance (Stream s) => Applicative (ParsecT e s m) where
   pure = pPure
   (<*>) = pAp
   p1 *> p2 = p1 `pBind` const p2
+  {-# INLINE (*>) #-}
   p1 <* p2 = do x1 <- p1; void p2; return x1
+  {-# INLINE (<*) #-}
 
 pPure :: (Stream s) => a -> ParsecT e s m a
 pPure x = ParsecT $ \s _ _ eok _ -> eok x s mempty
