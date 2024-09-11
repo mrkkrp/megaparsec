@@ -331,7 +331,7 @@ pmkParsec k = ParsecT $ \s cok cerr eok eerr ->
 -- __Note__: strictly speaking, this instance is unlawful. The right
 -- identity law does not hold, e.g. in general this is not true:
 --
--- > v >> mzero = mero
+-- > v >> mzero = mzero
 --
 -- However the following holds:
 --
