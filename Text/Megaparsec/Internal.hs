@@ -46,6 +46,7 @@ where
 
 import Control.Applicative
 import Control.Monad
+import qualified Control.Monad.Combinators
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
 import qualified Control.Monad.Fail as Fail
@@ -211,6 +212,8 @@ pAp m k = ParsecT $ \s cok cerr eok eerr ->
 instance (Ord e, Stream s) => Alternative (ParsecT e s m) where
   empty = mzero
   (<|>) = mplus
+  many = Control.Monad.Combinators.many
+  some = Control.Monad.Combinators.some
 
 -- | 'return' returns a parser that __succeeds__ without consuming input.
 instance (Stream s) => Monad (ParsecT e s m) where
