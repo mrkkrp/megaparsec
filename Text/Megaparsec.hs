@@ -130,11 +130,15 @@ import Text.Megaparsec.Stream
 --
 -- Note that we re-export monadic combinators from
 -- "Control.Monad.Combinators" because these are more efficient than
--- 'Applicative'-based ones. Thus 'many' and 'some' may clash with the
+-- 'Applicative'-based ones (†). Thus 'many' and 'some' may clash with the
 -- functions from "Control.Applicative". You need to hide the functions like
 -- this:
 --
 -- > import Control.Applicative hiding (many, some)
+--
+-- † As of Megaparsec 9.7.0 'Control.Applicative.many' and
+-- 'Control.Applicative.some' are as efficient as their monadic
+-- counterparts.
 --
 -- Also note that you can import "Control.Monad.Combinators.NonEmpty" if you
 -- wish that combinators like 'some' return 'NonEmpty' lists. The module
