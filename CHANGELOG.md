@@ -1,5 +1,13 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Unreleased
+
+* The type of indented tokens in `IndentOpt` is now existentially
+  quantified in the `IndentMany` and `IndentSome` constructors, so
+  `IndentOpt` takes two type parameters instead of three. Added a `Functor`
+  instance for `IndentOpt`. [Issue
+  565](https://github.com/mrkkrp/megaparsec/issues/565).
+
 ## Megaparsec 9.8.3
 
 * Added `INLINE` pragmas to the built-in `Stream` instances for `Text` and
