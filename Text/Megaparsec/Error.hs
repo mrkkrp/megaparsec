@@ -41,12 +41,15 @@ module Text.Megaparsec.Error
     -- * Pretty-printing
     ShowErrorComponent (..),
     errorBundlePretty,
+    errorBundlePrettyForGhcPreProcessors,
+    errorBundlePrettyWith,
     parseErrorPretty,
     parseErrorTextPretty,
     showErrorItem,
   )
 where
 
+import Control.Arrow ((>>>))
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad.State.Strict
@@ -349,6 +352,36 @@ instance ShowErrorComponent Void where
   showErrorComponent = absurd
 
 -- | Pretty-print a 'ParseErrorBundle'. All 'ParseError's in the bundle will
+-- be pretty-printed in order, by applying a provided format function, with
+-- a single pass over the input stream.
+--
+-- @since 9.7.0
+errorBundlePrettyWith ::
+  forall s e.
+  ( VisualStream s,
+    TraversableStream s
+  ) =>
+  -- | Format function for a single 'ParseError'
+  (Maybe String -> SourcePos -> ParseError s e -> String) ->
+  -- | Parse error bundle to display
+  ParseErrorBundle s e ->
+  -- | Textual rendition of the bundle
+  String
+errorBundlePrettyWith format ParseErrorBundle {..} =
+  let (r, _) = foldl f (id, bundlePosState) bundleErrors
+   in r ""
+  where
+    f ::
+      (ShowS, PosState s) ->
+      ParseError s e ->
+      (ShowS, PosState s)
+    f (o, !pst) e = (o . (outChunk ++), pst')
+      where
+        (msline, pst') = reachOffset (errorOffset e) pst
+        epos = pstateSourcePos pst'
+        outChunk = format msline epos e
+
+-- | Pretty-print a 'ParseErrorBundle'. All 'ParseError's in the bundle will
 -- be pretty-printed in order together with the corresponding offending
 -- lines by doing a single pass over the input stream. The rendered 'String'
 -- always ends with a newline.
@@ -364,18 +397,15 @@ errorBundlePretty ::
   ParseErrorBundle s e ->
   -- | Textual rendition of the bundle
   String
-errorBundlePretty ParseErrorBundle {..} =
-  let (r, _) = foldl f (id, bundlePosState) bundleErrors
-   in drop 1 (r "")
+errorBundlePretty = drop 1 . errorBundlePrettyWith format
   where
-    f ::
-      (ShowS, PosState s) ->
+    format ::
+      Maybe String ->
+      SourcePos ->
       ParseError s e ->
-      (ShowS, PosState s)
-    f (o, !pst) e = (o . (outChunk ++), pst')
+      String
+    format msline epos e = outChunk
       where
-        (msline, pst') = reachOffset (errorOffset e) pst
-        epos = pstateSourcePos pst'
         outChunk =
           "\n"
             <> sourcePosPretty epos
@@ -417,6 +447,41 @@ errorBundlePretty ParseErrorBundle {..} =
             TrivialError _ (Just x) _ -> errorItemLength pxy x
             FancyError _ xs ->
               E.foldl' (\a b -> max a (errorFancyLength b)) 1 xs
+
+-- | Pretty-print a 'ParseErrorBundle'. All 'ParseError's in the bundle will
+-- be pretty-printed in order by doing a single pass over the input stream.
+--
+-- The rendered format is suitable for custom GHC pre-processors (as can be
+-- specified with -F -pgmF).
+--
+-- @since 9.7.0
+errorBundlePrettyForGhcPreProcessors ::
+  forall s e.
+  ( VisualStream s,
+    TraversableStream s,
+    ShowErrorComponent e
+  ) =>
+  -- | Parse error bundle to display
+  ParseErrorBundle s e ->
+  -- | Textual rendition of the bundle
+  String
+errorBundlePrettyForGhcPreProcessors = errorBundlePrettyWith format
+  where
+    format ::
+      Maybe String ->
+      SourcePos ->
+      ParseError s e ->
+      String
+    format _msline epos e =
+      sourcePosPretty epos
+        <> ":"
+        <> indent (parseErrorTextPretty e)
+
+    indent :: String -> String
+    indent =
+      lines >>> \case
+        [err] -> err
+        err -> intercalate "\n" $ map (" " <>) err
 
 -- | Pretty-print a 'ParseError'. The rendered 'String' always ends with a
 -- newline.
