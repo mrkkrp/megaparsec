@@ -10,7 +10,7 @@
 * `many` and `some` of the `Alternative` instance of `ParsecT` are now more
   efficient, since they use the monadic implementations under the hood.
   [Issue 567](https://github.com/mrkkrp/megaparsec/issues/567).
-* Add `Text.Megaparsec.Error.errorBundlePrettyForGhcPreProcessors`. [PR
+* Added `Text.Megaparsec.Error.errorBundlePrettyForGhcPreProcessors`. [PR
   573](https://github.com/mrkkrp/megaparsec/pull/573).
 
 ## Megaparsec 9.6.1
