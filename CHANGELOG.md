@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Upcoming
+## Megaparsec 9.7.0
 
 * Implemented correct handling of wide Unicode characters in error messages.
   To that end, a new module `Text.Megaparsec.Unicode` was introduced. [Issue
