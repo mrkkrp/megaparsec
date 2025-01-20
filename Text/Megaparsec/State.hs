@@ -29,7 +29,6 @@ where
 
 import Control.DeepSeq (NFData)
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics
 import {-# SOURCE #-} Text.Megaparsec.Error (ParseError)
 import Text.Megaparsec.Pos
@@ -53,7 +52,7 @@ data State s e = State
     -- @since 8.0.0
     stateParseErrors :: [ParseError s e]
   }
-  deriving (Typeable, Generic)
+  deriving (Generic)
 
 deriving instance
   ( Show (ParseError s e),
@@ -110,7 +109,7 @@ data PosState s = PosState
     -- | Prefix to prepend to offending line
     pstateLinePrefix :: String
   }
-  deriving (Show, Eq, Data, Typeable, Generic)
+  deriving (Show, Eq, Data, Generic)
 
 instance (NFData s) => NFData (PosState s)
 

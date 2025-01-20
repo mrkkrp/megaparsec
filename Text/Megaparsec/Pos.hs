@@ -36,7 +36,6 @@ where
 import Control.DeepSeq
 import Control.Exception
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics
 
 ----------------------------------------------------------------------------
@@ -49,7 +48,7 @@ import GHC.Generics
 --
 -- @since 5.0.0
 newtype Pos = Pos Int
-  deriving (Show, Eq, Ord, Data, Generic, Typeable, NFData)
+  deriving (Show, Eq, Ord, Data, Generic, NFData)
 
 -- | Construction of 'Pos' from 'Int'. The function throws
 -- 'InvalidPosException' when given a non-positive argument.
@@ -105,7 +104,7 @@ instance Read Pos where
 newtype InvalidPosException
   = -- | Contains the actual value that was passed to 'mkPos'
     InvalidPosException Int
-  deriving (Eq, Show, Data, Typeable, Generic)
+  deriving (Eq, Show, Data, Generic)
 
 instance Exception InvalidPosException
 
@@ -126,7 +125,7 @@ data SourcePos = SourcePos
     -- | Column number
     sourceColumn :: !Pos
   }
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic)
+  deriving (Show, Read, Eq, Ord, Data, Generic)
 
 instance NFData SourcePos
 
