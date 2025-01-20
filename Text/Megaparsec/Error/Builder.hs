@@ -47,7 +47,6 @@ import qualified Data.List.NonEmpty as NE
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as E
-import Data.Typeable (Typeable)
 import GHC.Generics
 import Text.Megaparsec.Error
 import Text.Megaparsec.Stream
@@ -57,7 +56,7 @@ import Text.Megaparsec.Stream
 
 -- | Auxiliary type for construction of trivial parse errors.
 data ET s = ET (Maybe (ErrorItem (Token s))) (Set (ErrorItem (Token s)))
-  deriving (Typeable, Generic)
+  deriving (Generic)
 
 deriving instance (Eq (Token s)) => Eq (ET s)
 
@@ -84,7 +83,7 @@ instance (Stream s) => Monoid (ET s) where
 
 -- | Auxiliary type for construction of fancy parse errors.
 newtype EF e = EF (Set (ErrorFancy e))
-  deriving (Eq, Ord, Data, Typeable, Generic)
+  deriving (Eq, Ord, Data, Generic)
 
 instance (Ord e) => Semigroup (EF e) where
   EF xs0 <> EF xs1 = EF (E.union xs0 xs1)

@@ -83,7 +83,7 @@ data ErrorItem t
     Label (NonEmpty Char)
   | -- | End of input
     EndOfInput
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
+  deriving (Show, Read, Eq, Ord, Data, Generic, Functor)
 
 instance (NFData t) => NFData (ErrorItem t)
 
@@ -101,7 +101,7 @@ data ErrorFancy e
     ErrorIndentation Ordering Pos Pos
   | -- | Custom error data
     ErrorCustom e
-  deriving (Show, Read, Eq, Ord, Data, Typeable, Generic, Functor)
+  deriving (Show, Read, Eq, Ord, Data, Generic, Functor)
 
 instance (NFData a) => NFData (ErrorFancy a) where
   rnf (ErrorFail str) = rnf str
@@ -129,7 +129,7 @@ data ParseError s e
     --
     -- Type of the first argument was changed in the version /7.0.0/.
     FancyError Int (Set (ErrorFancy e))
-  deriving (Typeable, Generic)
+  deriving (Generic)
 
 deriving instance
   ( Show (Token s),
