@@ -270,13 +270,6 @@ deriving instance
   Eq (ParseErrorBundle s e)
 
 deriving instance
-  ( Typeable s,
-    Typeable (Token s),
-    Typeable e
-  ) =>
-  Typeable (ParseErrorBundle s e)
-
-deriving instance
   ( Data s,
     Data (Token s),
     Ord (Token s),
