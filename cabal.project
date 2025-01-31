@@ -1,1 +1,4 @@
 packages: . megaparsec-tests
+tests: True
+benchmarks: True
+constraints: megaparsec +dev, megaparsec-tests +dev

@@ -18,10 +18,8 @@ jobs:
     needs: ormolu
     strategy:
       matrix:
-        cabal: ["3.10"]
+        cabal: ["3.12"]
         ghc:   ["9.8.4", "9.10.1", "9.12.1"]
-    env:
-      CONFIG: "--enable-tests --enable-benchmarks --flags=dev"
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
@@ -30,7 +28,7 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
       - run: cabal update
-      - run: cabal freeze $CONFIG
+      - run: cabal freeze
       - uses: actions/cache@v4.0.0
         with:
           path: |
@@ -42,9 +40,9 @@ jobs:
       - run: cabal format
       - run: pushd megaparsec-tests && cabal format && popd
       - run: git diff --exit-code --color=always
-      - run: cabal build all $CONFIG
-      - run: cabal test all $CONFIG
-      - run: cabal haddock megaparsec $CONFIG
-      - run: cabal haddock megaparsec-tests $CONFIG
+      - run: cabal build all
+      - run: cabal test all
+      - run: cabal haddock megaparsec
+      - run: cabal haddock megaparsec-tests
       - run: cabal sdist
       - run: pushd megaparsec-tests && cabal sdist && popd
