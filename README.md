@@ -4,7 +4,7 @@
 [![Hackage](https://img.shields.io/hackage/v/megaparsec.svg?style=flat)](https://hackage.haskell.org/package/megaparsec)
 [![Stackage Nightly](http://stackage.org/package/megaparsec/badge/nightly)](http://stackage.org/nightly/package/megaparsec)
 [![Stackage LTS](http://stackage.org/package/megaparsec/badge/lts)](http://stackage.org/lts/package/megaparsec)
-![CI](https://github.com/mrkkrp/megaparsec/workflows/CI/badge.svg?branch=master)
+[![CI](https://github.com/mrkkrp/megaparsec/actions/workflows/ci.yaml/badge.svg)](https://github.com/mrkkrp/megaparsec/actions/workflows/ci.yaml)
 
 * [Features](#features)
     * [Core features](#core-features)
