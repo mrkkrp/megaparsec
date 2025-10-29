@@ -9,7 +9,7 @@ author:
     Paolo Martini <paolo@nemail.it>,
     Daan Leijen <daan@microsoft.com>
 
-tested-with:     ghc ==9.8.4 ghc ==9.10.1 ghc ==9.12.1
+tested-with:     ghc ==9.8.4 ghc ==9.10.3 ghc ==9.12.1
 homepage:        https://github.com/mrkkrp/megaparsec
 bug-reports:     https://github.com/mrkkrp/megaparsec/issues
 synopsis:        Monadic parser combinators
