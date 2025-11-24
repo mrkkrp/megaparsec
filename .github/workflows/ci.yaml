@@ -11,7 +11,7 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: haskell-actions/run-ormolu@v17
   build:
     runs-on: ubuntu-latest
@@ -21,7 +21,7 @@ jobs:
         cabal: ["3.12"]
         ghc:   ["9.8.4", "9.10.3", "9.12.1"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: haskell-actions/setup@v2
         id: setup-haskell-cabal
         with:
