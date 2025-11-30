@@ -386,8 +386,8 @@ region f m = do
 -- | Register a 'ParseError' for later reporting. This action does not end
 -- parsing and has no effect except for adding the given 'ParseError' to the
 -- collection of “delayed” 'ParseError's which will be taken into
--- consideration at the end of parsing. Only if this collection is empty the
--- parser will succeed. This is the main way to report several parse errors
+-- consideration at the end of parsing. Only if this collection is empty will
+-- the parser succeed. This is the main way to report several parse errors
 -- at once.
 --
 -- @since 8.0.0
@@ -523,7 +523,7 @@ oneOf ::
 oneOf cs = satisfy (\x -> elem x cs)
 {-# INLINE oneOf #-}
 
--- | As the dual of 'oneOf', @'noneOf' ts@ succeeds if the current token
+-- | As the dual of 'oneOf', @'noneOf' ts@ succeeds if the current token is
 -- /not/ in the supplied list of tokens @ts@. Returns the parsed character.
 -- Note that this parser cannot automatically generate the “expected”
 -- component of error message, so usually you should label it manually with
@@ -539,7 +539,7 @@ oneOf cs = satisfy (\x -> elem x cs)
 -- @since 7.0.0
 noneOf ::
   (Foldable f, MonadParsec e s m) =>
-  -- | Collection of taken we should not match
+  -- | Collection of tokens we should not match
   f (Token s) ->
   m (Token s)
 noneOf cs = satisfy (\x -> notElem x cs)
