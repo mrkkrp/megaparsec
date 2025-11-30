@@ -126,7 +126,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- to the point where the next object starts.
   --
   -- Note that if @r@ fails, the original error message is reported as if
-  -- without 'withRecovery'. In no way recovering parser @r@ can influence
+  -- without 'withRecovery'. In no way can the recovering parser @r@ influence
   -- error messages.
   --
   -- @since 4.4.0
@@ -245,7 +245,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     m (Tokens s)
 
   -- | Extract the specified number of tokens from the input stream and
-  -- return them packed as a chunk of stream. If there is not enough tokens
+  -- return them packed as a chunk of stream. If there are not enough tokens
   -- in the stream, a parse error will be signaled. It's guaranteed that if
   -- the parser succeeds, the requested number of tokens will be returned.
   --
