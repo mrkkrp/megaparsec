@@ -29,7 +29,7 @@ jobs:
           cabal-version: ${{ matrix.cabal }}
       - run: cabal update
       - run: cabal freeze
-      - uses: actions/cache@v4.3.0
+      - uses: actions/cache@v5.0.1
         with:
           path: |
             ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
