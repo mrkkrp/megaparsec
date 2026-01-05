@@ -344,6 +344,3 @@ instance Arbitrary B.ByteString where
 
 instance Arbitrary BL.ByteString where
   arbitrary = BL.pack <$> arbitrary
-
-instance (Arbitrary a) => Arbitrary (NonEmpty a) where
-  arbitrary = NE.fromList <$> (arbitrary `suchThat` (not . null))
