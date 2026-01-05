@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Text.Megaparsec.CharSpec (spec) where
 
 import Control.Monad
@@ -12,9 +10,6 @@ import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
 import Text.Megaparsec.Char
-
-instance Arbitrary GeneralCategory where
-  arbitrary = elements [minBound .. maxBound]
 
 spec :: Spec
 spec = do
