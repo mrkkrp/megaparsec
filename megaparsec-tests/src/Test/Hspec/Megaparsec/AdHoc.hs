@@ -293,7 +293,7 @@ instance Arbitrary (ErrorFancy a) where
       ]
 
 instance
-  (Arbitrary (Token s), Ord (Token s), Arbitrary e, Ord e) =>
+  (Arbitrary (Token s), Ord (Token s), Ord e) =>
   Arbitrary (ParseError s e)
   where
   arbitrary =
