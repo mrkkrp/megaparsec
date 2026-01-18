@@ -168,8 +168,7 @@ instance (Stream s, Ord e) => Monoid (ParseError s e) where
   {-# INLINE mappend #-}
 
 instance
-  ( Show s,
-    Show (Token s),
+  ( Show (Token s),
     Show e,
     ShowErrorComponent e,
     VisualStream s,

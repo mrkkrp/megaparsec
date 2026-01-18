@@ -18,8 +18,8 @@ jobs:
     needs: ormolu
     strategy:
       matrix:
-        cabal: ["3.12"]
-        ghc:   ["9.8.4", "9.10.3", "9.12.1"]
+        cabal: ["3.16"]
+        ghc:   ["9.10.3", "9.12.4", "9.14.1"]
     steps:
       - uses: actions/checkout@v6
       - uses: haskell-actions/setup@v2
