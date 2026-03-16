@@ -235,7 +235,7 @@ strSourcePos tabWidth ipos input =
 toChar :: Word8 -> Char
 toChar = chr . fromIntegral
 
--- | Covert a char to byte.
+-- | Convert a char to byte.
 fromChar :: Char -> Maybe Word8
 fromChar x =
   let p = ord x

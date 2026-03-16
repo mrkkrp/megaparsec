@@ -6,7 +6,7 @@ import qualified Text.Megaparsec.Unicode as Unicode
 spec :: Spec
 spec = do
   describe "stringLength" $
-    it "computes correct length in the presense of wide chars" $
+    it "computes correct length in the presence of wide chars" $
       Unicode.stringLength "123 구구 이면" `shouldBe` 13
   describe "charLength" $ do
     it "returns 1 for non-wide chars" $
