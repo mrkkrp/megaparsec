@@ -263,7 +263,7 @@ spec = do
           prs p s `shouldParse` n
           prs' p s `succeedsLeaving` ""
     context "with scientific" $
-      it "parses singed scientific numbers" $
+      it "parses signed scientific numbers" $
         property $ \n -> do
           let p = signed (hidden B.space) scientific
               s = B8.pack $ either show show (n :: Either Integer Double)

@@ -440,10 +440,10 @@ pLookAhead p = ParsecT $ \s _ cerr eok eerr ->
 pNotFollowedBy :: (Stream s) => ParsecT e s m a -> ParsecT e s m ()
 pNotFollowedBy p = ParsecT $ \s@(State input o _ _) _ _ eok eerr ->
   let what = maybe EndOfInput (Tokens . nes . fst) (take1_ input)
-      unexpect u = TrivialError o (pure u) E.empty
-      cok' _ _ _ = eerr (unexpect what) s
+      unexpected u = TrivialError o (pure u) E.empty
+      cok' _ _ _ = eerr (unexpected what) s
       cerr' _ _ = eok () s mempty
-      eok' _ _ _ = eerr (unexpect what) s
+      eok' _ _ _ = eerr (unexpected what) s
       eerr' _ _ = eok () s mempty
    in unParser p s cok' cerr' eok' eerr'
 {-# INLINE pNotFollowedBy #-}
@@ -521,14 +521,14 @@ pTokens ::
   ParsecT e s m (Tokens s)
 pTokens f tts = ParsecT $ \s@(State input o pst de) cok _ eok eerr ->
   let pxy = Proxy :: Proxy s
-      unexpect pos' u =
+      unexpected pos' u =
         let us = pure u
             ps = (E.singleton . Tokens . NE.fromList . chunkToTokens pxy) tts
          in TrivialError pos' us ps
       len = chunkLength pxy tts
    in case takeN_ len input of
         Nothing ->
-          eerr (unexpect o EndOfInput) s
+          eerr (unexpected o EndOfInput) s
         Just (tts', input') ->
           if f tts tts'
             then
@@ -538,7 +538,7 @@ pTokens f tts = ParsecT $ \s@(State input o pst de) cok _ eok eerr ->
                     else cok tts' st mempty
             else
               let ps = (Tokens . NE.fromList . chunkToTokens pxy) tts'
-               in eerr (unexpect o ps) (State input o pst de)
+               in eerr (unexpected o ps) (State input o pst de)
 {-# INLINE pTokens #-}
 
 pTakeWhileP ::

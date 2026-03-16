@@ -209,7 +209,7 @@ spec = do
                     s = [c, b]
                 prs p s `shouldFailWith` err 0 (utok c <> etok a <> etok b)
                 prs' p s `failsLeaving` s
-        context "when stream is emtpy" $
+        context "when stream is empty" $
           it "signals correct parse error" $
             property $ \a b -> do
               let p = char a <|> (char b *> char a)
@@ -1162,7 +1162,7 @@ spec = do
           grs p "" (`shouldFailWith` TrivialError 0 us ps)
 
     describe "fancyFailure" $
-      it "singals correct parse error" $
+      it "signals correct parse error" $
         property $ \xs -> do
           let p :: (MonadParsec Void String m) => m ()
               p = void (fancyFailure xs)
@@ -1253,8 +1253,8 @@ spec = do
               p = void (registerFailure us ps)
           grs p "" (`shouldFailWith` TrivialError 0 us ps)
 
-    describe "reisterFancyFailure" $
-      it "singals correct parse error" $
+    describe "registerFancyFailure" $
+      it "signals correct parse error" $
         property $ \xs -> do
           let p :: (MonadParsec Void String m) => m ()
               p = void (registerFancyFailure xs)
@@ -1777,7 +1777,7 @@ spec = do
 
     describe "mkParsec" $
       it "enables defining new primitives" $ do
-        -- This example lifts breakOn from text, although in order to re-use
+        -- This example lifts breakOn from text, although in order to reuse
         -- the machinery that we have here it parses String, hence
         -- conversions. The parser always succeeds.
         let breakOn end = mkParsec $ \s ->
