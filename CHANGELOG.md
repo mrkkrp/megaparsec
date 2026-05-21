@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.7.1
+
+* Typo fixes and compatibility with `QuickCheck >= 2.17` for
+  `megaparsec-tests`.
+
 ## Megaparsec 9.7.0
 
 * Implemented correct handling of wide Unicode characters in error messages.
