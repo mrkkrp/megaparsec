@@ -214,6 +214,20 @@ spec = do
             property $ \a b -> do
               let p = char a <|> (char b *> char a)
               prs p "" `shouldFailWith` err 0 (ueof <> etok a <> etok b)
+      context "when testing associativity with try" $ do
+        let a = try (char 'a' >> empty)
+            b = void (char 'b')
+            c = pure ()
+            pLeftAssociative = ((a <|> b) <|> c) >> char 'd'
+            pRightAssociative = (a <|> (b <|> c)) >> char 'd'
+            e = err 0 (utok 'a' <> etok 'd' <> etok 'b')
+            s = "aaa"
+        context "left associative" $
+          it "fails with the right error" $
+            prs pLeftAssociative s `shouldFailWith` e
+        context "right associative" $
+          it "fails with the right error" $
+            prs pRightAssociative s `shouldFailWith` e
       it "associativity of fold over alternatives should not matter" $ do
         let p = asum [empty, string ">>>", empty, return "foo"] <?> "bar"
             p' = bsum [empty, string ">>>", empty, return "foo"] <?> "bar"
