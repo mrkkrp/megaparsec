@@ -1,5 +1,10 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.7.2
+
+* Fixed the associativity of the `(<|>)` operator. [Issue
+  412](https://github.com/mrkkrp/megaparsec/issues/412).
+
 ## Megaparsec 9.7.1
 
 * Typo fixes and compatibility with `QuickCheck >= 2.17` for
