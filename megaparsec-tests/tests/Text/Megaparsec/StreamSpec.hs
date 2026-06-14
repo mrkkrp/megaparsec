@@ -8,7 +8,6 @@ import Control.Monad
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (chr, isControl, isLetter, isSpace)
-import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy

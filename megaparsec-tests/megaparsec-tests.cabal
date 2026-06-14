@@ -81,7 +81,7 @@ test-suite tests
     if flag(dev)
         ghc-options:
             -Wall -Werror -Wredundant-constraints -Wpartial-fields
-            -Wunused-packages -Wno-unused-imports
+            -Wunused-packages
 
     else
         ghc-options: -O2 -Wall
