@@ -41,7 +41,6 @@ where
 
 import Control.Applicative
 import Data.Functor (void)
-import Data.List (foldl')
 import Data.Proxy
 import Data.Scientific (Scientific)
 import qualified Data.Scientific as Sci

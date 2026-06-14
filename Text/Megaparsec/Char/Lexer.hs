@@ -69,7 +69,6 @@ where
 import Control.Applicative
 import Control.Monad (void)
 import qualified Data.Char as Char
-import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Proxy
