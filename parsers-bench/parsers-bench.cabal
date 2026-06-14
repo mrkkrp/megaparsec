@@ -1,7 +1,7 @@
-cabal-version:   >=1.18
+cabal-version:   2.4
 name:            parsers-bench
 version:         0.1.0
-license:         BSD3
+license:         BSD-3-Clause
 maintainer:      Mark Karpov <markkarpov92@gmail.com>
 author:          Mark Karpov <markkarpov92@gmail.com>
 tested-with:     ghc ==9.8.4 ghc ==9.10.1 ghc ==9.12.1
