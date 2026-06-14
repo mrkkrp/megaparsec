@@ -19,7 +19,7 @@
         system = "x86_64-linux";
         config.allowBroken = true;
       };
-      ghc = "ghc924";
+      ghc = "ghc9124";
 
       megaparsecSource = pkgs.lib.sourceByRegex ./. [
         "^CHANGELOG\.md$"
@@ -146,13 +146,13 @@
     flake-utils.lib.eachDefaultSystem (system:
       {
         packages = flake-utils.lib.flattenTree {
-          base = pkgs.recurseIntoAttrs base;
+          base = pkgs.lib.recurseIntoAttrs base;
           all_base = pkgs.linkFarmFromDrvs "base" (builtins.attrValues base);
-          deps = pkgs.recurseIntoAttrs deps;
+          deps = pkgs.lib.recurseIntoAttrs deps;
           all_deps = pkgs.linkFarmFromDrvs "deps" (builtins.attrValues deps);
-          benches = pkgs.recurseIntoAttrs benches;
+          benches = pkgs.lib.recurseIntoAttrs benches;
           all_benches = pkgs.linkFarmFromDrvs "benches" (builtins.attrValues benches);
-          dist = pkgs.recurseIntoAttrs dist;
+          dist = pkgs.lib.recurseIntoAttrs dist;
           all_dist = pkgs.linkFarmFromDrvs "dist" (builtins.attrValues dist);
         };
         defaultPackage = base.megaparsec;
