@@ -1,4 +1,4 @@
-packages: . megaparsec-tests
+packages: . megaparsec-tests parsers-bench
 tests: True
 benchmarks: True
-constraints: megaparsec +dev, megaparsec-tests +dev
+constraints: megaparsec +dev, megaparsec-tests +dev, parsers-bench +dev
