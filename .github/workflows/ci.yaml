@@ -7,46 +7,9 @@ on:
     types:
       - opened
       - synchronize
+
 jobs:
-  ormolu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: haskell-actions/run-ormolu@v17
-  build:
-    runs-on: ubuntu-latest
-    needs: ormolu
-    strategy:
-      matrix:
-        cabal: ["3.16"]
-        ghc:   ["9.10.3", "9.12.4", "9.14.1"]
-    env:
-      CABAL_CHECK_OPTIONS: "--ignore=missing-upper-bounds --ignore=option-o2"
-    steps:
-      - uses: actions/checkout@v6
-      - uses: haskell-actions/setup@v2
-        id: setup-haskell-cabal
-        with:
-          ghc-version: ${{ matrix.ghc }}
-          cabal-version: ${{ matrix.cabal }}
-      - run: cabal update
-      - run: cabal freeze
-      - uses: actions/cache@v5.0.2
-        with:
-          path: |
-            ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-            dist-newstyle
-          key: ${{ runner.os }}-${{ matrix.ghc }}-0-${{ hashFiles('cabal.project.freeze') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-0-
-      - run: cabal format
-      - run: pushd megaparsec-tests && cabal format && popd
-      - run: git diff --exit-code --color=always
-      - run: cabal check $CABAL_CHECK_OPTIONS
-      - run: pushd megaparsec-tests && cabal check $CABAL_CHECK_OPTIONS && popd
-      - run: cabal build all
-      - run: cabal test all
-      - run: cabal haddock megaparsec
-      - run: cabal haddock megaparsec-tests
-      - run: cabal sdist
-      - run: pushd megaparsec-tests && cabal sdist && popd
+  ci:
+    uses: mrkkrp/haskell-ci/.github/workflows/haskell-ci.yml@master
+    with:
+      additional-packages: 'megaparsec-tests'
