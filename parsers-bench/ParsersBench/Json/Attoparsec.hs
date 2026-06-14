@@ -8,7 +8,6 @@ module ParsersBench.Json.Attoparsec
   )
 where
 
-import Control.Applicative
 import qualified Data.Attoparsec.ByteString as A
 import Data.Attoparsec.ByteString.Char8
 import Data.ByteString (ByteString)
