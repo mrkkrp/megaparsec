@@ -20,6 +20,8 @@ jobs:
       matrix:
         cabal: ["3.16"]
         ghc:   ["9.10.3", "9.12.4", "9.14.1"]
+    env:
+      CABAL_CHECK_OPTIONS: "--ignore=missing-upper-bounds --ignore=option-o2"
     steps:
       - uses: actions/checkout@v6
       - uses: haskell-actions/setup@v2
@@ -40,6 +42,8 @@ jobs:
       - run: cabal format
       - run: pushd megaparsec-tests && cabal format && popd
       - run: git diff --exit-code --color=always
+      - run: cabal check $CABAL_CHECK_OPTIONS
+      - run: pushd megaparsec-tests && cabal check $CABAL_CHECK_OPTIONS && popd
       - run: cabal build all
       - run: cabal test all
       - run: cabal haddock megaparsec
