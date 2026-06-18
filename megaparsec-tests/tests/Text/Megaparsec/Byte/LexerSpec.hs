@@ -64,6 +64,13 @@ spec = do
               s = B8.pack (showInt n "")
           prs p s `shouldParse` n
           prs' p s `succeedsLeaving` ""
+    context "when parsing Float values (issue #479)" $
+      it "maintains precision without accumulated floating-point errors" $ do
+        let p = decimal :: Parser Float
+            s = "655361200000"
+            expected = fromIntegral (655361200000 :: Integer) :: Float
+        prs p s `shouldParse` expected
+        prs' p s `succeedsLeaving` ""
     context "when stream does not begin with decimal digits" $
       it "signals correct parse error" $
         property $ \a as ->

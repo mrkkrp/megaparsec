@@ -4,6 +4,10 @@
 
 * Fixed the associativity of the `(<|>)` operator. [Issue
   412](https://github.com/mrkkrp/megaparsec/issues/412).
+* Fixed the loss of precision in `decimal`, `binary`, `octal`, and
+  `hexadecimal` functions in `Text.Megaparsec.Byte.Lexer` and
+  `Text.Megaparsec.Char.Lexer` when they are used to parse floating point
+  numbers. [Issue 479](https://github.com/mrkkrp/megaparsec/issues/479).
 
 ## Megaparsec 9.7.1
 

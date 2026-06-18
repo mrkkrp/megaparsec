@@ -121,7 +121,7 @@ decimal_ ::
   m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w = a * 10 + fromIntegral (w - 48)
 {-# INLINE decimal_ #-}
 
@@ -144,7 +144,7 @@ binary =
     <$> takeWhile1P Nothing isBinDigit
     <?> "binary integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w = a * 2 + fromIntegral (w - 48)
     isBinDigit w = w == 48 || w == 49
 {-# INLINEABLE binary #-}
@@ -169,7 +169,7 @@ octal =
     <$> takeWhile1P Nothing isOctDigit
     <?> "octal integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w = a * 8 + fromIntegral (w - 48)
     isOctDigit w = w - 48 < 8
 {-# INLINEABLE octal #-}
@@ -194,7 +194,7 @@ hexadecimal =
     <$> takeWhile1P Nothing isHexDigit
     <?> "hexadecimal integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a w
       | w >= 48 && w <= 57 = a * 16 + fromIntegral (w - 48)
       | w >= 97 = a * 16 + fromIntegral (w - 87)
