@@ -568,8 +568,8 @@ reachOffset' ::
   (Token s -> Char) ->
   -- | Newline token and tab token
   (Token s, Token s) ->
-  -- | Increment in column position for a token
-  (Token s -> Pos) ->
+  -- | Update column position for a token
+  (Token s -> Pos -> Pos) ->
   -- | Offset to reach
   Int ->
   -- | Initial 'PosState' to use
@@ -631,7 +631,7 @@ reachOffset'
                     (g . (fromTok ch :))
               | otherwise ->
                   St
-                    (SourcePos n l (c <> columnIncrement ch))
+                    (SourcePos n l (columnIncrement ch c))
                     (g . (fromTok ch :))
 {-# INLINE reachOffset' #-}
 
@@ -645,9 +645,9 @@ reachOffsetNoLine' ::
   (forall b. (b -> Token s -> b) -> b -> Tokens s -> b) ->
   -- | Newline token and tab token
   (Token s, Token s) ->
+  -- | Update column position for a token
+  (Token s -> Pos -> Pos) ->
   -- | Offset to reach
-  -- | Increment in column position for a token
-  (Token s -> Pos) ->
   Int ->
   -- | Initial 'PosState' to use
   PosState s ->
@@ -680,7 +680,7 @@ reachOffsetNoLine'
               | ch == tabTok ->
                   SourcePos n l (mkPos $ c' + w - ((c' - 1) `rem` w))
               | otherwise ->
-                  SourcePos n l (c <> columnIncrement ch)
+                  SourcePos n l (columnIncrement ch c)
 {-# INLINE reachOffsetNoLine' #-}
 
 -- | Like 'BL.splitAt' but accepts the index as an 'Int'.
@@ -764,12 +764,15 @@ expandTab w' = go 0 0
     go !i n xs = ' ' : go (i + 1) (n - 1) xs
     w = unPos w'
 
--- | Return increment in column position that corresponds to the given
--- 'Char'.
-charInc :: Char -> Pos
-charInc ch = if Unicode.isWideChar ch then pos1 <> pos1 else pos1
+-- | Return updated column position that corresponds to the given 'Char'.
+charInc :: Char -> Pos -> Pos
+charInc ch c
+  | Unicode.isZeroWidthChar ch = c
+  | Unicode.isWideChar ch = c <> pos1 <> pos1
+  | otherwise = c <> pos1
 
--- | Return increment in column position that corresponds to the given
--- 'Word8'.
-byteInc :: Word8 -> Pos
-byteInc _ = pos1
+-- | Return updated column position that corresponds to the given 'Word8'.
+byteInc :: Word8 -> Pos -> Pos
+byteInc w c
+  | w < 0x20 || (w >= 0x7f && w < 0xa0) = c -- C0 and C1 control chars
+  | otherwise = c <> pos1
