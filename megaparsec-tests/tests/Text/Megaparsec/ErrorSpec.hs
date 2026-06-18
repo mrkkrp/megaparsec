@@ -101,6 +101,11 @@ spec = do
           pe = err 1 (utok 's' <> etok 'x') :: PE
       mkBundlePE s pe
         `shouldBe` "1:9:\n  |\n1 |         something\n  |         ^\nunexpected 's'\nexpecting 'x'\n"
+    it "shows offending line in the presence of zero-width characters correctly (issue #572)" $ do
+      let s = "abc\SOHdef\SOHghi" :: String
+          pe = err 4 (utok 'd' <> etok 'x') :: PE
+      mkBundlePE s pe
+        `shouldBe` "1:4:\n  |\n1 | abc\SOHdef\SOHghi\n  |    ^\nunexpected 'd'\nexpecting 'x'\n"
     it "uses continuous highlighting properly (trivial)" $ do
       let s = "\tfoobar" :: String
           pe = err 1 (utoks "foo" <> utoks "rar") :: PE

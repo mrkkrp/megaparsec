@@ -16,6 +16,7 @@ module Text.Megaparsec.Unicode
   ( stringLength,
     charLength,
     isWideChar,
+    isZeroWidthChar,
   )
 where
 
@@ -33,7 +34,10 @@ stringLength = sum . fmap charLength
 --
 -- @since 9.7.0
 charLength :: Char -> Int
-charLength ch = if isWideChar ch then 2 else 1
+charLength ch
+  | isZeroWidthChar ch = 0
+  | isWideChar ch = 2
+  | otherwise = 1
 
 -- | Determine whether the given 'Char' is “wide”, that is, whether it spans
 -- 2 columns instead of one.
@@ -50,6 +54,24 @@ isWideChar c = go (bounds wideCharRanges)
       where
         mid = (lo + hi) `div` 2
         (a, b) = wideCharRanges ! mid
+    n = ord c
+
+-- | Determine whether the given 'Char' is "zero-width", that is, whether it
+-- has no visible representation and does not advance the cursor position.
+-- This includes control characters and certain Unicode zero-width characters.
+--
+-- @since 9.8.0
+isZeroWidthChar :: Char -> Bool
+isZeroWidthChar c = go (bounds zeroWidthCharRanges)
+  where
+    go (lo, hi)
+      | hi < lo = False
+      | a <= n && n <= b = True
+      | n < a = go (lo, pred mid)
+      | otherwise = go (succ mid, hi)
+      where
+        mid = (lo + hi) `div` 2
+        (a, b) = zeroWidthCharRanges ! mid
     n = ord c
 
 -- | Wide character ranges.
@@ -178,3 +200,24 @@ wideCharRanges =
       (0x02f800, 0x02fa1d)
     ]
 {-# NOINLINE wideCharRanges #-}
+
+-- | Zero-width character ranges.
+zeroWidthCharRanges :: Array Int (Int, Int)
+zeroWidthCharRanges =
+  listArray
+    (0, 12)
+    [ (0x0000, 0x001f), -- C0 control characters
+      (0x007f, 0x009f), -- DEL and C1 control characters
+      (0x00ad, 0x00ad), -- Soft Hyphen
+      (0x0300, 0x036f), -- Combining Diacritical Marks
+      (0x0483, 0x0489), -- Combining Cyrillic
+      (0x0591, 0x05bd), -- Hebrew combining marks
+      (0x05bf, 0x05bf), -- Hebrew point
+      (0x05c1, 0x05c2), -- Hebrew points
+      (0x05c4, 0x05c5), -- Hebrew marks
+      (0x05c7, 0x05c7), -- Hebrew point
+      (0x0610, 0x061a), -- Arabic combining marks
+      (0x200b, 0x200f), -- Zero width chars and directional marks
+      (0x202a, 0x202e) -- Directional formatting
+    ]
+{-# NOINLINE zeroWidthCharRanges #-}

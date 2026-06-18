@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Megaparsec 9.7.2
+## Megaparsec 9.8.0
 
 * Fixed the associativity of the `(<|>)` operator. [Issue
   412](https://github.com/mrkkrp/megaparsec/issues/412).
@@ -8,6 +8,9 @@
   `hexadecimal` functions in `Text.Megaparsec.Byte.Lexer` and
   `Text.Megaparsec.Char.Lexer` when they are used to parse floating point
   numbers. [Issue 479](https://github.com/mrkkrp/megaparsec/issues/479).
+* Fixed handling of zero-width characters in error messages. To that end,
+  added `isZeroWidthChar` function in `Text.Megaparsec.Unicode`. [Issue
+  572](https://github.com/mrkkrp/megaparsec/issues/572).
 
 ## Megaparsec 9.7.1
 
