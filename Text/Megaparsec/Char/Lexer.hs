@@ -371,7 +371,7 @@ decimal_ ::
   m a
 decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 10 + fromIntegral (Char.digitToInt c)
 {-# INLINE decimal_ #-}
 
@@ -394,7 +394,7 @@ binary =
     <$> takeWhile1P Nothing isBinDigit
     <?> "binary integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 2 + fromIntegral (Char.digitToInt c)
     isBinDigit x = x == '0' || x == '1'
 {-# INLINEABLE binary #-}
@@ -422,7 +422,7 @@ octal =
     <$> takeWhile1P Nothing Char.isOctDigit
     <?> "octal integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 8 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE octal #-}
 
@@ -449,7 +449,7 @@ hexadecimal =
     <$> takeWhile1P Nothing Char.isHexDigit
     <?> "hexadecimal integer"
   where
-    mkNum = foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
+    mkNum = fromInteger . foldl' step 0 . chunkToTokens (Proxy :: Proxy s)
     step a c = a * 16 + fromIntegral (Char.digitToInt c)
 {-# INLINEABLE hexadecimal #-}
 
