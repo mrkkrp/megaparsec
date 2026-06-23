@@ -8,6 +8,7 @@ import Control.Monad
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (chr, isControl, isLetter, isSpace)
+import qualified Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Proxy
@@ -519,7 +520,7 @@ describeReachOffset Proxy =
       property $ \os' (NonNegative d) s -> do
         let os = getNonNegative <$> os'
             s' :: PosState String
-            s' = foldl' f s os
+            s' = Data.List.foldl' f s os
             o' = case os of
               [] -> d
               xs -> maximum xs + d
@@ -576,7 +577,7 @@ describeReachOffsetNoLine Proxy =
       property $ \os' (NonNegative d) s -> do
         let os = getNonNegative <$> os'
             s' :: PosState String
-            s' = foldl' f s os
+            s' = Data.List.foldl' f s os
             o' = case os of
               [] -> d
               xs -> maximum xs + d

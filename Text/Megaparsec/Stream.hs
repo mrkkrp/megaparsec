@@ -42,6 +42,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import Data.Char (chr)
 import Data.Foldable (toList)
 import Data.Kind (Type)
+import qualified Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
@@ -514,9 +515,9 @@ class (Stream s) => TraversableStream s where
 instance TraversableStream String where
   -- NOTE Do not eta-reduce these (breaks inlining)
   reachOffset o pst =
-    reachOffset' splitAt foldl' id id ('\n', '\t') charInc o pst
+    reachOffset' splitAt Data.List.foldl' id id ('\n', '\t') charInc o pst
   reachOffsetNoLine o pst =
-    reachOffsetNoLine' splitAt foldl' ('\n', '\t') charInc o pst
+    reachOffsetNoLine' splitAt Data.List.foldl' ('\n', '\t') charInc o pst
 
 instance TraversableStream B.ByteString where
   -- NOTE Do not eta-reduce these (breaks inlining)
