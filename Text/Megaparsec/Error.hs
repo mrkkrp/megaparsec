@@ -415,7 +415,7 @@ errorBundlePretty = drop 1 . errorBundlePrettyWith format
                   pointerLen =
                     if rpshift + elen > slineLen
                       then slineLen - rpshift + 1
-                      else elen
+                      else max 1 elen
                   pointer = replicate pointerLen '^'
                   lineNumber = (show . unPos . sourceLine) epos
                   padding = replicate (length lineNumber + 1) ' '
