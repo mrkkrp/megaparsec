@@ -5,6 +5,8 @@
 * Fixed the regression introduced by the fix for the [issue
   572](https://github.com/mrkkrp/megaparsec/issues/572) which caused the
   position marker `^` to be missing in certain cases.
+* This release officially supports GHC 9.6. This is the oldest GHC version
+  we support at this time.
 
 ## Megaparsec 9.8.0
 
