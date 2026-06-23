@@ -106,6 +106,16 @@ spec = do
           pe = err 4 (utok 'd' <> etok 'x') :: PE
       mkBundlePE s pe
         `shouldBe` "1:4:\n  |\n1 | abc\SOHdef\SOHghi\n  |    ^\nunexpected 'd'\nexpecting 'x'\n"
+    it "shows position marker for newline errors at end of line" $ do
+      let s = "abc\n" :: String
+          pe = err 3 (utok '\n' <> elabel "end of line") :: PE
+      mkBundlePE s pe
+        `shouldBe` "1:4:\n  |\n1 | abc\n  |    ^\nunexpected newline\nexpecting end of line\n"
+    it "shows position marker for other control characters at end of line" $ do
+      let s = "xyz\r" :: String
+          pe = err 3 (utok '\r' <> etok 'a') :: PE
+      mkBundlePE s pe
+        `shouldBe` "1:4:\n  |\n1 | xyz\r\n  |    ^\nunexpected carriage return\nexpecting 'a'\n"
     it "uses continuous highlighting properly (trivial)" $ do
       let s = "\tfoobar" :: String
           pe = err 1 (utoks "foo" <> utoks "rar") :: PE

@@ -1,5 +1,11 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Megaparsec 9.8.1
+
+* Fixed the regression introduced by the fix for the [issue
+  572](https://github.com/mrkkrp/megaparsec/issues/572) which caused the
+  position marker `^` to be missing in certain cases.
+
 ## Megaparsec 9.8.0
 
 * Fixed the associativity of the `(<|>)` operator. [Issue
