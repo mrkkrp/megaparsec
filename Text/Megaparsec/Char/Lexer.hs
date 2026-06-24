@@ -212,17 +212,22 @@ nonIndented sc p = indentGuard sc EQ pos1 *> p
 -- 'indentBlock', which see.
 --
 -- @since 4.3.0
-data IndentOpt m a b
+data IndentOpt m a
   = -- | Parse no indented tokens, just return the value
     IndentNone a
   | -- | Parse many indented tokens (possibly zero), use given indentation
     -- level (if 'Nothing', use level of the first indented token); the
     -- second argument tells how to get the final result, and the third
     -- argument describes how to parse an indented token
-    IndentMany (Maybe Pos) ([b] -> m a) (m b)
+    forall b. IndentMany (Maybe Pos) ([b] -> m a) (m b)
   | -- | Just like 'IndentMany', but requires at least one indented token to
     -- be present
-    IndentSome (Maybe Pos) ([b] -> m a) (m b)
+    forall b. IndentSome (Maybe Pos) ([b] -> m a) (m b)
+
+instance Functor m => Functor (IndentOpt m) where
+  fmap f (IndentNone x) = IndentNone (f x)
+  fmap f (IndentMany i g p) = IndentMany i (fmap (fmap f) g) p
+  fmap f (IndentSome i g p) = IndentSome i (fmap (fmap f) g) p
 
 -- | Parse a “reference” token and a number of other tokens that have a
 -- greater (but the same for all of them) level of indentation than that of
@@ -238,7 +243,7 @@ indentBlock ::
   -- | How to consume indentation (white space)
   m () ->
   -- | How to parse “reference” token
-  m (IndentOpt m a b) ->
+  m (IndentOpt m a) ->
   m a
 indentBlock sc r = do
   sc
