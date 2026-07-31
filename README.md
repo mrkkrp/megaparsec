@@ -27,56 +27,55 @@
 * [License](#license)
 
 This is an industrial-strength monadic parser combinator library. Megaparsec
-is a feature-rich package that tries to find a nice balance between speed,
-flexibility, and quality of parse errors.
+is a feature-rich package that strikes a nice balance between speed,
+flexibility, and the quality of parse errors.
 
 ## Features
 
-The project provides flexible solutions to satisfy common parsing needs. The
-section describes them shortly. If you're looking for comprehensive
+The project provides flexible solutions for common parsing needs. This
+section describes them briefly. If you're looking for comprehensive
 documentation, see the [section about documentation](#documentation).
 
 ### Core features
 
-The package is built around `MonadParsec`, an MTL-style monad transformer.
-Most features work with all instances of `MonadParsec`. One can achieve
-various effects combining monad transformers, i.e. building a monadic stack.
-Since the common monad transformers like `WriterT`, `StateT`, `ReaderT` and
-others are instances of the `MonadParsec` type class, one can also wrap
-`ParsecT` *in* these monads, achieving, for example, backtracking state.
+The package is built around `MonadParsec`, an MTL-style type class. Most
+features work with all instances of `MonadParsec`. You can achieve various
+effects by combining monad transformers, i.e. by building a monadic stack.
+Since the common monad transformers like `WriterT`, `StateT`, and `ReaderT`
+are instances of the `MonadParsec` type class, you can also wrap `ParsecT`
+*in* these monads, achieving, for example, backtracking state.
 
-On the other hand `ParsecT` is an instance of many type classes as well. The
-most useful ones are `Monad`, `Applicative`, `Alternative`, and
-`MonadParsec`.
+`ParsecT` is also an instance of many type classes itself. The most useful
+ones are `Monad`, `Applicative`, `Alternative`, and `MonadParsec`.
 
 Megaparsec includes all functionality that is typically available in
 Parsec-like libraries and also features some special combinators:
 
 * `parseError` allows us to end parsing and report an arbitrary parse error.
-* `withRecovery` can be used to recover from parse errors “on-the-fly” and
-  continue parsing. Once parsing is finished, several parse errors may be
-  reported or ignored altogether.
+* `withRecovery` can be used to recover from parse errors “on the fly” and
+  continue parsing. Once parsing is finished, the collected parse errors may
+  be reported or ignored altogether.
 * `observing` makes it possible to “observe” parse errors without ending
   parsing.
 
-In addition to that, Megaparsec features high-performance combinators
-similar to those found in [Attoparsec][attoparsec]:
+In addition, Megaparsec features high-performance combinators similar to
+those found in [Attoparsec][attoparsec]:
 
 * `tokens` makes it easy to parse several tokens in a row (`string` and
-  `string'` are built on top of this primitive). This is about 100 times
-  faster than matching a string token by token. `tokens` returns “chunk” of
-  original input, meaning that if you parse `Text`, it'll return `Text`
-  without repacking.
-* `takeWhile` and `takeWhile1` are about 150 times faster than approaches
-  involving `many`, `manyTill` and other similar combinators.
-* `takeP` allows us to grab n tokens from the stream and returns them as a
+  `string'` are built on top of this primitive). It is about 100 times
+  faster than matching a string token by token. `tokens` returns a “chunk”
+  of the original input, meaning that if you parse `Text`, it'll return
+  `Text` without repacking.
+* `takeWhileP` and `takeWhile1P` are about 150 times faster than approaches
+  involving `many`, `manyTill`, and other similar combinators.
+* `takeP` allows us to grab `n` tokens from the stream and returns them as a
   “chunk” of the stream.
 
 Megaparsec is about as fast as Attoparsec if you write your parser carefully
 (see also [the section about performance](#performance)).
 
 The library can currently work with the following types of input stream
-out-of-the-box:
+out of the box:
 
 * `String = [Char]`
 * `ByteString` (strict and lazy)
@@ -90,20 +89,20 @@ an instance of the `Stream` type class.
 * Megaparsec has typed error messages and the ability to signal custom parse
   errors that better suit the user's domain of interest.
 
-* Since version 8, the location of parse errors can independent of current
-  offset in the input stream. It is useful when you want a parse error to
-  point to a particular position after performing some checks.
+* Since version 8, the location of a parse error can be independent of the
+  current offset in the input stream. This is useful when you want a parse
+  error to point to a particular position after performing some checks.
 
-* Instead of a single parse error Megaparsec produces so-called
-  `ParseErrorBundle` data type that helps to manage multi-error messages and
-  pretty-print them. Since version 8, reporting multiple parse errors at
-  once has become easier.
+* Instead of a single parse error, Megaparsec produces a `ParseErrorBundle`
+  data type that helps manage multi-error messages and pretty-print them.
+  Since version 8, reporting multiple parse errors at once has become
+  easier.
 
 ### External lexers
 
 Megaparsec works well with streams of tokens produced by tools like Alex.
-The design of the `Stream` type class has been changed significantly in the
-recent versions, but user can still work with custom streams of tokens.
+The design of the `Stream` type class has changed significantly in recent
+versions, but you can still work with custom streams of tokens.
 
 ### Character and binary parsing
 
@@ -119,13 +118,13 @@ you write your lexer. If you have used `Parsec` in the past, this module
 “fixes” its particularly inflexible `Text.Parsec.Token`.
 
 [`Text.Megaparsec.Char.Lexer`][tm-char-lexer] is intended to be imported
-using a qualified import, it's not included in [`Text.Megaparsec`][tm]. The
-module doesn't impose how you should write your parser, but certain
-approaches may be more elegant than others. An especially important theme is
-parsing of white space, comments, and indentation.
+qualified, and it's not included in [`Text.Megaparsec`][tm]. The module
+doesn't impose how you should write your parser, but certain approaches may
+be more elegant than others. An especially important theme is the parsing of
+white space, comments, and indentation.
 
-The design of the module allows one quickly solve simple tasks and doesn't
-get in the way when the need to implement something less standard arises.
+The design of the module lets you solve simple tasks quickly and doesn't get
+in the way when you need to implement something less standard.
 
 [`Text.Megaparsec.Byte.Lexer`][tm-byte-lexer] is also available for users
 who wish to parse binary data.
@@ -138,8 +137,7 @@ documentation on Hackage][hackage].
 ## Tutorials
 
 You can find the most complete Megaparsec tutorial [here][the-tutorial]. It
-should provide sufficient guidance to help you start with your parsing
-tasks.
+should provide enough guidance to get you started with your parsing tasks.
 
 ## Performance
 
@@ -170,38 +168,37 @@ More information about benchmarking and development can be found
 
 ## Comparison with other solutions
 
-There are quite a few libraries that can be used for parsing in Haskell,
-let's compare Megaparsec with some of them.
+There are quite a few libraries that can be used for parsing in Haskell.
+Let's compare Megaparsec with some of them.
 
 ### Megaparsec vs Attoparsec
 
 [Attoparsec][attoparsec] is another prominent Haskell library for parsing.
 Although both libraries deal with parsing, it's usually easy to decide which
-you will need in particular project:
+one you need for a particular project:
 
-* *Attoparsec* is sometimes faster but not that feature-rich. It should be
-  used when you want to process large amounts of data where performance
-  matters more than quality of error messages.
+* *Attoparsec* is sometimes faster but not as feature-rich. It should be used
+  when you want to process large amounts of data and performance matters more
+  than the quality of error messages.
 
-* *Megaparsec* is good for parsing of source code or other human-readable
-  texts. It has better error messages and it's implemented as a monad
-  transformer.
+* *Megaparsec* is good for parsing source code or other human-readable text.
+  It has better error messages and is implemented as a monad transformer.
 
-So, if you work with something human-readable where the size of input data
-is moderate, it makes sense to go with Megaparsec, otherwise Attoparsec may
-be a better choice.
+In short, if you work with something human-readable where the size of the
+input data is moderate, it makes sense to go with Megaparsec; otherwise
+Attoparsec may be a better choice.
 
 ### Megaparsec vs Parsec
 
 Since Megaparsec is a fork of [Parsec][parsec], we are bound to list the
 main differences between the two libraries:
 
-* Better error messages. Megaparsec has typed error messages and custom
-  error messages, it can also report multiple parse errors at once.
+* Better error messages. Megaparsec has typed and custom error messages, and
+  it can also report multiple parse errors at once.
 
-* Megaparsec can show the line on which parse error happened as part of
-  parse error. This makes it a lot easier to figure out where the error
-  happened.
+* Megaparsec can include the line on which a parse error happened as part of
+  the parse error. This makes it a lot easier to figure out where the error
+  occurred.
 
 * Some quirks and bugs of Parsec are fixed.
 
@@ -215,17 +212,16 @@ main differences between the two libraries:
 * Megaparsec can recover from parse errors “on the fly” and continue
   parsing.
 
-* Megaparsec allows us to conditionally process parse errors inside a
-  running parser. In particular, it's possible to define regions in which
-  parse errors, should they happen, will get a “context tag”, e.g. we could
-  build a context stack like “in function definition foo”, “in expression
-  x”, etc.
+* Megaparsec allows us to conditionally process parse errors inside a running
+  parser. In particular, it's possible to define regions in which parse
+  errors, should they happen, get a “context tag”. This lets us build a
+  context stack like “in function definition foo”, “in expression x”, etc.
 
-* Megaparsec is faster and supports efficient operations `tokens`,
-  `takeWhileP`, `takeWhile1P`, `takeP`, like Attoparsec.
+* Like Attoparsec, Megaparsec is faster and supports the efficient operations
+  `tokens`, `takeWhileP`, `takeWhile1P`, and `takeP`.
 
-If you want to see a detailed change log, `CHANGELOG.md` may be helpful.
-Also see [this original announcement][original-announcement] for another
+If you want to see a detailed change log, `CHANGELOG.md` may be helpful. Also
+see [this original announcement][original-announcement] for another
 comparison.
 
 ### Megaparsec vs Trifecta
@@ -234,33 +230,33 @@ comparison.
 messages. These are the common reasons why Trifecta may be problematic to
 use:
 
-* Complicated, doesn't have any tutorials available, and documentation
+* It is complicated, has no tutorials available, and its documentation
   doesn't help much.
 
 * Trifecta can parse `String` and `ByteString` natively, but not `Text`.
 
-* Depends on `lens`, which is a very heavy dependency. If you're not into
+* It depends on `lens`, which is a very heavy dependency. If you're not into
   `lens`, you may not like the API.
 
-[Idris][idris] has switched from Trifecta to Megaparsec which allowed it to
+[Idris][idris] switched from Trifecta to Megaparsec, which allowed it to
 [have better error messages and fewer dependencies][idris-testimony].
 
 ### Megaparsec vs Earley
 
 [Earley][earley] is a newer library that allows us to safely parse
-context-free grammars (CFG). Megaparsec is a lower-level library compared to
+context-free grammars (CFGs). Megaparsec is a lower-level library compared to
 Earley, but there are still enough reasons to choose it:
 
 * Megaparsec is faster.
 
-* Your grammar may be not context-free or you may want introduce some sort
-  of state to the parsing process. Almost all non-trivial parsers require
-  state. Even if your grammar is context-free, state may allow for
+* Your grammar may not be context-free, or you may want to introduce some
+  sort of state into the parsing process. Almost all non-trivial parsers
+  require state. Even if your grammar is context-free, state may allow for
   additional niceties. Earley does not support that.
 
-* Megaparsec's error messages are more flexible allowing to include
+* Megaparsec's error messages are more flexible, allowing you to include
   arbitrary data in them, return multiple error messages, mark regions that
-  affect any error that happens in those regions, etc.
+  affect any error that happens within them, etc.
 
 In other words, Megaparsec is less safe but also more powerful.
 
@@ -270,7 +266,7 @@ The following packages are designed to be used with Megaparsec (open a PR if
 you want to add something to the list):
 
 * [`hspec-megaparsec`](https://hackage.haskell.org/package/hspec-megaparsec)—utilities
-  for testing Megaparsec parsers with with
+  for testing Megaparsec parsers with
   [Hspec](https://hackage.haskell.org/package/hspec).
 * [`replace-megaparsec`](https://hackage.haskell.org/package/replace-megaparsec)—Stream
   editing and find-and-replace with Megaparsec.
@@ -283,7 +279,7 @@ you want to add something to the list):
   Megaparsec.
 * [`parser-combinators`](https://hackage.haskell.org/package/parser-combinators)—provides permutation and expression parsers [previously bundled with Megaparsec](https://markkarpov.com/post/megaparsec-7.html#parsercombinators-grows-megaparsec-shrinks).
 * [`faster-megaparsec`](https://hackage.haskell.org/package/faster-megaparsec)—speeds up parsing
-  by trying a simple `MonadParsec` instance and falls back to `ParsecT` to report errors.
+  by trying a simple `MonadParsec` instance and falling back to `ParsecT` to report errors.
 
 ## Prominent projects that use Megaparsec
 
@@ -301,8 +297,8 @@ Some prominent projects that use Megaparsec:
 
 ## Links to announcements and blog posts
 
-Here are some blog posts mainly announcing new features of the project and
-describing what sort of things are now possible:
+Here are some blog posts, mainly announcing new features of the project and
+describing what sort of things they make possible:
 
 * [Megaparsec 8](https://markkarpov.com/post/megaparsec-8.html)
 * [Megaparsec 7](https://markkarpov.com/post/megaparsec-7.html)
@@ -315,8 +311,8 @@ describing what sort of things are now possible:
 
 ## Contribution
 
-Issues (bugs, feature requests or otherwise feedback) may be reported in
-[the GitHub issue tracker for this
+Issues (bugs, feature requests, or other feedback) may be reported in [the
+GitHub issue tracker for this
 project](https://github.com/mrkkrp/megaparsec/issues).
 
 Pull requests are also welcome. If you would like to contribute to the
