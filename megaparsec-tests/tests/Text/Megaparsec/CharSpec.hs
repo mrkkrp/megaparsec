@@ -38,12 +38,12 @@ spec = do
           ch /= '\n' ==> do
             let s = ['\r', ch]
             prs eol s `shouldFailWith` err 0 (utoks s <> elabel "end of line")
-    context "when input stream is '\\r'" $
-      it "signals correct parse error" $
-        prs eol "\r"
-          `shouldFailWith` err
-            0
-            (utok '\r' <> elabel "end of line")
+    context "when input stream is '\\r'"
+      $ it "signals correct parse error"
+      $ prs eol "\r"
+        `shouldFailWith` err
+          0
+          (utok '\r' <> elabel "end of line")
     context "when stream does not begin with newline or CRLF sequence" $
       it "signals correct parse error" $
         property $ \ch s ->
@@ -53,12 +53,12 @@ spec = do
               `shouldFailWith` err
                 0
                 (utoks (take 2 s') <> elabel "end of line")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs eol ""
-          `shouldFailWith` err
-            0
-            (ueof <> elabel "end of line")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs eol ""
+        `shouldFailWith` err
+          0
+          (ueof <> elabel "end of line")
 
   describe "tab" $
     checkStrLit "tab" "\t" (pure <$> tab)
@@ -95,9 +95,9 @@ spec = do
               s = ' ' : s0 ++ s1
           prs space1 s `shouldParse` ()
           prs' space1 s `succeedsLeaving` s1
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "hspace1" $ do
     context "when stream does not start with a space character" $
@@ -115,9 +115,9 @@ spec = do
               s = ' ' : s0 ++ s1
           prs hspace1 s `shouldParse` ()
           prs' hspace1 s `succeedsLeaving` s1
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" isControl controlChar
@@ -181,9 +181,9 @@ spec = do
           prs latin1Char "б"
             `shouldFailWith` err 0 (utok 'б' <> elabel "Latin-1 character")
           prs' latin1Char "в" `failsLeaving` "в"
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs latin1Char "" `shouldFailWith` err 0 (ueof <> elabel "Latin-1 character")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs latin1Char "" `shouldFailWith` err 0 (ueof <> elabel "Latin-1 character")
 
   describe "charCategory" $ do
     context "when parser corresponding to general category of next char is used" $
@@ -318,9 +318,9 @@ checkStrLit name ts p = do
               us = take (length ts) s'
           prs p s' `shouldFailWith` err 0 (utoks us <> etoks ts)
           prs' p s' `failsLeaving` s'
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
 
 checkCharPred :: String -> (Char -> Bool) -> Parser Char -> SpecWith ()
 checkCharPred name f p = do
@@ -338,9 +338,9 @@ checkCharPred name f p = do
           let s' = ch : s
           prs p s' `shouldFailWith` err 0 (utok ch <> elabel name)
           prs' p s' `failsLeaving` s'
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 checkCharRange :: String -> String -> Parser Char -> SpecWith ()
 checkCharRange name tchs p = do
@@ -351,9 +351,9 @@ checkCharRange name tchs p = do
           let s' = tch : s
           prs p s' `shouldParse` tch
           prs' p s' `succeedsLeaving` s
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 -- | Randomly change the case in the given string.
 fuzzyCase :: String -> Gen String

@@ -222,12 +222,12 @@ spec = do
             pRightAssociative = (a <|> (b <|> c)) >> char 'd'
             e = err 0 (utok 'a' <> etok 'd' <> etok 'b')
             s = "aaa"
-        context "left associative" $
-          it "fails with the right error" $
-            prs pLeftAssociative s `shouldFailWith` e
-        context "right associative" $
-          it "fails with the right error" $
-            prs pRightAssociative s `shouldFailWith` e
+        context "left associative"
+          $ it "fails with the right error"
+          $ prs pLeftAssociative s `shouldFailWith` e
+        context "right associative"
+          $ it "fails with the right error"
+          $ prs pRightAssociative s `shouldFailWith` e
       it "associativity of fold over alternatives should not matter" $ do
         let p = asum [empty, string ">>>", empty, return "foo"] <?> "bar"
             p' = bsum [empty, string ">>>", empty, return "foo"] <?> "bar"
@@ -922,9 +922,9 @@ spec = do
               grs' p s (`failsLeaving` (b : as))
 
     describe "eof" $ do
-      context "when input stream is empty" $
-        it "succeeds" $
-          grs eof "" (`shouldParse` ())
+      context "when input stream is empty"
+        $ it "succeeds"
+        $ grs eof "" (`shouldParse` ())
       context "when input stream is not empty" $
         it "signals correct error message" $
           property $ \a as -> do
@@ -1287,9 +1287,9 @@ spec = do
             let s' = ch : s
             grs p s' (`shouldParse` ch)
             grs' p s' (`succeedsLeaving` s)
-      context "when stream is empty" $
-        it "signals correct parse error" $
-          grs p "" (`shouldFailWith` err 0 ueof)
+      context "when stream is empty"
+        $ it "signals correct parse error"
+        $ grs p "" (`shouldFailWith` err 0 ueof)
 
     describe "anySingleBut" $ do
       context "when stream begins with the character specified as argument" $
@@ -1308,9 +1308,9 @@ spec = do
                   p = anySingleBut ch
               grs p s (`shouldParse` head s)
               grs' p s (`succeedsLeaving` tail s)
-      context "when stream is empty" $
-        it "signals correct parse error" $
-          grs (anySingleBut 'a') "" (`shouldFailWith` err 0 ueof)
+      context "when stream is empty"
+        $ it "signals correct parse error"
+        $ grs (anySingleBut 'a') "" (`shouldFailWith` err 0 ueof)
 
     describe "oneOf" $ do
       context "when stream begins with one of specified characters" $

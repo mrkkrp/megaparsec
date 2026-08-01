@@ -45,9 +45,9 @@ spec = do
         property $ \chk ->
           chunkEmpty sproxy chk === (chunkLength sproxy chk <= 0)
     describe "take1_" $ do
-      context "when input in empty" $
-        it "returns Nothing" $
-          take1_ ("" :: String) === Nothing
+      context "when input in empty"
+        $ it "returns Nothing"
+        $ take1_ ("" :: String) === Nothing
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
@@ -98,9 +98,9 @@ spec = do
         property $ \chk ->
           chunkEmpty bproxy chk === (chunkLength bproxy chk <= 0)
     describe "take1_" $ do
-      context "when input in empty" $
-        it "returns Nothing" $
-          take1_ ("" :: B.ByteString) === Nothing
+      context "when input in empty"
+        $ it "returns Nothing"
+        $ take1_ ("" :: B.ByteString) === Nothing
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
@@ -152,9 +152,9 @@ spec = do
         property $ \chk ->
           chunkEmpty blproxy chk === (chunkLength blproxy chk <= 0)
     describe "take1_" $ do
-      context "when input in empty" $
-        it "returns Nothing" $
-          take1_ ("" :: BL.ByteString) === Nothing
+      context "when input in empty"
+        $ it "returns Nothing"
+        $ take1_ ("" :: BL.ByteString) === Nothing
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
@@ -206,9 +206,9 @@ spec = do
         property $ \chk ->
           chunkEmpty tproxy chk === (chunkLength tproxy chk <= 0)
     describe "take1_" $ do
-      context "when input in empty" $
-        it "returns Nothing" $
-          take1_ ("" :: T.Text) === Nothing
+      context "when input in empty"
+        $ it "returns Nothing"
+        $ take1_ ("" :: T.Text) === Nothing
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->
@@ -259,9 +259,9 @@ spec = do
         property $ \chk ->
           chunkEmpty tlproxy chk === (chunkLength tlproxy chk <= 0)
     describe "take1_" $ do
-      context "when input in empty" $
-        it "returns Nothing" $
-          take1_ ("" :: TL.Text) === Nothing
+      context "when input in empty"
+        $ it "returns Nothing"
+        $ take1_ ("" :: TL.Text) === Nothing
       context "when input is not empty" $
         it "unconses a token" $
           property $ \s ->

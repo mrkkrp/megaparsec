@@ -46,12 +46,12 @@ spec = do
             let s = "\r" <> B.singleton ch
             prs eol s
               `shouldFailWith` err 0 (utoks s <> elabel "end of line")
-    context "when input stream is '\\r'" $
-      it "signals correct parse error" $
-        prs eol "\r"
-          `shouldFailWith` err
-            0
-            (utok 13 <> elabel "end of line")
+    context "when input stream is '\\r'"
+      $ it "signals correct parse error"
+      $ prs eol "\r"
+        `shouldFailWith` err
+          0
+          (utok 13 <> elabel "end of line")
     context "when stream does not begin with newline or CRLF sequence" $
       it "signals correct parse error" $
         property $ \ch s ->
@@ -61,12 +61,12 @@ spec = do
               `shouldFailWith` err
                 0
                 (utoks (B.take 2 s') <> elabel "end of line")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs eol ""
-          `shouldFailWith` err
-            0
-            (ueof <> elabel "end of line")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs eol ""
+        `shouldFailWith` err
+          0
+          (ueof <> elabel "end of line")
 
   describe "tab" $
     checkStrLit "tab" "\t" (tokenToChunk bproxy <$> tab)
@@ -103,9 +103,9 @@ spec = do
               s = " " <> s0 <> s1
           prs space1 s `shouldParse` ()
           prs' space1 s `succeedsLeaving` s1
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs space1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "hspace1" $ do
     context "when stream does not start with a space character" $
@@ -123,9 +123,9 @@ spec = do
               s = " " <> s0 <> s1
           prs hspace1 s `shouldParse` ()
           prs' hspace1 s `succeedsLeaving` s1
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs hspace1 "" `shouldFailWith` err 0 (ueof <> elabel "white space")
 
   describe "controlChar" $
     checkCharPred "control character" (isControl . toChar) controlChar
@@ -194,9 +194,9 @@ checkStrLit name ts p = do
               us = B.take (B.length ts) s'
           prs p s' `shouldFailWith` err 0 (utoks us <> etoks ts)
           prs' p s' `failsLeaving` s'
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> etoks ts)
 
 checkCharPred :: String -> (Word8 -> Bool) -> Parser Word8 -> SpecWith ()
 checkCharPred name f p = do
@@ -214,9 +214,9 @@ checkCharPred name f p = do
           let s' = B.singleton ch <> s
           prs p s' `shouldFailWith` err 0 (utok ch <> elabel name)
           prs' p s' `failsLeaving` s'
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 checkCharRange :: String -> [Word8] -> Parser Word8 -> SpecWith ()
 checkCharRange name tchs p = do
@@ -227,9 +227,9 @@ checkCharRange name tchs p = do
           let s' = B.singleton tch <> s
           prs p s' `shouldParse` tch
           prs' p s' `succeedsLeaving` s
-  context "when stream is empty" $
-    it "signals correct parse error" $
-      prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
+  context "when stream is empty"
+    $ it "signals correct parse error"
+    $ prs p "" `shouldFailWith` err 0 (ueof <> elabel name)
 
 prs ::
   -- | Parser to run

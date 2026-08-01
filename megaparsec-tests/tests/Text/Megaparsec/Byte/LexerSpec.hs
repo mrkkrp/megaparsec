@@ -78,10 +78,10 @@ spec = do
             let p = decimal :: Parser Integer
                 s = B.pack (a : as)
             prs p s `shouldFailWith` err 0 (utok a <> elabel "integer")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (decimal :: Parser Integer) ""
-          `shouldFailWith` err 0 (ueof <> elabel "integer")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (decimal :: Parser Integer) ""
+        `shouldFailWith` err 0 (ueof <> elabel "integer")
 
   describe "binary" $ do
     context "when stream begins with binary digits" $
@@ -100,10 +100,10 @@ spec = do
                 s = B.pack (a : as)
             prs p s
               `shouldFailWith` err 0 (utok a <> elabel "binary integer")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (binary :: Parser Integer) ""
-          `shouldFailWith` err 0 (ueof <> elabel "binary integer")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (binary :: Parser Integer) ""
+        `shouldFailWith` err 0 (ueof <> elabel "binary integer")
 
   describe "octal" $ do
     context "when stream begins with octal digits" $
@@ -122,10 +122,10 @@ spec = do
                 s = B.pack (a : as)
             prs p s
               `shouldFailWith` err 0 (utok a <> elabel "octal integer")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (octal :: Parser Integer) ""
-          `shouldFailWith` err 0 (ueof <> elabel "octal integer")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (octal :: Parser Integer) ""
+        `shouldFailWith` err 0 (ueof <> elabel "octal integer")
 
   describe "hexadecimal" $ do
     context "when stream begins with hexadecimal digits" $
@@ -152,10 +152,10 @@ spec = do
                 s = B.pack (a : as)
             prs p s
               `shouldFailWith` err 0 (utok a <> elabel "hexadecimal integer")
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (hexadecimal :: Parser Integer) ""
-          `shouldFailWith` err 0 (ueof <> elabel "hexadecimal integer")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (hexadecimal :: Parser Integer) ""
+        `shouldFailWith` err 0 (ueof <> elabel "hexadecimal integer")
 
   describe "scientific" $ do
     context "when stream begins with a number" $
@@ -196,10 +196,10 @@ spec = do
               s = B8.pack $ showFFloatAlt Nothing (n :: Double) "err!"
           prs p s `shouldParse` fromFloatDigits n
           prs' p s `succeedsLeaving` "err!"
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (scientific :: Parser Scientific) ""
-          `shouldFailWith` err 0 (ueof <> elabel "digit")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (scientific :: Parser Scientific) ""
+        `shouldFailWith` err 0 (ueof <> elabel "digit")
 
   describe "float" $ do
     context "when stream begins with a float" $
@@ -237,10 +237,10 @@ spec = do
               s = B8.pack $ showFFloatAlt Nothing (n :: Double) "err!"
           prs p s `shouldParse` n
           prs' p s `succeedsLeaving` "err!"
-    context "when stream is empty" $
-      it "signals correct parse error" $
-        prs (float :: Parser Double) ""
-          `shouldFailWith` err 0 (ueof <> elabel "digit")
+    context "when stream is empty"
+      $ it "signals correct parse error"
+      $ prs (float :: Parser Double) ""
+        `shouldFailWith` err 0 (ueof <> elabel "digit")
     context "when there is float with just exponent" $
       it "parses it all right" $
         do
