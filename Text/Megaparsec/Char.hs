@@ -158,7 +158,7 @@ letterChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 letterChar = satisfy isLetter <?> "letter"
 {-# INLINE letterChar #-}
 
--- | Parse an alphabetic or numeric digit Unicode characters.
+-- | Parse an alphabetic or numeric digit Unicode character.
 --
 -- Note that the numeric digits outside the ASCII range are parsed by this
 -- parser but not by 'digitChar'. Such digits may be part of identifiers but
@@ -168,12 +168,12 @@ alphaNumChar = satisfy isAlphaNum <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
 -- | Parse a printable Unicode character: letter, number, mark, punctuation,
--- symbol or space.
+-- symbol, or space.
 printChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 printChar = satisfy isPrint <?> "printable character"
 {-# INLINE printChar #-}
 
--- | Parse an ASCII digit, i.e between “0” and “9”.
+-- | Parse an ASCII digit, i.e. between “0” and “9”.
 digitChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 digitChar = satisfy isDigit <?> "digit"
 {-# INLINE digitChar #-}
@@ -211,18 +211,18 @@ numberChar = satisfy isNumber <?> "numeric character"
 {-# INLINE numberChar #-}
 
 -- | Parse a Unicode punctuation character, including various kinds of
--- connectors, brackets and quotes.
+-- connectors, brackets, and quotes.
 punctuationChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 punctuationChar = satisfy isPunctuation <?> "punctuation"
 {-# INLINE punctuationChar #-}
 
--- | Parse a Unicode symbol characters, including mathematical and currency
+-- | Parse a Unicode symbol character, including mathematical and currency
 -- symbols.
 symbolChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 symbolChar = satisfy isSymbol <?> "symbol"
 {-# INLINE symbolChar #-}
 
--- | Parse a Unicode space and separator characters.
+-- | Parse a Unicode space or separator character.
 separatorChar :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 separatorChar = satisfy isSeparator <?> "separator"
 {-# INLINE separatorChar #-}
@@ -239,8 +239,8 @@ latin1Char :: (MonadParsec e s m, Token s ~ Char) => m (Token s)
 latin1Char = satisfy isLatin1 <?> "Latin-1 character"
 {-# INLINE latin1Char #-}
 
--- | @'charCategory' cat@ parses character in Unicode General Category
--- @cat@, see 'Data.Char.GeneralCategory'.
+-- | @'charCategory' cat@ parses a character in the Unicode General Category
+-- @cat@; see 'Data.Char.GeneralCategory'.
 charCategory ::
   (MonadParsec e s m, Token s ~ Char) =>
   GeneralCategory ->
@@ -248,7 +248,7 @@ charCategory ::
 charCategory cat = satisfy ((== cat) . generalCategory) <?> categoryName cat
 {-# INLINE charCategory #-}
 
--- | Return the human-readable name of Unicode General Category.
+-- | Return the human-readable name of a Unicode General Category.
 categoryName :: GeneralCategory -> String
 categoryName = \case
   UppercaseLetter -> "uppercase letter"

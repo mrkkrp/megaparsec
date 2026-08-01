@@ -72,7 +72,7 @@ import qualified Text.Megaparsec.Unicode as Unicode
 ----------------------------------------------------------------------------
 -- Parse error type
 
--- | A data type that is used to represent “unexpected\/expected” items in
+-- | A data type that is used to represent “unexpected\/expected” items in a
 -- 'ParseError'. It is parametrized over the token type @t@.
 --
 -- @since 5.0.0
@@ -87,13 +87,13 @@ data ErrorItem t
 
 instance (NFData t) => NFData (ErrorItem t)
 
--- | Additional error data, extendable by user. When no custom data is
+-- | Additional error data, extendable by the user. When no custom data is
 -- necessary, the type is typically indexed by 'Void' to “cancel” the
 -- 'ErrorCustom' constructor.
 --
 -- @since 6.0.0
 data ErrorFancy e
-  = -- | 'fail' has been used in parser monad
+  = -- | 'fail' has been used in the parser monad
     ErrorFail String
   | -- | Incorrect indentation error: desired ordering between reference
     -- level and actual level, reference indentation level, actual
@@ -123,11 +123,11 @@ data ParseError s e
     -- constructor includes the offset of error, unexpected token (if any),
     -- and expected tokens.
     --
-    -- Type of the first argument was changed in the version /7.0.0/.
+    -- The type of the first argument was changed in version /7.0.0/.
     TrivialError Int (Maybe (ErrorItem (Token s))) (Set (ErrorItem (Token s)))
   | -- | Fancy, custom errors.
     --
-    -- Type of the first argument was changed in the version /7.0.0/.
+    -- The type of the first argument was changed in version /7.0.0/.
     FancyError Int (Set (ErrorFancy e))
   deriving (Generic)
 
@@ -205,11 +205,11 @@ setErrorOffset :: Int -> ParseError s e -> ParseError s e
 setErrorOffset o (TrivialError _ u p) = TrivialError o u p
 setErrorOffset o (FancyError _ x) = FancyError o x
 
--- | Merge two error data structures into one joining their collections of
--- message items and preferring the longest match. In other words, earlier
--- error message is discarded. This may seem counter-intuitive, but
+-- | Merge two error data structures into one, joining their collections of
+-- message items and preferring the longest match. In other words, the
+-- earlier error message is discarded. This may seem counter-intuitive, but
 -- 'mergeError' is only used to merge error messages of alternative branches
--- of parsing and in this case longest match should be preferred.
+-- of parsing, and in this case the longest match should be preferred.
 mergeError ::
   (Stream s, Ord e) =>
   ParseError s e ->
@@ -242,7 +242,7 @@ mergeError e1 e2 =
     n (Just x) (Just y) = Just (max x y)
 {-# INLINE mergeError #-}
 
--- | A non-empty collection of 'ParseError's equipped with 'PosState' that
+-- | A non-empty collection of 'ParseError's equipped with a 'PosState' that
 -- allows us to pretty-print the errors efficiently and correctly.
 --
 -- @since 7.0.0
@@ -333,8 +333,8 @@ class (Ord a) => ShowErrorComponent a where
   -- | Pretty-print a component of 'ParseError'.
   showErrorComponent :: a -> String
 
-  -- | Length of the error component in characters, used for highlighting of
-  -- parse errors in input string.
+  -- | Length of the error component in characters, used for highlighting
+  -- parse errors in the input string.
   --
   -- @since 7.0.0
   errorComponentLen :: a -> Int

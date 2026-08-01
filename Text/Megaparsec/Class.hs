@@ -16,8 +16,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Definition of 'MonadParsec'—type class describing monads that implement
--- the full set of primitive parsers.
+-- Definition of 'MonadParsec'—the type class describing monads that
+-- implement the full set of primitive parsers.
 --
 -- @since 6.5.0
 module Text.Megaparsec.Class
@@ -61,7 +61,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   label :: String -> m a -> m a
 
   -- | @'hidden' p@ behaves just like parser @p@, but it doesn't show any
-  -- “expected” tokens in error message when @p@ fails.
+  -- “expected” tokens in the error message when @p@ fails.
   --
   -- Please use 'hidden' instead of the old @'label' ""@ idiom.
   hidden :: m a -> m a
@@ -71,7 +71,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- backtracks the parser state when @p@ fails (either consuming input or
   -- not).
   --
-  -- This combinator is used whenever arbitrary look ahead is needed. Since
+  -- This combinator is used whenever arbitrary lookahead is needed. Since
   -- it pretends that it hasn't consumed any input when @p@ fails, the
   -- ('A.<|>') combinator will try its second alternative even if the first
   -- parser failed while consuming input.
@@ -107,11 +107,11 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- alternatives are complex, composite parsers.
   try :: m a -> m a
 
-  -- | If @p@ in @'lookAhead' p@ succeeds (either consuming input or not)
-  -- the whole parser behaves like @p@ succeeded without consuming anything
-  -- (parser state is not updated as well). If @p@ fails, 'lookAhead' has no
-  -- effect, i.e. it will fail consuming input if @p@ fails consuming input.
-  -- Combine with 'try' if this is undesirable.
+  -- | If @p@ in @'lookAhead' p@ succeeds (either consuming input or not),
+  -- the whole parser behaves as if @p@ succeeded without consuming anything
+  -- (the parser state is not updated either). If @p@ fails, 'lookAhead' has
+  -- no effect, i.e. it will fail consuming input if @p@ fails consuming
+  -- input. Combine with 'try' if this is undesirable.
   lookAhead :: m a -> m a
 
   -- | @'notFollowedBy' p@ only succeeds when the parser @p@ fails. This
@@ -126,8 +126,8 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- to the point where the next object starts.
   --
   -- Note that if @r@ fails, the original error message is reported as if
-  -- without 'withRecovery'. In no way can the recovering parser @r@ influence
-  -- error messages.
+  -- 'withRecovery' had not been used. In no way can the recovering parser @r@
+  -- influence error messages.
   --
   -- @since 4.4.0
   withRecovery ::
@@ -139,10 +139,10 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     m a
 
   -- | @'observing' p@ allows us to “observe” failure of the @p@ parser,
-  -- should it happen, without actually ending parsing but instead getting
-  -- the 'ParseError' in 'Left'. On success parsed value is returned in
+  -- should it happen, without actually ending parsing, but instead getting
+  -- the 'ParseError' in 'Left'. On success, the parsed value is returned in
   -- 'Right' as usual. Note that this primitive just allows you to observe
-  -- parse errors as they happen, it does not backtrack or change how the
+  -- parse errors as they happen; it does not backtrack or change how the
   -- @p@ parser works in any way.
   --
   -- @since 5.1.0
@@ -156,7 +156,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
 
   -- | The parser @'token' test expected@ accepts tokens for which the
   -- matching function @test@ returns 'Just' results. If 'Nothing' is
-  -- returned the @expected@ set is used to report the items that were
+  -- returned, the @expected@ set is used to report the items that were
   -- expected.
   --
   -- For example, the 'Text.Megaparsec.satisfy' parser is implemented as:
@@ -165,7 +165,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- >   where
   -- >     testToken x = if f x then Just x else Nothing
   --
-  -- __Note__: type signature of this primitive was changed in the version
+  -- __Note__: the type signature of this primitive was changed in version
   -- /7.0.0/.
   token ::
     -- | Matching function for the token to parse
@@ -179,15 +179,15 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   -- given and parsed chunks after a candidate chunk of correct length is
   -- fetched from the stream.
   --
-  -- This can be used for example to write 'Text.Megaparsec.chunk':
+  -- This can be used, for example, to write 'Text.Megaparsec.chunk':
   --
   -- > chunk = tokens (==)
   --
-  -- Note that beginning from Megaparsec 4.4.0, this is an auto-backtracking
+  -- Note that beginning with Megaparsec 4.4.0, this is an auto-backtracking
   -- primitive, which means that if it fails, it never consumes any input.
   -- This is done to make its consumption model match how error messages for
-  -- this primitive are reported (which becomes an important thing as user
-  -- gets more control with primitives like 'withRecovery'):
+  -- this primitive are reported (which becomes important as the user gets
+  -- more control with primitives like 'withRecovery'):
   --
   -- >>> parseTest (string "abc") "abd"
   -- 1:1:
@@ -217,7 +217,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   --
   -- @since 6.0.0
   takeWhileP ::
-    -- | Name for a single token in the row
+    -- | Name for a single token in the resulting chunk
     Maybe String ->
     -- | Predicate to use to test tokens
     (Token s -> Bool) ->
@@ -237,7 +237,7 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
   --
   -- @since 6.0.0
   takeWhile1P ::
-    -- | Name for a single token in the row
+    -- | Name for a single token in the resulting chunk
     Maybe String ->
     -- | Predicate to use to test tokens
     (Token s -> Bool) ->
@@ -245,22 +245,23 @@ class (Stream s, MonadPlus m) => MonadParsec e s m | m -> e s where
     m (Tokens s)
 
   -- | Extract the specified number of tokens from the input stream and
-  -- return them packed as a chunk of stream. If there are not enough tokens
-  -- in the stream, a parse error will be signaled. It's guaranteed that if
-  -- the parser succeeds, the requested number of tokens will be returned.
+  -- return them packed as a chunk of the stream. If there are not enough
+  -- tokens in the stream, a parse error will be signaled. It's guaranteed
+  -- that if the parser succeeds, the requested number of tokens will be
+  -- returned.
   --
   -- The parser is roughly equivalent to:
   --
   -- > takeP (Just "foo") n = count n (anySingle <?> "foo")
   -- > takeP Nothing      n = count n anySingle
   --
-  -- Note that if the combinator fails due to insufficient number of tokens
-  -- in the input stream, it backtracks automatically. No 'try' is necessary
-  -- with 'takeP'.
+  -- Note that if the combinator fails due to an insufficient number of
+  -- tokens in the input stream, it backtracks automatically. No 'try' is
+  -- necessary with 'takeP'.
   --
   -- @since 6.0.0
   takeP ::
-    -- | Name for a single token in the row
+    -- | Name for a single token in the resulting chunk
     Maybe String ->
     -- | How many tokens to extract
     Int ->

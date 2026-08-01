@@ -63,7 +63,7 @@ import qualified Text.Megaparsec.Unicode as Unicode
 -- retain the current behaviour and are concerned with maximum performance you
 -- should consider using the 'ShareInput' wrapper explicitly.
 --
--- __Note__: before the version /9.0.0/ the class included the methods from
+-- __Note__: before version /9.0.0/ the class included the methods from
 -- 'VisualStream' and 'TraversableStream'.
 class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- | Type of token in the stream.
@@ -72,29 +72,29 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   -- | Type of “chunk” of the stream.
   type Tokens s :: Type
 
-  -- | Lift a single token to chunk of the stream. The default
+  -- | Lift a single token to a chunk of the stream. The default
   -- implementation is:
   --
   -- > tokenToChunk pxy = tokensToChunk pxy . pure
   --
-  -- However for some types of stream there may be a more efficient way to
+  -- However, for some types of stream there may be a more efficient way to
   -- lift.
   tokenToChunk :: Proxy s -> Token s -> Tokens s
   tokenToChunk pxy = tokensToChunk pxy . pure
 
-  -- | The first method that establishes isomorphism between list of tokens
-  -- and chunk of the stream. Valid implementation should satisfy:
+  -- | The first method that establishes the isomorphism between a list of
+  -- tokens and a chunk of the stream. A valid implementation should satisfy:
   --
   -- > chunkToTokens pxy (tokensToChunk pxy ts) == ts
   tokensToChunk :: Proxy s -> [Token s] -> Tokens s
 
-  -- | The second method that establishes isomorphism between list of tokens
-  -- and chunk of the stream. Valid implementation should satisfy:
+  -- | The second method that establishes the isomorphism between a list of
+  -- tokens and a chunk of the stream. A valid implementation should satisfy:
   --
   -- > tokensToChunk pxy (chunkToTokens pxy chunk) == chunk
   chunkToTokens :: Proxy s -> Tokens s -> [Token s]
 
-  -- | Return length of a chunk of the stream.
+  -- | Return the length of a chunk of the stream.
   chunkLength :: Proxy s -> Tokens s -> Int
 
   -- | Check if a chunk of the stream is empty. The default implementation
@@ -102,16 +102,16 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   --
   -- > chunkEmpty pxy ts = chunkLength pxy ts <= 0
   --
-  -- However for many streams there may be a more efficient implementation.
+  -- However, for many streams there may be a more efficient implementation.
   chunkEmpty :: Proxy s -> Tokens s -> Bool
   chunkEmpty pxy ts = chunkLength pxy ts <= 0
 
-  -- | Extract a single token form the stream. Return 'Nothing' if the
+  -- | Extract a single token from the stream. Return 'Nothing' if the
   -- stream is empty.
   take1_ :: s -> Maybe (Token s, s)
 
   -- | @'takeN_' n s@ should try to extract a chunk of length @n@, or if the
-  -- stream is too short, the rest of the stream. Valid implementation
+  -- stream is too short, the rest of the stream. A valid implementation
   -- should follow the rules:
   --
   --     * If the requested length @n@ is 0 (or less), 'Nothing' should
@@ -120,16 +120,16 @@ class (Ord (Token s), Ord (Tokens s)) => Stream s where
   --       stream (second argument).
   --     * If the requested length is greater than 0 and the stream is
   --       empty, 'Nothing' should be returned indicating end of input.
-  --     * In other cases, take chunk of length @n@ (or shorter if the
+  --     * In other cases, take a chunk of length @n@ (or shorter if the
   --       stream is not long enough) from the input stream and return the
   --       chunk along with the rest of the stream.
   takeN_ :: Int -> s -> Maybe (Tokens s, s)
 
-  -- | Extract chunk of the stream taking tokens while the supplied
+  -- | Extract a chunk of the stream, taking tokens while the supplied
   -- predicate returns 'True'. Return the chunk and the rest of the stream.
   --
-  -- For many types of streams, the method allows for significant
-  -- performance improvements, although it is not strictly necessary from
+  -- For many types of streams, this method allows for significant
+  -- performance improvements, although it is not strictly necessary from a
   -- conceptual point of view.
   takeWhile_ :: (Token s -> Bool) -> s -> (Tokens s, s)
 
@@ -174,11 +174,11 @@ instance (Ord a) => Stream (S.Seq a) where
 -- 'T.split'.
 --
 -- Note that using slices is in general faster than copying; on the other
--- hand it also has the potential for causing surprising memory leaks: if
+-- hand, it also has the potential for causing surprising memory leaks: if
 -- any slice of the input survives in the output, holding on to the output
 -- will force the entire input 'T.Text'/'B.ByteString' to stay in memory!
 -- Even when using lazy 'TL.Text'/'BL.ByteString' we will hold on to whole
--- chunks at a time leading to to significantly worse memory residency in
+-- chunks at a time, leading to significantly worse memory residency in
 -- some cases.
 --
 -- See 'NoShareInput' for a somewhat slower implementation that avoids this
@@ -257,7 +257,7 @@ instance Stream (ShareInput TL.Text) where
 -- garbage collected.
 --
 -- For maximum performance you might consider using 'ShareInput' instead,
--- but beware of its pitfalls!
+-- but beware its pitfalls!
 --
 -- @since 9.3.0
 newtype NoShareInput a = NoShareInput {unNoShareInput :: a}
@@ -412,7 +412,7 @@ instance Stream TL.Text where
 --
 -- @since 9.0.0
 class (Stream s) => VisualStream s where
-  -- | Pretty-print non-empty stream of tokens. This function is also used
+  -- | Pretty-print a non-empty stream of tokens. This function is also used
   -- to print single tokens (represented as singleton lists).
   --
   -- @since 7.0.0
@@ -450,7 +450,7 @@ instance VisualStream TL.Text where
 class (Stream s) => TraversableStream s where
   {-# MINIMAL reachOffset | reachOffsetNoLine #-}
 
-  -- | Given an offset @o@ and initial 'PosState', adjust the state in such
+  -- | Given an offset @o@ and an initial 'PosState', adjust the state in such
   -- a way that it starts at the offset.
   --
   -- Return two values (in order):
@@ -463,20 +463,21 @@ class (Stream s) => TraversableStream s where
   --     * The updated 'PosState' which can be in turn used to locate
   --       another offset @o'@ given that @o' >= o@.
   --
-  -- The 'String' representing the offending line in input stream should
+  -- The 'String' representing the offending line in the input stream should
   -- satisfy the following:
   --
-  --     * It should adequately represent location of token at the offset of
-  --       interest, that is, character at 'sourceColumn' of the returned
-  --       'SourcePos' should correspond to the token at the offset @o@.
+  --     * It should adequately represent the location of the token at the
+  --       offset of interest, that is, the character at 'sourceColumn' of the
+  --       returned 'SourcePos' should correspond to the token at the offset
+  --       @o@.
   --     * It should not include the newline at the end.
-  --     * It should not be empty, if the line happens to be empty, it
+  --     * It should not be empty; if the line happens to be empty, it
   --       should be replaced with the string @\"\<empty line\>\"@.
-  --     * Tab characters should be replaced by appropriate number of
+  --     * Tab characters should be replaced by an appropriate number of
   --       spaces, which is determined by the 'pstateTabWidth' field of
   --       'PosState'.
   --
-  -- __Note__: type signature of the function was changed in the version
+  -- __Note__: the type signature of the function was changed in version
   -- /9.0.0/.
   --
   -- @since 7.0.0
@@ -491,14 +492,14 @@ class (Stream s) => TraversableStream s where
     (Nothing, reachOffsetNoLine o pst)
 
   -- | A version of 'reachOffset' that may be faster because it doesn't need
-  -- to fetch the line at which the given offset in located.
+  -- to fetch the line at which the given offset is located.
   --
   -- The default implementation is this:
   --
   -- > reachOffsetNoLine o pst =
   -- >   snd (reachOffset o pst)
   --
-  -- __Note__: type signature of the function was changed in the version
+  -- __Note__: the type signature of the function was changed in version
   -- /8.0.0/.
   --
   -- @since 7.0.0
@@ -559,11 +560,11 @@ data St = St {-# UNPACK #-} !SourcePos ShowS
 reachOffset' ::
   forall s.
   (Stream s) =>
-  -- | How to split input stream at given offset
+  -- | How to split the input stream at a given offset
   (Int -> s -> (Tokens s, s)) ->
-  -- | How to fold over input stream
+  -- | How to fold over the input stream
   (forall b. (b -> Token s -> b) -> b -> Tokens s -> b) ->
-  -- | How to convert chunk of input stream into a 'String'
+  -- | How to convert a chunk of the input stream into a 'String'
   (Tokens s -> String) ->
   -- | How to convert a token into a 'Char'
   (Token s -> Char) ->
@@ -640,9 +641,9 @@ reachOffset'
 reachOffsetNoLine' ::
   forall s.
   (Stream s) =>
-  -- | How to split input stream at given offset
+  -- | How to split the input stream at a given offset
   (Int -> s -> (Tokens s, s)) ->
-  -- | How to fold over input stream
+  -- | How to fold over the input stream
   (forall b. (b -> Token s -> b) -> b -> Tokens s -> b) ->
   -- | Newline token and tab token
   (Token s, Token s) ->
@@ -694,8 +695,8 @@ splitAtTL :: Int -> TL.Text -> (TL.Text, TL.Text)
 splitAtTL n = TL.splitAt (fromIntegral n)
 {-# INLINE splitAtTL #-}
 
--- | @stringPretty s@ returns pretty representation of string @s@. This is
--- used when printing string tokens in error messages.
+-- | @stringPretty s@ returns a pretty representation of the string @s@. This
+-- is used when printing string tokens in error messages.
 stringPretty :: NonEmpty Char -> String
 stringPretty (x :| []) = charPretty x
 stringPretty ('\r' :| "\n") = "crlf newline"
@@ -706,8 +707,8 @@ stringPretty xs = "\"" <> concatMap f (NE.toList xs) <> "\""
         Nothing -> [ch]
         Just pretty -> "<" <> pretty <> ">"
 
--- | @charPretty ch@ returns user-friendly string representation of given
--- character @ch@, suitable for using in error messages.
+-- | @charPretty ch@ returns a user-friendly string representation of the
+-- given character @ch@, suitable for use in error messages.
 charPretty :: Char -> String
 charPretty ' ' = "space"
 charPretty ch = fromMaybe ("'" <> [ch] <> "'") (charPretty' ch)
@@ -752,7 +753,7 @@ charPretty' = \case
   '\160' -> Just "non-breaking space"
   _ -> Nothing
 
--- | Replace tab characters with given number of spaces.
+-- | Replace tab characters with the given number of spaces.
 expandTab ::
   Pos ->
   String ->

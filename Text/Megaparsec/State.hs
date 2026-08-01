@@ -33,10 +33,10 @@ import GHC.Generics
 import {-# SOURCE #-} Text.Megaparsec.Error (ParseError)
 import Text.Megaparsec.Pos
 
--- | This is the Megaparsec's state parametrized over stream type @s@ and
--- custom error component type @e@.
+-- | This is Megaparsec's state, parametrized over the stream type @s@ and
+-- the custom error component type @e@.
 data State s e = State
-  { -- | The rest of input to process
+  { -- | The rest of the input to process
     stateInput :: s,
     -- | Number of processed tokens so far
     --
@@ -75,7 +75,7 @@ deriving instance
 
 instance (NFData s, NFData (ParseError s e)) => NFData (State s e)
 
--- | Given the name of the source file and the input construct the initial
+-- | Given the name of the source file and the input, construct the initial
 -- state for a parser.
 --
 -- @since 9.6.0
@@ -98,22 +98,22 @@ initialState name s =
 --
 -- @since 7.0.0
 data PosState s = PosState
-  { -- | The rest of input to process
+  { -- | The rest of the input to process
     pstateInput :: s,
-    -- | Offset corresponding to beginning of 'pstateInput'
+    -- | Offset corresponding to the beginning of 'pstateInput'
     pstateOffset :: !Int,
-    -- | Source position corresponding to beginning of 'pstateInput'
+    -- | Source position corresponding to the beginning of 'pstateInput'
     pstateSourcePos :: !SourcePos,
     -- | Tab width to use for column calculation
     pstateTabWidth :: Pos,
-    -- | Prefix to prepend to offending line
+    -- | Prefix to prepend to the offending line
     pstateLinePrefix :: String
   }
   deriving (Show, Eq, Data, Generic)
 
 instance (NFData s) => NFData (PosState s)
 
--- | Given the name of source file and the input construct the initial
+-- | Given the name of the source file and the input, construct the initial
 -- positional state.
 --
 -- @since 9.6.0

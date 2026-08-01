@@ -50,7 +50,7 @@ import Data.Int
 import Data.Word
 import Text.Megaparsec
 
--- | Data types that can be converted to little- or big- endian numbers.
+-- | Data types that can be converted to little- or big-endian numbers.
 class BinaryChunk chunk where
   convertChunkBE :: (Bits a, Num a) => chunk -> a
   convertChunkLE :: (Bits a, Num a) => chunk -> a
@@ -132,18 +132,18 @@ word32be = anyBE (Just "big-endian 32 bit word")
 
 -- | Parse a little-endian 'Word64'.
 word64le :: (MonadParsec e s m, BinaryChunk (Tokens s)) => m Word64
-word64le = anyLE (Just "little-endian 64 word")
+word64le = anyLE (Just "little-endian 64 bit word")
 {-# INLINE word64le #-}
 
 -- | Parse a big-endian 'Word64'.
 word64be :: (MonadParsec e s m, BinaryChunk (Tokens s)) => m Word64
-word64be = anyBE (Just "big-endian 64 word")
+word64be = anyBE (Just "big-endian 64 bit word")
 {-# INLINE word64be #-}
 
 ----------------------------------------------------------------------------
 -- Parsing signed values
 
--- | Parse a 'Int8'.
+-- | Parse an 'Int8'.
 int8 :: (MonadParsec e s m, BinaryChunk (Tokens s)) => m Int8
 int8 = anyBE (Just "8 bit int")
 {-# INLINE int8 #-}
@@ -170,12 +170,12 @@ int32be = anyBE (Just "big-endian 32 bit int")
 
 -- | Parse a little-endian 'Int64'.
 int64le :: (MonadParsec e s m, BinaryChunk (Tokens s)) => m Int64
-int64le = anyLE (Just "little-endian 64 int")
+int64le = anyLE (Just "little-endian 64 bit int")
 {-# INLINE int64le #-}
 
 -- | Parse a big-endian 'Int64'.
 int64be :: (MonadParsec e s m, BinaryChunk (Tokens s)) => m Int64
-int64be = anyBE (Just "big-endian 64 int")
+int64be = anyBE (Just "big-endian 64 bit int")
 {-# INLINE int64be #-}
 
 --------------------------------------------------------------------------------

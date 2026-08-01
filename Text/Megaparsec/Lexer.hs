@@ -2,7 +2,7 @@
 {-# LANGUAGE Safe #-}
 
 -- |
--- Module      :  Text.Megaparsec.Common
+-- Module      :  Text.Megaparsec.Lexer
 -- Copyright   :  © 2018–present Megaparsec contributors
 -- License     :  FreeBSD
 --
@@ -10,7 +10,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Common token combinators. This module is not public, the functions from
+-- Common token combinators. This module is not public; the functions from
 -- it are re-exported in "Text.Megaparsec.Byte" and "Text.Megaparsec.Char".
 --
 -- @since 7.0.0
@@ -38,9 +38,9 @@ import Text.Megaparsec.Common
 --
 -- @sc@ is used to parse blocks of space characters. You can use
 -- 'Text.Megaparsec.Char.space1' from "Text.Megaparsec.Char" for this
--- purpose as well as your own parser (if you don't want to automatically
+-- purpose, as well as your own parser (if you don't want to automatically
 -- consume newlines, for example). Make sure that the parser does not
--- succeed on the empty input though. In an earlier version of the library
+-- succeed on empty input though. In an earlier version of the library,
 -- 'Text.Megaparsec.Char.spaceChar' was recommended, but now parsers based
 -- on 'takeWhile1P' are preferred because of their speed.
 --
@@ -51,8 +51,8 @@ import Text.Megaparsec.Common
 -- @skipBlockComment@ or @skipBlockCommentNested@ if you don't need anything
 -- special.
 --
--- If you don't want to allow a kind of comment, simply pass 'empty' which
--- will fail instantly when parsing of that sort of comment is attempted and
+-- If you don't want to allow a kind of comment, simply pass 'empty', which
+-- will fail instantly when parsing of that sort of comment is attempted, and
 -- 'space' will just move on or finish depending on whether there is more
 -- white space for it to consume.
 space ::
@@ -79,9 +79,9 @@ space sp line block =
 -- > integer = lexeme L.decimal
 lexeme ::
   (MonadParsec e s m) =>
-  -- | How to consume white space after lexeme
+  -- | How to consume white space after the lexeme
   m () ->
-  -- | How to parse actual lexeme
+  -- | How to parse the actual lexeme
   m a ->
   m a
 lexeme spc p = p <* spc
@@ -103,7 +103,7 @@ lexeme spc p = p <* spc
 -- > dot       = symbol "."
 symbol ::
   (MonadParsec e s m) =>
-  -- | How to consume white space after lexeme
+  -- | How to consume white space after the lexeme
   m () ->
   -- | Symbol to parse
   Tokens s ->
@@ -115,7 +115,7 @@ symbol spc = lexeme spc . string
 -- working with case-insensitive languages.
 symbol' ::
   (MonadParsec e s m, CI.FoldCase (Tokens s)) =>
-  -- | How to consume white space after lexeme
+  -- | How to consume white space after the lexeme
   m () ->
   -- | Symbol to parse (case-insensitive)
   Tokens s ->

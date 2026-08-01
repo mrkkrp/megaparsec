@@ -10,7 +10,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Common token combinators. This module is not public, the functions from
+-- Common token combinators. This module is not public; the functions from
 -- it are re-exported in "Text.Megaparsec.Byte" and "Text.Megaparsec.Char".
 --
 -- @since 7.0.0
@@ -29,8 +29,8 @@ string :: (MonadParsec e s m) => Tokens s -> m (Tokens s)
 string = chunk
 {-# INLINE string #-}
 
--- | The same as 'string', but case-insensitive. On success returns string
--- cased as the parsed input.
+-- | The same as 'string', but case-insensitive. On success returns the
+-- string cased as the parsed input.
 --
 -- >>> parseTest (string' "foobar") "foObAr"
 -- "foObAr"

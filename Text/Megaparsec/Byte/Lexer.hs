@@ -53,10 +53,10 @@ import Text.Megaparsec.Lexer
 ----------------------------------------------------------------------------
 -- White space
 
--- | Given a comment prefix this function returns a parser that skips line
+-- | Given a comment prefix, this function returns a parser that skips line
 -- comments. Note that it stops just before the newline character but
--- doesn't consume the newline. Newline is either supposed to be consumed by
--- 'space' parser or picked up manually.
+-- doesn't consume the newline. The newline is supposed to be either consumed
+-- by the 'space' parser or picked up manually.
 skipLineComment ::
   (MonadParsec e s m, Token s ~ Word8) =>
   -- | Line comment prefix
@@ -66,7 +66,7 @@ skipLineComment prefix =
   B.string prefix *> void (takeWhileP (Just "character") (/= 10))
 {-# INLINEABLE skipLineComment #-}
 
--- | @'skipBlockComment' start end@ skips non-nested block comment starting
+-- | @'skipBlockComment' start end@ skips a non-nested block comment starting
 -- with @start@ and ending with @end@.
 skipBlockComment ::
   (MonadParsec e s m) =>
@@ -81,7 +81,7 @@ skipBlockComment start end = p >> void (manyTill anySingle n)
     n = B.string end
 {-# INLINEABLE skipBlockComment #-}
 
--- | @'skipBlockCommentNested' start end@ skips possibly nested block
+-- | @'skipBlockCommentNested' start end@ skips a possibly nested block
 -- comment starting with @start@ and ending with @end@.
 --
 -- @since 5.0.0
@@ -129,7 +129,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") isDigit
 -- | Parse an integer in the binary representation. The binary number is
 -- expected to be a non-empty sequence of zeroes “0” and ones “1”.
 --
--- You could of course parse some prefix before the actual number:
+-- You could, of course, parse some prefix before the actual number:
 --
 -- > binary = char 48 >> char' 98 >> L.binary
 --
@@ -151,12 +151,12 @@ binary =
 {-# INLINEABLE binary #-}
 
 -- | Parse an integer in the octal representation. The format of the octal
--- number is expected to be according to the Haskell report except for the
--- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
--- responsibility of the programmer to parse correct prefix before parsing
--- the number itself.
+-- number is expected to be according to the Haskell report, except for the
+-- fact that this parser doesn't parse the “0o” or “0O” prefix. It is the
+-- responsibility of the programmer to parse the correct prefix before
+-- parsing the number itself.
 --
--- For example you can make it conform to the Haskell report like this:
+-- For example, you can make it conform to the Haskell report like this:
 --
 -- > octal = char 48 >> char' 111 >> L.octal
 --
@@ -176,12 +176,12 @@ octal =
 {-# INLINEABLE octal #-}
 
 -- | Parse an integer in the hexadecimal representation. The format of the
--- hexadecimal number is expected to be according to the Haskell report
--- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
--- It is a responsibility of the programmer to parse correct prefix before
--- parsing the number itself.
+-- hexadecimal number is expected to be according to the Haskell report,
+-- except for the fact that this parser doesn't parse the “0x” or “0X”
+-- prefix. It is the responsibility of the programmer to parse the correct
+-- prefix before parsing the number itself.
 --
--- For example you can make it conform to the Haskell report like this:
+-- For example, you can make it conform to the Haskell report like this:
 --
 -- > hexadecimal = char 48 >> char' 120 >> L.hexadecimal
 --
@@ -207,14 +207,14 @@ hexadecimal =
 {-# INLINEABLE hexadecimal #-}
 
 -- | Parse a floating point value as a 'Scientific' number. 'Scientific' is
--- great for parsing of arbitrary precision numbers coming from an untrusted
--- source. See documentation in "Data.Scientific" for more information.
+-- great for parsing arbitrary-precision numbers coming from an untrusted
+-- source. See the documentation in "Data.Scientific" for more information.
 --
 -- The parser can be used to parse integers or floating point values. Use
 -- functions like 'Data.Scientific.floatingOrInteger' from "Data.Scientific"
 -- to test and extract integer or real values.
 --
--- This function does not parse sign, if you need to parse signed numbers,
+-- This function does not parse a sign; if you need to parse signed numbers,
 -- see 'signed'.
 scientific ::
   forall e s m.
@@ -232,7 +232,7 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 -- | Parse a floating point number according to the syntax for floating
 -- point literals described in the Haskell report.
 --
--- This function does not parse sign, if you need to parse signed numbers,
+-- This function does not parse a sign; if you need to parse signed numbers,
 -- see 'signed'.
 --
 -- __Note__: in versions /6.0.0/–/6.1.1/ this function accepted plain integers.
@@ -273,13 +273,13 @@ exponent_ e' = do
   (+ e') <$> signed (return ()) decimal_
 {-# INLINE exponent_ #-}
 
--- | @'signed' space p@ parser parses an optional sign character (“+” or
--- “-”), then if there is a sign it consumes optional white space (using
--- @space@ parser), then it runs parser @p@ which should return a number.
--- Sign of the number is changed according to the previously parsed sign
+-- | @'signed' space p@ parses an optional sign character (“+” or “-”), then,
+-- if there is a sign, it consumes optional white space (using the @space@
+-- parser), then it runs the parser @p@, which should return a number. The
+-- sign of the number is changed according to the previously parsed sign
 -- character.
 --
--- For example, to parse signed integer you can write:
+-- For example, to parse a signed integer you can write:
 --
 -- > lexeme        = L.lexeme spaceConsumer
 -- > integer       = lexeme L.decimal

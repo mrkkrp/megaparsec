@@ -23,8 +23,8 @@
 -- at the tutorial <https://markkarpov.com/tutorial/megaparsec.html>.
 --
 -- In addition to the "Text.Megaparsec" module, which exports and re-exports
--- almost everything that you may need, we advise to import
--- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char' tokens
+-- almost everything that you may need, we advise importing
+-- "Text.Megaparsec.Char" if you plan to work with a stream of 'Char' tokens,
 -- or "Text.Megaparsec.Byte" if you intend to parse binary data.
 --
 -- It is common to start working with the library by defining a type synonym
@@ -36,9 +36,9 @@
 -- > Custom error component    Input stream type
 --
 -- Then you can write type signatures like @Parser 'Int'@—for a parser that
--- returns an 'Int' for example.
+-- returns an 'Int', for example.
 --
--- Similarly (since it's known to cause confusion), you should use
+-- Similarly (since it's known to cause confusion), you should use the
 -- 'ParseErrorBundle' type parametrized like this:
 --
 -- > ParseErrorBundle Text Void
@@ -47,7 +47,7 @@
 -- >  Input stream type    Custom error component (the same you used in Parser)
 --
 -- Megaparsec uses some type-level machinery to provide flexibility without
--- compromising on type safety. Thus type signatures are sometimes necessary
+-- compromising on type safety. Thus, type signatures are sometimes necessary
 -- to avoid ambiguous types. If you're seeing an error message that reads
 -- like “Type variable @e0@ is ambiguous …”, you need to give an explicit
 -- signature to your parser to resolve the ambiguity. It's a good idea to
@@ -131,7 +131,7 @@ import Text.Megaparsec.Stream
 -- Note that we re-export monadic combinators from
 -- "Control.Monad.Combinators" because these are more efficient than
 -- 'Applicative'-based ones (†). Thus 'many' and 'some' may clash with the
--- functions from "Control.Applicative". You need to hide the functions like
+-- functions from "Control.Applicative". You need to hide those functions like
 -- this:
 --
 -- > import Control.Applicative hiding (many, some)
@@ -152,7 +152,7 @@ import Text.Megaparsec.Stream
 -- Other modules of interest are:
 --
 --     * "Control.Monad.Combinators.Expr" for parsing of expressions.
---     * "Control.Applicative.Permutations" for parsing of permutations
+--     * "Control.Applicative.Permutations" for parsing of permutation
 --       phrases.
 
 ----------------------------------------------------------------------------
@@ -196,8 +196,8 @@ parse = runParser
 -- will fail.
 --
 -- The function is supposed to be useful for lightweight parsing, where
--- error messages (and thus file names) are not important and entire input
--- should be consumed. For example, it can be used for parsing of a single
+-- error messages (and thus file names) are not important and the entire
+-- input should be consumed. For example, it can be used for parsing a single
 -- number according to a specification of its format.
 parseMaybe :: (Ord e, Stream s) => Parsec e s a -> s -> Maybe a
 parseMaybe p s =
@@ -241,8 +241,8 @@ runParser ::
   Either (ParseErrorBundle s e) a
 runParser p name s = snd $ runParser' p (initialState name s)
 
--- | The function is similar to 'runParser' with the difference that it
--- accepts and returns the parser state. This allows us e.g. to specify
+-- | The function is similar to 'runParser', with the difference that it
+-- accepts and returns the parser state. This allows us, e.g., to specify an
 -- arbitrary textual position at the beginning of parsing. This is the most
 -- general way to run a parser over the 'Identity' monad.
 --
@@ -304,10 +304,10 @@ runParserT' p s = do
 
 -- $parse-errors
 --
--- The most general function to fail and end parsing is 'parseError'. These
--- are built on top of it. The section also includes functions starting with
--- the @register@ prefix which allow users to register “delayed”
--- 'ParseError's.
+-- The most general function to fail and end parsing is 'parseError'. The
+-- others are built on top of it. This section also includes functions
+-- starting with the @register@ prefix, which allow users to register
+-- “delayed” 'ParseError's.
 
 -- | Stop parsing and report a trivial 'ParseError'.
 --
@@ -338,8 +338,8 @@ fancyFailure xs = do
   parseError (FancyError o xs)
 {-# INLINE fancyFailure #-}
 
--- | The parser @'unexpected' item@ fails with an error message telling
--- about unexpected item @item@ without consuming any input.
+-- | The parser @'unexpected' item@ fails with an error message telling the
+-- user about the unexpected item @item@ without consuming any input.
 --
 -- > unexpected item = failure (Just item) Set.empty
 unexpected :: (MonadParsec e s m) => ErrorItem (Token s) -> m a
@@ -359,8 +359,8 @@ customFailure = fancyFailure . E.singleton . ErrorCustom
 -- | Specify how to process 'ParseError's that happen inside of this
 -- wrapper. This applies to both normal and delayed 'ParseError's.
 --
--- As a side-effect of the implementation the inner computation will start
--- with an empty collection of delayed errors and they will be updated and
+-- As a side effect of the implementation, the inner computation will start
+-- with an empty collection of delayed errors, and they will be updated and
 -- “restored” on the way out of 'region'.
 --
 -- @since 5.3.0
@@ -568,10 +568,10 @@ infix 0 <?>
 (<?>) = flip label
 {-# INLINE (<?>) #-}
 
--- | Return both the result of a parse and a chunk of input that was
+-- | Return both the result of a parse and the chunk of input that was
 -- consumed during parsing. This relies on the change of the 'stateOffset'
 -- value to evaluate how many tokens were consumed. If you mess with it
--- manually in the argument parser, prepare for troubles.
+-- manually in the argument parser, prepare for trouble.
 --
 -- @since 5.3.0
 match :: (MonadParsec e s m) => m a -> m (Tokens s, a)
@@ -620,9 +620,9 @@ setInput :: (MonadParsec e s m) => s -> m ()
 setInput s = updateParserState (\(State _ o pst de) -> State s o pst de)
 {-# INLINE setInput #-}
 
--- | Return the current source position. This function /is not cheap/, do
--- not call it e.g. on matching of every token, that's a bad idea. Still you
--- can use it to get 'SourcePos' to attach to things that you parse.
+-- | Return the current source position. This function /is not cheap/, so do
+-- not call it, e.g., on matching of every token—that's a bad idea. Still,
+-- you can use it to get a 'SourcePos' to attach to things that you parse.
 --
 -- The function works under the assumption that we move in the input stream
 -- only forwards and never backwards, which is always true unless the user

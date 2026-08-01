@@ -143,18 +143,18 @@ letterChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 letterChar = satisfy (isLetter . toChar) <?> "letter"
 {-# INLINE letterChar #-}
 
--- | Parse an alphabetic or digit characters.
+-- | Parse an alphabetic or digit character.
 alphaNumChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 alphaNumChar = satisfy (isAlphaNum . toChar) <?> "alphanumeric character"
 {-# INLINE alphaNumChar #-}
 
--- | Parse a printable character: letter, number, mark, punctuation, symbol
+-- | Parse a printable character: letter, number, mark, punctuation, symbol,
 -- or space.
 printChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 printChar = satisfy (isPrint . toChar) <?> "printable character"
 {-# INLINE printChar #-}
 
--- | Parse an ASCII digit, i.e between “0” and “9”.
+-- | Parse an ASCII digit, i.e. between “0” and “9”.
 digitChar :: (MonadParsec e s m, Token s ~ Word8) => m (Token s)
 digitChar = satisfy isDigit' <?> "digit"
   where

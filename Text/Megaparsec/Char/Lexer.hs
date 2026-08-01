@@ -83,10 +83,10 @@ import Text.Megaparsec.Lexer
 ----------------------------------------------------------------------------
 -- White space
 
--- | Given a comment prefix this function returns a parser that skips line
+-- | Given a comment prefix, this function returns a parser that skips line
 -- comments. Note that it stops just before the newline character but
--- doesn't consume the newline. Newline is either supposed to be consumed by
--- 'space' parser or picked up manually.
+-- doesn't consume the newline. The newline is supposed to be either consumed
+-- by the 'space' parser or picked up manually.
 skipLineComment ::
   (MonadParsec e s m, Token s ~ Char) =>
   -- | Line comment prefix
@@ -96,7 +96,7 @@ skipLineComment prefix =
   C.string prefix *> void (takeWhileP (Just "character") (/= '\n'))
 {-# INLINEABLE skipLineComment #-}
 
--- | @'skipBlockComment' start end@ skips non-nested block comment starting
+-- | @'skipBlockComment' start end@ skips a non-nested block comment starting
 -- with @start@ and ending with @end@.
 skipBlockComment ::
   (MonadParsec e s m) =>
@@ -111,7 +111,7 @@ skipBlockComment start end = p >> void (manyTill anySingle n)
     n = C.string end
 {-# INLINEABLE skipBlockComment #-}
 
--- | @'skipBlockCommentNested' start end@ skips possibly nested block
+-- | @'skipBlockCommentNested' start end@ skips a possibly nested block
 -- comment starting with @start@ and ending with @end@.
 --
 -- @since 5.0.0
@@ -143,8 +143,8 @@ indentLevel :: (TraversableStream s, MonadParsec e s m) => m Pos
 indentLevel = sourceColumn <$> getSourcePos
 {-# INLINE indentLevel #-}
 
--- | Fail reporting incorrect indentation error. The error has attached
--- information:
+-- | Fail, reporting an incorrect indentation error. The error has the
+-- following attached information:
 --
 --     * Desired ordering between reference level and actual level
 --     * Reference indentation level
@@ -166,15 +166,16 @@ incorrectIndent ord ref actual =
 {-# INLINEABLE incorrectIndent #-}
 
 -- | @'indentGuard' spaceConsumer ord ref@ first consumes all white space
--- (indentation) with @spaceConsumer@ parser, then it checks the column
--- position. Ordering between current indentation level and the reference
--- indentation level @ref@ should be @ord@, otherwise the parser fails. On
--- success the current column position is returned.
+-- (indentation) with the @spaceConsumer@ parser, then it checks the column
+-- position. The ordering between the current indentation level and the
+-- reference indentation level @ref@ should be @ord@, otherwise the parser
+-- fails. On success the current column position is returned.
 --
 -- When you want to parse a block of indentation, first run this parser with
 -- arguments like @'indentGuard' spaceConsumer 'GT' 'pos1'@—this will make
--- sure you have some indentation. Use returned value to check indentation
--- on every subsequent line according to syntax of your language.
+-- sure you have some indentation. Use the returned value to check
+-- indentation on every subsequent line according to the syntax of your
+-- language.
 indentGuard ::
   (TraversableStream s, MonadParsec e s m) =>
   -- | How to consume indentation (white space)
@@ -194,7 +195,7 @@ indentGuard sc ord ref = do
 {-# INLINEABLE indentGuard #-}
 
 -- | Parse a non-indented construction. This ensures that there is no
--- indentation before actual data. Useful, for example, as a wrapper for
+-- indentation before the actual data. Useful, for example, as a wrapper for
 -- top-level function definitions.
 --
 -- @since 4.3.0
@@ -208,8 +209,7 @@ nonIndented ::
 nonIndented sc p = indentGuard sc EQ pos1 *> p
 {-# INLINEABLE nonIndented #-}
 
--- | Behaviors for parsing of indented tokens. This is used in
--- 'indentBlock', which see.
+-- | Behaviors for parsing of indented tokens. This is used in 'indentBlock'.
 --
 -- @since 4.3.0
 data IndentOpt m a b
@@ -226,7 +226,7 @@ data IndentOpt m a b
 
 -- | Parse a “reference” token and a number of other tokens that have a
 -- greater (but the same for all of them) level of indentation than that of
--- the “reference” token. The reference token can influence parsing, see
+-- the “reference” token. The reference token can influence parsing; see
 -- 'IndentOpt' for more information.
 --
 -- __Note__: the first argument of this function /must/ consume newlines
@@ -265,7 +265,7 @@ indentBlock sc r = do
       f (x : xs)
 {-# INLINEABLE indentBlock #-}
 
--- | Grab indented items. This is a helper for 'indentBlock', it's not a
+-- | Grab indented items. This is a helper for 'indentBlock'; it's not a
 -- part of the public API.
 indentedItems ::
   (TraversableStream s, MonadParsec e s m) =>
@@ -293,10 +293,10 @@ indentedItems ref lvl sc p = go
             | otherwise -> incorrectIndent EQ lvl pos
 
 -- | Create a parser that supports line-folding. The first argument is used
--- to consume white space between components of line fold, thus it /must/
+-- to consume white space between components of a line fold, thus it /must/
 -- consume newlines in order to work properly. The second argument is a
 -- callback that receives a custom space-consuming parser as an argument.
--- This parser should be used after separate components of line fold that
+-- This parser should be used after separate components of the line fold that
 -- can be put on different lines.
 --
 -- An example should clarify the usage pattern:
@@ -357,8 +357,8 @@ charLiteral = label "literal character" $ do
 --
 -- If you need to parse signed integers, see the 'signed' combinator.
 --
--- __Note__: before the version /6.0.0/ the function returned 'Integer',
--- i.e. it wasn't polymorphic in its return type.
+-- __Note__: before version /6.0.0/ the function returned 'Integer', i.e. it
+-- wasn't polymorphic in its return type.
 --
 -- __Warning__: this function does not perform range checks.
 decimal :: (MonadParsec e s m, Token s ~ Char, Num a) => m a
@@ -379,7 +379,7 @@ decimal_ = mkNum <$> takeWhile1P (Just "digit") Char.isDigit
 -- | Parse an integer in binary representation. The binary number is
 -- expected to be a non-empty sequence of zeroes “0” and ones “1”.
 --
--- You could of course parse some prefix before the actual number:
+-- You could, of course, parse some prefix before the actual number:
 --
 -- > binary = char '0' >> char' 'b' >> L.binary
 --
@@ -401,12 +401,12 @@ binary =
 {-# INLINEABLE binary #-}
 
 -- | Parse an integer in the octal representation. The format of the octal
--- number is expected to be according to the Haskell report except for the
--- fact that this parser doesn't parse “0o” or “0O” prefix. It is a
--- responsibility of the programmer to parse correct prefix before parsing
--- the number itself.
+-- number is expected to be according to the Haskell report, except for the
+-- fact that this parser doesn't parse the “0o” or “0O” prefix. It is the
+-- responsibility of the programmer to parse the correct prefix before
+-- parsing the number itself.
 --
--- For example you can make it conform to the Haskell report like this:
+-- For example, you can make it conform to the Haskell report like this:
 --
 -- > octal = char '0' >> char' 'o' >> L.octal
 --
@@ -428,12 +428,12 @@ octal =
 {-# INLINEABLE octal #-}
 
 -- | Parse an integer in the hexadecimal representation. The format of the
--- hexadecimal number is expected to be according to the Haskell report
--- except for the fact that this parser doesn't parse “0x” or “0X” prefix.
--- It is a responsibility of the programmer to parse correct prefix before
--- parsing the number itself.
+-- hexadecimal number is expected to be according to the Haskell report,
+-- except for the fact that this parser doesn't parse the “0x” or “0X”
+-- prefix. It is the responsibility of the programmer to parse the correct
+-- prefix before parsing the number itself.
 --
--- For example you can make it conform to the Haskell report like this:
+-- For example, you can make it conform to the Haskell report like this:
 --
 -- > hexadecimal = char '0' >> char' 'x' >> L.hexadecimal
 --
@@ -455,14 +455,14 @@ hexadecimal =
 {-# INLINEABLE hexadecimal #-}
 
 -- | Parse a floating point value as a 'Scientific' number. 'Scientific' is
--- great for parsing of arbitrary precision numbers coming from an untrusted
--- source. See documentation in "Data.Scientific" for more information.
+-- great for parsing arbitrary-precision numbers coming from an untrusted
+-- source. See the documentation in "Data.Scientific" for more information.
 --
 -- The parser can be used to parse integers or floating point values. Use
 -- functions like 'Data.Scientific.floatingOrInteger' from "Data.Scientific"
 -- to test and extract integer or real values.
 --
--- This function does not parse sign, if you need to parse signed numbers,
+-- This function does not parse a sign; if you need to parse signed numbers,
 -- see 'signed'.
 --
 -- @since 5.0.0
@@ -482,7 +482,7 @@ data SP = SP !Integer {-# UNPACK #-} !Int
 -- | Parse a floating point number according to the syntax for floating
 -- point literals described in the Haskell report.
 --
--- This function does not parse sign, if you need to parse signed numbers,
+-- This function does not parse a sign; if you need to parse signed numbers,
 -- see 'signed'.
 --
 -- __Note__: before version /6.0.0/ the function returned 'Double', i.e. it
@@ -527,13 +527,13 @@ exponent_ e' = do
   (+ e') <$> signed (return ()) decimal_
 {-# INLINE exponent_ #-}
 
--- | @'signed' space p@ parses an optional sign character (“+” or “-”), then
--- if there is a sign it consumes optional white space (using the @space@
--- parser), then it runs the parser @p@ which should return a number. Sign
--- of the number is changed according to the previously parsed sign
+-- | @'signed' space p@ parses an optional sign character (“+” or “-”), then,
+-- if there is a sign, it consumes optional white space (using the @space@
+-- parser), then it runs the parser @p@, which should return a number. The
+-- sign of the number is changed according to the previously parsed sign
 -- character.
 --
--- For example, to parse signed integer you can write:
+-- For example, to parse a signed integer you can write:
 --
 -- > lexeme        = L.lexeme spaceConsumer
 -- > integer       = lexeme L.decimal

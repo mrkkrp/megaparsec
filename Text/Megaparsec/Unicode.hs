@@ -23,14 +23,14 @@ where
 import Data.Array (Array, bounds, listArray, (!))
 import Data.Char (ord)
 
--- | Calculate length of a string taking into account the fact that certain
--- 'Char's may span more than 1 column.
+-- | Calculate the length of a string, taking into account the fact that
+-- certain 'Char's may span more than 1 column.
 --
 -- @since 9.7.0
 stringLength :: (Traversable t) => t Char -> Int
 stringLength = sum . fmap charLength
 
--- | Return length of an individual 'Char'.
+-- | Return the length of an individual 'Char'.
 --
 -- @since 9.7.0
 charLength :: Char -> Int
@@ -56,7 +56,7 @@ isWideChar c = go (bounds wideCharRanges)
         (a, b) = wideCharRanges ! mid
     n = ord c
 
--- | Determine whether the given 'Char' is "zero-width", that is, whether it
+-- | Determine whether the given 'Char' is “zero-width”, that is, whether it
 -- has no visible representation and does not advance the cursor position.
 -- This includes control characters and certain Unicode zero-width characters.
 --

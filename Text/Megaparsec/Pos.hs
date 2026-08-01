@@ -12,8 +12,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Textual source position. The position includes name of file, line number,
--- and column number.
+-- Textual source position. The position includes the name of the file, the
+-- line number, and the column number.
 --
 -- You probably do not want to import this module directly because
 -- "Text.Megaparsec" re-exports it anyway.
@@ -42,7 +42,7 @@ import GHC.Generics
 -- Abstract position
 
 -- | 'Pos' is the type for positive integers. This is used to represent line
--- number, column number, and similar things like indentation level.
+-- number, column number, and similar things like indentation level. The
 -- 'Semigroup' instance can be used to safely and efficiently add 'Pos'es
 -- together.
 --
@@ -74,9 +74,9 @@ unPos (Pos w) = w
 pos1 :: Pos
 pos1 = mkPos 1
 
--- | Value of tab width used by default. Always prefer this constant when
--- you want to refer to the default tab width because actual value /may/
--- change in future.
+-- | The value of the tab width used by default. Always prefer this constant
+-- when you want to refer to the default tab width, because the actual value
+-- /may/ change in the future.
 --
 -- Currently:
 --
@@ -129,8 +129,8 @@ data SourcePos = SourcePos
 
 instance NFData SourcePos
 
--- | Construct initial position (line 1, column 1) given name of source
--- file.
+-- | Construct the initial position (line 1, column 1) given the name of the
+-- source file.
 initialPos :: FilePath -> SourcePos
 initialPos n = SourcePos n pos1 pos1
 

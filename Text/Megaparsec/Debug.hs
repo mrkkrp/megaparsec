@@ -46,18 +46,18 @@ import Text.Megaparsec.Stream
 --
 -- @since 9.3.0
 class (MonadParsec e s m) => MonadParsecDbg e s m where
-  -- | @'dbg' label p@ parser works exactly like @p@, but when it's evaluated
-  -- it prints information useful for debugging. The @label@ is only used to
-  -- refer to this parser in the debugging output. This combinator uses the
-  -- 'trace' function from "Debug.Trace" under the hood.
+  -- | The @'dbg' label p@ parser works exactly like @p@, but when it's
+  -- evaluated it prints information useful for debugging. The @label@ is only
+  -- used to refer to this parser in the debugging output. This combinator
+  -- uses the 'trace' function from "Debug.Trace" under the hood.
   --
-  -- Typical usage is to wrap every sub-parser in misbehaving parser with
-  -- 'dbg' assigning meaningful labels. Then give it a shot and go through the
-  -- print-out. As of current version, this combinator prints all available
-  -- information except for /hints/, which are probably only interesting to
-  -- the maintainer of Megaparsec itself and may be quite verbose to output in
-  -- general. Let me know if you would like to be able to see hints in the
-  -- debugging output.
+  -- Typical usage is to wrap every sub-parser of a misbehaving parser with
+  -- 'dbg', assigning meaningful labels. Then give it a shot and go through
+  -- the print-out. As of the current version, this combinator prints all
+  -- available information except for /hints/, which are probably only
+  -- interesting to the maintainer of Megaparsec itself and may be quite
+  -- verbose to output in general. Let me know if you would like to be able to
+  -- see hints in the debugging output.
   --
   -- The output itself is pretty self-explanatory, although the following
   -- abbreviations should be clarified (they are derived from the low-level
@@ -68,9 +68,9 @@ class (MonadParsec e s m) => MonadParsecDbg e s m where
   --     * @EOK@—“empty OK”. The parser succeeded without consuming input.
   --     * @EERR@—“empty error”. The parser failed without consuming input.
   --
-  -- __Note__: up until the version /9.3.0/ this was a non-polymorphic
-  -- function that worked only in 'ParsecT'. It was first introduced in the
-  -- version /7.0.0/.
+  -- __Note__: up until version /9.3.0/ this was a non-polymorphic function
+  -- that worked only in 'ParsecT'. It was first introduced in version
+  -- /7.0.0/.
   dbg ::
     (Show a) =>
     -- | Debugging label
@@ -144,8 +144,8 @@ instance
   where
   dbg str wma = S.WriterT $ dbgWithComment "LOG" str $ S.runWriterT wma
 
--- | @RWST@ works like @StateT@ inside a @WriterT@: subparser's log and its
--- final state is printed:
+-- | @RWST@ works like @StateT@ inside a @WriterT@: the subparser's log and
+-- its final state are printed:
 --
 -- >>> p = tell [0] >> modify succ >> dbg "a" (single 'a' >> tell [1] >> modify succ)
 -- >>> parseTest (runRWST p () 0) "a"
@@ -164,8 +164,8 @@ instance
     ((a, st), w) <- first unComment . unComment <$> dbg str smth
     pure (a, st, w)
 
--- | @RWST@ works like @StateT@ inside a @WriterT@: subparser's log and its
--- final state is printed:
+-- | @RWST@ works like @StateT@ inside a @WriterT@: the subparser's log and
+-- its final state are printed:
 --
 -- >>> p = tell [0] >> modify succ >> dbg "a" (single 'a' >> tell [1] >> modify succ)
 -- >>> parseTest (runRWST p () 0) "a"
@@ -189,7 +189,7 @@ instance (MonadParsecDbg e s m) => MonadParsecDbg e s (IdentityT m) where
 
 -- | @'dbgWithComment' label_a label_c m@ traces the first component of the
 -- result produced by @m@ with @label_a@ and the second component with
--- @label_b@.
+-- @label_c@.
 dbgWithComment ::
   (MonadParsecDbg e s m, Show a, Show c) =>
   -- | Debugging label (for @a@)
@@ -294,12 +294,12 @@ showStream pxy ts =
       let (h, r) = splitAt 40 (showTokens pxy ne)
        in if null r then h else h ++ " <…>"
 
--- | Calculate number of consumed tokens given 'State' of parser before and
--- after parsing.
+-- | Calculate the number of consumed tokens given the 'State' of the parser
+-- before and after parsing.
 streamDelta ::
-  -- | State of parser before consumption
+  -- | State of the parser before consumption
   State s e ->
-  -- | State of parser after consumption
+  -- | State of the parser after consumption
   State s e ->
   -- | Number of consumed tokens
   Int

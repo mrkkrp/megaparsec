@@ -71,10 +71,10 @@ import Text.Megaparsec.Stream
 ----------------------------------------------------------------------------
 -- Data types
 
--- | 'Hints' represent a collection of 'ErrorItem's to be included into
--- 'ParseError' (when it's a 'TrivialError') as “expected” message items
--- when a parser fails without consuming input right after successful parser
--- that produced the hints.
+-- | 'Hints' represent a collection of 'ErrorItem's to be included in a
+-- 'ParseError' (when it's a 'TrivialError') as “expected” message items when
+-- a parser fails without consuming input right after a successful parser that
+-- produced the hints.
 --
 -- For example, without hints you could get:
 --
@@ -99,8 +99,8 @@ instance (Ord t) => Monoid (Hints t) where
 
 -- | All information available after parsing. This includes consumption of
 -- input, success (with the returned value) or failure (with the parse
--- error), and parser state at the end of parsing. 'Reply' can also be used
--- to resume parsing.
+-- error), and the parser state at the end of parsing. 'Reply' can also be
+-- used to resume parsing.
 --
 -- See also: 'Consumption', 'Result'.
 data Reply e s a = Reply (State s e) Consumption (Result s e a)
@@ -110,7 +110,7 @@ data Reply e s a = Reply (State s e) Consumption (Result s e a)
 --
 -- See also: 'Result', 'Reply'.
 data Consumption
-  = -- | Some part of input stream was consumed
+  = -- | Some part of the input stream was consumed
     Consumed
   | -- | No input was consumed
     NotConsumed
@@ -126,8 +126,8 @@ data Result s e a
     Error (ParseError s e)
   deriving (Functor)
 
--- | @'ParsecT' e s m a@ is a parser with custom data component of error
--- @e@, stream type @s@, underlying monad @m@ and return type @a@.
+-- | @'ParsecT' e s m a@ is a parser with custom error data component @e@,
+-- stream type @s@, underlying monad @m@, and return type @a@.
 newtype ParsecT e s m a = ParsecT
   { unParser ::
       forall b.
@@ -336,7 +336,7 @@ pmkParsec k = ParsecT $ \s cok cerr eok eerr ->
 --
 -- > v >> mzero = mzero
 --
--- However the following holds:
+-- However, the following holds:
 --
 -- > try v >> mzero = mzero
 instance (Ord e, Stream s) => MonadPlus (ParsecT e s m) where
@@ -653,7 +653,7 @@ nes x = x :| []
 -- | Convert a 'ParseError' record into 'Hints'.
 toHints ::
   (Stream s) =>
-  -- | Current offset in input stream
+  -- | Current offset in the input stream
   Int ->
   -- | Parse error to convert
   ParseError s e ->
@@ -670,10 +670,11 @@ toHints streamPos = \case
   FancyError _ _ -> mempty
 {-# INLINE toHints #-}
 
--- | @'withHints' hs c@ makes “error” continuation @c@ use given hints @hs@.
+-- | @'withHints' hs c@ makes the “error” continuation @c@ use the given
+-- hints @hs@.
 --
--- __Note__ that if resulting continuation gets 'ParseError' that has custom
--- data in it, hints are ignored.
+-- __Note__ that if the resulting continuation gets a 'ParseError' that has
+-- custom data in it, the hints are ignored.
 withHints ::
   (Stream s) =>
   -- | Hints to use
@@ -691,8 +692,8 @@ withHints (Hints ps') c e =
     _ -> c e
 {-# INLINE withHints #-}
 
--- | @'accHints' hs c@ results in “OK” continuation that will add given
--- hints @hs@ to third argument of original continuation @c@.
+-- | @'accHints' hs c@ results in an “OK” continuation that will add the given
+-- hints @hs@ to the third argument of the original continuation @c@.
 accHints ::
   (Stream s) =>
   -- | 'Hints' to add

@@ -124,8 +124,8 @@ errFancy p (EF xs) = FancyError p xs
 utok :: Token s -> ET s
 utok = unexp . Tokens . nes
 
--- | Construct an “unexpected tokens” error component. Empty chunk produces
--- 'EndOfInput'.
+-- | Construct an “unexpected tokens” error component. An empty chunk
+-- produces 'EndOfInput'.
 utoks :: forall s. (Stream s) => Tokens s -> ET s
 utoks = unexp . canonicalizeTokens (Proxy :: Proxy s)
 
@@ -144,7 +144,7 @@ ueof = unexp EndOfInput
 etok :: Token s -> ET s
 etok = expe . Tokens . nes
 
--- | Construct an “expected tokens” error component. Empty chunk produces
+-- | Construct an “expected tokens” error component. An empty chunk produces
 -- 'EndOfInput'.
 etoks :: forall s. (Stream s) => Tokens s -> ET s
 etoks = expe . canonicalizeTokens (Proxy :: Proxy s)
