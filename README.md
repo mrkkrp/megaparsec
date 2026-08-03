@@ -20,6 +20,7 @@
     * [Megaparsec vs Parsec](#megaparsec-vs-parsec)
     * [Megaparsec vs Trifecta](#megaparsec-vs-trifecta)
     * [Megaparsec vs Earley](#megaparsec-vs-earley)
+    * [Megaparsec vs Flatparse](#megaparsec-vs-flatparse)
 * [Related packages](#related-packages)
 * [Prominent projects that use Megaparsec](#prominent-projects-that-use-megaparsec)
 * [Links to announcements and blog posts](#links-to-announcements-and-blog-posts)
@@ -89,14 +90,13 @@ an instance of the `Stream` type class.
 * Megaparsec has typed error messages and the ability to signal custom parse
   errors that better suit the user's domain of interest.
 
-* Since version 8, the location of a parse error can be independent of the
-  current offset in the input stream. This is useful when you want a parse
-  error to point to a particular position after performing some checks.
+* The location of a parse error can be independent of the current offset in
+  the input stream. This is useful when you want a parse error to point to a
+  particular position after performing some checks.
 
 * Instead of a single parse error, Megaparsec produces a `ParseErrorBundle`
-  data type that helps manage multi-error messages and pretty-print them.
-  Since version 8, reporting multiple parse errors at once has become
-  easier.
+  data type that helps manage multi-error messages and pretty-print them,
+  making it easy to report multiple parse errors at once.
 
 ### External lexers
 
@@ -260,6 +260,30 @@ Earley, but there are still enough reasons to choose it:
 
 In other words, Megaparsec is less safe but also more powerful.
 
+### Megaparsec vs Flatparse
+
+[Flatparse][flatparse] is a newer library that focuses squarely on raw
+parsing speed. On microbenchmarks it can be several times faster than both
+Megaparsec and Attoparsec, and it produces considerably smaller object code.
+It achieves this by making a number of trade-offs:
+
+* Flatparse works only with strict `ByteString`. It does not support `Text`,
+  `String`, lazy input, or incremental parsing, whereas Megaparsec works with
+  all of these and with custom token streams via the `Stream` type class.
+
+* Flatparse provides only a low-level interface to error handling and source
+  positions. Megaparsec has typed, custom, and multi-error messages out of
+  the box, along with error recovery and context-tagged regions.
+
+* Flatparse distinguishes recoverable failures from unrecoverable errors and
+  leaves grammar and error propagation largely up to you, so it sits at a
+  lower level of abstraction than Megaparsec.
+
+In short, if you need the absolute best performance and are willing to work
+at a lower level with `ByteString` only, Flatparse is worth a look.
+Megaparsec is the better choice when you value error messages, flexibility,
+and support for a variety of input streams.
+
 ## Related packages
 
 The following packages are designed to be used with Megaparsec (open a PR if
@@ -280,12 +304,21 @@ you want to add something to the list):
 * [`parser-combinators`](https://hackage.haskell.org/package/parser-combinators)—provides permutation and expression parsers [previously bundled with Megaparsec](https://markkarpov.com/post/megaparsec-7.html#parsercombinators-grows-megaparsec-shrinks).
 * [`faster-megaparsec`](https://hackage.haskell.org/package/faster-megaparsec)—speeds up parsing
   by trying a simple `MonadParsec` instance and falling back to `ParsecT` to report errors.
+* [`parsers-megaparsec`](https://hackage.haskell.org/package/parsers-megaparsec)—provides
+  instances of the [`parsers`](https://hackage.haskell.org/package/parsers)
+  type classes (`Parsing`, `CharParsing`, `LookAheadParsing`, and
+  `TokenParsing`) for Megaparsec.
+* [`headed-megaparsec`](https://hackage.haskell.org/package/headed-megaparsec)—helps
+  produce more informative parsers by distinguishing a parser's “head” from
+  its “body”.
+* [`htoml-megaparsec`](https://hackage.haskell.org/package/htoml-megaparsec)—a
+  parser for [TOML](https://toml.io) files built with Megaparsec.
 
 ## Prominent projects that use Megaparsec
 
 Some prominent projects that use Megaparsec:
 
-* [Idris](https://github.com/idris-lang/Idris-dev)—a general-purpose
+* [Idris](https://github.com/idris-lang/Idris2)—a general-purpose
   functional programming language with dependent types
 * [Dhall](https://github.com/dhall-lang/dhall-haskell)—an advanced
   configuration language
@@ -340,9 +373,8 @@ Distributed under FreeBSD license.
 [parsec]: https://hackage.haskell.org/package/parsec
 [trifecta]: https://hackage.haskell.org/package/trifecta
 [earley]: https://hackage.haskell.org/package/Earley
+[flatparse]: https://hackage.haskell.org/package/flatparse
 [idris]: https://www.idris-lang.org/
-[idris-testimony]: https://twitter.com/edwinbrady/status/950084043282010117?s=09
+[idris-testimony]: https://x.com/edwinbrady/status/950084043282010117
 
-[parsers-bench]: https://github.com/mrkkrp/parsers-bench
-[fast-parser]: https://markkarpov.com/megaparsec/writing-a-fast-parser.html
 [original-announcement]: https://mail.haskell.org/pipermail/haskell-cafe/2015-September/121530.html
