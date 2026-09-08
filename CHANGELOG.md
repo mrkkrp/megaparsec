@@ -1,5 +1,13 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Unreleased
+
+* Fixed tab expansion in the rendering of the offending line so that it
+  takes into account the display width of the preceding characters.
+  Previously a tab that followed a wide or zero-width character was expanded
+  to the wrong number of spaces, which made the position marker `^`
+  misaligned or missing.
+
 ## Megaparsec 9.8.1
 
 * Fixed the regression introduced by the fix for the [issue

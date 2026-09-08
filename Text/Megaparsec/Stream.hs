@@ -762,7 +762,7 @@ expandTab w' = go 0 0
   where
     go _ 0 [] = []
     go !i 0 ('\t' : xs) = go i (w - (i `rem` w)) xs
-    go !i 0 (x : xs) = x : go (i + 1) 0 xs
+    go !i 0 (x : xs) = x : go (i + Unicode.charLength x) 0 xs
     go !i n xs = ' ' : go (i + 1) (n - 1) xs
     w = unPos w'
 
