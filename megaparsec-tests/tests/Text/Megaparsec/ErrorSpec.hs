@@ -106,6 +106,16 @@ spec = do
           pe = err 4 (utok 'd' <> etok 'x') :: PE
       mkBundlePE s pe
         `shouldBe` "1:4:\n  |\n1 | abc\SOHdef\SOHghi\n  |    ^\nunexpected 'd'\nexpecting 'x'\n"
+    it "expands tabs after wide characters to the same width as the column count" $ do
+      let s = "日本\tx" :: String
+          pe = err 3 (utok 'x' <> etok 'd') :: PE
+      mkBundlePE s pe
+        `shouldBe` "1:9:\n  |\n1 | 日本    x\n  |         ^\nunexpected 'x'\nexpecting 'd'\n"
+    it "expands tabs after zero-width characters to the same width as the column count" $ do
+      let s = "\SOH\SOH\tx" :: String
+          pe = err 3 (utok 'x' <> etok 'd') :: PE
+      mkBundlePE s pe
+        `shouldBe` "1:9:\n  |\n1 | \SOH\SOH        x\n  |         ^\nunexpected 'x'\nexpecting 'd'\n"
     it "shows position marker for newline errors at end of line" $ do
       let s = "abc\n" :: String
           pe = err 3 (utok '\n' <> elabel "end of line") :: PE
