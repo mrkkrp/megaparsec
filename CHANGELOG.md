@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Unreleased
+## Megaparsec 9.8.2
 
 * Fixed tab expansion in the rendering of the offending line so that it
   takes into account the display width of the preceding characters.
