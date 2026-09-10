@@ -56,6 +56,7 @@ library
         Text.Megaparsec.Class
         Text.Megaparsec.Common
         Text.Megaparsec.Lexer
+        Text.Megaparsec.Unicode.Tables
 
     default-language: Haskell2010
     build-depends:

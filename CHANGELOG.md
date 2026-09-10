@@ -23,6 +23,18 @@
   byte `0xad` was counted as one column even though it is displayed as a
   zero-width soft hyphen, which could shift the position marker `^` or make
   it disappear altogether.
+* Updated the character width data used by `Text.Megaparsec.Unicode` to
+  Unicode 17.0.0. The previous data was extracted from Unicode 12.0.0 and
+  was moreover incomplete: it did not know about the CJK ideograph
+  extensions G through I, about any of the emoji added since, or about most
+  combining marks, including all of the variation selectors and everything
+  outside of the Latin, Cyrillic, Hebrew, and Arabic scripts. As a result
+  the position marker `^` did not line up with the offending line for input
+  containing such characters.
+* `isWideChar` now returns `False` for the few characters that are Wide
+  according to their East Asian Width but are also combining marks, such as
+  `U+302A`. They occupy no columns of their own, which `charLength` and
+  `isZeroWidthChar` already reported.
 
 ## Megaparsec 9.8.1
 

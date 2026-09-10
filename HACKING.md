@@ -4,6 +4,7 @@
 * [Running unit tests](#running-unit-tests)
 * [Checking dependent packages](#checking-dependent-packages)
 * [Benchmarks](#benchmarks)
+* [Regenerating the Unicode tables](#regenerating-the-unicode-tables)
 * [Releasing a new version](#releasing-a-new-version)
 
 This document tries to describe everything you need to know to
@@ -116,6 +117,32 @@ $ nix build .#benches/megaparsec # builds megaparsec's microbenchmarks
 `cd` to the `bench` sub-directory and run benchmarks from there because some
 benchmarks need data to run on and the paths are relative, so it'll fail if
 run from the root of Megaparsec's repo.
+
+## Regenerating the Unicode tables
+
+`Text.Megaparsec.Unicode.Tables` holds the character width data that decides
+how many columns a character takes up in a parse error, and it is generated
+from the Unicode Character Database. Do not edit it by hand. To move to a
+newer version of the standard, run the following from the root of the repo
+and commit the result along with a changelog entry:
+
+```console
+$ runghc script/GenUnicodeTables.hs 17.0.0 > Text/Megaparsec/Unicode/Tables.hs
+```
+
+The script needs `curl` and downloads the two files it needs from
+`unicode.org`, caching them in the working directory as `ucd-*.txt`. If you
+already have a copy of the UCD, point the script at it instead with
+`--ucd-dir DIR`; the directory should contain `EastAsianWidth.txt` and
+`DerivedGeneralCategory.txt`. Omitting the version argument uses the version
+that the script was last updated for, which is also recorded in
+`unicodeVersion` in the generated module.
+
+The hand-written code in `Text.Megaparsec.Unicode` decides the width of the
+characters below the top of the Latin-1 range without consulting the tables
+at all, since that is by far the most common case. The script checks that
+this shortcut still agrees with the data and refuses to generate anything if
+it does not, in which case both it and `charLength` need to be revisited.
 
 ## Releasing a new version
 

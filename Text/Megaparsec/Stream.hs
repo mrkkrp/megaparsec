@@ -768,10 +768,11 @@ expandTab w' = go 0 0
 
 -- | Return updated column position that corresponds to the given 'Char'.
 charInc :: Char -> Pos -> Pos
-charInc ch c
-  | Unicode.isZeroWidthChar ch = c
-  | Unicode.isWideChar ch = c <> pos1 <> pos1
-  | otherwise = c <> pos1
+charInc ch c =
+  case Unicode.charLength ch of
+    0 -> c
+    2 -> c <> pos1 <> pos1
+    _ -> c <> pos1
 
 -- | Return updated column position that corresponds to the given 'Word8'.
 byteInc :: Word8 -> Pos -> Pos
