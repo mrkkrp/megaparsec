@@ -158,6 +158,10 @@ spec = do
               pe = err 3 (ueof <> etok 'x') :: PE
           mkBundlePE s pe
             `shouldBe` "1:1:\n  |\n1 | <empty line>\n  | ^\nunexpected end of input\nexpecting 'x'\n"
+    -- In these cases the offending line does not include the part of the
+    -- line that precedes the starting column, so it is shorter than the
+    -- reported column suggests and the marker ends up past its end. That is
+    -- still more helpful than omitting the marker.
     context "starting column in bundle is greater than 1" $ do
       context "and less than parse error column" $
         it "is rendered correctly" $
@@ -177,7 +181,7 @@ spec = do
                           }
                     }
             errorBundlePretty bundle
-              `shouldBe` "1:6:\n  |\n1 | foo\n  | \nunexpected 'o'\nexpecting 'x'\n"
+              `shouldBe` "1:6:\n  |\n1 | foo\n  |      ^\nunexpected 'o'\nexpecting 'x'\n"
       context "and greater than parse error column" $
         it "is rendered correctly" $
           do
@@ -196,7 +200,7 @@ spec = do
                           }
                     }
             errorBundlePretty bundle
-              `shouldBe` "1:10:\n  |\n1 | foo\n  | \nunexpected 'o'\nexpecting 'x'\n"
+              `shouldBe` "1:10:\n  |\n1 | foo\n  |          ^\nunexpected 'o'\nexpecting 'x'\n"
     it "takes tab width into account correctly" $
       property $ \w' i' -> do
         let w = unPos w'

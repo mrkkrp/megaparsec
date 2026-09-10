@@ -408,14 +408,12 @@ errorBundlePretty = drop 1 . errorBundlePrettyWith format
           case msline of
             Nothing -> ""
             Just sline ->
-              let rpadding =
-                    if pointerLen > 0
-                      then replicate rpshift ' '
-                      else ""
+              let rpadding = replicate rpshift ' '
                   pointerLen =
-                    if rpshift + elen > slineLen
-                      then slineLen - rpshift + 1
-                      else max 1 elen
+                    max 1 $
+                      if rpshift + elen > slineLen
+                        then slineLen - rpshift + 1
+                        else elen
                   pointer = replicate pointerLen '^'
                   lineNumber = (show . unPos . sourceLine) epos
                   padding = replicate (length lineNumber + 1) ' '

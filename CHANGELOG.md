@@ -35,6 +35,8 @@
   according to their East Asian Width but are also combining marks, such as
   `U+302A`. They occupy no columns of their own, which `charLength` and
   `isZeroWidthChar` already reported.
+* The position marker `^` is no longer omitted when the offending line turns
+  out to be shorter than the column of the parse error.
 
 ## Megaparsec 9.8.1
 
