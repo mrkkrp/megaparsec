@@ -18,6 +18,11 @@
   (or a negative number of) tokens. Since it consumes nothing in that case,
   it now signals that fact, so that e.g. the second branch of `(<|>)` is
   still tried after it.
+* Fixed column calculation for `ByteString` streams (strict and lazy) so
+  that it agrees with the way the offending line is rendered. Previously the
+  byte `0xad` was counted as one column even though it is displayed as a
+  zero-width soft hyphen, which could shift the position marker `^` or make
+  it disappear altogether.
 
 ## Megaparsec 9.8.1
 

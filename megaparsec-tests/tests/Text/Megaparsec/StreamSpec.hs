@@ -20,6 +20,7 @@ import Test.Hspec
 import Test.Hspec.Megaparsec.AdHoc
 import Test.QuickCheck
 import Text.Megaparsec
+import qualified Text.Megaparsec.Unicode as Unicode
 
 spec :: Spec
 spec = do
@@ -129,6 +130,20 @@ spec = do
     describeShowTokens bproxy quotedWordGen
     describeReachOffset bproxy
     describeReachOffsetNoLine bproxy
+    describe "column calculation" $
+      it "advances columns by the display width of the byte as Latin-1" $
+        forM_ (filter (`notElem` [0x09, 0x0a]) [minBound .. maxBound]) $ \w -> do
+          let pst =
+                PosState
+                  { pstateInput = B.singleton w,
+                    pstateOffset = 0,
+                    pstateSourcePos = initialPos "",
+                    pstateTabWidth = defaultTabWidth,
+                    pstateLinePrefix = ""
+                  }
+              c = sourceColumn (pstateSourcePos (reachOffsetNoLine 1 pst))
+          (w, unPos c)
+            `shouldBe` (w, 1 + Unicode.charLength (chr (fromIntegral w)))
 
   describe "Lazy ByteString instance of Stream" $ do
     describe "tokenToChunk" $
@@ -468,6 +483,16 @@ describeReachOffset Proxy =
             SourcePos n l c = pstateSourcePos pst
             w = pstateTabWidth pst
         r `shouldBe` SourcePos n l (toNextTab w c)
+    it "returns correct SourcePos (zero-width)" $
+      property $ \pst' -> do
+        let pst =
+              (pst' :: PosState s)
+                { pstateInput = "\173" :: s -- soft hyphen
+                }
+            o = pstateOffset pst + 1
+            r = pstateSourcePos . snd $ reachOffset o pst
+            SourcePos n l c = pstateSourcePos pst
+        r `shouldBe` SourcePos n l c
     it "returns correct SourcePos (other)" $
       property $ \pst' -> do
         let pst =
@@ -563,6 +588,16 @@ describeReachOffsetNoLine Proxy =
             SourcePos n l c = pstateSourcePos pst
             w = pstateTabWidth pst
         r `shouldBe` SourcePos n l (toNextTab w c)
+    it "returns correct SourcePos (zero-width)" $
+      property $ \pst' -> do
+        let pst =
+              (pst' :: PosState s)
+                { pstateInput = "\173" :: s -- soft hyphen
+                }
+            o = pstateOffset pst + 1
+            r = pstateSourcePos (reachOffsetNoLine o pst)
+            SourcePos n l c = pstateSourcePos pst
+        r `shouldBe` SourcePos n l c
     it "returns correct SourcePos (other)" $
       property $ \pst' -> do
         let pst =

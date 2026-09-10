@@ -3,6 +3,7 @@
 module Text.Megaparsec.ErrorSpec (spec) where
 
 import Control.Exception (Exception (..))
+import qualified Data.ByteString as B
 import Data.Functor.Identity
 import Data.List (isInfixOf, isSuffixOf, sort)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -116,6 +117,11 @@ spec = do
           pe = err 3 (utok 'x' <> etok 'd') :: PE
       mkBundlePE s pe
         `shouldBe` "1:9:\n  |\n1 | \SOH\SOH        x\n  |         ^\nunexpected 'x'\nexpecting 'd'\n"
+    it "shows position marker for byte streams with zero-width bytes" $ do
+      let s = B.pack (replicate 8 0xad ++ [0x78]) -- soft hyphens and 'x'
+          pe = err 8 (utok 0x78 <> etok 0x64) :: ParseError B.ByteString Void
+      mkBundlePE s pe
+        `shouldBe` "1:1:\n  |\n1 | \173\173\173\173\173\173\173\173x\n  | ^\nunexpected 'x'\nexpecting 'd'\n"
     it "shows position marker for newline errors at end of line" $ do
       let s = "abc\n" :: String
           pe = err 3 (utok '\n' <> elabel "end of line") :: PE

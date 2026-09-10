@@ -776,5 +776,8 @@ charInc ch c
 -- | Return updated column position that corresponds to the given 'Word8'.
 byteInc :: Word8 -> Pos -> Pos
 byteInc w c
-  | w < 0x20 || (w >= 0x7f && w < 0xa0) = c -- C0 and C1 control chars
+  | w < 0x20 -- C0 control chars
+      || (w >= 0x7f && w < 0xa0) -- DEL and C1 control chars
+      || w == 0xad = -- soft hyphen
+      c
   | otherwise = c <> pos1
