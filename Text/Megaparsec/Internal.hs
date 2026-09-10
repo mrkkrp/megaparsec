@@ -605,7 +605,7 @@ pTakeP ::
   Maybe String ->
   Int ->
   ParsecT e s m (Tokens s)
-pTakeP ml n' = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
+pTakeP ml n' = ParsecT $ \s@(State input o pst de) cok _ eok eerr ->
   let n = max 0 n'
       pxy = Proxy :: Proxy s
       el = Label <$> (ml >>= NE.nonEmpty)
@@ -615,12 +615,19 @@ pTakeP ml n' = ParsecT $ \s@(State input o pst de) cok _ _ eerr ->
           eerr (TrivialError o (pure EndOfInput) ps) s
         Just (ts, input') ->
           let len = chunkLength pxy ts
+              st = State input' (o + len) pst de
            in if len /= n
                 then
                   eerr
                     (TrivialError (o + len) (pure EndOfInput) ps)
                     (State input o pst de)
-                else cok ts (State input' (o + len) pst de) mempty
+                else
+                  -- NOTE When nothing has been taken we must report that no
+                  -- input has been consumed, otherwise e.g. ('<|>') would
+                  -- not try its second branch after this parser.
+                  if chunkEmpty pxy ts
+                    then eok ts st mempty
+                    else cok ts st mempty
 {-# INLINE pTakeP #-}
 
 pGetParserState :: (Stream s) => ParsecT e s m (State s e)

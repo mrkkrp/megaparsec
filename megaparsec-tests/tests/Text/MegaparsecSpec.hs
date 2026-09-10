@@ -1129,6 +1129,11 @@ spec = do
                     p = takeP Nothing 0
                 grs p s (`shouldParse` "")
                 grs' p s (`succeedsLeaving` s)
+        it "does not consume input, so the next alternative is tried" $
+          property $ \s -> do
+            let p :: (MonadParsec Void String m) => m String
+                p = (takeP Nothing 0 *> empty) <|> pure "alt"
+            grs p s (`shouldParse` "alt")
       context "when taking <0 tokens" $ do
         context "when stream is empty" $
           it "succeeds returning zero-length chunk" $
@@ -1144,6 +1149,11 @@ spec = do
                     p = takeP Nothing n
                 grs p s (`shouldParse` "")
                 grs' p s (`succeedsLeaving` s)
+        it "does not consume input, so the next alternative is tried" $
+          property $ \(Negative n) s -> do
+            let p :: (MonadParsec Void String m) => m String
+                p = (takeP Nothing n *> empty) <|> pure "alt"
+            grs p s (`shouldParse` "alt")
       context "when taking >0 tokens" $ do
         context "when stream is empty" $ do
           context "with label" $
@@ -1180,6 +1190,12 @@ spec = do
                     (s0, s1) = splitAt n s
                 grs p s (`shouldParse` s0)
                 grs' p s (`succeedsLeaving` s1)
+        it "consumes input, so the next alternative is not tried" $
+          property $ \(Positive n) s ->
+            length s >= n ==> do
+              let p :: (MonadParsec Void String m) => m String
+                  p = (takeP Nothing n *> empty) <|> pure "alt"
+              grs p s (`shouldFailWith` err n mempty)
       context "when failing right after takeP (testing hints)" $
         it "there are no hints to influence the parse error" $
           property $ \(Positive n) s ->

@@ -14,6 +14,10 @@
   happen because of `try`). Such an error mentioned a position that did not
   correspond to the unexpected item it reported and lost all expected items.
   In that case the longest match is now preferred again.
+* Fixed `takeP` reporting that it had consumed input when asked to take zero
+  (or a negative number of) tokens. Since it consumes nothing in that case,
+  it now signals that fact, so that e.g. the second branch of `(<|>)` is
+  still tried after it.
 
 ## Megaparsec 9.8.1
 
