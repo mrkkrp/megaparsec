@@ -7,6 +7,13 @@
   Previously a tab that followed a wide or zero-width character was expanded
   to the wrong number of spaces, which made the position marker `^`
   misaligned or missing.
+* Fixed the regression introduced by the fix for the [issue
+  412](https://github.com/mrkkrp/megaparsec/issues/412) which caused `(<|>)`
+  to report a parse error at the position where the alternation started even
+  when both of its branches had failed ahead of that position (which can
+  happen because of `try`). Such an error mentioned a position that did not
+  correspond to the unexpected item it reported and lost all expected items.
+  In that case the longest match is now preferred again.
 
 ## Megaparsec 9.8.1
 

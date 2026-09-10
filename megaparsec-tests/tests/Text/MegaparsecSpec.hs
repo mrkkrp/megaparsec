@@ -228,6 +228,29 @@ spec = do
         context "right associative"
           $ it "fails with the right error"
           $ prs pRightAssociative s `shouldFailWith` e
+      context "when a branch fails ahead of the alternation due to try" $ do
+        context "when the other branch fails where the alternation started" $
+          it "reports the error there keeping its expected items" $ do
+            let p = try (char 'a' >> char 'b') <|> char 'c'
+            prs p "ad" `shouldFailWith` err 0 (utok 'a' <> etok 'c')
+            prs' p "ad" `failsLeaving` "ad"
+        context "when both branches fail ahead at the same offset" $
+          it "prefers the longest match" $ do
+            let p = try (char 'a' >> char 'b') <|> try (char 'a' >> char 'c')
+            prs p "ad" `shouldFailWith` err 1 (utok 'd' <> etok 'b' <> etok 'c')
+        context "when both branches fail ahead at different offsets" $
+          it "prefers the longest match" $ do
+            let p =
+                  try (char 'a' >> char 'b')
+                    <|> try (char 'a' >> char 'd' >> char 'e')
+            prs p "adx" `shouldFailWith` err 2 (utok 'x' <> etok 'e')
+      it "is associative no matter where the branches fail" $
+        property $ \b1 b2 b3 -> do
+          let p = altBranch b1
+              q = altBranch b2
+              r = altBranch b3
+          prs ((p <|> q) <|> r) altBranchInput
+            `shouldBe` prs (p <|> (q <|> r)) altBranchInput
       it "associativity of fold over alternatives should not matter" $ do
         let p = asum [empty, string ">>>", empty, return "foo"] <?> "bar"
             p' = bsum [empty, string ">>>", empty, return "foo"] <?> "bar"
@@ -1839,6 +1862,36 @@ eqParser ::
   s ->
   Bool
 eqParser p1 p2 s = runParser p1 "" s == runParser p2 "" s
+
+-- | A description of a branch of an alternation, used for testing the
+-- associativity of ('<|>'). Every branch fails on 'altBranchInput', but
+-- depending on the constructor it fails either exactly where the
+-- alternation started or ahead of that position, which is the interesting
+-- case because it can only happen due to 'try'.
+data AltBranch
+  = -- | Fail without consuming input
+    AltAt Char
+  | -- | Fail one token ahead, but backtrack
+    AltAhead Char
+  deriving (Eq, Show)
+
+instance Arbitrary AltBranch where
+  arbitrary = do
+    f <- elements [AltAt, AltAhead]
+    -- Neither 'a' nor 'd' so that the branch is guaranteed to fail on
+    -- 'altBranchInput'.
+    f <$> elements "bcexyz"
+
+-- | The input on which the parsers produced by 'altBranch' are supposed to
+-- be run.
+altBranchInput :: String
+altBranchInput = "ad"
+
+-- | Turn an 'AltBranch' into a parser that fails on 'altBranchInput'.
+altBranch :: AltBranch -> Parser Char
+altBranch = \case
+  AltAt c -> char c
+  AltAhead c -> try (char 'a' >> char c)
 
 mkBundle ::
   State s e ->

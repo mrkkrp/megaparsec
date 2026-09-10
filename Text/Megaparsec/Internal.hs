@@ -364,24 +364,12 @@ pPlus m n = ParsecT $ \s cok cerr eok eerr ->
    in unParser m s cok cerr eok meerr
   where
     combineErrors altOffset e1 e2 = case (e1, e2) of
-      (TrivialError o1 u1 p1, TrivialError o2 u2 p2) ->
-        -- When merging alternative errors, if one is ahead due to try, we
-        -- bring both to the alternative position and union their expected
-        -- tokens.
-        if o1 > altOffset || o2 > altOffset
-          then
-            -- At least one error is ahead, normalize to alt position. Only
-            -- include expected tokens from errors at the alt position.
-            let p1' = if o1 == altOffset then p1 else E.empty
-                p2' = if o2 == altOffset then p2 else E.empty
-                -- Use the unexpected from the error at alt position, or the
-                -- furthest.
-                unexp = case (o1 `compare` altOffset, o2 `compare` altOffset) of
-                  (EQ, _) -> u1
-                  (_, EQ) -> u2
-                  _ -> if o1 >= o2 then u1 else u2
-             in TrivialError altOffset unexp (E.union p1' p2')
-          else e2 <> e1
+      (TrivialError o1 u1 p1, TrivialError o2 _ _)
+        | o1 == altOffset && o2 > altOffset ->
+            TrivialError altOffset u1 p1
+      (TrivialError o1 _ _, TrivialError o2 u2 p2)
+        | o2 == altOffset && o1 > altOffset ->
+            TrivialError altOffset u2 p2
       _ -> e2 <> e1
 {-# INLINE pPlus #-}
 
