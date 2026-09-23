@@ -1,5 +1,11 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
+## Unreleased
+
+* Added `INLINE` pragmas to the built-in `Stream` instances for `Text` and
+  `ByteString`, restoring the performance they had before 9.3.0. [Issue
+  612](https://github.com/mrkkrp/megaparsec/issues/612).
+
 ## Megaparsec 9.8.2
 
 * Fixed tab expansion in the rendering of the offending line so that it
