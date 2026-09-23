@@ -201,6 +201,14 @@ instance Stream (ShareInput B.ByteString) where
     | B.null s = Nothing
     | otherwise = Just . second ShareInput $ B.splitAt n s
   takeWhile_ p (ShareInput s) = second ShareInput $ B.span p s
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream (ShareInput BL.ByteString) where
   type Token (ShareInput BL.ByteString) = Word8
@@ -216,6 +224,14 @@ instance Stream (ShareInput BL.ByteString) where
     | BL.null s = Nothing
     | otherwise = Just . second ShareInput $ BL.splitAt (fromIntegral n) s
   takeWhile_ p (ShareInput s) = second ShareInput $ BL.span p s
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream (ShareInput T.Text) where
   type Token (ShareInput T.Text) = Char
@@ -231,6 +247,14 @@ instance Stream (ShareInput T.Text) where
     | T.null s = Nothing
     | otherwise = Just . second ShareInput $ T.splitAt n s
   takeWhile_ p (ShareInput s) = second ShareInput $ T.span p s
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream (ShareInput TL.Text) where
   type Token (ShareInput TL.Text) = Char
@@ -246,6 +270,14 @@ instance Stream (ShareInput TL.Text) where
     | TL.null s = Nothing
     | otherwise = Just . second ShareInput $ TL.splitAt (fromIntegral n) s
   takeWhile_ p (ShareInput s) = second ShareInput $ TL.span p s
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 -- | This wrapper selects the no-input-sharing 'Stream' implementation for
 -- 'T.Text' ('TL.Text') and 'B.ByteString' ('BL.ByteString'). This means
@@ -371,6 +403,14 @@ instance Stream B.ByteString where
   take1_ s = second unShareInput <$> take1_ (ShareInput s)
   takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
   takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream BL.ByteString where
   type Token BL.ByteString = Token (ShareInput BL.ByteString)
@@ -383,6 +423,14 @@ instance Stream BL.ByteString where
   take1_ s = second unShareInput <$> take1_ (ShareInput s)
   takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
   takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream T.Text where
   type Token T.Text = Token (ShareInput T.Text)
@@ -395,6 +443,14 @@ instance Stream T.Text where
   take1_ s = second unShareInput <$> take1_ (ShareInput s)
   takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
   takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 instance Stream TL.Text where
   type Token TL.Text = Token (ShareInput TL.Text)
@@ -407,6 +463,14 @@ instance Stream TL.Text where
   take1_ s = second unShareInput <$> take1_ (ShareInput s)
   takeN_ n s = second unShareInput <$> takeN_ n (ShareInput s)
   takeWhile_ p s = second unShareInput $ takeWhile_ p (ShareInput s)
+  {-# INLINE tokenToChunk #-}
+  {-# INLINE tokensToChunk #-}
+  {-# INLINE chunkToTokens #-}
+  {-# INLINE chunkLength #-}
+  {-# INLINE chunkEmpty #-}
+  {-# INLINE take1_ #-}
+  {-# INLINE takeN_ #-}
+  {-# INLINE takeWhile_ #-}
 
 -- | Type class for inputs that can also be used for debugging.
 --
