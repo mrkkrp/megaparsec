@@ -1,6 +1,6 @@
 *Megaparsec follows [SemVer](https://semver.org/).*
 
-## Unreleased
+## Megaparsec 9.8.3
 
 * Added `INLINE` pragmas to the built-in `Stream` instances for `Text` and
   `ByteString`, restoring the performance they had before 9.3.0. [Issue
