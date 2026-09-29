@@ -222,8 +222,8 @@ mergeError e1 e2 =
       case (e1, e2) of
         (TrivialError s1 u1 p1, TrivialError _ u2 p2) ->
           TrivialError s1 (n u1 u2) (E.union p1 p2)
-        (FancyError {}, TrivialError {}) -> e1
-        (TrivialError {}, FancyError {}) -> e2
+        (FancyError{}, TrivialError{}) -> e1
+        (TrivialError{}, FancyError{}) -> e2
         (FancyError s1 x1, FancyError _ x2) ->
           FancyError s1 (E.union x1 x2)
     GT -> e1
@@ -359,7 +359,7 @@ errorBundlePrettyWith ::
   ParseErrorBundle s e ->
   -- | Textual rendition of the bundle
   String
-errorBundlePrettyWith format ParseErrorBundle {..} =
+errorBundlePrettyWith format ParseErrorBundle{..} =
   let (r, _) = foldl f (id, bundlePosState) bundleErrors
    in r ""
   where

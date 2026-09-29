@@ -1403,7 +1403,7 @@ spec = do
 
     describe "takeRest" $
       it "returns rest of the input" $
-        property $ \st@State {..} -> do
+        property $ \st@State{..} -> do
           let p :: Parser String
               p = takeRest
               st' =
@@ -1456,7 +1456,7 @@ spec = do
               p = getSourcePos
               pst' = snd $ reachOffset (stateOffset st) (statePosState st)
               spos = pstateSourcePos pst'
-          runParser' p st `shouldBe` (st {statePosState = pst'}, Right spos)
+          runParser' p st `shouldBe` (st{statePosState = pst'}, Right spos)
 
     describe "setOffset and getOffset" $
       it "sets number of processed tokens and gets it back" $

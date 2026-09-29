@@ -185,7 +185,7 @@ instance (Ord a) => Stream (S.Seq a) where
 -- memory leak scenario.
 --
 -- @since 9.3.0
-newtype ShareInput a = ShareInput {unShareInput :: a}
+newtype ShareInput a = ShareInput{unShareInput :: a}
 
 instance Stream (ShareInput B.ByteString) where
   type Token (ShareInput B.ByteString) = Word8
@@ -292,7 +292,7 @@ instance Stream (ShareInput TL.Text) where
 -- but beware its pitfalls!
 --
 -- @since 9.3.0
-newtype NoShareInput a = NoShareInput {unNoShareInput :: a}
+newtype NoShareInput a = NoShareInput{unNoShareInput :: a}
 
 instance Stream (NoShareInput B.ByteString) where
   type Token (NoShareInput B.ByteString) = Word8
@@ -650,7 +650,7 @@ reachOffset'
   (newlineTok, tabTok)
   columnIncrement
   o
-  PosState {..} =
+  PosState{..} =
     ( Just $ case expandTab pstateTabWidth
         . addPrefix
         . f
@@ -725,7 +725,7 @@ reachOffsetNoLine'
   (newlineTok, tabTok)
   columnIncrement
   o
-  PosState {..} =
+  PosState{..} =
     ( PosState
         { pstateInput = post,
           pstateOffset = max pstateOffset o,

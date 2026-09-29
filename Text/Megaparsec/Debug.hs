@@ -327,7 +327,7 @@ dbg' ::
 dbg' lbl p = unBlind <$> dbg lbl (Blind <$> p)
 
 -- | A wrapper type with a dummy 'Show' instance.
-newtype Blind x = Blind {unBlind :: x}
+newtype Blind x = Blind{unBlind :: x}
 
 instance Show (Blind x) where
   show _ = "NOT SHOWN"

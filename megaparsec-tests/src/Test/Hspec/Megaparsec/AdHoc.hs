@@ -208,7 +208,7 @@ getTabWidth = pstateTabWidth . statePosState <$> getParserState
 setTabWidth :: (MonadParsec e s m) => Pos -> m ()
 setTabWidth w = updateParserState $ \st ->
   let pst = statePosState st
-   in st {statePosState = pst {pstateTabWidth = w}}
+   in st{statePosState = pst{pstateTabWidth = w}}
 
 -- | Scale down.
 scaleDown :: Gen a -> Gen a

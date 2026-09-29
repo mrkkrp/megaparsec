@@ -374,10 +374,10 @@ region ::
 region f m = do
   deSoFar <- stateParseErrors <$> getParserState
   updateParserState $ \s ->
-    s {stateParseErrors = []}
+    s{stateParseErrors = []}
   r <- observing m
   updateParserState $ \s ->
-    s {stateParseErrors = (f <$> stateParseErrors s) ++ deSoFar}
+    s{stateParseErrors = (f <$> stateParseErrors s) ++ deSoFar}
   case r of
     Left err -> parseError (f err)
     Right x -> return x
@@ -393,7 +393,7 @@ region f m = do
 -- @since 8.0.0
 registerParseError :: (MonadParsec e s m) => ParseError s e -> m ()
 registerParseError e = updateParserState $ \s ->
-  s {stateParseErrors = e : stateParseErrors s}
+  s{stateParseErrors = e : stateParseErrors s}
 {-# INLINE registerParseError #-}
 
 -- | Like 'failure', but for delayed 'ParseError's.
@@ -633,7 +633,7 @@ getSourcePos :: (TraversableStream s, MonadParsec e s m) => m SourcePos
 getSourcePos = do
   st <- getParserState
   let pst = reachOffsetNoLine (stateOffset st) (statePosState st)
-  setParserState st {statePosState = pst}
+  setParserState st{statePosState = pst}
   return (pstateSourcePos pst)
 {-# INLINE getSourcePos #-}
 
