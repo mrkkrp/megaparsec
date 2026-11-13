@@ -62,7 +62,6 @@ import Data.Proxy
 import Data.Semigroup
 import Data.Set (Set)
 import qualified Data.Set as E
-import Data.String (IsString (..))
 import Text.Megaparsec.Class
 import Text.Megaparsec.Error
 import Text.Megaparsec.State
@@ -154,13 +153,6 @@ instance (Stream s, Monoid a) => Monoid (ParsecT e s m a) where
   {-# INLINE mappend #-}
   mconcat = fmap mconcat . sequence
   {-# INLINE mconcat #-}
-
--- | @since 6.3.0
-instance
-  (a ~ Tokens s, IsString a, Eq a, Stream s, Ord e) =>
-  IsString (ParsecT e s m a)
-  where
-  fromString s = tokens (==) (fromString s)
 
 instance Functor (ParsecT e s m) where
   fmap = pMap

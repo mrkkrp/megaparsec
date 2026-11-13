@@ -25,7 +25,6 @@ import qualified Control.Monad.State.Strict as S
 import Control.Monad.Trans.Except (Except, runExcept)
 import qualified Control.Monad.Writer.Lazy as L
 import qualified Control.Monad.Writer.Strict as S
-import qualified Data.ByteString as BS
 import Data.Char (isLetter, toUpper)
 import Data.Foldable (asum)
 import Data.List (isPrefixOf)
@@ -61,32 +60,6 @@ spec = do
       property $ \a b -> do
         let p = pure [a] `mappend` pure [b]
         prs p "" `shouldParse` ([a, b] :: [Int])
-
-  describe "ParsecT IsString instance" $ do
-    describe "equivalence to 'string'" $ do
-      it "for String" $
-        property $ \s i ->
-          eqParser
-            (chunk s)
-            (fromString s)
-            (i :: String)
-      it "for Text" $
-        property $ \s i ->
-          eqParser
-            (chunk (T.pack s))
-            (fromString s)
-            (i :: T.Text)
-      it "for ByteString" $
-        property $ \s i ->
-          eqParser
-            (chunk (fromString s :: BS.ByteString))
-            (fromString s)
-            (i :: BS.ByteString)
-    it "can handle Unicode" $ do
-      let r = "פּאַרסער 解析器" :: BS.ByteString
-          p :: Parsec Void BS.ByteString BS.ByteString
-          p = BS.concat <$> sequence ["פּאַ", "רסער", " 解析器"]
-      parse p "" r `shouldParse` r
 
   describe "ParsecT Functor instance" $ do
     it "obeys identity law" $
@@ -1870,14 +1843,6 @@ emulateStrParsing st@(State i o pst de) s =
       )
   where
     l = length s
-
-eqParser ::
-  (Eq a, Eq (Token s), Eq s) =>
-  Parsec Void s a ->
-  Parsec Void s a ->
-  s ->
-  Bool
-eqParser p1 p2 s = runParser p1 "" s == runParser p2 "" s
 
 -- | A description of a branch of an alternation, used for testing the
 -- associativity of ('<|>'). Every branch fails on 'altBranchInput', but
