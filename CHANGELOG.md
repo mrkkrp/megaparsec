@@ -8,6 +8,11 @@
   instance for `IndentOpt`. [Issue
   565](https://github.com/mrkkrp/megaparsec/issues/565).
 
+* Removed the `IsString` instance for `ParsecT`, so that users can define
+  their own instance, for example one that also consumes trailing white
+  space. Use `chunk` or `string` instead of string literals. [Issue
+  515](https://github.com/mrkkrp/megaparsec/issues/515).
+
 ## Megaparsec 9.8.3
 
 * Added `INLINE` pragmas to the built-in `Stream` instances for `Text` and
