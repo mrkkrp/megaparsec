@@ -23,7 +23,9 @@ description:
 category:        Parsing
 build-type:      Simple
 extra-doc-files:
+    AGENTS.md
     CHANGELOG.md
+    HACKING.md
     README.md
 
 source-repository head
