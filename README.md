@@ -157,10 +157,7 @@ JSON (Megaparsec) |       25.45 μs |   203,824 |         9,176
 You can run the benchmarks yourself by executing:
 
 ```
-$ nix-build -A benches.parsers-bench
-$ cd result/bench
-$ ./bench-memory
-$ ./bench-speed
+$ cabal bench pkg:parsers-bench -O2
 ```
 
 More information about benchmarking and development can be found
