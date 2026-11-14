@@ -157,7 +157,7 @@ JSON (Megaparsec) |       25.45 μs |   203,824 |         9,176
 You can run the benchmarks yourself by executing:
 
 ```
-$ cabal bench pkg:parsers-bench -O2
+$ cabal bench pkg:parsers-bench
 ```
 
 More information about benchmarking and development can be found
