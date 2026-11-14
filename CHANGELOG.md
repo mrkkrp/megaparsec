@@ -13,6 +13,9 @@
   space. Use `chunk` or `string` instead of string literals. [Issue
   515](https://github.com/mrkkrp/megaparsec/issues/515).
 
+* Added a `MonadAccum` instance for `ParsecT`. The lower bound of `mtl` is
+  now 2.3.1. [Issue 522](https://github.com/mrkkrp/megaparsec/issues/522).
+
 ## Megaparsec 9.8.3
 
 * Added `INLINE` pragmas to the built-in `Stream` instances for `Text` and
