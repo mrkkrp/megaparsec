@@ -62,12 +62,9 @@ Both `megaparsec` and `parsers-bench` have `bench-speed` and
 `bench-memory` benchmarks:
 
 ```console
-$ cabal bench pkg:megaparsec -O2
-$ cabal bench pkg:parsers-bench -O2
+$ cabal bench pkg:megaparsec
+$ cabal bench pkg:parsers-bench
 ```
-
-Pass `-O2` because the `dev` flag that `cabal.project` enables drops the
-`-O2` that the packages are normally compiled with.
 
 ## Regenerating the Unicode tables
 
@@ -121,4 +118,14 @@ To release a new version of Megaparsec, follow these steps:
   ```console
   $ cabal upload --publish dist-newstyle/sdist/megaparsec-X.Y.Z.tar.gz
   $ cabal upload --publish dist-newstyle/sdist/megaparsec-tests-X.Y.Z.tar.gz
+  ```
+
+* Generate the documentation and upload it as well. Hackage normally builds
+  documentation on its own, but uploading it manually makes sure that it is
+  there:
+
+  ```console
+  $ cabal haddock --haddock-for-hackage pkg:megaparsec pkg:megaparsec-tests
+  $ cabal upload --documentation --publish dist-newstyle/megaparsec-X.Y.Z-docs.tar.gz
+  $ cabal upload --documentation --publish dist-newstyle/megaparsec-tests-X.Y.Z-docs.tar.gz
   ```
