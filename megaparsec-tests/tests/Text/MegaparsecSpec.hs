@@ -6,12 +6,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Text.MegaparsecSpec (spec) where
 
 import Control.Monad (ap, forM_, guard, unless, void, when)
+import Control.Monad.Accum (accum, add, look)
 import Control.Monad.Cont (Cont, callCC, runCont)
 import Control.Monad.Except (catchError, throwError)
 import Control.Monad.Fix (MonadFix)
@@ -22,6 +24,7 @@ import qualified Control.Monad.RWS.Strict as S
 import Control.Monad.Reader (Reader, ask, asks, local, runReader, runReaderT)
 import qualified Control.Monad.State.Lazy as L
 import qualified Control.Monad.State.Strict as S
+import Control.Monad.Trans.Accum (Accum, evalAccum)
 import Control.Monad.Trans.Except (Except, runExcept)
 import qualified Control.Monad.Writer.Lazy as L
 import qualified Control.Monad.Writer.Strict as S
@@ -429,6 +432,45 @@ spec = do
             let p :: ParsecT Void String (L.State Integer) ()
                 p = optional (char a) *> L.put n' <* hidden eof
             L.evalState (runParserT p "" [b]) n `shouldFailWith` err 0 (utok b <> etok a)
+
+  describe "ParsecT MonadAccum instance" $ do
+    describe "look" $ do
+      it "returns accumulated value" $
+        property $ \w -> do
+          let p = look :: ParsecT Void String (Accum [Integer]) [Integer]
+          evalAccum (runParserT p "" "") w `shouldBe` Right w
+      it "preserves hints" $
+        property $ \a b (w :: [Integer]) ->
+          a /= b ==> do
+            let p :: ParsecT Void String (Accum [Integer]) [Integer]
+                p = optional (char a) *> look <* hidden eof
+            evalAccum (runParserT p "" [b]) w `shouldFailWith` err 0 (utok b <> etok a)
+
+    describe "add" $ do
+      it "appends to accumulated value" $
+        property $ \w w' -> do
+          let p :: ParsecT Void String (Accum [Integer]) [Integer]
+              p = add w' *> look
+          evalAccum (runParserT p "" "") w `shouldBe` Right (w <> w')
+      it "preserves hints" $
+        property $ \a b (w :: [Integer]) w' ->
+          a /= b ==> do
+            let p :: ParsecT Void String (Accum [Integer]) ()
+                p = optional (char a) *> add w' <* hidden eof
+            evalAccum (runParserT p "" [b]) w `shouldFailWith` err 0 (utok b <> etok a)
+
+    describe "accum" $ do
+      it "returns and appends to accumulated value" $
+        property $ \w w' -> do
+          let p :: ParsecT Void String (Accum [Integer]) ([Integer], [Integer])
+              p = (,) <$> accum (,w') <*> look
+          evalAccum (runParserT p "" "") w `shouldBe` Right (w, w <> w')
+      it "preserves hints" $
+        property $ \a b (w :: [Integer]) w' ->
+          a /= b ==> do
+            let p :: ParsecT Void String (Accum [Integer]) [Integer]
+                p = optional (char a) *> accum (,w') <* hidden eof
+            evalAccum (runParserT p "" [b]) w `shouldFailWith` err 0 (utok b <> etok a)
 
   describe "ParsecT MonadCont instance" $
     describe "callCC" $

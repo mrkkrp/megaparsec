@@ -46,6 +46,7 @@ where
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Accum
 import qualified Control.Monad.Combinators
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
@@ -274,6 +275,12 @@ instance (Stream s, MonadWriter w m) => MonadWriter w (ParsecT e s m) where
           OK hs (x, ww) -> (OK hs x, ww)
           Error e -> (Error e, id)
     return (Reply st consumption r', ww')
+
+-- | @since 10.0.0
+instance (Stream s, MonadAccum w m) => MonadAccum w (ParsecT e s m) where
+  look = lift look
+  add = lift . add
+  accum = lift . accum
 
 instance (Stream s, MonadCont m) => MonadCont (ParsecT e s m) where
   callCC f = mkParsecT $ \s ->
